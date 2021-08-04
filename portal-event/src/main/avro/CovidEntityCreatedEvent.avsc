@@ -1,0 +1,80 @@
+{
+  "type": "record",
+  "name": "CovidEntityCreatedEvent",
+  "namespace": "net.lightapi.portal.covid",
+  "fields": [
+    {
+      "name": "EventId",
+      "type": {
+        "type": "record",
+        "name": "EventId",
+        "namespace": "com.networknt.kafka.common",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "doc": "a unique identifier"
+          },
+          {
+            "name": "nonce",
+            "type": "long",
+            "doc": "the number of the transactions for the user"
+          },
+          {
+            "name": "derived",
+            "type": "boolean",
+            "default": false,
+            "doc": "indicate if the event is derived from event processor"
+          }
+        ]
+      }
+    },
+    {
+      "name": "key",
+      "type": "string",
+      "doc": "country, province and city combination"
+    },
+    {
+      "name": "keyId",
+      "type": "int",
+      "default": 0,
+      "doc": "keyId 0 entityId 1 map category 1 map subcategory"
+    },
+    {
+      "name": "userId",
+      "type": "string",
+      "doc": "the unique user id"
+    },
+    {
+      "name": "category",
+      "type": "string",
+      "doc": "category"
+    },
+    {
+      "name": "subcategory",
+      "type": "string",
+      "doc": "subcategory"
+    },
+    {
+      "name": "latitude",
+      "type": "double",
+      "doc": "latitude"
+    },
+    {
+      "name": "longitude",
+      "type": "double",
+      "doc": "city longitude"
+    },
+    {
+      "name": "introduction",
+      "type": "string",
+      "doc": "introduction"
+    },
+    {
+      "name": "timestamp",
+      "type": "long",
+      "default": 0,
+      "doc": "time the event is recorded"
+    }
+  ]
+}

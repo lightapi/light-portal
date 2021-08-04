@@ -1,0 +1,79 @@
+{
+  "type": "record",
+  "name": "ControllerRegisteredEvent",
+  "namespace": "net.lightapi.portal.controller",
+  "fields": [
+    {
+      "name": "EventId",
+      "type": {
+        "type": "record",
+        "name": "EventId",
+        "namespace": "com.networknt.kafka.common",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "doc": "a unique identifier"
+          },
+          {
+            "name": "nonce",
+            "type": "long",
+            "doc": "the number of the transactions for the user"
+          },
+          {
+            "name": "derived",
+            "type": "boolean",
+            "default": false,
+            "doc": "indicate if the event is derived from event processor"
+          }
+        ]
+      }
+    },
+    {
+      "name": "host",
+      "type": "string",
+      "doc": "host"
+    },
+    {
+      "name": "key",
+      "type": "string",
+      "doc": "key id that might be service or service plus tag if tag is not null"
+    },
+    {
+      "name": "serviceId",
+      "type": "string",
+      "doc": "serviceId of the registered service from server.yml"
+    },
+    {
+      "name": "protocol",
+      "type": "string",
+      "doc": "protocol of the service that controller is connecting to. http or https"
+    },
+    {
+      "name": "tag",
+      "type": "string",
+      "doc": "the environment tag of the service"
+    },
+    {
+      "name": "address",
+      "type": "string",
+      "doc": "the ip address of the service"
+    },
+    {
+      "name": "port",
+      "type": "int",
+      "doc": "the port number of the service"
+    },
+    {
+      "name": "check",
+      "type": "string",
+      "doc": "the health info from the registry request body"
+    },
+    {
+      "name": "timestamp",
+      "type": "long",
+      "default": 0,
+      "doc": "time the event is recorded"
+    }
+  ]
+}

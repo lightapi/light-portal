@@ -1,0 +1,65 @@
+{
+  "type": "record",
+  "name": "MarketServiceDeletedEvent",
+  "namespace": "net.lightapi.portal.market",
+  "fields": [
+    {
+      "name": "EventId",
+      "type": {
+        "type": "record",
+        "name": "EventId",
+        "namespace": "com.networknt.kafka.common",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "doc": "a unique identifier"
+          },
+          {
+            "name": "nonce",
+            "type": "long",
+            "doc": "the number of the transactions for the id"
+          },
+          {
+            "name": "derived",
+            "type": "boolean",
+            "default": false,
+            "doc": "indicate if the event is derived from event processor"
+          }
+        ]
+      }
+    },
+    {
+      "name": "keyId",
+      "type": "int",
+      "doc": "keyId 0 serviceId plus optional buildNumber 1 host"
+    },
+    {
+      "name": "host",
+      "type": "string",
+      "doc": "host"
+    },
+    {
+      "name": "style",
+      "type": "string",
+      "doc": "api style"
+    },
+    {
+      "name": "serviceId",
+      "type": "string",
+      "doc": "service id"
+    },
+    {
+      "name": "buildNumber",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "build number"
+    },
+    {
+      "name": "timestamp",
+      "type": "long",
+      "default": 0,
+      "doc": "time the event is recorded"
+    }
+  ]
+}

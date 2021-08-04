@@ -1,0 +1,69 @@
+{
+  "type": "record",
+  "name": "CityMapUpdatedEvent",
+  "namespace": "net.lightapi.portal.covid",
+  "fields": [
+    {
+      "name": "EventId",
+      "type": {
+        "type": "record",
+        "name": "EventId",
+        "namespace": "com.networknt.kafka.common",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "doc": "a unique identifier"
+          },
+          {
+            "name": "nonce",
+            "type": "long",
+            "doc": "the number of the transactions for the user"
+          },
+          {
+            "name": "derived",
+            "type": "boolean",
+            "default": false,
+            "doc": "indicate if the event is derived from event processor"
+          }
+        ]
+      }
+    },
+    {
+      "name": "country",
+      "type": "string",
+      "doc": "country"
+    },
+    {
+      "name": "province",
+      "type": "string",
+      "doc": "province"
+    },
+    {
+      "name": "city",
+      "type": "string",
+      "doc": "city"
+    },
+    {
+      "name": "latitude",
+      "type": "double",
+      "doc": "city latitude"
+    },
+    {
+      "name": "longitude",
+      "type": "double",
+      "doc": "city longitude"
+    },
+    {
+      "name": "zoom",
+      "type": "int",
+      "doc": "initial zoom"
+    },
+    {
+      "name": "timestamp",
+      "type": "long",
+      "default": 0,
+      "doc": "time the event is recorded"
+    }
+  ]
+}

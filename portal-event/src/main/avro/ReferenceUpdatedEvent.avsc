@@ -1,0 +1,69 @@
+{
+  "type": "record",
+  "name": "ReferenceUpdatedEvent",
+  "namespace": "net.lightapi.portal.user",
+  "fields": [
+    {
+      "name": "EventId",
+      "type": {
+        "type": "record",
+        "name": "EventId",
+        "namespace": "com.networknt.kafka.common",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "doc": "a unique identifier"
+          },
+          {
+            "name": "nonce",
+            "type": "long",
+            "doc": "the number of the transactions for the user"
+          },
+          {
+            "name": "derived",
+            "type": "boolean",
+            "default": false,
+            "doc": "indicate if the event is derived from event processor"
+          }
+        ]
+      }
+    },
+    {
+      "name": "table",
+      "type": "string",
+      "doc": "reference table"
+    },
+    {
+      "name": "language",
+      "type": "string",
+      "doc": "value label language"
+    },
+    {
+      "name": "value",
+      "type": "string",
+      "doc": "reference value"
+    },
+    {
+      "name": "label",
+      "type": "string",
+      "doc": "value label in language"
+    },
+    {
+      "name": "email",
+      "type": "string",
+      "doc": "owner email"
+    },
+    {
+      "name": "desc",
+      "type": "string",
+      "doc": "value description"
+    },
+    {
+      "name": "timestamp",
+      "type": "long",
+      "default": 0,
+      "doc": "time the event is recorded"
+    }
+  ]
+}

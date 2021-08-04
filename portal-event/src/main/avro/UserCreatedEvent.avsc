@@ -1,0 +1,117 @@
+{
+  "type": "record",
+  "name": "UserCreatedEvent",
+  "namespace": "net.lightapi.portal.user",
+  "fields": [
+    {
+      "name": "EventId",
+      "type": {
+        "type": "record",
+        "name": "EventId",
+        "namespace": "com.networknt.kafka.common",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "doc": "a unique identifier"
+          },
+          {
+            "name": "nonce",
+            "type": "long",
+            "doc": "the number of the transactions for the user"
+          },
+          {
+            "name": "derived",
+            "type": "boolean",
+            "default": false,
+            "doc": "indicate if the event is derived from event processor"
+          }
+        ]
+      }
+    },
+    {
+      "name": "host",
+      "type": "string",
+      "doc": "the host organization of the user"
+    },
+    {
+      "name": "email",
+      "type": "string",
+      "doc": "the email of the user"
+    },
+    {
+      "name": "userId",
+      "type": "string",
+      "doc": "the unique user id"
+    },
+    {
+      "name": "language",
+      "type": "string",
+      "doc": "the preferred language of the user"
+    },
+    {
+      "name": "password",
+      "type": "string",
+      "doc": "the password of the user"
+    },
+    {
+      "name": "value",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "user detail in JSON, include firstName, lastName, gender, birthday, postCode, address"
+    },
+    {
+      "name": "taijiWallet",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "taiji blockchain address of the user"
+    },
+    {
+      "name": "country",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "country of the user"
+    },
+    {
+      "name": "province",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "province of the user"
+    },
+    {
+      "name": "city",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "city of the user"
+    },
+    {
+      "name": "verified",
+      "type": "boolean",
+      "default": false,
+      "doc": "If the email is verified"
+    },
+    {
+      "name": "token",
+      "type": "string",
+      "doc": "A UUID that is used for email verification"
+    },
+    {
+      "name": "roles",
+      "type": "string",
+      "default": "user",
+      "doc": "a list of roles for the user"
+    },
+    {
+      "name": "locked",
+      "type": "boolean",
+      "default": false,
+      "doc": "If the account is locked"
+    },
+    {
+      "name": "timestamp",
+      "type": "long",
+      "default": 0,
+      "doc": "time the event is recorded"
+    }
+  ]
+}

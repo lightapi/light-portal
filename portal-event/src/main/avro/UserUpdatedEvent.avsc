@@ -1,0 +1,113 @@
+{
+  "type": "record",
+  "name": "UserUpdatedEvent",
+  "namespace": "net.lightapi.portal.user",
+  "fields": [
+    {
+      "name": "EventId",
+      "type": {
+        "type": "record",
+        "name": "EventId",
+        "namespace": "com.networknt.kafka.common",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "doc": "a unique identifier"
+          },
+          {
+            "name": "nonce",
+            "type": "long",
+            "doc": "the number of the transactions for the id"
+          },
+          {
+            "name": "derived",
+            "type": "boolean",
+            "default": false,
+            "doc": "indicate if the event is derived from event processor"
+          }
+        ]
+      }
+    },
+    {
+      "name": "host",
+      "type": "string",
+      "doc": "the host organization of the user"
+    },
+    {
+      "name": "email",
+      "type": "string",
+      "doc": "email address of the updated user"
+    },
+    {
+      "name": "userId",
+      "type": "string",
+      "doc": "a unique user id"
+    },
+    {
+      "name": "keyId",
+      "type": "int",
+      "default": 0,
+      "doc": "keyId 0 email 1 map category 2 map subcategory"
+    },
+    {
+      "name": "language",
+      "type": "string",
+      "doc": "the preferred language of the user"
+    },
+    {
+      "name": "value",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "user detail in JSON, include firstName, lastName, gender, birthday, postCode, address"
+    },
+    {
+      "name": "taijiWallet",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "taiji blockchain address of the user"
+    },
+    {
+      "name": "country",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "country of the user"
+    },
+    {
+      "name": "province",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "province of the user"
+    },
+    {
+      "name": "city",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "city of the user"
+    },
+    {
+      "name": "oldCountry",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "old country of the user, used to move the maproot"
+    },
+    {
+      "name": "oldProvince",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "old province of the user, used to move the maproot"
+    },
+    {
+      "name": "oldCity",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "old city of the user, used to move the maproot"
+    },
+    {
+      "name": "timestamp",
+      "type": "long",
+      "default": 0,
+      "doc": "time the event is recorded"
+    }
+  ]
+}
