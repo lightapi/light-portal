@@ -1,0 +1,59 @@
+{
+  "type": "record",
+  "name": "PrivateMessageSentEvent",
+  "namespace": "net.lightapi.portal.user",
+  "fields": [
+    {
+      "name": "EventId",
+      "type": {
+        "type": "record",
+        "name": "EventId",
+        "namespace": "com.networknt.kafka.common",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "doc": "a unique identifier"
+          },
+          {
+            "name": "nonce",
+            "type": "long",
+            "doc": "the number of the transactions for the user"
+          },
+          {
+            "name": "derived",
+            "type": "boolean",
+            "default": false,
+            "doc": "indicate if the event is derived from event processor"
+          }
+        ]
+      }
+    },
+    {
+      "name": "fromId",
+      "type": "string",
+      "doc": "From userId that matches the EventId.id email"
+    },
+    {
+      "name": "toEmail",
+      "type": "string",
+      "doc": "The target email"
+    },
+    {
+      "name": "subject",
+      "type": "string",
+      "doc": "Subject of the message"
+    },
+    {
+      "name": "content",
+      "type": "string",
+      "doc": "Content of the message"
+    },
+    {
+      "name": "timestamp",
+      "type": "long",
+      "default": 0,
+      "doc": "time the event is recorded"
+    }
+  ]
+}

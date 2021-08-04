@@ -1,0 +1,1128 @@
+package net.lightapi.portal;
+
+import com.networknt.config.Config;
+import com.networknt.config.JsonMapper;
+import com.networknt.monad.Failure;
+import com.networknt.monad.Result;
+import com.networknt.monad.Success;
+import com.networknt.server.Server;
+import com.networknt.service.SingletonServiceFactory;
+import com.networknt.status.Status;
+import com.networknt.client.Http2Client;
+import com.networknt.cluster.Cluster;
+import io.undertow.UndertowOptions;
+import io.undertow.client.ClientConnection;
+import io.undertow.client.ClientRequest;
+import io.undertow.client.ClientResponse;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.Headers;
+import io.undertow.util.Methods;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.xnio.IoUtils;
+import org.xnio.OptionMap;
+
+import java.net.URI;
+import java.net.URLEncoder;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
+
+/**
+ * This is a client utility that is shared by all command side services to query data from
+ * the query side. It creates a HTTP/2 connection to the query side and cache that connection
+ * until the connection is closed. Then it create another connection and cache it. This will
+ * ensure the highest efficiency.
+ *
+ * @author Steve Hu
+ */
+public class HybridQueryClient {
+
+    static final Logger logger = LoggerFactory.getLogger(HybridQueryClient.class);
+    static final String FAILED_TO_POPULATE_HEADER = "ERR12050";
+
+    static final String queryServiceId = "com.networknt.portal.hybrid.query-1.0.0";
+    static String tag = Server.getServerConfig().getEnvironment();
+    // Get the singleton Cluster instance
+    static Cluster cluster = SingletonServiceFactory.getBean(Cluster.class);
+    // Get the singleton Http2Client instance
+    static Http2Client client = Http2Client.getInstance();
+    static ClientConnection connection;
+    {
+        String host = cluster.serviceToUrl("https", queryServiceId, tag, null);
+        try {
+            connection = client.connect(new URI(host), Http2Client.WORKER, Http2Client.SSL, Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+        }
+    }
+    static final String GENERIC_EXCEPTION = "ERR10014";
+
+    static Map<String, ClientConnection> connCache = new ConcurrentHashMap<>();
+
+    public static Result<String> callQueryWithToken(String command, String token) {
+        Result<String> result = null;
+        try {
+            if(connection == null || !connection.isOpen()) {
+                // The connection is close or not created.
+                String host = cluster.serviceToUrl("https", queryServiceId, tag, null);
+                connection = client.connect(new URI(host), Http2Client.WORKER, Http2Client.SSL, Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
+            }
+            // Create one CountDownLatch that will be reset in the callback function
+            final CountDownLatch latch = new CountDownLatch(1);
+            // Create an AtomicReference object to receive ClientResponse from callback function
+            final AtomicReference<ClientResponse> reference = new AtomicReference<>();
+            String message = "/portal/query?cmd=" + URLEncoder.encode(command, "UTF-8");
+            final ClientRequest request = new ClientRequest().setMethod(Methods.GET).setPath(message);
+            request.getRequestHeaders().put(Headers.AUTHORIZATION, "Bearer " + token);
+            request.getRequestHeaders().put(Headers.HOST, "localhost");
+            connection.sendRequest(request, client.createClientCallback(reference, latch));
+            latch.await();
+            int statusCode = reference.get().getResponseCode();
+            String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
+            if(statusCode != 200) {
+                Status status = Config.getInstance().getMapper().readValue(body, Status.class);
+                result = Failure.of(status);
+            } else result = Success.of(body);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            Status status = new Status(GENERIC_EXCEPTION, e.getMessage());
+            result = Failure.of(status);
+        }
+        return result;
+    }
+
+    public static Result<String> callQueryExchangeUrl(String command, HttpServerExchange exchange, String url) {
+        Result<String> result = null;
+        try {
+            ClientConnection conn = connCache.get(url);
+            if(conn == null || !conn.isOpen()) {
+                conn = client.connect(new URI(url), Http2Client.WORKER, Http2Client.SSL, Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
+                connCache.put(url, conn);
+            }
+            // Create one CountDownLatch that will be reset in the callback function
+            final CountDownLatch latch = new CountDownLatch(1);
+            // Create an AtomicReference object to receive ClientResponse from callback function
+            final AtomicReference<ClientResponse> reference = new AtomicReference<>();
+            String message = "/portal/query?cmd=" + URLEncoder.encode(command, "UTF-8");
+            final ClientRequest request = new ClientRequest().setMethod(Methods.GET).setPath(message);
+            String token = exchange.getRequestHeaders().getFirst(Headers.AUTHORIZATION);
+            if(token != null) request.getRequestHeaders().put(Headers.AUTHORIZATION, token);
+            request.getRequestHeaders().put(Headers.HOST, "localhost");
+            conn.sendRequest(request, client.createClientCallback(reference, latch));
+            latch.await();
+            int statusCode = reference.get().getResponseCode();
+            String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
+            if(statusCode != 200) {
+                Status status = Config.getInstance().getMapper().readValue(body, Status.class);
+                result = Failure.of(status);
+            } else result = Success.of(body);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            Status status = new Status(GENERIC_EXCEPTION, e.getMessage());
+            result = Failure.of(status);
+        }
+        return result;
+    }
+
+    public static Result<String> callQueryExchange(String command, HttpServerExchange exchange) {
+        Result<String> result = null;
+        try {
+            if(connection == null || !connection.isOpen()) {
+                // The connection is close or not created.
+                String host = cluster.serviceToUrl("https", queryServiceId, tag, null);
+                connection = client.connect(new URI(host), Http2Client.WORKER, Http2Client.SSL, Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
+            }
+            // Create one CountDownLatch that will be reset in the callback function
+            final CountDownLatch latch = new CountDownLatch(1);
+            // Create an AtomicReference object to receive ClientResponse from callback function
+            final AtomicReference<ClientResponse> reference = new AtomicReference<>();
+            String message = "/portal/query?cmd=" + URLEncoder.encode(command, "UTF-8");
+            final ClientRequest request = new ClientRequest().setMethod(Methods.GET).setPath(message);
+            String token = exchange.getRequestHeaders().getFirst(Headers.AUTHORIZATION);
+            if(token != null) request.getRequestHeaders().put(Headers.AUTHORIZATION, token);
+            request.getRequestHeaders().put(Headers.HOST, "localhost");
+            connection.sendRequest(request, client.createClientCallback(reference, latch));
+            latch.await();
+            int statusCode = reference.get().getResponseCode();
+            String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
+            if(statusCode != 200) {
+                Status status = Config.getInstance().getMapper().readValue(body, Status.class);
+                result = Failure.of(status);
+            } else result = Success.of(body);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            Status status = new Status(GENERIC_EXCEPTION, e.getMessage());
+            result = Failure.of(status);
+        }
+        return result;
+    }
+
+    public static Result<String> callQueryUrl(String command, String url) {
+        Result<String> result = null;
+        try {
+            ClientConnection conn = connCache.get(url);
+            if(conn == null || !conn.isOpen()) {
+                conn = client.connect(new URI(url), Http2Client.WORKER, Http2Client.SSL, Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
+                connCache.put(url, conn);
+            }
+            // Create one CountDownLatch that will be reset in the callback function
+            final CountDownLatch latch = new CountDownLatch(1);
+            // Create an AtomicReference object to receive ClientResponse from callback function
+            final AtomicReference<ClientResponse> reference = new AtomicReference<>();
+            String message = "/portal/query?cmd=" + URLEncoder.encode(command, "UTF-8");
+            final ClientRequest request = new ClientRequest().setMethod(Methods.GET).setPath(message);
+            request.getRequestHeaders().put(Headers.HOST, "localhost");
+            conn.sendRequest(request, client.createClientCallback(reference, latch));
+            latch.await();
+            int statusCode = reference.get().getResponseCode();
+            String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
+            if(statusCode != 200) {
+                Status status = Config.getInstance().getMapper().readValue(body, Status.class);
+                result = Failure.of(status);
+            } else result = Success.of(body);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            Status status = new Status(GENERIC_EXCEPTION, e.getMessage());
+            result = Failure.of(status);
+        }
+        return result;
+    }
+
+    public static Result<String> callQueryTokenUrl(String command, String token, String url) {
+        Result<String> result = null;
+        try {
+            ClientConnection conn = connCache.get(url);
+            if(conn == null || !conn.isOpen()) {
+                conn = client.connect(new URI(url), Http2Client.WORKER, Http2Client.SSL, Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
+                connCache.put(url, conn);
+            }
+            // Create one CountDownLatch that will be reset in the callback function
+            final CountDownLatch latch = new CountDownLatch(1);
+            // Create an AtomicReference object to receive ClientResponse from callback function
+            final AtomicReference<ClientResponse> reference = new AtomicReference<>();
+            String message = "/portal/query?cmd=" + URLEncoder.encode(command, "UTF-8");
+            final ClientRequest request = new ClientRequest().setMethod(Methods.GET).setPath(message);
+            request.getRequestHeaders().put(Headers.AUTHORIZATION, "Bearer " + token);
+            request.getRequestHeaders().put(Headers.HOST, "localhost");
+            conn.sendRequest(request, client.createClientCallback(reference, latch));
+            latch.await();
+            int statusCode = reference.get().getResponseCode();
+            String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
+            if(statusCode != 200) {
+                Status status = Config.getInstance().getMapper().readValue(body, Status.class);
+                result = Failure.of(status);
+            } else result = Success.of(body);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            Status status = new Status(GENERIC_EXCEPTION, e.getMessage());
+            result = Failure.of(status);
+        }
+        return result;
+    }
+
+    /*
+    public static Result<String> callQueryTokenUrl(String command, String token, String url) {
+        Result<String> result = null;
+        try {
+            ClientConnection conn = connCache.get(url);
+            if(conn == null || !conn.isOpen()) {
+                conn = client.connect(new URI(url), Http2Client.WORKER, Http2Client.SSL, Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
+                connCache.put(url, conn);
+            }
+            // Create one CountDownLatch that will be reset in the callback function
+            final CountDownLatch latch = new CountDownLatch(1);
+            // Create an AtomicReference object to receive ClientResponse from callback function
+            final AtomicReference<ClientResponse> reference = new AtomicReference<>();
+            String message = "/portal/query?cmd=" + URLEncoder.encode(command, "UTF-8");
+            final ClientRequest request = new ClientRequest().setMethod(Methods.GET).setPath(message);
+            request.getRequestHeaders().put(Headers.AUTHORIZATION, token.startsWith("Bearer") ? token : "Bearer " + token);
+            request.getRequestHeaders().put(Headers.HOST, "localhost");
+            conn.sendRequest(request, client.createClientCallback(reference, latch));
+            latch.await();
+            int statusCode = reference.get().getResponseCode();
+            String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
+            if(statusCode != 200) {
+                Status status = Config.getInstance().getMapper().readValue(body, Status.class);
+                result = Failure.of(status);
+            } else result = Success.of(body);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            Status status = new Status(GENERIC_EXCEPTION, e.getMessage());
+            result = Failure.of(status);
+        }
+        return result;
+    }
+    */
+
+    /**
+     * Get User by email with exchange and email
+     *
+     * @param exchange HttpServerExchange
+     * @param email user email
+     * @return Result of user object in JSON
+     */
+    public static Result<String> getUserByEmail(HttpServerExchange exchange, String email) {
+        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"user\",\"action\":\"queryUserByEmail\",\"version\":\"0.1.0\",\"data\":{\"email\":\"%s\"}}", email);
+        return callQueryExchange(command, exchange);
+    }
+
+    /**
+     * Get User by email with exchange, a specific url and email
+     *
+     * @param exchange HttpServerExchange
+     * @param url url to a specific host
+     * @param email user email
+     * @return Result of user object in JSON
+     */
+    public static Result<String> getUserByEmail(HttpServerExchange exchange, String url, String email) {
+        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"user\",\"action\":\"queryUserByEmail\",\"version\":\"0.1.0\",\"data\":{\"email\":\"%s\"}}", email);
+        return callQueryExchangeUrl(command, exchange, url);
+    }
+
+    /**
+     * Get User by email between service to service invocation. It is mainly called from light-spa-4j social login handlers.
+     * The token will be a bootstrap client credential token so that there is no user_id in the JWT to bypass the match
+     * verification. This is an internal method that is called between portal services and a client credential token must
+     * be provided.
+     *
+     * @param email email
+     * @param token a client credential JWT token
+     * @return Result of user
+     */
+    public static Result<String> getUserByEmail(String email, String token) {
+        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"user\",\"action\":\"queryUserByEmail\",\"version\":\"0.1.0\",\"data\":{\"email\":\"%s\"}}", email);
+        return callQueryWithToken(command, token);
+    }
+
+    /**
+     * Get User email by id with the current credentials in the exchange. This means the same user is
+     * trying to get its email from userId. Or an Admin user is doing so with an authorization code
+     * token.
+     *
+     * @param exchange HttpServerExchange
+     * @param userId userId
+     * @return Result of user email
+     */
+    public static Result<String> getUserById(HttpServerExchange exchange, String userId) {
+        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"user\",\"action\":\"queryUserById\",\"version\":\"0.1.0\",\"data\":{\"userId\":\"%s\"}}", userId);
+        return callQueryExchange(command, exchange);
+    }
+
+    /**
+     * Get User email by id with the same credentials token. It must be the same user or an admin user. Given there is
+     * a url in the parameter, that means this is coming from the Kafka lookup already so the exact url is specified.
+     *
+     * @param exchange HttpServerExchange
+     * @param url to a specific host
+     * @param userId userId
+     * @return Result of user email
+     */
+    public static Result<String> getUserById(HttpServerExchange exchange, String url, String userId) {
+        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"user\",\"action\":\"queryUserById\",\"version\":\"0.1.0\",\"data\":{\"userId\":\"%s\"}}", userId);
+        return callQueryExchangeUrl(command, exchange, url);
+    }
+
+    /**
+     * Get User email by userId between service to service invocation. The token will be a client credential
+     * token so that there is no user_id in the JWT to bypass the match verification. This is an internal
+     * method that is called between portal services and a client credential token must be provided.
+     *
+     * @param userId userId
+     * @param token a client credential JWT token
+     * @return Result of user email
+     */
+     public static Result<String> getUserById(String userId, String token) {
+         final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"user\",\"action\":\"queryUserById\",\"version\":\"0.1.0\",\"data\":{\"userId\":\"%s\"}}", userId);
+         return callQueryWithToken(command, token);
+     }
+
+    /**
+     * Get Nonce for the user by email. The result also indicates the user exists in the system.
+     *
+     * @param exchange HttpServerExchange
+     * @param email user email
+     * @return Result of user object in JSON
+     */
+    public static Result<String> getNonceByEmail(HttpServerExchange exchange, String email) {
+        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"user\",\"action\":\"getNonceByEmail\",\"version\":\"0.1.0\",\"data\":{\"email\":\"%s\"}}", email);
+        return callQueryExchange(command, exchange);
+    }
+
+    /**
+     * Get Nonce for the user by email. The result also indicates the user exists in the system.
+     *
+     * @param exchange HttpServerExchange
+     * @param url url to a specific host
+     * @param email user email
+     * @return Result of user object in JSON
+     */
+    public static Result<String> getNonceByEmail(HttpServerExchange exchange, String url, String email) {
+        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"user\",\"action\":\"getNonceByEmail\",\"version\":\"0.1.0\",\"data\":{\"email\":\"%s\"}}", email);
+        return callQueryExchangeUrl(command, exchange, url);
+    }
+
+    /**
+     * Get city object from a combination of country, province and city. The result also indicates the city exists in the system.
+     *
+     * @param exchange HttpServerExchange
+     * @param country of the city
+     * @param province of the city
+     * @param city name of the city
+     * @return Result of city object in JSON
+     */
+    public static Result<String> getCity(HttpServerExchange exchange, String country, String province, String city) {
+        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"covid\",\"action\":\"getCity\",\"version\":\"0.1.0\",\"data\":{\"country\":\"%s\",\"province\":\"%s\",\"city\":\"%s\"}}", country, province, city);
+        return callQueryExchange(command, exchange);
+    }
+
+    /**
+     * Get password by email for login.
+     *
+     * @param url url to a specific host
+     * @param email email of the user
+     * @param password password of the user
+     * @return Result of user password
+     */
+    public static Result<String> loginUser(String url, String email, String password) {
+        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"user\",\"action\":\"loginUser\",\"version\":\"0.1.0\",\"data\":{\"email\":\"%s\",\"password\":\"%s\"}}", email, password);
+        return callQueryUrl(command, url);
+    }
+
+    /**
+     * Get private messages for the user by email. The result contains a list of messages.
+     *
+     * @param exchange HttpServerExchange
+     * @param url host of instance that contains the state store
+     * @param email user email
+     * @return Result of message list in JSON
+     */
+    public static Result<String> getMessageByEmail(HttpServerExchange exchange, String url, String email) {
+        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"user\",\"action\":\"getPrivateMessage\",\"version\":\"0.1.0\",\"data\":{\"email\":\"%s\"}}", email);
+        return callQueryExchangeUrl(command, exchange, url);
+    }
+
+    /**
+     * Get notification for the user by email. The result contains a list of notifications.
+     *
+     * @param exchange HttpServerExchange
+     * @param url host of instance that contains the state store
+     * @param email user email
+     * @return Result of message list in JSON
+     */
+    public static Result<String> getNotificationByEmail(HttpServerExchange exchange, String url, String email) {
+        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"user\",\"action\":\"getNotification\",\"version\":\"0.1.0\",\"data\":{\"email\":\"%s\"}}", email);
+        return callQueryExchangeUrl(command, exchange, url);
+    }
+
+    /**
+     * Get covid entity for the user by key. The result contains an entity object.
+     *
+     * @param exchange HttpServerExchange
+     * @param url host of instance that contains the state store
+     * @param email entity email
+     * @return Result of message list in JSON
+     */
+    public static Result<String> getEntity(HttpServerExchange exchange, String url, String email) {
+        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"covid\",\"action\":\"getEntity\",\"version\":\"0.1.0\",\"data\":{\"email\":\"%s\"}}", email);
+        return callQueryExchangeUrl(command, exchange, url);
+    }
+
+    /**
+     * Get status by email. The result contains an status object.
+     *
+     * @param exchange HttpServerExchange
+     * @param url host of instance that contains the state store
+     * @param email entity email
+     * @return Result of status object in JSON
+     */
+    public static Result<String> getStatusByEmail(HttpServerExchange exchange, String url, String email) {
+        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"covid\",\"action\":\"getStatusByEmail\",\"version\":\"0.1.0\",\"data\":{\"email\":\"%s\"}}", email);
+        return callQueryExchangeUrl(command, exchange, url);
+    }
+
+    /**
+     * Get status by email with a client credentials token. The result contains an status object.
+     *
+     * @param token Jwt token
+     * @param url host of instance that contains the state store
+     * @param email entity email
+     * @return Result of status object in JSON
+     */
+    public static Result<String> getStatusByEmail(String url, String email, String token) {
+        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"covid\",\"action\":\"getStatusByEmail\",\"version\":\"0.1.0\",\"data\":{\"email\":\"%s\"}}", email);
+        return callQueryTokenUrl(command, token, url);
+    }
+
+    /**
+     * Get website by email. The result contains an website object.
+     *
+     * @param exchange HttpServerExchange
+     * @param url host of instance that contains the state store
+     * @param email entity email
+     * @return Result of website object in JSON
+     */
+    public static Result<String> getWebsiteByEmail(HttpServerExchange exchange, String url, String email) {
+        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"covid\",\"action\":\"getWebsiteByEmail\",\"version\":\"0.1.0\",\"data\":{\"email\":\"%s\"}}", email);
+        return callQueryExchangeUrl(command, exchange, url);
+    }
+
+    /**
+     * Get website by email with a client credentials token. The result contains a website object.
+     *
+     * @param token Jwt token
+     * @param url host of instance that contains the state store
+     * @param email entity email
+     * @return Result of website object in JSON
+     */
+    public static Result<String> getWebsiteByEmail(String url, String email, String token) {
+        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"covid\",\"action\":\"getWebsiteByEmail\",\"version\":\"0.1.0\",\"data\":{\"email\":\"%s\"}}", email);
+        return callQueryTokenUrl(command, token, url);
+    }
+
+    /**
+     * Get payment by email. The result contains a list of payments.
+     *
+     * @param exchange HttpServerExchange
+     * @param url host of instance that contains the state store
+     * @param email entity email
+     * @return Result of payments object in JSON
+     */
+    public static Result<String> getPaymentByEmail(HttpServerExchange exchange, String url, String email) {
+        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"user\",\"action\":\"getPayment\",\"version\":\"0.1.0\",\"data\":{\"email\":\"%s\"}}", email);
+        return callQueryExchangeUrl(command, exchange, url);
+    }
+
+    /**
+     * Get payment by email. The result contains a list of payments. This is for API to API
+     * invocation with client credentials token.
+     *
+     * @param url host of instance that contains the state store
+     * @param email entity email
+     * @param token JWT token
+     * @return Result of payments object in JSON
+     */
+    public static Result<String> getPaymentByEmail(String url, String email, String token) {
+        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"user\",\"action\":\"getPayment\",\"version\":\"0.1.0\",\"data\":{\"email\":\"%s\"}}", email);
+        return callQueryTokenUrl(command, token, url);
+    }
+
+    /**
+     * Get customer orders by email. The result contains a list of orders for the customer email.
+     *
+     * @param exchange HttpServerExchange
+     * @param url host of instance that contains the state store
+     * @param email entity email
+     * @param offset entry offset
+     * @param limit entry limit
+     * @return Result of orders object in JSON
+     */
+    public static Result<String> getCustomerOrderByEmail(HttpServerExchange exchange, String url, String email, int offset, int limit) {
+        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"user\",\"action\":\"getCustomerOrder\",\"version\":\"0.1.0\",\"data\":{\"email\":\"%s\",\"offset\":%d,\"limit\":%d}}", email, offset, limit);
+        return callQueryExchangeUrl(command, exchange, url);
+    }
+
+    /**
+     * Get merchant orders by email. The result contains a list of orders for the merchant email.
+     *
+     * @param exchange HttpServerExchange
+     * @param url host of instance that contains the state store
+     * @param email entity email
+     * @param orderStatus order status
+     * @param offset order offset
+     * @param limit order limit
+     * @return Result of orders object in JSON
+     */
+    public static Result<String> getMerchantOrderByEmail(HttpServerExchange exchange, String url, String email, String orderStatus, int offset, int limit) {
+        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"user\",\"action\":\"getMerchantOrder\",\"version\":\"0.1.0\",\"data\":{\"email\":\"%s\",\"status\":\"%s\",\"offset\":%d,\"limit\":%d}}", email, orderStatus, offset, limit);
+        return callQueryExchangeUrl(command, exchange, url);
+    }
+
+    /**
+     * Get client detail by clientId. The result contains a map of properties.
+     *
+     * @param exchange HttpServerExchange
+     * @param url host of instance that contains the state store
+     * @param clientId client id
+     * @return Result of client object in JSON
+     */
+    public static Result<String> getClientById(HttpServerExchange exchange, String url, String clientId) {
+        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getClientById\",\"version\":\"0.1.0\",\"data\":{\"clientId\":\"%s\"}}", clientId);
+        return callQueryExchangeUrl(command, exchange, url);
+    }
+
+    /**
+     * Get client detail by clientId. The result contains a map of properties.
+     *
+     * @param token access token
+     * @param url host of instance that contains the state store
+     * @param clientId client id
+     * @return Result of client object in JSON
+     */
+    public static Result<String> getClientById(String token, String url, String clientId) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getClientById\",\"version\":\"0.1.0\",\"data\":{\"clientId\":\"%s\"}}", clientId);
+        return callQueryTokenUrl(s, token, url);
+    }
+
+    /**
+     * Get client by clientId with client credentials token from oauth-kafka. The token will be a client credential
+     * token so that there is no user_id in the JWT to bypass the match verification. This is an internal method
+     * that is called between oauth and portal services and a client credential token must be provided.
+     *
+     * @param clientId client Id
+     * @param token a client credential JWT token
+     * @return Result of client
+     */
+    public static Result<String> getClientById(String token, String clientId) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getClientById\",\"version\":\"0.1.0\",\"data\":{\"clientId\":\"%s\"}}", clientId);
+        return callQueryWithToken(s, token);
+    }
+
+    /**
+     * Get client for host with exchange and url. The result contains a list of client.
+     *
+     * @param exchange HttpServerExchange
+     * @param url url of target server
+     * @param host host name
+     * @param offset of the records
+     * @param limit of the records
+     * @return Result list of client in JSON
+     */
+    public static Result<String> getClient(HttpServerExchange exchange, String url, String host, int offset, int limit) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getClient\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
+        return callQueryExchangeUrl(s, exchange, url);
+    }
+
+    /**
+     * Get service detail by serviceId and buildNumber. The result contains a map of properties.
+     *
+     * @param exchange HttpServerExchange
+     * @param url host of instance that contains the state store
+     * @param serviceId service id
+     * @param buildNumber build number
+     * @return Result of client object in JSON
+     */
+    public static Result<String> getServiceById(HttpServerExchange exchange, String url, String serviceId, String buildNumber) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getServiceById\",\"version\":\"0.1.0\",\"data\":{\"serviceId\":\"%s\",\"buildNumber\":\"%s\"}}", serviceId, buildNumber);
+        return callQueryExchangeUrl(s, exchange, url);
+    }
+
+    /**
+     * Get refreshToken detail. The result contains a map of properties.
+     *
+     * @param exchange HttpServerExchange
+     * @param url host of instance that contains the state store
+     * @param refreshToken refreshToken
+     * @return Result of refreshToken object in JSON
+     */
+    public static Result<String> getRefreshTokenDetail(HttpServerExchange exchange, String url, String refreshToken) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getRefreshTokenDetail\",\"version\":\"0.1.0\",\"data\":{\"refreshToken\":\"%s\"}}", refreshToken);
+        return callQueryExchangeUrl(s, exchange, url);
+    }
+
+    /**
+     * Get refresh tokens for host with exchange and url. The result contains a list of refresh tokens.
+     *
+     * @param exchange HttpServerExchange
+     * @param url url of target server
+     * @param host host name
+     * @param offset of the records
+     * @param limit of the records
+     * @return Result list of refresh tokens in JSON
+     */
+    public static Result<String> getRefreshToken(HttpServerExchange exchange, String url, String host, int offset, int limit) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getRefreshToken\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
+        return callQueryExchangeUrl(s, exchange, url);
+    }
+
+    /**
+     * Get authCode detail. The result contains a map of properties.
+     *
+     * @param exchange HttpServerExchange
+     * @param url host of instance that contains the state store
+     * @param authCode auth code
+     * @return Result of authCode object in JSON
+     */
+    public static Result<String> getAuthCodeDetail(HttpServerExchange exchange, String url, String authCode) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getAuthCodeDetail\",\"version\":\"0.1.0\",\"data\":{\"authCode\":\"%s\"}}", authCode);
+        return callQueryExchangeUrl(s, exchange, url);
+    }
+
+    /**
+     * Get authCode detail by authCode with client credentials token from oauth-kafka. The token will be a client
+     * credentials token so that there is no user_id in the JWT to bypass the match verification. This is an internal
+     * method that is called between oauth and portal services and a client credential token must be provided.
+     *
+     * @param authCode Auth Code
+     * @param token a client credential JWT token
+     * @return Result of authCode
+     */
+    public static Result<String> getAuthCodeDetail(String authCode, String token) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getAuthCodeDetail\",\"version\":\"0.1.0\",\"data\":{\"authCode\":\"%s\"}}", authCode);
+        return callQueryWithToken(s, token);
+    }
+
+    /**
+     * Get authCode for host. The result contains a list of auth code object.
+     *
+     * @param exchange HttpServerExchange
+     * @param host host name
+     * @param offset of the records
+     * @param limit of the records
+     * @return Result list of authCode object in JSON
+     */
+    public static Result<String> getAuthCode(HttpServerExchange exchange, String host, int offset, int limit) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getAuthCode\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
+        return callQueryExchange(s, exchange);
+    }
+
+    /**
+     * Get authCode for host with exchange and url. The result contains a list of auth code object.
+     *
+     * @param exchange HttpServerExchange
+     * @param url url of target server
+     * @param host host name
+     * @param offset of the records
+     * @param limit of the records
+     * @return Result list of authCode object in JSON
+     */
+    public static Result<String> getAuthCode(HttpServerExchange exchange, String url, String host, int offset, int limit) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getAuthCode\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
+        return callQueryExchangeUrl(s, exchange, url);
+    }
+
+    /**
+     * Get refToken detail. The result contains a map of properties.
+     *
+     * @param exchange HttpServerExchange
+     * @param url host of instance that contains the state store
+     * @param refToken reference token
+     * @return Result of refToken object in JSON
+     */
+    public static Result<String> getRefTokenDetail(HttpServerExchange exchange, String url, String refToken) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getRefTokenDetail\",\"version\":\"0.1.0\",\"data\":{\"refToken\":\"%s\"}}", refToken);
+        return callQueryExchangeUrl(s, exchange, url);
+    }
+
+    /**
+     * Get refToken detail by reference token with client credentials token from oauth-kafka. The token will be a client
+     * credentials token so that there is no user_id in the JWT to bypass the match verification. This is an internal
+     * method that is called between oauth and portal services and a client credential token must be provided.
+     *
+     * @param refToken Reference Token
+     * @param token a client credential JWT token
+     * @return Result of refToken
+     */
+    public static Result<String> getRefTokenDetail(String refToken, String token) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getRefTokenDetail\",\"version\":\"0.1.0\",\"data\":{\"refToken\":\"%s\"}}", refToken);
+        return callQueryWithToken(s, token);
+    }
+
+    /**
+     * Get reference tokens for host with exchange and url. The result contains a list of reference tokens.
+     *
+     * @param exchange HttpServerExchange
+     * @param url url of target server
+     * @param host host name
+     * @param offset of the records
+     * @param limit of the records
+     * @return Result list of reference tokens in JSON
+     */
+    public static Result<String> getRefToken(HttpServerExchange exchange, String url, String host, int offset, int limit) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getRefToken\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
+        return callQueryExchangeUrl(s, exchange, url);
+    }
+
+    /**
+     * Get provider detail. The result contains a map of properties.
+     *
+     * @param exchange HttpServerExchange
+     * @param url host of instance that contains the state store
+     * @param providerId provider Id
+     * @return Result of provider object in JSON
+     */
+    public static Result<String> getProviderDetail(HttpServerExchange exchange, String url, String providerId) {
+        String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getProviderDetail\",\"version\":\"0.1.0\",\"data\":{\"providerId\":\"%s\"}}", providerId);
+        return callQueryExchangeUrl(command, exchange, url);
+    }
+
+    /**
+     * Get provider for host with exchange and url. The result contains a list of providers.
+     *
+     * @param exchange HttpServerExchange
+     * @param url url of target server
+     * @param host host name
+     * @param offset of the records
+     * @param limit of the records
+     * @return Result list of provider object in JSON
+     */
+    public static Result<String> getProvider(HttpServerExchange exchange, String url, String host, int offset, int limit) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getProvider\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
+        return callQueryExchangeUrl(s, exchange, url);
+    }
+
+    /**
+     * Get a list of hosts from reference api
+     *
+     * @return Result of list of host object in JSON
+     */
+    public static Result<String> getHost() {
+        String path = "/r/data?name=host";
+        Result<String> result = null;
+        ClientConnection conn = null;
+        try {
+            String host = cluster.serviceToUrl("https", "com.networknt.reference-1.0.0", tag, null);
+            conn = client.connect(new URI(host), Http2Client.WORKER, Http2Client.SSL, Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
+            // Create one CountDownLatch that will be reset in the callback function
+            final CountDownLatch latch = new CountDownLatch(1);
+            // Create an AtomicReference object to receive ClientResponse from callback function
+            final AtomicReference<ClientResponse> reference = new AtomicReference<>();
+            final ClientRequest request = new ClientRequest().setMethod(Methods.GET).setPath(path);
+            request.getRequestHeaders().put(Headers.HOST, "localhost");
+            conn.sendRequest(request, client.createClientCallback(reference, latch));
+            latch.await();
+            int statusCode = reference.get().getResponseCode();
+            String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
+            if(statusCode != 200) {
+                Status status = Config.getInstance().getMapper().readValue(body, Status.class);
+                result = Failure.of(status);
+            } else result = Success.of(body);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            Status status = new Status(GENERIC_EXCEPTION, e.getMessage());
+            result = Failure.of(status);
+        } finally {
+            IoUtils.safeClose(conn);
+        }
+        return result;
+    }
+
+    /**
+     * Get category for host and name with exchange and url. The result contains a list of codes.
+     *
+     * @param exchange HttpServerExchange
+     * @param url url of target server
+     * @param host host name
+     * @param name of the category
+     * @return Result list of category objects in JSON
+     */
+    public static Result<String> getCategoryByName(HttpServerExchange exchange, String url, String host, String name) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getCategoryByName\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"name\":\"%s\"}}", host, name);
+        return callQueryExchangeUrl(s, exchange, url);
+    }
+
+    /**
+     * Get category list for host with exchange and url. The result contains a list of categories.
+     *
+     * @param exchange HttpServerExchange
+     * @param url url of target server
+     * @param host host name
+     * @return Result list of category objects in JSON
+     */
+    public static Result<String> getCategory(HttpServerExchange exchange, String url, String host) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getCategory\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\"}}", host);
+        return callQueryExchangeUrl(s, exchange, url);
+    }
+
+    /**
+     * Get blog for host and id with exchange and url. The result contains a blog object.
+     *
+     * @param exchange HttpServerExchange
+     * @param url url of target server
+     * @param host host name
+     * @param id of the blog
+     * @return Result the blog object in JSON
+     */
+    public static Result<String> getBlogById(HttpServerExchange exchange, String url, String host, String id) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getBlogById\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"id\":\"%s\"}}", host, id);
+        return callQueryExchangeUrl(s, exchange, url);
+    }
+
+    /**
+     * Get blog for host and id with exchange. The result contains a blog object.
+     *
+     * @param exchange HttpServerExchange
+     * @param host host name
+     * @param id of the blog
+     * @return Result the blog object in JSON
+     */
+    public static Result<String> getBlogById(HttpServerExchange exchange, String host, String id) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getBlogById\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"id\":\"%s\"}}", host, id);
+        return callQueryExchange(s, exchange);
+    }
+
+    /**
+     * Get blog list for host or categories or tags with exchange and url. The result contains a list of detailed blog objects.
+     *
+     * @param exchange HttpServerExchange
+     * @param host host name
+     * @param url url of target server
+     * @param offset of the records
+     * @param limit of the records
+     * @param categories list of categories
+     * @param tags list of tags
+     * @return Result the blog object in JSON
+     */
+    public static Result<String> getBlogList(HttpServerExchange exchange, String url, String host, int offset, int limit, List<String> categories, List<String> tags) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("host", "lightapi.net");
+        map.put("service", "market");
+        map.put("action", "getBlogList");
+        map.put("version", "0.1.0");
+        Map<String, Object> dataMap = new HashMap<>();
+        dataMap.put("host", host);
+        dataMap.put("offset", offset);
+        dataMap.put("limit", limit);
+        dataMap.put("categories", categories);
+        dataMap.put("tags", tags);
+        map.put("data", dataMap);
+        return callQueryExchangeUrl(JsonMapper.toJson(map), exchange, url);
+    }
+
+    /**
+     * Get blog list for host with exchange and url. The result contains a list of blogs.
+     *
+     * @param exchange HttpServerExchange
+     * @param url url of target server
+     * @param host host name
+     * @param offset of the records
+     * @param limit of the records
+     * @return Result list of blog objects in JSON
+     */
+    public static Result<String> getBlog(HttpServerExchange exchange, String url, String host, int offset, int limit) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getBlog\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
+        return callQueryExchangeUrl(s, exchange, url);
+    }
+
+    /**
+     * Get document for host and id with exchange and url. The result contains a document object.
+     *
+     * @param exchange HttpServerExchange
+     * @param url url of target server
+     * @param host host name
+     * @param id of the document
+     * @return Result the document object in JSON
+     */
+    public static Result<String> getDocumentById(HttpServerExchange exchange, String url, String host, String id) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getDocumentById\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"id\":\"%s\"}}", host, id);
+        return callQueryExchangeUrl(s, exchange, url);
+    }
+
+    /**
+     * Get document list for host with exchange and url. The result contains a list of documents.
+     *
+     * @param exchange HttpServerExchange
+     * @param url url of target server
+     * @param host host name
+     * @param offset of the records
+     * @param limit of the records
+     * @return Result list of document objects in JSON
+     */
+    public static Result<String> getDocument(HttpServerExchange exchange, String url, String host, int offset, int limit) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getDocument\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
+        return callQueryExchangeUrl(s, exchange, url);
+    }
+
+    /**
+     * Get news for host and id with exchange and url. The result contains a news object.
+     *
+     * @param exchange HttpServerExchange
+     * @param url url of target server
+     * @param host host name
+     * @param id of the document
+     * @return Result the news object in JSON
+     */
+    public static Result<String> getNewsById(HttpServerExchange exchange, String url, String host, String id) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getNewsById\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"id\":\"%s\"}}", host, id);
+        return callQueryExchangeUrl(s, exchange, url);
+    }
+
+    /**
+     * Get news list for host with exchange and url. The result contains a list of news.
+     *
+     * @param exchange HttpServerExchange
+     * @param url url of target server
+     * @param host host name
+     * @param offset of the records
+     * @param limit of the records
+     * @return Result list of news objects in JSON
+     */
+    public static Result<String> getNews(HttpServerExchange exchange, String url, String host, int offset, int limit) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getNews\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
+        return callQueryExchangeUrl(s, exchange, url);
+    }
+
+    /**
+     * Get page for host and id with exchange and url. The result contains a page object.
+     *
+     * @param exchange HttpServerExchange
+     * @param url url of target server
+     * @param host host name
+     * @param id of the page
+     * @return Result the page object in JSON
+     */
+    public static Result<String> getPageById(HttpServerExchange exchange, String url, String host, String id) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getPageById\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"id\":\"%s\"}}", host, id);
+        return callQueryExchangeUrl(s, exchange, url);
+    }
+
+    /**
+     * Get page list for host with exchange and url. The result contains a list of page.
+     *
+     * @param exchange HttpServerExchange
+     * @param url url of target server
+     * @param host host name
+     * @param offset of the records
+     * @param limit of the records
+     * @return Result list of page objects in JSON
+     */
+    public static Result<String> getPage(HttpServerExchange exchange, String url, String host, int offset, int limit) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getPage\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
+        return callQueryExchangeUrl(s, exchange, url);
+    }
+
+    /**
+     * Get template for host and id with exchange and url. The result contains a template object.
+     *
+     * @param exchange HttpServerExchange
+     * @param url url of target server
+     * @param host host name
+     * @param id of the template
+     * @return Result the template object in JSON
+     */
+    public static Result<String> getTemplateById(HttpServerExchange exchange, String url, String host, String id) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getTemplateById\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"id\":\"%s\"}}", host, id);
+        return callQueryExchangeUrl(s, exchange, url);
+    }
+
+    /**
+     * Get template list for host with exchange and url. The result contains a list of template.
+     *
+     * @param exchange HttpServerExchange
+     * @param url url of target server
+     * @param host host name
+     * @param offset of the records
+     * @param limit of the records
+     * @return Result list of template objects in JSON
+     */
+    public static Result<String> getTemplate(HttpServerExchange exchange, String url, String host, int offset, int limit) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getTemplate\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
+        return callQueryExchangeUrl(s, exchange, url);
+    }
+
+    /**
+     * Get tags list for host and app with url. The result contains a list of tags for the host and app combination.
+     *
+     * @param url url of target server
+     * @param host host name
+     * @param app app name
+     * @return Result list of tags objects in JSON
+     */
+    public static Result<String> getTags(String url, String host, String app) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getTags\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"app\":\"%s\",\"local\":true}}", host, app);
+        return callQueryUrl(s, url);
+    }
+
+    /**
+     * Get error list for host with exchange and url. The result contains a list of error codes.
+     *
+     * @param exchange HttpServerExchange
+     * @param url url of target server
+     * @param host host name
+     * @param offset of the records
+     * @param limit of the records
+     * @return Result list of error objects in JSON
+     */
+    public static Result<String> getError(HttpServerExchange exchange, String url, String host, int offset, int limit) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getError\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
+        return callQueryExchangeUrl(s, exchange, url);
+    }
+
+    /**
+     * Get error for host and errorCode with exchange. The result contains a error object.
+     *
+     * @param exchange HttpServerExchange
+     * @param host host name
+     * @param url of the target server
+     * @param errorCode of the error
+     * @return Result the error object in JSON
+     */
+    public static Result<String> getErrorByCode(HttpServerExchange exchange, String url, String host, String errorCode) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getErrorByCode\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"errorCode\":\"%s\"}}", host, errorCode);
+        return callQueryExchangeUrl(s, exchange, url);
+    }
+
+    /**
+     * Get schema list for host with exchange and url. The result contains a list of schema ids.
+     *
+     * @param exchange HttpServerExchange
+     * @param url url of target server
+     * @param host host name
+     * @param offset of the records
+     * @param limit of the records
+     * @return Result list of schema objects in JSON
+     */
+    public static Result<String> getJsonSchema(HttpServerExchange exchange, String url, String host, int offset, int limit) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getJsonSchema\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
+        return callQueryExchangeUrl(s, exchange, url);
+    }
+
+    /**
+     * Get schema for host and id with exchange and url. The result contains a schema object.
+     *
+     * @param exchange HttpServerExchange
+     * @param host host name
+     * @param url of the target server
+     * @param id of the schema
+     * @return Result the schema object in JSON
+     */
+    public static Result<String> getJsonSchemaById(HttpServerExchange exchange, String url, String host, String id) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getJsonSchemaById\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"id\":\"%s\"}}", host, id);
+        return callQueryExchangeUrl(s, exchange, url);
+    }
+
+    /**
+     * Get schema for host and id with exchange. The result contains a schema object.
+     *
+     * @param exchange HttpServerExchange
+     * @param host host name
+     * @param id of the schema
+     * @return Result the schema object in JSON
+     */
+    public static Result<String> getJsonSchemaById(HttpServerExchange exchange, String host, String id) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getJsonSchemaById\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"id\":\"%s\"}}", host, id);
+        return callQueryExchange(s, exchange);
+    }
+
+    /**
+     * Get schema list for host or categories or tags with exchange and url. The result contains a list of detailed schema objects.
+     *
+     * @param exchange HttpServerExchange
+     * @param host host name
+     * @param url url of target server
+     * @param offset of the records
+     * @param limit of the records
+     * @param categories list of categories
+     * @param tags list of tags
+     * @return Result the schema object in JSON
+     */
+    public static Result<String> getJsonSchemaList(HttpServerExchange exchange, String url, String host, int offset, int limit, List<String> categories, List<String> tags) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("host", "lightapi.net");
+        map.put("service", "market");
+        map.put("action", "getJsonSchemaList");
+        map.put("version", "0.1.0");
+        Map<String, Object> dataMap = new HashMap<>();
+        dataMap.put("host", host);
+        dataMap.put("offset", offset);
+        dataMap.put("limit", limit);
+        dataMap.put("categories", categories);
+        dataMap.put("tags", tags);
+        map.put("data", dataMap);
+        return callQueryExchangeUrl(JsonMapper.toJson(map), exchange, url);
+    }
+
+}

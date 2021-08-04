@@ -1,0 +1,73 @@
+{
+  "type": "record",
+  "name": "UserDeletedEvent",
+  "namespace": "net.lightapi.portal.user",
+  "fields": [
+    {
+      "name": "EventId",
+      "type": {
+        "type": "record",
+        "name": "EventId",
+        "namespace": "com.networknt.kafka.common",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "doc": "a unique identifier"
+          },
+          {
+            "name": "nonce",
+            "type": "long",
+            "doc": "the number of the transactions for the id"
+          },
+          {
+            "name": "derived",
+            "type": "boolean",
+            "default": false,
+            "doc": "indicate if the event is derived from event processor"
+          }
+        ]
+      }
+    },
+    {
+      "name": "email",
+      "type": "string",
+      "doc": "email of the user to be deleted"
+    },
+    {
+      "name": "userId",
+      "type": "string",
+      "doc": "the unique user id, used to clean up the maproot"
+    },
+    {
+      "name": "keyId",
+      "type": "int",
+      "default": 0,
+      "doc": "keyId 0 email 1 map category 2 map subcategory"
+    },
+    {
+      "name": "country",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "country of the user, used to clean up the maproot"
+    },
+    {
+      "name": "province",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "province of the user, used to clean up the maproot"
+    },
+    {
+      "name": "city",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "city of the user, used to clean up the maproot"
+    },
+    {
+      "name": "timestamp",
+      "type": "long",
+      "default": 0,
+      "doc": "time the event is recorded"
+    }
+  ]
+}

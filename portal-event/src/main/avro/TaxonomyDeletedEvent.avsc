@@ -1,0 +1,54 @@
+{
+  "type": "record",
+  "name": "TaxonomyDeletedEvent",
+  "namespace": "net.lightapi.portal.market",
+  "fields": [
+    {
+      "name": "EventId",
+      "type": {
+        "type": "record",
+        "name": "EventId",
+        "namespace": "com.networknt.kafka.common",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "doc": "a unique identifier"
+          },
+          {
+            "name": "nonce",
+            "type": "long",
+            "doc": "the number of the transactions for the user"
+          },
+          {
+            "name": "derived",
+            "type": "boolean",
+            "default": true,
+            "doc": "indicate if the event is derived from event processor"
+          }
+        ]
+      }
+    },
+    {
+      "name": "host",
+      "type": "string",
+      "doc": "host"
+    },
+    {
+      "name": "name",
+      "type": "string",
+      "doc": "name"
+    },
+    {
+      "name": "value",
+      "type": "string",
+      "doc": "value"
+    },
+    {
+      "name": "timestamp",
+      "type": "long",
+      "default": 0,
+      "doc": "time the event is recorded"
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "type": "record",
+  "name": "CovidWebsiteUpdatedEvent",
+  "namespace": "net.lightapi.portal.covid",
+  "fields": [
+    {
+      "name": "EventId",
+      "type": {
+        "type": "record",
+        "name": "EventId",
+        "namespace": "com.networknt.kafka.common",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "doc": "a unique identifier"
+          },
+          {
+            "name": "nonce",
+            "type": "long",
+            "doc": "the number of the transactions for the id"
+          },
+          {
+            "name": "derived",
+            "type": "boolean",
+            "default": false,
+            "doc": "indicate if the event is derived from event processor"
+          }
+        ]
+      }
+    },
+    {
+      "name": "website",
+      "type": "string",
+      "doc": "website in string format"
+    },
+    {
+      "name": "userId",
+      "type": "string",
+      "doc": "the unique user id to update map store"
+    },
+    {
+      "name": "keyId",
+      "type": "int",
+      "default": 0,
+      "doc": "keyId 0 email 1 map category 2 map subcategory"
+    },
+    {
+      "name": "country",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "country of the user to update map store"
+    },
+    {
+      "name": "province",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "province of the user to update map store"
+    },
+    {
+      "name": "city",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "city of the user to update map store"
+    },
+    {
+      "name": "timestamp",
+      "type": "long",
+      "default": 0,
+      "doc": "time the event is recorded"
+    }
+  ]
+}
