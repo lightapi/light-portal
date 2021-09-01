@@ -51,7 +51,8 @@
     },
     {
       "name": "tag",
-      "type": "string",
+      "type": ["null", "string"],
+      "default": null,
       "doc": "the environment tag of the service"
     },
     {
