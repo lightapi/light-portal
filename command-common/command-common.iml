@@ -9,39 +9,40 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" name="Maven: com.networknt:client:2.0.29-SNAPSHOT" level="project" />
-    <orderEntry type="library" name="Maven: com.networknt:common:2.0.29-SNAPSHOT" level="project" />
-    <orderEntry type="library" name="Maven: com.networknt:decryptor:2.0.29-SNAPSHOT" level="project" />
-    <orderEntry type="library" name="Maven: com.networknt:http-string:2.0.29-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.networknt:client:2.0.31-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.networknt:common:2.0.31-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.networknt:decryptor:2.0.31-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.networknt:http-string:2.0.31-SNAPSHOT" level="project" />
     <orderEntry type="library" name="Maven: io.opentracing:opentracing-api:0.32.0" level="project" />
-    <orderEntry type="library" name="Maven: com.networknt:config:2.0.29-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.networknt:http-entity:2.0.31-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.networknt:config:2.0.31-SNAPSHOT" level="project" />
     <orderEntry type="library" name="Maven: com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.12.1" level="project" />
     <orderEntry type="library" name="Maven: org.yaml:snakeyaml:1.26" level="project" />
-    <orderEntry type="library" name="Maven: com.networknt:service:2.0.29-SNAPSHOT" level="project" />
-    <orderEntry type="library" name="Maven: com.networknt:status:2.0.29-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.networknt:service:2.0.31-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.networknt:status:2.0.31-SNAPSHOT" level="project" />
     <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-databind:2.12.1" level="project" />
     <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-annotations:2.12.1" level="project" />
     <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-core:2.12.1" level="project" />
     <orderEntry type="library" name="Maven: commons-codec:commons-codec:1.11" level="project" />
-    <orderEntry type="library" name="Maven: com.networknt:server:2.0.29-SNAPSHOT" level="project" />
-    <orderEntry type="library" name="Maven: com.networknt:audit:2.0.29-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.networknt:server:2.0.31-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.networknt:audit:2.0.31-SNAPSHOT" level="project" />
     <orderEntry type="library" name="Maven: org.bitbucket.b_c:jose4j:0.6.3" level="project" />
-    <orderEntry type="library" name="Maven: com.networknt:mask:2.0.29-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.networknt:mask:2.0.31-SNAPSHOT" level="project" />
     <orderEntry type="library" name="Maven: com.jayway.jsonpath:json-path:2.4.0" level="project" />
-    <orderEntry type="library" name="Maven: com.networknt:info:2.0.29-SNAPSHOT" level="project" />
-    <orderEntry type="library" name="Maven: com.networknt:exception:2.0.29-SNAPSHOT" level="project" />
-    <orderEntry type="library" name="Maven: com.networknt:body:2.0.29-SNAPSHOT" level="project" />
-    <orderEntry type="library" name="Maven: com.networknt:registry:2.0.29-SNAPSHOT" level="project" />
-    <orderEntry type="library" name="Maven: com.networknt:switcher:2.0.29-SNAPSHOT" level="project" />
-    <orderEntry type="library" name="Maven: com.networknt:portal-registry:2.0.29-SNAPSHOT" level="project" />
-    <orderEntry type="library" name="Maven: com.networknt:balance:2.0.29-SNAPSHOT" level="project" />
-    <orderEntry type="library" name="Maven: com.networknt:handler:2.0.29-SNAPSHOT" level="project" />
-    <orderEntry type="library" name="Maven: com.networknt:monad-result:2.0.29-SNAPSHOT" level="project" />
-    <orderEntry type="library" name="Maven: com.networknt:cluster:2.0.29-SNAPSHOT" level="project" />
-    <orderEntry type="library" name="Maven: com.networknt:utility:2.0.29-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.networknt:info:2.0.31-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.networknt:exception:2.0.31-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.networknt:body:2.0.31-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.networknt:registry:2.0.31-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.networknt:switcher:2.0.31-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.networknt:portal-registry:2.0.31-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.networknt:balance:2.0.31-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.networknt:handler:2.0.31-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.networknt:monad-result:2.0.31-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.networknt:cluster:2.0.31-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.networknt:utility:2.0.31-SNAPSHOT" level="project" />
     <orderEntry type="library" name="Maven: org.owasp.encoder:encoder:1.2.1" level="project" />
-    <orderEntry type="library" name="Maven: com.networknt:consul:2.0.29-SNAPSHOT" level="project" />
-    <orderEntry type="library" name="Maven: com.networknt:kafka-common:2.0.29-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.networknt:consul:2.0.31-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.networknt:kafka-common:2.0.31-SNAPSHOT" level="project" />
     <orderEntry type="library" name="Maven: org.apache.avro:avro:1.9.2" level="project" />
     <orderEntry type="library" name="Maven: org.apache.commons:commons-compress:1.19" level="project" />
     <orderEntry type="library" name="Maven: tech.allegro.schema.json2avro:converter:0.2.9" level="project" />
@@ -63,6 +64,7 @@
     <orderEntry type="library" name="Maven: com.fasterxml.jackson.datatype:jackson-datatype-joda:2.10.5" level="project" />
     <orderEntry type="library" name="Maven: joda-time:joda-time:2.9.9" level="project" />
     <orderEntry type="library" name="Maven: com.kjetland:mbknor-jackson-jsonschema_2.13:1.0.39" level="project" />
+    <orderEntry type="library" name="Maven: org.scala-lang:scala-library:2.13.1" level="project" />
     <orderEntry type="library" name="Maven: org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable:1.3.50" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Maven: org.jetbrains.kotlin:kotlin-scripting-compiler-impl-embeddable:1.3.50" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Maven: org.jetbrains.kotlin:kotlin-scripting-common:1.3.50" level="project" />
@@ -93,36 +95,11 @@
     <orderEntry type="library" name="Maven: org.codehaus.mojo:animal-sniffer-annotations:1.18" level="project" />
     <orderEntry type="library" name="Maven: com.google.errorprone:error_prone_annotations:2.3.4" level="project" />
     <orderEntry type="library" name="Maven: com.google.code.gson:gson:2.8.6" level="project" />
-    <orderEntry type="library" name="Maven: com.networknt:kafka-producer:2.0.29-SNAPSHOT" level="project" />
-    <orderEntry type="library" name="Maven: com.networknt:security:2.0.29-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.networknt:kafka-producer:2.0.31-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.networknt:security:2.0.31-SNAPSHOT" level="project" />
     <orderEntry type="library" name="Maven: com.github.ben-manes.caffeine:caffeine:2.6.2" level="project" />
-    <orderEntry type="library" name="Maven: com.networknt:kafka-entity:2.0.29-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.networknt:kafka-entity:2.0.31-SNAPSHOT" level="project" />
     <orderEntry type="library" name="Maven: com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.12.1" level="project" />
-    <orderEntry type="library" name="Maven: org.apache.kafka:kafka_2.13:2.7.0" level="project" />
-    <orderEntry type="library" name="Maven: org.apache.kafka:kafka-raft:2.7.0" level="project" />
-    <orderEntry type="library" name="Maven: com.fasterxml.jackson.module:jackson-module-scala_2.13:2.10.5" level="project" />
-    <orderEntry type="library" name="Maven: com.fasterxml.jackson.module:jackson-module-paranamer:2.10.5" level="project" />
-    <orderEntry type="library" name="Maven: com.thoughtworks.paranamer:paranamer:2.8" level="project" />
-    <orderEntry type="library" name="Maven: com.fasterxml.jackson.dataformat:jackson-dataformat-csv:2.10.5" level="project" />
-    <orderEntry type="library" name="Maven: net.sf.jopt-simple:jopt-simple:5.0.4" level="project" />
-    <orderEntry type="library" name="Maven: com.yammer.metrics:metrics-core:2.2.0" level="project" />
-    <orderEntry type="library" name="Maven: org.scala-lang.modules:scala-collection-compat_2.13:2.2.0" level="project" />
-    <orderEntry type="library" name="Maven: org.scala-lang.modules:scala-java8-compat_2.13:0.9.1" level="project" />
-    <orderEntry type="library" name="Maven: org.scala-lang:scala-library:2.13.3" level="project" />
-    <orderEntry type="library" name="Maven: org.scala-lang:scala-reflect:2.13.3" level="project" />
-    <orderEntry type="library" name="Maven: com.typesafe.scala-logging:scala-logging_2.13:3.9.2" level="project" />
-    <orderEntry type="library" name="Maven: org.apache.zookeeper:zookeeper:3.5.8" level="project" />
-    <orderEntry type="library" name="Maven: org.apache.zookeeper:zookeeper-jute:3.5.8" level="project" />
-    <orderEntry type="library" name="Maven: org.apache.yetus:audience-annotations:0.5.0" level="project" />
-    <orderEntry type="library" name="Maven: io.netty:netty-handler:4.1.48.Final" level="project" />
-    <orderEntry type="library" name="Maven: io.netty:netty-common:4.1.48.Final" level="project" />
-    <orderEntry type="library" name="Maven: io.netty:netty-resolver:4.1.48.Final" level="project" />
-    <orderEntry type="library" name="Maven: io.netty:netty-buffer:4.1.48.Final" level="project" />
-    <orderEntry type="library" name="Maven: io.netty:netty-transport:4.1.48.Final" level="project" />
-    <orderEntry type="library" name="Maven: io.netty:netty-codec:4.1.48.Final" level="project" />
-    <orderEntry type="library" name="Maven: io.netty:netty-transport-native-epoll:4.1.48.Final" level="project" />
-    <orderEntry type="library" name="Maven: io.netty:netty-transport-native-unix-common:4.1.48.Final" level="project" />
-    <orderEntry type="library" name="Maven: commons-cli:commons-cli:1.4" level="project" />
     <orderEntry type="library" name="Maven: org.apache.kafka:kafka-clients:2.5.0" level="project" />
     <orderEntry type="library" name="Maven: com.github.luben:zstd-jni:1.4.4-7" level="project" />
     <orderEntry type="library" name="Maven: org.lz4:lz4-java:1.7.1" level="project" />
@@ -140,6 +117,11 @@
     <orderEntry type="library" name="Maven: io.confluent:kafka-schema-registry-client:5.3.3" level="project" />
     <orderEntry type="library" name="Maven: io.confluent:common-config:5.3.3" level="project" />
     <orderEntry type="library" name="Maven: io.confluent:common-utils:5.3.3" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.zookeeper:zookeeper:3.4.14" level="project" />
+    <orderEntry type="library" name="Maven: com.github.spotbugs:spotbugs-annotations:3.1.9" level="project" />
+    <orderEntry type="library" name="Maven: jline:jline:0.9.94" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.yetus:audience-annotations:0.5.0" level="project" />
+    <orderEntry type="library" name="Maven: io.netty:netty:3.10.6.Final" level="project" />
     <orderEntry type="library" name="Maven: com.101tec:zkclient:0.10" level="project" />
   </component>
 </module>

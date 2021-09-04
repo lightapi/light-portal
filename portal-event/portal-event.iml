@@ -15,14 +15,14 @@
     <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-annotations:2.12.1" level="project" />
     <orderEntry type="library" name="Maven: org.apache.commons:commons-compress:1.19" level="project" />
     <orderEntry type="library" name="Maven: org.slf4j:slf4j-api:1.7.25" level="project" />
-    <orderEntry type="library" name="Maven: com.networknt:kafka-common:2.0.29-SNAPSHOT" level="project" />
-    <orderEntry type="library" name="Maven: com.networknt:utility:2.0.29-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.networknt:kafka-common:2.0.31-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.networknt:utility:2.0.31-SNAPSHOT" level="project" />
     <orderEntry type="library" name="Maven: commons-codec:commons-codec:1.11" level="project" />
-    <orderEntry type="library" name="Maven: com.networknt:config:2.0.29-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.networknt:config:2.0.31-SNAPSHOT" level="project" />
     <orderEntry type="library" name="Maven: com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.12.1" level="project" />
     <orderEntry type="library" name="Maven: org.owasp.encoder:encoder:1.2.1" level="project" />
     <orderEntry type="library" name="Maven: org.yaml:snakeyaml:1.26" level="project" />
-    <orderEntry type="library" name="Maven: com.networknt:decryptor:2.0.29-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="Maven: com.networknt:decryptor:2.0.31-SNAPSHOT" level="project" />
     <orderEntry type="library" name="Maven: tech.allegro.schema.json2avro:converter:0.2.9" level="project" />
     <orderEntry type="library" name="Maven: io.confluent:kafka-avro-serializer:6.1.0" level="project" />
     <orderEntry type="library" name="Maven: io.confluent:kafka-schema-serializer:6.1.0" level="project" />
