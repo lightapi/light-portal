@@ -14,8 +14,8 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 2835070155864063168L;
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"TaskDefinition\",\"namespace\":\"com.networknt.scheduler\",\"fields\":[{\"name\":\"host\",\"type\":\"string\"},{\"name\":\"name\",\"type\":\"string\"},{\"name\":\"action\",\"type\":{\"type\":\"enum\",\"name\":\"DefinitionAction\",\"symbols\":[\"INSERT\",\"UPDATE\",\"DELETE\"]}},{\"name\":\"frequency\",\"type\":[\"null\",{\"type\":\"record\",\"name\":\"TaskFrequency\",\"fields\":[{\"name\":\"timeUnit\",\"type\":{\"type\":\"enum\",\"name\":\"TimeUnit\",\"symbols\":[\"MILLISECONDS\",\"SECONDS\",\"MINUTES\",\"HOURS\",\"DAYS\"]}},{\"name\":\"time\",\"type\":\"int\"}]}],\"default\":null},{\"name\":\"topic\",\"type\":\"string\"},{\"name\":\"data\",\"type\":[\"null\",{\"type\":\"map\",\"values\":\"string\"}],\"default\":null}]}");
+  private static final long serialVersionUID = 410678981943919853L;
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"TaskDefinition\",\"namespace\":\"com.networknt.scheduler\",\"fields\":[{\"name\":\"host\",\"type\":\"string\"},{\"name\":\"name\",\"type\":\"string\"},{\"name\":\"action\",\"type\":{\"type\":\"enum\",\"name\":\"DefinitionAction\",\"symbols\":[\"INSERT\",\"UPDATE\",\"DELETE\"]}},{\"name\":\"frequency\",\"type\":[\"null\",{\"type\":\"record\",\"name\":\"TaskFrequency\",\"fields\":[{\"name\":\"timeUnit\",\"type\":{\"type\":\"enum\",\"name\":\"TimeUnit\",\"symbols\":[\"MILLISECONDS\",\"SECONDS\",\"MINUTES\",\"HOURS\",\"DAYS\"]}},{\"name\":\"time\",\"type\":\"int\"}]}],\"default\":null},{\"name\":\"topic\",\"type\":\"string\"},{\"name\":\"start\",\"type\":\"long\"},{\"name\":\"data\",\"type\":[\"null\",{\"type\":\"map\",\"values\":\"string\"}],\"default\":null}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static SpecificData MODEL$ = new SpecificData();
@@ -76,6 +76,7 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
   @Deprecated public com.networknt.scheduler.DefinitionAction action;
   @Deprecated public com.networknt.scheduler.TaskFrequency frequency;
   @Deprecated public java.lang.CharSequence topic;
+  @Deprecated public long start;
   @Deprecated public java.util.Map<java.lang.CharSequence,java.lang.CharSequence> data;
 
   /**
@@ -92,14 +93,16 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
    * @param action The new value for action
    * @param frequency The new value for frequency
    * @param topic The new value for topic
+   * @param start The new value for start
    * @param data The new value for data
    */
-  public TaskDefinition(java.lang.CharSequence host, java.lang.CharSequence name, com.networknt.scheduler.DefinitionAction action, com.networknt.scheduler.TaskFrequency frequency, java.lang.CharSequence topic, java.util.Map<java.lang.CharSequence,java.lang.CharSequence> data) {
+  public TaskDefinition(java.lang.CharSequence host, java.lang.CharSequence name, com.networknt.scheduler.DefinitionAction action, com.networknt.scheduler.TaskFrequency frequency, java.lang.CharSequence topic, java.lang.Long start, java.util.Map<java.lang.CharSequence,java.lang.CharSequence> data) {
     this.host = host;
     this.name = name;
     this.action = action;
     this.frequency = frequency;
     this.topic = topic;
+    this.start = start;
     this.data = data;
   }
 
@@ -113,7 +116,8 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
     case 2: return action;
     case 3: return frequency;
     case 4: return topic;
-    case 5: return data;
+    case 5: return start;
+    case 6: return data;
     default: throw new org.apache.avro.AvroRuntimeException("Bad index");
     }
   }
@@ -127,7 +131,8 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
     case 2: action = (com.networknt.scheduler.DefinitionAction)value$; break;
     case 3: frequency = (com.networknt.scheduler.TaskFrequency)value$; break;
     case 4: topic = (java.lang.CharSequence)value$; break;
-    case 5: data = (java.util.Map<java.lang.CharSequence,java.lang.CharSequence>)value$; break;
+    case 5: start = (java.lang.Long)value$; break;
+    case 6: data = (java.util.Map<java.lang.CharSequence,java.lang.CharSequence>)value$; break;
     default: throw new org.apache.avro.AvroRuntimeException("Bad index");
     }
   }
@@ -218,6 +223,23 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
   }
 
   /**
+   * Gets the value of the 'start' field.
+   * @return The value of the 'start' field.
+   */
+  public long getStart() {
+    return start;
+  }
+
+
+  /**
+   * Sets the value of the 'start' field.
+   * @param value the value to set.
+   */
+  public void setStart(long value) {
+    this.start = value;
+  }
+
+  /**
    * Gets the value of the 'data' field.
    * @return The value of the 'data' field.
    */
@@ -281,6 +303,7 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
     private com.networknt.scheduler.TaskFrequency frequency;
     private com.networknt.scheduler.TaskFrequency.Builder frequencyBuilder;
     private java.lang.CharSequence topic;
+    private long start;
     private java.util.Map<java.lang.CharSequence,java.lang.CharSequence> data;
 
     /** Creates a new Builder */
@@ -317,9 +340,13 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
         this.topic = data().deepCopy(fields()[4].schema(), other.topic);
         fieldSetFlags()[4] = other.fieldSetFlags()[4];
       }
-      if (isValidValue(fields()[5], other.data)) {
-        this.data = data().deepCopy(fields()[5].schema(), other.data);
+      if (isValidValue(fields()[5], other.start)) {
+        this.start = data().deepCopy(fields()[5].schema(), other.start);
         fieldSetFlags()[5] = other.fieldSetFlags()[5];
+      }
+      if (isValidValue(fields()[6], other.data)) {
+        this.data = data().deepCopy(fields()[6].schema(), other.data);
+        fieldSetFlags()[6] = other.fieldSetFlags()[6];
       }
     }
 
@@ -350,9 +377,13 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
         this.topic = data().deepCopy(fields()[4].schema(), other.topic);
         fieldSetFlags()[4] = true;
       }
-      if (isValidValue(fields()[5], other.data)) {
-        this.data = data().deepCopy(fields()[5].schema(), other.data);
+      if (isValidValue(fields()[5], other.start)) {
+        this.start = data().deepCopy(fields()[5].schema(), other.start);
         fieldSetFlags()[5] = true;
+      }
+      if (isValidValue(fields()[6], other.data)) {
+        this.data = data().deepCopy(fields()[6].schema(), other.data);
+        fieldSetFlags()[6] = true;
       }
     }
 
@@ -592,6 +623,45 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
     }
 
     /**
+      * Gets the value of the 'start' field.
+      * @return The value.
+      */
+    public long getStart() {
+      return start;
+    }
+
+
+    /**
+      * Sets the value of the 'start' field.
+      * @param value The value of 'start'.
+      * @return This builder.
+      */
+    public com.networknt.scheduler.TaskDefinition.Builder setStart(long value) {
+      validate(fields()[5], value);
+      this.start = value;
+      fieldSetFlags()[5] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'start' field has been set.
+      * @return True if the 'start' field has been set, false otherwise.
+      */
+    public boolean hasStart() {
+      return fieldSetFlags()[5];
+    }
+
+
+    /**
+      * Clears the value of the 'start' field.
+      * @return This builder.
+      */
+    public com.networknt.scheduler.TaskDefinition.Builder clearStart() {
+      fieldSetFlags()[5] = false;
+      return this;
+    }
+
+    /**
       * Gets the value of the 'data' field.
       * @return The value.
       */
@@ -606,9 +676,9 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
       * @return This builder.
       */
     public com.networknt.scheduler.TaskDefinition.Builder setData(java.util.Map<java.lang.CharSequence,java.lang.CharSequence> value) {
-      validate(fields()[5], value);
+      validate(fields()[6], value);
       this.data = value;
-      fieldSetFlags()[5] = true;
+      fieldSetFlags()[6] = true;
       return this;
     }
 
@@ -617,7 +687,7 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
       * @return True if the 'data' field has been set, false otherwise.
       */
     public boolean hasData() {
-      return fieldSetFlags()[5];
+      return fieldSetFlags()[6];
     }
 
 
@@ -627,7 +697,7 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
       */
     public com.networknt.scheduler.TaskDefinition.Builder clearData() {
       data = null;
-      fieldSetFlags()[5] = false;
+      fieldSetFlags()[6] = false;
       return this;
     }
 
@@ -650,7 +720,8 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
           record.frequency = fieldSetFlags()[3] ? this.frequency : (com.networknt.scheduler.TaskFrequency) defaultValue(fields()[3]);
         }
         record.topic = fieldSetFlags()[4] ? this.topic : (java.lang.CharSequence) defaultValue(fields()[4]);
-        record.data = fieldSetFlags()[5] ? this.data : (java.util.Map<java.lang.CharSequence,java.lang.CharSequence>) defaultValue(fields()[5]);
+        record.start = fieldSetFlags()[5] ? this.start : (java.lang.Long) defaultValue(fields()[5]);
+        record.data = fieldSetFlags()[6] ? this.data : (java.util.Map<java.lang.CharSequence,java.lang.CharSequence>) defaultValue(fields()[6]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -699,6 +770,8 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
 
     out.writeString(this.topic);
 
+    out.writeLong(this.start);
+
     if (this.data == null) {
       out.writeIndex(0);
       out.writeNull();
@@ -745,6 +818,8 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
 
       this.topic = in.readString(this.topic instanceof Utf8 ? (Utf8)this.topic : null);
 
+      this.start = in.readLong();
+
       if (in.readIndex() != 1) {
         in.readNull();
         this.data = null;
@@ -767,7 +842,7 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
       }
 
     } else {
-      for (int i = 0; i < 6; i++) {
+      for (int i = 0; i < 7; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           this.host = in.readString(this.host instanceof Utf8 ? (Utf8)this.host : null);
@@ -798,6 +873,10 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
           break;
 
         case 5:
+          this.start = in.readLong();
+          break;
+
+        case 6:
           if (in.readIndex() != 1) {
             in.readNull();
             this.data = null;

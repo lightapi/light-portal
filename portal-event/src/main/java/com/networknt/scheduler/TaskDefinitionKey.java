@@ -15,7 +15,7 @@ import org.apache.avro.message.SchemaStore;
 @org.apache.avro.specific.AvroGenerated
 public class TaskDefinitionKey extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
   private static final long serialVersionUID = 2475168499173960391L;
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"TaskDefinitionKey\",\"namespace\":\"com.networknt.scheduler\",\"fields\":[{\"name\":\"host\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"}},{\"name\":\"name\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"}}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"TaskDefinitionKey\",\"namespace\":\"com.networknt.scheduler\",\"fields\":[{\"name\":\"host\",\"type\":\"string\"},{\"name\":\"name\",\"type\":\"string\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static SpecificData MODEL$ = new SpecificData();
@@ -71,8 +71,8 @@ public class TaskDefinitionKey extends org.apache.avro.specific.SpecificRecordBa
     return DECODER.decode(b);
   }
 
-   private java.lang.String host;
-   private java.lang.String name;
+  @Deprecated public java.lang.CharSequence host;
+  @Deprecated public java.lang.CharSequence name;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -86,7 +86,7 @@ public class TaskDefinitionKey extends org.apache.avro.specific.SpecificRecordBa
    * @param host The new value for host
    * @param name The new value for name
    */
-  public TaskDefinitionKey(java.lang.String host, java.lang.String name) {
+  public TaskDefinitionKey(java.lang.CharSequence host, java.lang.CharSequence name) {
     this.host = host;
     this.name = name;
   }
@@ -106,8 +106,8 @@ public class TaskDefinitionKey extends org.apache.avro.specific.SpecificRecordBa
   @SuppressWarnings(value="unchecked")
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
-    case 0: host = value$ != null ? value$.toString() : null; break;
-    case 1: name = value$ != null ? value$.toString() : null; break;
+    case 0: host = (java.lang.CharSequence)value$; break;
+    case 1: name = (java.lang.CharSequence)value$; break;
     default: throw new org.apache.avro.AvroRuntimeException("Bad index");
     }
   }
@@ -116,7 +116,7 @@ public class TaskDefinitionKey extends org.apache.avro.specific.SpecificRecordBa
    * Gets the value of the 'host' field.
    * @return The value of the 'host' field.
    */
-  public java.lang.String getHost() {
+  public java.lang.CharSequence getHost() {
     return host;
   }
 
@@ -125,7 +125,7 @@ public class TaskDefinitionKey extends org.apache.avro.specific.SpecificRecordBa
    * Sets the value of the 'host' field.
    * @param value the value to set.
    */
-  public void setHost(java.lang.String value) {
+  public void setHost(java.lang.CharSequence value) {
     this.host = value;
   }
 
@@ -133,7 +133,7 @@ public class TaskDefinitionKey extends org.apache.avro.specific.SpecificRecordBa
    * Gets the value of the 'name' field.
    * @return The value of the 'name' field.
    */
-  public java.lang.String getName() {
+  public java.lang.CharSequence getName() {
     return name;
   }
 
@@ -142,7 +142,7 @@ public class TaskDefinitionKey extends org.apache.avro.specific.SpecificRecordBa
    * Sets the value of the 'name' field.
    * @param value the value to set.
    */
-  public void setName(java.lang.String value) {
+  public void setName(java.lang.CharSequence value) {
     this.name = value;
   }
 
@@ -187,8 +187,8 @@ public class TaskDefinitionKey extends org.apache.avro.specific.SpecificRecordBa
   public static class Builder extends org.apache.avro.specific.SpecificRecordBuilderBase<TaskDefinitionKey>
     implements org.apache.avro.data.RecordBuilder<TaskDefinitionKey> {
 
-    private java.lang.String host;
-    private java.lang.String name;
+    private java.lang.CharSequence host;
+    private java.lang.CharSequence name;
 
     /** Creates a new Builder */
     private Builder() {
@@ -231,7 +231,7 @@ public class TaskDefinitionKey extends org.apache.avro.specific.SpecificRecordBa
       * Gets the value of the 'host' field.
       * @return The value.
       */
-    public java.lang.String getHost() {
+    public java.lang.CharSequence getHost() {
       return host;
     }
 
@@ -241,7 +241,7 @@ public class TaskDefinitionKey extends org.apache.avro.specific.SpecificRecordBa
       * @param value The value of 'host'.
       * @return This builder.
       */
-    public com.networknt.scheduler.TaskDefinitionKey.Builder setHost(java.lang.String value) {
+    public com.networknt.scheduler.TaskDefinitionKey.Builder setHost(java.lang.CharSequence value) {
       validate(fields()[0], value);
       this.host = value;
       fieldSetFlags()[0] = true;
@@ -271,7 +271,7 @@ public class TaskDefinitionKey extends org.apache.avro.specific.SpecificRecordBa
       * Gets the value of the 'name' field.
       * @return The value.
       */
-    public java.lang.String getName() {
+    public java.lang.CharSequence getName() {
       return name;
     }
 
@@ -281,7 +281,7 @@ public class TaskDefinitionKey extends org.apache.avro.specific.SpecificRecordBa
       * @param value The value of 'name'.
       * @return This builder.
       */
-    public com.networknt.scheduler.TaskDefinitionKey.Builder setName(java.lang.String value) {
+    public com.networknt.scheduler.TaskDefinitionKey.Builder setName(java.lang.CharSequence value) {
       validate(fields()[1], value);
       this.name = value;
       fieldSetFlags()[1] = true;
@@ -312,8 +312,8 @@ public class TaskDefinitionKey extends org.apache.avro.specific.SpecificRecordBa
     public TaskDefinitionKey build() {
       try {
         TaskDefinitionKey record = new TaskDefinitionKey();
-        record.host = fieldSetFlags()[0] ? this.host : (java.lang.String) defaultValue(fields()[0]);
-        record.name = fieldSetFlags()[1] ? this.name : (java.lang.String) defaultValue(fields()[1]);
+        record.host = fieldSetFlags()[0] ? this.host : (java.lang.CharSequence) defaultValue(fields()[0]);
+        record.name = fieldSetFlags()[1] ? this.name : (java.lang.CharSequence) defaultValue(fields()[1]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -357,19 +357,19 @@ public class TaskDefinitionKey extends org.apache.avro.specific.SpecificRecordBa
   {
     org.apache.avro.Schema.Field[] fieldOrder = in.readFieldOrderIfDiff();
     if (fieldOrder == null) {
-      this.host = in.readString();
+      this.host = in.readString(this.host instanceof Utf8 ? (Utf8)this.host : null);
 
-      this.name = in.readString();
+      this.name = in.readString(this.name instanceof Utf8 ? (Utf8)this.name : null);
 
     } else {
       for (int i = 0; i < 2; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
-          this.host = in.readString();
+          this.host = in.readString(this.host instanceof Utf8 ? (Utf8)this.host : null);
           break;
 
         case 1:
-          this.name = in.readString();
+          this.name = in.readString(this.name instanceof Utf8 ? (Utf8)this.name : null);
           break;
 
         default:
