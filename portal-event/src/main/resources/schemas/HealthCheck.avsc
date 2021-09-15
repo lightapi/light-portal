@@ -1,0 +1,20 @@
+{
+  "namespace": "com.networknt.controller",
+  "type": "record",
+  "name": "HealthCheck",
+  "fields": [
+    {"name": "host","type": "string"},
+    {"name": "lastExecuteTimestamp","type": "long"},
+    {"name": "lastFailedTimestamp","type": "long"},
+    {"name": "serviceId","type": "string"},
+    {"name": "tag", "type": ["null", "string"], "default": null},
+    {"name": "protocol","type": "string"},
+    {"name": "address","type": "string"},
+    {"name": "port","type": "int"},
+    {"name": "tlsSkipVerify","type": "boolean"},
+    {"name": "interval","type": "int"},
+    {"name": "id","type": "string"},
+    {"name": "deregisterCriticalServiceAfter","type": "int"},
+    {"name": "healthPath","type": "string"}
+  ]
+}
