@@ -1,5 +1,11 @@
 # Change Log
 
+## [2.0.31](https://github.com/networknt/light-portal/tree/2.0.31) (2021-09-22)
+
+
+**Merged pull requests:**
+
+
 ## [2.0.11](https://github.com/networknt/light-portal/tree/2.0.11) (2020-02-29)
 
 
