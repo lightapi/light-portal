@@ -8,7 +8,7 @@
     {"name": "action","type": "DefinitionAction"},
     {"name": "frequency","type": ["null", "TaskFrequency"], "default": null},
     {"name": "topic", "type": "string"},
-    {"name": "start", "type": ["null", "long"], "default": null},
+    {"name": "start", "type": "long"},
     {"name": "data","type": [ "null",
       {
         "type": "map",
