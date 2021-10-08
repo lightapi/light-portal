@@ -15,7 +15,7 @@ import org.apache.avro.message.SchemaStore;
 @org.apache.avro.specific.AvroGenerated
 public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
   private static final long serialVersionUID = 410678981943919853L;
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"TaskDefinition\",\"namespace\":\"com.networknt.scheduler\",\"fields\":[{\"name\":\"host\",\"type\":\"string\"},{\"name\":\"name\",\"type\":\"string\"},{\"name\":\"action\",\"type\":{\"type\":\"enum\",\"name\":\"DefinitionAction\",\"symbols\":[\"INSERT\",\"UPDATE\",\"DELETE\"]}},{\"name\":\"frequency\",\"type\":[\"null\",{\"type\":\"record\",\"name\":\"TaskFrequency\",\"fields\":[{\"name\":\"timeUnit\",\"type\":{\"type\":\"enum\",\"name\":\"TimeUnit\",\"symbols\":[\"MILLISECONDS\",\"SECONDS\",\"MINUTES\",\"HOURS\",\"DAYS\"]}},{\"name\":\"time\",\"type\":\"int\"}]}],\"default\":null},{\"name\":\"topic\",\"type\":\"string\"},{\"name\":\"start\",\"type\":\"long\"},{\"name\":\"data\",\"type\":[\"null\",{\"type\":\"map\",\"values\":\"string\"}],\"default\":null}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"TaskDefinition\",\"namespace\":\"com.networknt.scheduler\",\"fields\":[{\"name\":\"host\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"}},{\"name\":\"name\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"}},{\"name\":\"action\",\"type\":{\"type\":\"enum\",\"name\":\"DefinitionAction\",\"symbols\":[\"INSERT\",\"UPDATE\",\"DELETE\"]}},{\"name\":\"frequency\",\"type\":[\"null\",{\"type\":\"record\",\"name\":\"TaskFrequency\",\"fields\":[{\"name\":\"timeUnit\",\"type\":{\"type\":\"enum\",\"name\":\"TimeUnit\",\"symbols\":[\"MILLISECONDS\",\"SECONDS\",\"MINUTES\",\"HOURS\",\"DAYS\"]}},{\"name\":\"time\",\"type\":\"int\"}]}],\"default\":null},{\"name\":\"topic\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"}},{\"name\":\"start\",\"type\":\"long\"},{\"name\":\"data\",\"type\":[\"null\",{\"type\":\"map\",\"values\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"avro.java.string\":\"String\"}],\"default\":null}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static SpecificData MODEL$ = new SpecificData();
@@ -71,13 +71,13 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
     return DECODER.decode(b);
   }
 
-  @Deprecated public java.lang.CharSequence host;
-  @Deprecated public java.lang.CharSequence name;
-  @Deprecated public com.networknt.scheduler.DefinitionAction action;
-  @Deprecated public com.networknt.scheduler.TaskFrequency frequency;
-  @Deprecated public java.lang.CharSequence topic;
-  @Deprecated public long start;
-  @Deprecated public java.util.Map<java.lang.CharSequence,java.lang.CharSequence> data;
+   private java.lang.String host;
+   private java.lang.String name;
+   private com.networknt.scheduler.DefinitionAction action;
+   private com.networknt.scheduler.TaskFrequency frequency;
+   private java.lang.String topic;
+   private long start;
+   private java.util.Map<java.lang.String,java.lang.String> data;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -96,7 +96,7 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
    * @param start The new value for start
    * @param data The new value for data
    */
-  public TaskDefinition(java.lang.CharSequence host, java.lang.CharSequence name, com.networknt.scheduler.DefinitionAction action, com.networknt.scheduler.TaskFrequency frequency, java.lang.CharSequence topic, java.lang.Long start, java.util.Map<java.lang.CharSequence,java.lang.CharSequence> data) {
+  public TaskDefinition(java.lang.String host, java.lang.String name, com.networknt.scheduler.DefinitionAction action, com.networknt.scheduler.TaskFrequency frequency, java.lang.String topic, java.lang.Long start, java.util.Map<java.lang.String,java.lang.String> data) {
     this.host = host;
     this.name = name;
     this.action = action;
@@ -118,7 +118,7 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
     case 4: return topic;
     case 5: return start;
     case 6: return data;
-    default: throw new org.apache.avro.AvroRuntimeException("Bad index");
+    default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
 
@@ -126,14 +126,14 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
   @SuppressWarnings(value="unchecked")
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
-    case 0: host = (java.lang.CharSequence)value$; break;
-    case 1: name = (java.lang.CharSequence)value$; break;
+    case 0: host = value$ != null ? value$.toString() : null; break;
+    case 1: name = value$ != null ? value$.toString() : null; break;
     case 2: action = (com.networknt.scheduler.DefinitionAction)value$; break;
     case 3: frequency = (com.networknt.scheduler.TaskFrequency)value$; break;
-    case 4: topic = (java.lang.CharSequence)value$; break;
+    case 4: topic = value$ != null ? value$.toString() : null; break;
     case 5: start = (java.lang.Long)value$; break;
-    case 6: data = (java.util.Map<java.lang.CharSequence,java.lang.CharSequence>)value$; break;
-    default: throw new org.apache.avro.AvroRuntimeException("Bad index");
+    case 6: data = (java.util.Map<java.lang.String,java.lang.String>)value$; break;
+    default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
 
@@ -141,7 +141,7 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
    * Gets the value of the 'host' field.
    * @return The value of the 'host' field.
    */
-  public java.lang.CharSequence getHost() {
+  public java.lang.String getHost() {
     return host;
   }
 
@@ -150,7 +150,7 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
    * Sets the value of the 'host' field.
    * @param value the value to set.
    */
-  public void setHost(java.lang.CharSequence value) {
+  public void setHost(java.lang.String value) {
     this.host = value;
   }
 
@@ -158,7 +158,7 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
    * Gets the value of the 'name' field.
    * @return The value of the 'name' field.
    */
-  public java.lang.CharSequence getName() {
+  public java.lang.String getName() {
     return name;
   }
 
@@ -167,7 +167,7 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
    * Sets the value of the 'name' field.
    * @param value the value to set.
    */
-  public void setName(java.lang.CharSequence value) {
+  public void setName(java.lang.String value) {
     this.name = value;
   }
 
@@ -209,7 +209,7 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
    * Gets the value of the 'topic' field.
    * @return The value of the 'topic' field.
    */
-  public java.lang.CharSequence getTopic() {
+  public java.lang.String getTopic() {
     return topic;
   }
 
@@ -218,7 +218,7 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
    * Sets the value of the 'topic' field.
    * @param value the value to set.
    */
-  public void setTopic(java.lang.CharSequence value) {
+  public void setTopic(java.lang.String value) {
     this.topic = value;
   }
 
@@ -243,7 +243,7 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
    * Gets the value of the 'data' field.
    * @return The value of the 'data' field.
    */
-  public java.util.Map<java.lang.CharSequence,java.lang.CharSequence> getData() {
+  public java.util.Map<java.lang.String,java.lang.String> getData() {
     return data;
   }
 
@@ -252,7 +252,7 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
    * Sets the value of the 'data' field.
    * @param value the value to set.
    */
-  public void setData(java.util.Map<java.lang.CharSequence,java.lang.CharSequence> value) {
+  public void setData(java.util.Map<java.lang.String,java.lang.String> value) {
     this.data = value;
   }
 
@@ -297,14 +297,14 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
   public static class Builder extends org.apache.avro.specific.SpecificRecordBuilderBase<TaskDefinition>
     implements org.apache.avro.data.RecordBuilder<TaskDefinition> {
 
-    private java.lang.CharSequence host;
-    private java.lang.CharSequence name;
+    private java.lang.String host;
+    private java.lang.String name;
     private com.networknt.scheduler.DefinitionAction action;
     private com.networknt.scheduler.TaskFrequency frequency;
     private com.networknt.scheduler.TaskFrequency.Builder frequencyBuilder;
-    private java.lang.CharSequence topic;
+    private java.lang.String topic;
     private long start;
-    private java.util.Map<java.lang.CharSequence,java.lang.CharSequence> data;
+    private java.util.Map<java.lang.String,java.lang.String> data;
 
     /** Creates a new Builder */
     private Builder() {
@@ -391,7 +391,7 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
       * Gets the value of the 'host' field.
       * @return The value.
       */
-    public java.lang.CharSequence getHost() {
+    public java.lang.String getHost() {
       return host;
     }
 
@@ -401,7 +401,7 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
       * @param value The value of 'host'.
       * @return This builder.
       */
-    public com.networknt.scheduler.TaskDefinition.Builder setHost(java.lang.CharSequence value) {
+    public com.networknt.scheduler.TaskDefinition.Builder setHost(java.lang.String value) {
       validate(fields()[0], value);
       this.host = value;
       fieldSetFlags()[0] = true;
@@ -431,7 +431,7 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
       * Gets the value of the 'name' field.
       * @return The value.
       */
-    public java.lang.CharSequence getName() {
+    public java.lang.String getName() {
       return name;
     }
 
@@ -441,7 +441,7 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
       * @param value The value of 'name'.
       * @return This builder.
       */
-    public com.networknt.scheduler.TaskDefinition.Builder setName(java.lang.CharSequence value) {
+    public com.networknt.scheduler.TaskDefinition.Builder setName(java.lang.String value) {
       validate(fields()[1], value);
       this.name = value;
       fieldSetFlags()[1] = true;
@@ -557,6 +557,7 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
      * @param value The builder instance that must be set.
      * @return This builder.
      */
+
     public com.networknt.scheduler.TaskDefinition.Builder setFrequencyBuilder(com.networknt.scheduler.TaskFrequency.Builder value) {
       clearFrequency();
       frequencyBuilder = value;
@@ -586,7 +587,7 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
       * Gets the value of the 'topic' field.
       * @return The value.
       */
-    public java.lang.CharSequence getTopic() {
+    public java.lang.String getTopic() {
       return topic;
     }
 
@@ -596,7 +597,7 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
       * @param value The value of 'topic'.
       * @return This builder.
       */
-    public com.networknt.scheduler.TaskDefinition.Builder setTopic(java.lang.CharSequence value) {
+    public com.networknt.scheduler.TaskDefinition.Builder setTopic(java.lang.String value) {
       validate(fields()[4], value);
       this.topic = value;
       fieldSetFlags()[4] = true;
@@ -665,7 +666,7 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
       * Gets the value of the 'data' field.
       * @return The value.
       */
-    public java.util.Map<java.lang.CharSequence,java.lang.CharSequence> getData() {
+    public java.util.Map<java.lang.String,java.lang.String> getData() {
       return data;
     }
 
@@ -675,7 +676,7 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
       * @param value The value of 'data'.
       * @return This builder.
       */
-    public com.networknt.scheduler.TaskDefinition.Builder setData(java.util.Map<java.lang.CharSequence,java.lang.CharSequence> value) {
+    public com.networknt.scheduler.TaskDefinition.Builder setData(java.util.Map<java.lang.String,java.lang.String> value) {
       validate(fields()[6], value);
       this.data = value;
       fieldSetFlags()[6] = true;
@@ -706,8 +707,8 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
     public TaskDefinition build() {
       try {
         TaskDefinition record = new TaskDefinition();
-        record.host = fieldSetFlags()[0] ? this.host : (java.lang.CharSequence) defaultValue(fields()[0]);
-        record.name = fieldSetFlags()[1] ? this.name : (java.lang.CharSequence) defaultValue(fields()[1]);
+        record.host = fieldSetFlags()[0] ? this.host : (java.lang.String) defaultValue(fields()[0]);
+        record.name = fieldSetFlags()[1] ? this.name : (java.lang.String) defaultValue(fields()[1]);
         record.action = fieldSetFlags()[2] ? this.action : (com.networknt.scheduler.DefinitionAction) defaultValue(fields()[2]);
         if (frequencyBuilder != null) {
           try {
@@ -719,9 +720,9 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
         } else {
           record.frequency = fieldSetFlags()[3] ? this.frequency : (com.networknt.scheduler.TaskFrequency) defaultValue(fields()[3]);
         }
-        record.topic = fieldSetFlags()[4] ? this.topic : (java.lang.CharSequence) defaultValue(fields()[4]);
+        record.topic = fieldSetFlags()[4] ? this.topic : (java.lang.String) defaultValue(fields()[4]);
         record.start = fieldSetFlags()[5] ? this.start : (java.lang.Long) defaultValue(fields()[5]);
-        record.data = fieldSetFlags()[6] ? this.data : (java.util.Map<java.lang.CharSequence,java.lang.CharSequence>) defaultValue(fields()[6]);
+        record.data = fieldSetFlags()[6] ? this.data : (java.util.Map<java.lang.String,java.lang.String>) defaultValue(fields()[6]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -781,11 +782,11 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
       out.writeMapStart();
       out.setItemCount(size0);
       long actualSize0 = 0;
-      for (java.util.Map.Entry<java.lang.CharSequence, java.lang.CharSequence> e0: this.data.entrySet()) {
+      for (java.util.Map.Entry<java.lang.String, java.lang.String> e0: this.data.entrySet()) {
         actualSize0++;
         out.startItem();
         out.writeString(e0.getKey());
-        java.lang.CharSequence v0 = e0.getValue();
+        java.lang.String v0 = e0.getValue();
         out.writeString(v0);
       }
       out.writeMapEnd();
@@ -800,9 +801,9 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
   {
     org.apache.avro.Schema.Field[] fieldOrder = in.readFieldOrderIfDiff();
     if (fieldOrder == null) {
-      this.host = in.readString(this.host instanceof Utf8 ? (Utf8)this.host : null);
+      this.host = in.readString();
 
-      this.name = in.readString(this.name instanceof Utf8 ? (Utf8)this.name : null);
+      this.name = in.readString();
 
       this.action = com.networknt.scheduler.DefinitionAction.values()[in.readEnum()];
 
@@ -816,7 +817,7 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
         this.frequency.customDecode(in);
       }
 
-      this.topic = in.readString(this.topic instanceof Utf8 ? (Utf8)this.topic : null);
+      this.topic = in.readString();
 
       this.start = in.readLong();
 
@@ -825,17 +826,17 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
         this.data = null;
       } else {
         long size0 = in.readMapStart();
-        java.util.Map<java.lang.CharSequence,java.lang.CharSequence> m0 = this.data; // Need fresh name due to limitation of macro system
+        java.util.Map<java.lang.String,java.lang.String> m0 = this.data; // Need fresh name due to limitation of macro system
         if (m0 == null) {
-          m0 = new java.util.HashMap<java.lang.CharSequence,java.lang.CharSequence>((int)size0);
+          m0 = new java.util.HashMap<java.lang.String,java.lang.String>((int)size0);
           this.data = m0;
         } else m0.clear();
         for ( ; 0 < size0; size0 = in.mapNext()) {
           for ( ; size0 != 0; size0--) {
-            java.lang.CharSequence k0 = null;
-            k0 = in.readString(k0 instanceof Utf8 ? (Utf8)k0 : null);
-            java.lang.CharSequence v0 = null;
-            v0 = in.readString(v0 instanceof Utf8 ? (Utf8)v0 : null);
+            java.lang.String k0 = null;
+            k0 = in.readString();
+            java.lang.String v0 = null;
+            v0 = in.readString();
             m0.put(k0, v0);
           }
         }
@@ -845,11 +846,11 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
       for (int i = 0; i < 7; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
-          this.host = in.readString(this.host instanceof Utf8 ? (Utf8)this.host : null);
+          this.host = in.readString();
           break;
 
         case 1:
-          this.name = in.readString(this.name instanceof Utf8 ? (Utf8)this.name : null);
+          this.name = in.readString();
           break;
 
         case 2:
@@ -869,7 +870,7 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
           break;
 
         case 4:
-          this.topic = in.readString(this.topic instanceof Utf8 ? (Utf8)this.topic : null);
+          this.topic = in.readString();
           break;
 
         case 5:
@@ -882,17 +883,17 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
             this.data = null;
           } else {
             long size0 = in.readMapStart();
-            java.util.Map<java.lang.CharSequence,java.lang.CharSequence> m0 = this.data; // Need fresh name due to limitation of macro system
+            java.util.Map<java.lang.String,java.lang.String> m0 = this.data; // Need fresh name due to limitation of macro system
             if (m0 == null) {
-              m0 = new java.util.HashMap<java.lang.CharSequence,java.lang.CharSequence>((int)size0);
+              m0 = new java.util.HashMap<java.lang.String,java.lang.String>((int)size0);
               this.data = m0;
             } else m0.clear();
             for ( ; 0 < size0; size0 = in.mapNext()) {
               for ( ; size0 != 0; size0--) {
-                java.lang.CharSequence k0 = null;
-                k0 = in.readString(k0 instanceof Utf8 ? (Utf8)k0 : null);
-                java.lang.CharSequence v0 = null;
-                v0 = in.readString(v0 instanceof Utf8 ? (Utf8)v0 : null);
+                java.lang.String k0 = null;
+                k0 = in.readString();
+                java.lang.String v0 = null;
+                v0 = in.readString();
                 m0.put(k0, v0);
               }
             }

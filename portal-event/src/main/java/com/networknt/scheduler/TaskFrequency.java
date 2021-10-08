@@ -71,8 +71,8 @@ public class TaskFrequency extends org.apache.avro.specific.SpecificRecordBase i
     return DECODER.decode(b);
   }
 
-  @Deprecated public com.networknt.scheduler.TimeUnit timeUnit;
-  @Deprecated public int time;
+   private com.networknt.scheduler.TimeUnit timeUnit;
+   private int time;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -98,7 +98,7 @@ public class TaskFrequency extends org.apache.avro.specific.SpecificRecordBase i
     switch (field$) {
     case 0: return timeUnit;
     case 1: return time;
-    default: throw new org.apache.avro.AvroRuntimeException("Bad index");
+    default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
 
@@ -108,7 +108,7 @@ public class TaskFrequency extends org.apache.avro.specific.SpecificRecordBase i
     switch (field$) {
     case 0: timeUnit = (com.networknt.scheduler.TimeUnit)value$; break;
     case 1: time = (java.lang.Integer)value$; break;
-    default: throw new org.apache.avro.AvroRuntimeException("Bad index");
+    default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
 
