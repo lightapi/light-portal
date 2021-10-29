@@ -25,6 +25,7 @@ public class PortalConfig {
     String notificationTopic;
     String nonceApplicationId;
     String nonceTopic;
+    String marketApplicationId;
 
     public PortalConfig() {
     }
@@ -139,5 +140,13 @@ public class PortalConfig {
 
     public void setNonceTopic(String nonceTopic) {
         this.nonceTopic = nonceTopic;
+    }
+
+    public String getMarketApplicationId() {
+        return marketApplicationId;
+    }
+
+    public void setMarketApplicationId(String marketApplicationId) {
+        this.marketApplicationId = marketApplicationId;
     }
 }
