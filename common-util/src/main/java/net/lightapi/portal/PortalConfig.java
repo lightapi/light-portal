@@ -19,6 +19,12 @@ public class PortalConfig {
     String portalHost;
     String admin;
     String dataPath;
+    String userApplicationId;
+    String userTopic;
+    String notificationApplicationId;
+    String notificationTopic;
+    String nonceApplicationId;
+    String nonceTopic;
 
     public PortalConfig() {
     }
@@ -85,5 +91,53 @@ public class PortalConfig {
 
     public void setDataPath(String dataPath) {
         this.dataPath = dataPath;
+    }
+
+    public String getUserApplicationId() {
+        return userApplicationId;
+    }
+
+    public void setUserApplicationId(String userApplicationId) {
+        this.userApplicationId = userApplicationId;
+    }
+
+    public String getUserTopic() {
+        return userTopic;
+    }
+
+    public void setUserTopic(String userTopic) {
+        this.userTopic = userTopic;
+    }
+
+    public String getNotificationApplicationId() {
+        return notificationApplicationId;
+    }
+
+    public void setNotificationApplicationId(String notificationApplicationId) {
+        this.notificationApplicationId = notificationApplicationId;
+    }
+
+    public String getNotificationTopic() {
+        return notificationTopic;
+    }
+
+    public void setNotificationTopic(String notificationTopic) {
+        this.notificationTopic = notificationTopic;
+    }
+
+    public String getNonceApplicationId() {
+        return nonceApplicationId;
+    }
+
+    public void setNonceApplicationId(String nonceApplicationId) {
+        this.nonceApplicationId = nonceApplicationId;
+    }
+
+    public String getNonceTopic() {
+        return nonceTopic;
+    }
+
+    public void setNonceTopic(String nonceTopic) {
+        this.nonceTopic = nonceTopic;
     }
 }
