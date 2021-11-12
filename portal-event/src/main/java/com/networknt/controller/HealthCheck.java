@@ -15,7 +15,7 @@ import org.apache.avro.message.SchemaStore;
 @org.apache.avro.specific.AvroGenerated
 public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
   private static final long serialVersionUID = -6697768552917720523L;
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"HealthCheck\",\"namespace\":\"com.networknt.controller\",\"fields\":[{\"name\":\"host\",\"type\":\"string\"},{\"name\":\"lastExecuteTimestamp\",\"type\":\"long\"},{\"name\":\"lastFailedTimestamp\",\"type\":\"long\"},{\"name\":\"serviceId\",\"type\":\"string\"},{\"name\":\"tag\",\"type\":[\"null\",\"string\"],\"default\":null},{\"name\":\"protocol\",\"type\":\"string\"},{\"name\":\"address\",\"type\":\"string\"},{\"name\":\"port\",\"type\":\"int\"},{\"name\":\"tlsSkipVerify\",\"type\":\"boolean\"},{\"name\":\"interval\",\"type\":\"int\"},{\"name\":\"id\",\"type\":\"string\"},{\"name\":\"deregisterCriticalServiceAfter\",\"type\":\"int\"},{\"name\":\"healthPath\",\"type\":\"string\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"HealthCheck\",\"namespace\":\"com.networknt.controller\",\"fields\":[{\"name\":\"host\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"}},{\"name\":\"lastExecuteTimestamp\",\"type\":\"long\"},{\"name\":\"lastFailedTimestamp\",\"type\":\"long\"},{\"name\":\"serviceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"}},{\"name\":\"tag\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"default\":null},{\"name\":\"protocol\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"}},{\"name\":\"address\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"}},{\"name\":\"port\",\"type\":\"int\"},{\"name\":\"tlsSkipVerify\",\"type\":\"boolean\"},{\"name\":\"interval\",\"type\":\"int\"},{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"}},{\"name\":\"deregisterCriticalServiceAfter\",\"type\":\"int\"},{\"name\":\"healthPath\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"}}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static SpecificData MODEL$ = new SpecificData();
@@ -71,19 +71,19 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
     return DECODER.decode(b);
   }
 
-  @Deprecated public java.lang.CharSequence host;
-  @Deprecated public long lastExecuteTimestamp;
-  @Deprecated public long lastFailedTimestamp;
-  @Deprecated public java.lang.CharSequence serviceId;
-  @Deprecated public java.lang.CharSequence tag;
-  @Deprecated public java.lang.CharSequence protocol;
-  @Deprecated public java.lang.CharSequence address;
-  @Deprecated public int port;
-  @Deprecated public boolean tlsSkipVerify;
-  @Deprecated public int interval;
-  @Deprecated public java.lang.CharSequence id;
-  @Deprecated public int deregisterCriticalServiceAfter;
-  @Deprecated public java.lang.CharSequence healthPath;
+   private java.lang.String host;
+   private long lastExecuteTimestamp;
+   private long lastFailedTimestamp;
+   private java.lang.String serviceId;
+   private java.lang.String tag;
+   private java.lang.String protocol;
+   private java.lang.String address;
+   private int port;
+   private boolean tlsSkipVerify;
+   private int interval;
+   private java.lang.String id;
+   private int deregisterCriticalServiceAfter;
+   private java.lang.String healthPath;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -108,7 +108,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
    * @param deregisterCriticalServiceAfter The new value for deregisterCriticalServiceAfter
    * @param healthPath The new value for healthPath
    */
-  public HealthCheck(java.lang.CharSequence host, java.lang.Long lastExecuteTimestamp, java.lang.Long lastFailedTimestamp, java.lang.CharSequence serviceId, java.lang.CharSequence tag, java.lang.CharSequence protocol, java.lang.CharSequence address, java.lang.Integer port, java.lang.Boolean tlsSkipVerify, java.lang.Integer interval, java.lang.CharSequence id, java.lang.Integer deregisterCriticalServiceAfter, java.lang.CharSequence healthPath) {
+  public HealthCheck(java.lang.String host, java.lang.Long lastExecuteTimestamp, java.lang.Long lastFailedTimestamp, java.lang.String serviceId, java.lang.String tag, java.lang.String protocol, java.lang.String address, java.lang.Integer port, java.lang.Boolean tlsSkipVerify, java.lang.Integer interval, java.lang.String id, java.lang.Integer deregisterCriticalServiceAfter, java.lang.String healthPath) {
     this.host = host;
     this.lastExecuteTimestamp = lastExecuteTimestamp;
     this.lastFailedTimestamp = lastFailedTimestamp;
@@ -142,7 +142,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
     case 10: return id;
     case 11: return deregisterCriticalServiceAfter;
     case 12: return healthPath;
-    default: throw new org.apache.avro.AvroRuntimeException("Bad index");
+    default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
 
@@ -150,20 +150,20 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
   @SuppressWarnings(value="unchecked")
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
-    case 0: host = (java.lang.CharSequence)value$; break;
+    case 0: host = value$ != null ? value$.toString() : null; break;
     case 1: lastExecuteTimestamp = (java.lang.Long)value$; break;
     case 2: lastFailedTimestamp = (java.lang.Long)value$; break;
-    case 3: serviceId = (java.lang.CharSequence)value$; break;
-    case 4: tag = (java.lang.CharSequence)value$; break;
-    case 5: protocol = (java.lang.CharSequence)value$; break;
-    case 6: address = (java.lang.CharSequence)value$; break;
+    case 3: serviceId = value$ != null ? value$.toString() : null; break;
+    case 4: tag = value$ != null ? value$.toString() : null; break;
+    case 5: protocol = value$ != null ? value$.toString() : null; break;
+    case 6: address = value$ != null ? value$.toString() : null; break;
     case 7: port = (java.lang.Integer)value$; break;
     case 8: tlsSkipVerify = (java.lang.Boolean)value$; break;
     case 9: interval = (java.lang.Integer)value$; break;
-    case 10: id = (java.lang.CharSequence)value$; break;
+    case 10: id = value$ != null ? value$.toString() : null; break;
     case 11: deregisterCriticalServiceAfter = (java.lang.Integer)value$; break;
-    case 12: healthPath = (java.lang.CharSequence)value$; break;
-    default: throw new org.apache.avro.AvroRuntimeException("Bad index");
+    case 12: healthPath = value$ != null ? value$.toString() : null; break;
+    default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
 
@@ -171,7 +171,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
    * Gets the value of the 'host' field.
    * @return The value of the 'host' field.
    */
-  public java.lang.CharSequence getHost() {
+  public java.lang.String getHost() {
     return host;
   }
 
@@ -180,7 +180,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
    * Sets the value of the 'host' field.
    * @param value the value to set.
    */
-  public void setHost(java.lang.CharSequence value) {
+  public void setHost(java.lang.String value) {
     this.host = value;
   }
 
@@ -222,7 +222,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
    * Gets the value of the 'serviceId' field.
    * @return The value of the 'serviceId' field.
    */
-  public java.lang.CharSequence getServiceId() {
+  public java.lang.String getServiceId() {
     return serviceId;
   }
 
@@ -231,7 +231,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
    * Sets the value of the 'serviceId' field.
    * @param value the value to set.
    */
-  public void setServiceId(java.lang.CharSequence value) {
+  public void setServiceId(java.lang.String value) {
     this.serviceId = value;
   }
 
@@ -239,7 +239,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
    * Gets the value of the 'tag' field.
    * @return The value of the 'tag' field.
    */
-  public java.lang.CharSequence getTag() {
+  public java.lang.String getTag() {
     return tag;
   }
 
@@ -248,7 +248,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
    * Sets the value of the 'tag' field.
    * @param value the value to set.
    */
-  public void setTag(java.lang.CharSequence value) {
+  public void setTag(java.lang.String value) {
     this.tag = value;
   }
 
@@ -256,7 +256,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
    * Gets the value of the 'protocol' field.
    * @return The value of the 'protocol' field.
    */
-  public java.lang.CharSequence getProtocol() {
+  public java.lang.String getProtocol() {
     return protocol;
   }
 
@@ -265,7 +265,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
    * Sets the value of the 'protocol' field.
    * @param value the value to set.
    */
-  public void setProtocol(java.lang.CharSequence value) {
+  public void setProtocol(java.lang.String value) {
     this.protocol = value;
   }
 
@@ -273,7 +273,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
    * Gets the value of the 'address' field.
    * @return The value of the 'address' field.
    */
-  public java.lang.CharSequence getAddress() {
+  public java.lang.String getAddress() {
     return address;
   }
 
@@ -282,7 +282,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
    * Sets the value of the 'address' field.
    * @param value the value to set.
    */
-  public void setAddress(java.lang.CharSequence value) {
+  public void setAddress(java.lang.String value) {
     this.address = value;
   }
 
@@ -341,7 +341,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
    * Gets the value of the 'id' field.
    * @return The value of the 'id' field.
    */
-  public java.lang.CharSequence getId() {
+  public java.lang.String getId() {
     return id;
   }
 
@@ -350,7 +350,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
    * Sets the value of the 'id' field.
    * @param value the value to set.
    */
-  public void setId(java.lang.CharSequence value) {
+  public void setId(java.lang.String value) {
     this.id = value;
   }
 
@@ -375,7 +375,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
    * Gets the value of the 'healthPath' field.
    * @return The value of the 'healthPath' field.
    */
-  public java.lang.CharSequence getHealthPath() {
+  public java.lang.String getHealthPath() {
     return healthPath;
   }
 
@@ -384,7 +384,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
    * Sets the value of the 'healthPath' field.
    * @param value the value to set.
    */
-  public void setHealthPath(java.lang.CharSequence value) {
+  public void setHealthPath(java.lang.String value) {
     this.healthPath = value;
   }
 
@@ -429,19 +429,19 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
   public static class Builder extends org.apache.avro.specific.SpecificRecordBuilderBase<HealthCheck>
     implements org.apache.avro.data.RecordBuilder<HealthCheck> {
 
-    private java.lang.CharSequence host;
+    private java.lang.String host;
     private long lastExecuteTimestamp;
     private long lastFailedTimestamp;
-    private java.lang.CharSequence serviceId;
-    private java.lang.CharSequence tag;
-    private java.lang.CharSequence protocol;
-    private java.lang.CharSequence address;
+    private java.lang.String serviceId;
+    private java.lang.String tag;
+    private java.lang.String protocol;
+    private java.lang.String address;
     private int port;
     private boolean tlsSkipVerify;
     private int interval;
-    private java.lang.CharSequence id;
+    private java.lang.String id;
     private int deregisterCriticalServiceAfter;
-    private java.lang.CharSequence healthPath;
+    private java.lang.String healthPath;
 
     /** Creates a new Builder */
     private Builder() {
@@ -572,7 +572,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
       * Gets the value of the 'host' field.
       * @return The value.
       */
-    public java.lang.CharSequence getHost() {
+    public java.lang.String getHost() {
       return host;
     }
 
@@ -582,7 +582,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
       * @param value The value of 'host'.
       * @return This builder.
       */
-    public com.networknt.controller.HealthCheck.Builder setHost(java.lang.CharSequence value) {
+    public com.networknt.controller.HealthCheck.Builder setHost(java.lang.String value) {
       validate(fields()[0], value);
       this.host = value;
       fieldSetFlags()[0] = true;
@@ -690,7 +690,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
       * Gets the value of the 'serviceId' field.
       * @return The value.
       */
-    public java.lang.CharSequence getServiceId() {
+    public java.lang.String getServiceId() {
       return serviceId;
     }
 
@@ -700,7 +700,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
       * @param value The value of 'serviceId'.
       * @return This builder.
       */
-    public com.networknt.controller.HealthCheck.Builder setServiceId(java.lang.CharSequence value) {
+    public com.networknt.controller.HealthCheck.Builder setServiceId(java.lang.String value) {
       validate(fields()[3], value);
       this.serviceId = value;
       fieldSetFlags()[3] = true;
@@ -730,7 +730,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
       * Gets the value of the 'tag' field.
       * @return The value.
       */
-    public java.lang.CharSequence getTag() {
+    public java.lang.String getTag() {
       return tag;
     }
 
@@ -740,7 +740,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
       * @param value The value of 'tag'.
       * @return This builder.
       */
-    public com.networknt.controller.HealthCheck.Builder setTag(java.lang.CharSequence value) {
+    public com.networknt.controller.HealthCheck.Builder setTag(java.lang.String value) {
       validate(fields()[4], value);
       this.tag = value;
       fieldSetFlags()[4] = true;
@@ -770,7 +770,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
       * Gets the value of the 'protocol' field.
       * @return The value.
       */
-    public java.lang.CharSequence getProtocol() {
+    public java.lang.String getProtocol() {
       return protocol;
     }
 
@@ -780,7 +780,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
       * @param value The value of 'protocol'.
       * @return This builder.
       */
-    public com.networknt.controller.HealthCheck.Builder setProtocol(java.lang.CharSequence value) {
+    public com.networknt.controller.HealthCheck.Builder setProtocol(java.lang.String value) {
       validate(fields()[5], value);
       this.protocol = value;
       fieldSetFlags()[5] = true;
@@ -810,7 +810,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
       * Gets the value of the 'address' field.
       * @return The value.
       */
-    public java.lang.CharSequence getAddress() {
+    public java.lang.String getAddress() {
       return address;
     }
 
@@ -820,7 +820,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
       * @param value The value of 'address'.
       * @return This builder.
       */
-    public com.networknt.controller.HealthCheck.Builder setAddress(java.lang.CharSequence value) {
+    public com.networknt.controller.HealthCheck.Builder setAddress(java.lang.String value) {
       validate(fields()[6], value);
       this.address = value;
       fieldSetFlags()[6] = true;
@@ -967,7 +967,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
       * Gets the value of the 'id' field.
       * @return The value.
       */
-    public java.lang.CharSequence getId() {
+    public java.lang.String getId() {
       return id;
     }
 
@@ -977,7 +977,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
       * @param value The value of 'id'.
       * @return This builder.
       */
-    public com.networknt.controller.HealthCheck.Builder setId(java.lang.CharSequence value) {
+    public com.networknt.controller.HealthCheck.Builder setId(java.lang.String value) {
       validate(fields()[10], value);
       this.id = value;
       fieldSetFlags()[10] = true;
@@ -1046,7 +1046,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
       * Gets the value of the 'healthPath' field.
       * @return The value.
       */
-    public java.lang.CharSequence getHealthPath() {
+    public java.lang.String getHealthPath() {
       return healthPath;
     }
 
@@ -1056,7 +1056,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
       * @param value The value of 'healthPath'.
       * @return This builder.
       */
-    public com.networknt.controller.HealthCheck.Builder setHealthPath(java.lang.CharSequence value) {
+    public com.networknt.controller.HealthCheck.Builder setHealthPath(java.lang.String value) {
       validate(fields()[12], value);
       this.healthPath = value;
       fieldSetFlags()[12] = true;
@@ -1087,19 +1087,19 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
     public HealthCheck build() {
       try {
         HealthCheck record = new HealthCheck();
-        record.host = fieldSetFlags()[0] ? this.host : (java.lang.CharSequence) defaultValue(fields()[0]);
+        record.host = fieldSetFlags()[0] ? this.host : (java.lang.String) defaultValue(fields()[0]);
         record.lastExecuteTimestamp = fieldSetFlags()[1] ? this.lastExecuteTimestamp : (java.lang.Long) defaultValue(fields()[1]);
         record.lastFailedTimestamp = fieldSetFlags()[2] ? this.lastFailedTimestamp : (java.lang.Long) defaultValue(fields()[2]);
-        record.serviceId = fieldSetFlags()[3] ? this.serviceId : (java.lang.CharSequence) defaultValue(fields()[3]);
-        record.tag = fieldSetFlags()[4] ? this.tag : (java.lang.CharSequence) defaultValue(fields()[4]);
-        record.protocol = fieldSetFlags()[5] ? this.protocol : (java.lang.CharSequence) defaultValue(fields()[5]);
-        record.address = fieldSetFlags()[6] ? this.address : (java.lang.CharSequence) defaultValue(fields()[6]);
+        record.serviceId = fieldSetFlags()[3] ? this.serviceId : (java.lang.String) defaultValue(fields()[3]);
+        record.tag = fieldSetFlags()[4] ? this.tag : (java.lang.String) defaultValue(fields()[4]);
+        record.protocol = fieldSetFlags()[5] ? this.protocol : (java.lang.String) defaultValue(fields()[5]);
+        record.address = fieldSetFlags()[6] ? this.address : (java.lang.String) defaultValue(fields()[6]);
         record.port = fieldSetFlags()[7] ? this.port : (java.lang.Integer) defaultValue(fields()[7]);
         record.tlsSkipVerify = fieldSetFlags()[8] ? this.tlsSkipVerify : (java.lang.Boolean) defaultValue(fields()[8]);
         record.interval = fieldSetFlags()[9] ? this.interval : (java.lang.Integer) defaultValue(fields()[9]);
-        record.id = fieldSetFlags()[10] ? this.id : (java.lang.CharSequence) defaultValue(fields()[10]);
+        record.id = fieldSetFlags()[10] ? this.id : (java.lang.String) defaultValue(fields()[10]);
         record.deregisterCriticalServiceAfter = fieldSetFlags()[11] ? this.deregisterCriticalServiceAfter : (java.lang.Integer) defaultValue(fields()[11]);
-        record.healthPath = fieldSetFlags()[12] ? this.healthPath : (java.lang.CharSequence) defaultValue(fields()[12]);
+        record.healthPath = fieldSetFlags()[12] ? this.healthPath : (java.lang.String) defaultValue(fields()[12]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -1171,24 +1171,24 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
   {
     org.apache.avro.Schema.Field[] fieldOrder = in.readFieldOrderIfDiff();
     if (fieldOrder == null) {
-      this.host = in.readString(this.host instanceof Utf8 ? (Utf8)this.host : null);
+      this.host = in.readString();
 
       this.lastExecuteTimestamp = in.readLong();
 
       this.lastFailedTimestamp = in.readLong();
 
-      this.serviceId = in.readString(this.serviceId instanceof Utf8 ? (Utf8)this.serviceId : null);
+      this.serviceId = in.readString();
 
       if (in.readIndex() != 1) {
         in.readNull();
         this.tag = null;
       } else {
-        this.tag = in.readString(this.tag instanceof Utf8 ? (Utf8)this.tag : null);
+        this.tag = in.readString();
       }
 
-      this.protocol = in.readString(this.protocol instanceof Utf8 ? (Utf8)this.protocol : null);
+      this.protocol = in.readString();
 
-      this.address = in.readString(this.address instanceof Utf8 ? (Utf8)this.address : null);
+      this.address = in.readString();
 
       this.port = in.readInt();
 
@@ -1196,17 +1196,17 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
 
       this.interval = in.readInt();
 
-      this.id = in.readString(this.id instanceof Utf8 ? (Utf8)this.id : null);
+      this.id = in.readString();
 
       this.deregisterCriticalServiceAfter = in.readInt();
 
-      this.healthPath = in.readString(this.healthPath instanceof Utf8 ? (Utf8)this.healthPath : null);
+      this.healthPath = in.readString();
 
     } else {
       for (int i = 0; i < 13; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
-          this.host = in.readString(this.host instanceof Utf8 ? (Utf8)this.host : null);
+          this.host = in.readString();
           break;
 
         case 1:
@@ -1218,7 +1218,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
           break;
 
         case 3:
-          this.serviceId = in.readString(this.serviceId instanceof Utf8 ? (Utf8)this.serviceId : null);
+          this.serviceId = in.readString();
           break;
 
         case 4:
@@ -1226,16 +1226,16 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
             in.readNull();
             this.tag = null;
           } else {
-            this.tag = in.readString(this.tag instanceof Utf8 ? (Utf8)this.tag : null);
+            this.tag = in.readString();
           }
           break;
 
         case 5:
-          this.protocol = in.readString(this.protocol instanceof Utf8 ? (Utf8)this.protocol : null);
+          this.protocol = in.readString();
           break;
 
         case 6:
-          this.address = in.readString(this.address instanceof Utf8 ? (Utf8)this.address : null);
+          this.address = in.readString();
           break;
 
         case 7:
@@ -1251,7 +1251,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
           break;
 
         case 10:
-          this.id = in.readString(this.id instanceof Utf8 ? (Utf8)this.id : null);
+          this.id = in.readString();
           break;
 
         case 11:
@@ -1259,7 +1259,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
           break;
 
         case 12:
-          this.healthPath = in.readString(this.healthPath instanceof Utf8 ? (Utf8)this.healthPath : null);
+          this.healthPath = in.readString();
           break;
 
         default:

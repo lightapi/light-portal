@@ -38,8 +38,7 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class HybridCommandClient {
     static final Logger logger = LoggerFactory.getLogger(HybridCommandClient.class);
-    static final String commandServiceId = "com.networknt.portal.hybrid.command-1.0.0";
-
+    public static final PortalClientConfig config = (PortalClientConfig) Config.getInstance().getJsonObjectConfig(PortalClientConfig.CONFIG_NAME, PortalClientConfig.class);
     static String tag = Server.getServerConfig().getEnvironment();
     // Get the singleton Cluster instance
     static Cluster cluster = SingletonServiceFactory.getBean(Cluster.class);
@@ -47,23 +46,54 @@ public class HybridCommandClient {
     static Http2Client client = Http2Client.getInstance();
     static ClientConnection connection;
     {
-        String host = cluster.serviceToUrl("https", commandServiceId, tag, null);
-        try {
-            connection = client.connect(new URI(host), Http2Client.WORKER, Http2Client.SSL, Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
-        } catch (Exception e) {
-            logger.error("Exception:", e);
+        if (!config.isPortalByServiceUrl()) {
+            String host = cluster.serviceToUrl("https", config.getPortalCommandServiceId(), tag, null);
+            try {
+                connection = client.connect(new URI(host), Http2Client.WORKER, Http2Client.SSL, Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+            }
         }
+
     }
     static final String GENERIC_EXCEPTION = "ERR10014";
+    static final String ESTABLISH_CONNECTION_ERROR = "ERR10053";
+    static Map<String, ClientConnection> connCache = new ConcurrentHashMap<>();
 
     public static Result<String> callCommandWithToken(String command, String token) {
-        Result<String> result = null;
         try {
             if(connection == null || !connection.isOpen()) {
                 // The connection is close or not created.
-                String host = cluster.serviceToUrl("https", commandServiceId, tag, null);
+                String host = cluster.serviceToUrl("https", config.getPortalCommandServiceId(), tag, null);
                 connection = client.connect(new URI(host), Http2Client.WORKER, Http2Client.SSL, Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
             }
+            return callCommandWithToken(connection, command, token);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            Status status = new Status(ESTABLISH_CONNECTION_ERROR, e.getMessage());
+            return Failure.of(status);
+        }
+    }
+
+    public static Result<String> callCommandWithToken(String command, String token, String url) {
+        try {
+            ClientConnection conn = connCache.get(url);
+            if(conn == null || !conn.isOpen()) {
+                conn = client.connect(new URI(url), Http2Client.WORKER, Http2Client.SSL, Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
+                connCache.put(url, conn);
+            }
+            return callCommandWithToken(conn, command, token);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            Status status = new Status(ESTABLISH_CONNECTION_ERROR, e.getMessage());
+            return Failure.of(status);
+        }
+    }
+
+    public  static Result<String> callCommandWithToken(ClientConnection connection, String command, String token) {
+        Result<String> result = null;
+        try {
+
             // Create one CountDownLatch that will be reset in the callback function
             final CountDownLatch latch = new CountDownLatch(1);
             // Create an AtomicReference object to receive ClientResponse from callback function
@@ -88,6 +118,7 @@ public class HybridCommandClient {
         return result;
     }
 
+
     /**
      * Create a refresh token from the oauth-kafka. The token will be a client credential token so that there is no user_id
      * in the JWT to bypass the match verification. This is an internal method that is called between oauth and portal
@@ -106,7 +137,11 @@ public class HybridCommandClient {
         commandMap.put("data", refreshTokenMap);
         String command = JsonMapper.toJson(commandMap);
         if(logger.isTraceEnabled()) logger.trace("command = " + command);
-        return callCommandWithToken(command, token);
+        if (config.isPortalByServiceUrl()) {
+            return callCommandWithToken(command, token, config.getPortalCommandServiceUrl());
+        } else {
+            return callCommandWithToken(command, token);
+        }
     }
 
     /**
@@ -122,7 +157,12 @@ public class HybridCommandClient {
         commandMap.put("action", "createAuthCode");
         commandMap.put("version", "0.1.0");
         commandMap.put("data", codeMap);
-        return callCommandWithToken(JsonMapper.toJson(commandMap), token);
+        if (config.isPortalByServiceUrl()) {
+            return callCommandWithToken(JsonMapper.toJson(commandMap), token, config.getPortalCommandServiceUrl());
+        } else {
+            return callCommandWithToken(JsonMapper.toJson(commandMap), token);
+        }
+
     }
 
     /**
@@ -134,7 +174,11 @@ public class HybridCommandClient {
      */
     public static Result<String> deleteAuthCode(String host, String authCode, String token) {
         final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"deleteAuthCode\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"authCode\":\"%s\"}}", host, authCode);
-        return callCommandWithToken(command, token);
+        if (config.isPortalByServiceUrl()) {
+            return callCommandWithToken(command, token, config.getPortalCommandServiceUrl());
+        } else {
+            return callCommandWithToken(command, token);
+        }
     }
 
     /**
@@ -154,7 +198,11 @@ public class HybridCommandClient {
         commandMap.put("data", refTokenMap);
         String command = JsonMapper.toJson(commandMap);
         if(logger.isTraceEnabled()) logger.trace("command = " + command);
-        return callCommandWithToken(command, token);
+        if (config.isPortalByServiceUrl()) {
+            return callCommandWithToken(command, token, config.getPortalCommandServiceUrl());
+        } else {
+            return callCommandWithToken(command, token);
+        }
     }
 
     /**
@@ -173,7 +221,11 @@ public class HybridCommandClient {
         commandMap.put("data", userMap);
         String command = JsonMapper.toJson(commandMap);
         if(logger.isTraceEnabled()) logger.trace("command = " + command);
-        return callCommandWithToken(command, token);
+        if (config.isPortalByServiceUrl()) {
+            return callCommandWithToken(command, token, config.getPortalCommandServiceUrl());
+        } else {
+            return callCommandWithToken(command, token);
+        }
     }
 
 }
