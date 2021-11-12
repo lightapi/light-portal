@@ -43,20 +43,24 @@ public class HybridQueryClient {
 
     static final Logger logger = LoggerFactory.getLogger(HybridQueryClient.class);
     static final String FAILED_TO_POPULATE_HEADER = "ERR12050";
+    public static final PortalClientConfig config = (PortalClientConfig) Config.getInstance().getJsonObjectConfig(PortalClientConfig.CONFIG_NAME, PortalClientConfig.class);
 
-    static final String queryServiceId = "com.networknt.portal.hybrid.query-1.0.0";
+    //static final String queryServiceId = "com.networknt.portal.hybrid.query-1.0.0";
     static String tag = Server.getServerConfig().getEnvironment();
     // Get the singleton Cluster instance
     static Cluster cluster = SingletonServiceFactory.getBean(Cluster.class);
     // Get the singleton Http2Client instance
     static Http2Client client = Http2Client.getInstance();
     static ClientConnection connection;
+
     {
-        String host = cluster.serviceToUrl("https", queryServiceId, tag, null);
-        try {
-            connection = client.connect(new URI(host), Http2Client.WORKER, Http2Client.SSL, Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
-        } catch (Exception e) {
-            logger.error("Exception:", e);
+        if (!config.isPortalByServiceUrl()) {
+            String host = cluster.serviceToUrl("https", config.getPortalQueryServiceId(), tag, null);
+            try {
+                connection = client.connect(new URI(host), Http2Client.WORKER, Http2Client.SSL, Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+            }
         }
     }
     static final String GENERIC_EXCEPTION = "ERR10014";
@@ -68,7 +72,7 @@ public class HybridQueryClient {
         try {
             if(connection == null || !connection.isOpen()) {
                 // The connection is close or not created.
-                String host = cluster.serviceToUrl("https", queryServiceId, tag, null);
+                String host = cluster.serviceToUrl("https", config.getPortalQueryServiceId(), tag, null);
                 connection = client.connect(new URI(host), Http2Client.WORKER, Http2Client.SSL, Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
             }
             // Create one CountDownLatch that will be reset in the callback function
@@ -133,7 +137,7 @@ public class HybridQueryClient {
         try {
             if(connection == null || !connection.isOpen()) {
                 // The connection is close or not created.
-                String host = cluster.serviceToUrl("https", queryServiceId, tag, null);
+                String host = cluster.serviceToUrl("https", config.getPortalQueryServiceId(), tag, null);
                 connection = client.connect(new URI(host), Http2Client.WORKER, Http2Client.SSL, Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
             }
             // Create one CountDownLatch that will be reset in the callback function
@@ -267,7 +271,12 @@ public class HybridQueryClient {
      */
     public static Result<String> getUserByEmail(HttpServerExchange exchange, String email) {
         final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"user\",\"action\":\"queryUserByEmail\",\"version\":\"0.1.0\",\"data\":{\"email\":\"%s\"}}", email);
-        return callQueryExchange(command, exchange);
+        if (config.isPortalByServiceUrl()) {
+            return callQueryExchangeUrl(command, exchange, config.getPortalQueryServiceUrl());
+        } else {
+            return callQueryExchange(command, exchange);
+        }
+
     }
 
     /**
@@ -277,6 +286,7 @@ public class HybridQueryClient {
      * @param url url to a specific host
      * @param email user email
      * @return Result of user object in JSON
+     * @deprecated Please use portal.yml config PortalByServiceUrl indicator
      */
     public static Result<String> getUserByEmail(HttpServerExchange exchange, String url, String email) {
         final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"user\",\"action\":\"queryUserByEmail\",\"version\":\"0.1.0\",\"data\":{\"email\":\"%s\"}}", email);
@@ -295,7 +305,12 @@ public class HybridQueryClient {
      */
     public static Result<String> getUserByEmail(String email, String token) {
         final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"user\",\"action\":\"queryUserByEmail\",\"version\":\"0.1.0\",\"data\":{\"email\":\"%s\"}}", email);
-        return callQueryWithToken(command, token);
+        if (config.isPortalByServiceUrl()) {
+            return callQueryTokenUrl(command, token, config.getPortalQueryServiceUrl());
+        } else {
+            return callQueryWithToken(command, token);
+        }
+
     }
 
     /**
@@ -309,7 +324,11 @@ public class HybridQueryClient {
      */
     public static Result<String> getUserById(HttpServerExchange exchange, String userId) {
         final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"user\",\"action\":\"queryUserById\",\"version\":\"0.1.0\",\"data\":{\"userId\":\"%s\"}}", userId);
-        return callQueryExchange(command, exchange);
+        if (config.isPortalByServiceUrl()) {
+            return callQueryExchangeUrl(command, exchange, config.getPortalQueryServiceUrl());
+        } else {
+            return callQueryExchange(command, exchange);
+        }
     }
 
     /**
@@ -337,7 +356,11 @@ public class HybridQueryClient {
      */
      public static Result<String> getUserById(String userId, String token) {
          final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"user\",\"action\":\"queryUserById\",\"version\":\"0.1.0\",\"data\":{\"userId\":\"%s\"}}", userId);
-         return callQueryWithToken(command, token);
+         if (config.isPortalByServiceUrl()) {
+             return callQueryTokenUrl(command, token, config.getPortalQueryServiceUrl());
+         } else {
+             return callQueryWithToken(command, token);
+         }
      }
 
     /**
@@ -349,7 +372,11 @@ public class HybridQueryClient {
      */
     public static Result<String> getNonceByEmail(HttpServerExchange exchange, String email) {
         final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"user\",\"action\":\"getNonceByEmail\",\"version\":\"0.1.0\",\"data\":{\"email\":\"%s\"}}", email);
-        return callQueryExchange(command, exchange);
+        if (config.isPortalByServiceUrl()) {
+            return callQueryExchangeUrl(command, exchange, config.getPortalQueryServiceUrl());
+        } else {
+            return callQueryExchange(command, exchange);
+        }
     }
 
     /**
@@ -376,7 +403,11 @@ public class HybridQueryClient {
      */
     public static Result<String> getCity(HttpServerExchange exchange, String country, String province, String city) {
         final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"covid\",\"action\":\"getCity\",\"version\":\"0.1.0\",\"data\":{\"country\":\"%s\",\"province\":\"%s\",\"city\":\"%s\"}}", country, province, city);
-        return callQueryExchange(command, exchange);
+        if (config.isPortalByServiceUrl()) {
+            return callQueryExchangeUrl(command, exchange, config.getPortalQueryServiceUrl());
+        } else {
+            return callQueryExchange(command, exchange);
+        }
     }
 
     /**
@@ -578,7 +609,11 @@ public class HybridQueryClient {
      */
     public static Result<String> getClientById(String token, String clientId) {
         final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getClientById\",\"version\":\"0.1.0\",\"data\":{\"clientId\":\"%s\"}}", clientId);
-        return callQueryWithToken(s, token);
+        if (config.isPortalByServiceUrl()) {
+            return callQueryTokenUrl(s, token, config.getPortalQueryServiceUrl());
+        } else {
+            return callQueryWithToken(s, token);
+        }
     }
 
     /**
@@ -662,7 +697,11 @@ public class HybridQueryClient {
      */
     public static Result<String> getAuthCodeDetail(String authCode, String token) {
         final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getAuthCodeDetail\",\"version\":\"0.1.0\",\"data\":{\"authCode\":\"%s\"}}", authCode);
-        return callQueryWithToken(s, token);
+        if (config.isPortalByServiceUrl()) {
+            return callQueryTokenUrl(s, token, config.getPortalQueryServiceUrl());
+        } else {
+            return callQueryWithToken(s, token);
+        }
     }
 
     /**
@@ -676,7 +715,11 @@ public class HybridQueryClient {
      */
     public static Result<String> getAuthCode(HttpServerExchange exchange, String host, int offset, int limit) {
         final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getAuthCode\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
-        return callQueryExchange(s, exchange);
+        if (config.isPortalByServiceUrl()) {
+            return callQueryExchangeUrl(s, exchange, config.getPortalQueryServiceUrl());
+        } else {
+            return callQueryExchange(s, exchange);
+        }
     }
 
     /**
@@ -718,7 +761,11 @@ public class HybridQueryClient {
      */
     public static Result<String> getRefTokenDetail(String refToken, String token) {
         final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getRefTokenDetail\",\"version\":\"0.1.0\",\"data\":{\"refToken\":\"%s\"}}", refToken);
-        return callQueryWithToken(s, token);
+        if (config.isPortalByServiceUrl()) {
+            return callQueryTokenUrl(s, token, config.getPortalQueryServiceUrl());
+        } else {
+            return callQueryWithToken(s, token);
+        }
     }
 
     /**
@@ -774,7 +821,7 @@ public class HybridQueryClient {
         Result<String> result = null;
         ClientConnection conn = null;
         try {
-            String host = cluster.serviceToUrl("https", "com.networknt.reference-1.0.0", tag, null);
+            String host = cluster.serviceToUrl("https", config.getPortalReferenceServiceId(), tag, null);
             conn = client.connect(new URI(host), Http2Client.WORKER, Http2Client.SSL, Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
             // Create one CountDownLatch that will be reset in the callback function
             final CountDownLatch latch = new CountDownLatch(1);
@@ -1094,7 +1141,11 @@ public class HybridQueryClient {
      */
     public static Result<String> getJsonSchemaById(HttpServerExchange exchange, String host, String id) {
         final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getJsonSchemaById\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"id\":\"%s\"}}", host, id);
-        return callQueryExchange(s, exchange);
+        if (config.isPortalByServiceUrl()) {
+            return callQueryExchangeUrl(s, exchange, config.getPortalQueryServiceUrl());
+        } else {
+            return callQueryExchange(s, exchange);
+        }
     }
 
     /**
