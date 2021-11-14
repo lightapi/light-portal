@@ -56,6 +56,7 @@ public class HybridQueryClient {
     {
         if (!config.isPortalByServiceUrl()) {
             String host = cluster.serviceToUrl("https", config.getPortalQueryServiceId(), tag, null);
+            if(logger.isTraceEnabled()) logger.trace("serviceId " + config.getPortalQueryServiceId() + " with result " + host);
             try {
                 connection = client.connect(new URI(host), Http2Client.WORKER, Http2Client.SSL, Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
             } catch (Exception e) {
@@ -73,6 +74,7 @@ public class HybridQueryClient {
             if(connection == null || !connection.isOpen()) {
                 // The connection is close or not created.
                 String host = cluster.serviceToUrl("https", config.getPortalQueryServiceId(), tag, null);
+                if(logger.isTraceEnabled()) logger.trace("serviceId " + config.getPortalQueryServiceId() + " with result " + host);
                 connection = client.connect(new URI(host), Http2Client.WORKER, Http2Client.SSL, Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
             }
             // Create one CountDownLatch that will be reset in the callback function
@@ -138,6 +140,7 @@ public class HybridQueryClient {
             if(connection == null || !connection.isOpen()) {
                 // The connection is close or not created.
                 String host = cluster.serviceToUrl("https", config.getPortalQueryServiceId(), tag, null);
+                if(logger.isTraceEnabled()) logger.trace("serviceId " + config.getPortalQueryServiceId() + " with result " + host);
                 connection = client.connect(new URI(host), Http2Client.WORKER, Http2Client.SSL, Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
             }
             // Create one CountDownLatch that will be reset in the callback function
