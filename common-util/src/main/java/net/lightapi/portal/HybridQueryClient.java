@@ -1179,4 +1179,34 @@ public class HybridQueryClient {
         return callQueryExchangeUrl(JsonMapper.toJson(map), exchange, url);
     }
 
+    /**
+     * Get rule for host and ruleId with exchange. The result contains a rule object.
+     *
+     * @param exchange HttpServerExchange
+     * @param host host name
+     * @param url of the target server
+     * @param ruleId of the rule
+     * @return Result the rule object in JSON
+     */
+    public static Result<String> getRuleById(HttpServerExchange exchange, String url, String host, String ruleId) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getRuleById\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"ruleId\":\"%s\"}}", host, ruleId);
+        return callQueryExchangeUrl(s, exchange, url);
+    }
+
+    /**
+     * Get rule list for host with exchange and url. The result contains a list of rules.
+     *
+     * @param exchange HttpServerExchange
+     * @param url url of target server
+     * @param host host name
+     * @param offset of the records
+     * @param limit of the records
+     * @return Result list of rule objects in JSON
+     */
+    public static Result<String> getRuleByHost(HttpServerExchange exchange, String url, String host, int offset, int limit) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getRuleByHost\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
+        return callQueryExchangeUrl(s, exchange, url);
+    }
+
+
 }
