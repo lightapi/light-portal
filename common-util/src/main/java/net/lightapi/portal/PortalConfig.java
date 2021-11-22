@@ -20,7 +20,9 @@ public class PortalConfig {
     String admin;
     String dataPath;
     String userApplicationId;
-    String userTopic;
+    String userIdTopic;
+    String taijiTopic;
+    String referenceTopic;
     String notificationApplicationId;
     String notificationTopic;
     String nonceApplicationId;
@@ -102,12 +104,28 @@ public class PortalConfig {
         this.userApplicationId = userApplicationId;
     }
 
-    public String getUserTopic() {
-        return userTopic;
+    public String getUserIdTopic() {
+        return userIdTopic;
     }
 
-    public void setUserTopic(String userTopic) {
-        this.userTopic = userTopic;
+    public void setUserIdTopic(String userIdTopic) {
+        this.userIdTopic = userIdTopic;
+    }
+
+    public String getTaijiTopic() {
+        return taijiTopic;
+    }
+
+    public void setTaijiTopic(String taijiTopic) {
+        this.taijiTopic = taijiTopic;
+    }
+
+    public String getReferenceTopic() {
+        return referenceTopic;
+    }
+
+    public void setReferenceTopic(String referenceTopic) {
+        this.referenceTopic = referenceTopic;
     }
 
     public String getNotificationApplicationId() {
