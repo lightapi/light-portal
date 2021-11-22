@@ -32,18 +32,6 @@
             <groupId>com.networknt</groupId>
             <artifactId>cluster</artifactId>
         </dependency>
-        <dependency>
-            <groupId>com.networknt</groupId>
-            <artifactId>consul</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.networknt</groupId>
-            <artifactId>kafka-common</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.networknt</groupId>
-            <artifactId>kafka-producer</artifactId>
-        </dependency>
 
         <dependency>
             <groupId>org.slf4j</groupId>
