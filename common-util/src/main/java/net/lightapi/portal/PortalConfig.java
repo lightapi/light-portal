@@ -28,6 +28,8 @@ public class PortalConfig {
     String nonceApplicationId;
     String nonceTopic;
     String marketApplicationId;
+    String maprootApplicationId;
+
 
     public PortalConfig() {
     }
@@ -166,5 +168,13 @@ public class PortalConfig {
 
     public void setMarketApplicationId(String marketApplicationId) {
         this.marketApplicationId = marketApplicationId;
+    }
+
+    public String getMaprootApplicationId() {
+        return maprootApplicationId;
+    }
+
+    public void setMaprootApplicationId(String maprootApplicationId) {
+        this.maprootApplicationId = maprootApplicationId;
     }
 }
