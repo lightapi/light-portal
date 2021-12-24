@@ -14,8 +14,8 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class MarketServiceDeletedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -6587758547710592768L;
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"MarketServiceDeletedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the id\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"keyId\",\"type\":\"int\",\"doc\":\"keyId 0 serviceId plus optional buildNumber 1 host\"},{\"name\":\"host\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host\"},{\"name\":\"style\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api style\"},{\"name\":\"serviceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service id\"},{\"name\":\"buildNumber\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"build number\",\"default\":null},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  private static final long serialVersionUID = -1319740732762295891L;
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"MarketServiceDeletedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the id\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"keyId\",\"type\":\"int\",\"doc\":\"keyId 0 serviceId plus optional buildNumber 1 host\"},{\"name\":\"host\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host\"},{\"name\":\"style\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api style\"},{\"name\":\"serviceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service id\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static SpecificData MODEL$ = new SpecificData();
@@ -80,8 +80,6 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
    private java.lang.String style;
   /** service id */
    private java.lang.String serviceId;
-  /** build number */
-   private java.lang.String buildNumber;
   /** time the event is recorded */
    private long timestamp;
 
@@ -99,16 +97,14 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
    * @param host host
    * @param style api style
    * @param serviceId service id
-   * @param buildNumber build number
    * @param timestamp time the event is recorded
    */
-  public MarketServiceDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.Integer keyId, java.lang.String host, java.lang.String style, java.lang.String serviceId, java.lang.String buildNumber, java.lang.Long timestamp) {
+  public MarketServiceDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.Integer keyId, java.lang.String host, java.lang.String style, java.lang.String serviceId, java.lang.Long timestamp) {
     this.EventId = EventId;
     this.keyId = keyId;
     this.host = host;
     this.style = style;
     this.serviceId = serviceId;
-    this.buildNumber = buildNumber;
     this.timestamp = timestamp;
   }
 
@@ -122,8 +118,7 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
     case 2: return host;
     case 3: return style;
     case 4: return serviceId;
-    case 5: return buildNumber;
-    case 6: return timestamp;
+    case 5: return timestamp;
     default: throw new org.apache.avro.AvroRuntimeException("Bad index");
     }
   }
@@ -137,8 +132,7 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
     case 2: host = value$ != null ? value$.toString() : null; break;
     case 3: style = value$ != null ? value$.toString() : null; break;
     case 4: serviceId = value$ != null ? value$.toString() : null; break;
-    case 5: buildNumber = value$ != null ? value$.toString() : null; break;
-    case 6: timestamp = (java.lang.Long)value$; break;
+    case 5: timestamp = (java.lang.Long)value$; break;
     default: throw new org.apache.avro.AvroRuntimeException("Bad index");
     }
   }
@@ -233,24 +227,6 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
   }
 
   /**
-   * Gets the value of the 'buildNumber' field.
-   * @return build number
-   */
-  public java.lang.String getBuildNumber() {
-    return buildNumber;
-  }
-
-
-  /**
-   * Sets the value of the 'buildNumber' field.
-   * build number
-   * @param value the value to set.
-   */
-  public void setBuildNumber(java.lang.String value) {
-    this.buildNumber = value;
-  }
-
-  /**
    * Gets the value of the 'timestamp' field.
    * @return time the event is recorded
    */
@@ -319,8 +295,6 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
     private java.lang.String style;
     /** service id */
     private java.lang.String serviceId;
-    /** build number */
-    private java.lang.String buildNumber;
     /** time the event is recorded */
     private long timestamp;
 
@@ -358,13 +332,9 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
         this.serviceId = data().deepCopy(fields()[4].schema(), other.serviceId);
         fieldSetFlags()[4] = other.fieldSetFlags()[4];
       }
-      if (isValidValue(fields()[5], other.buildNumber)) {
-        this.buildNumber = data().deepCopy(fields()[5].schema(), other.buildNumber);
+      if (isValidValue(fields()[5], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[5].schema(), other.timestamp);
         fieldSetFlags()[5] = other.fieldSetFlags()[5];
-      }
-      if (isValidValue(fields()[6], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[6].schema(), other.timestamp);
-        fieldSetFlags()[6] = other.fieldSetFlags()[6];
       }
     }
 
@@ -395,13 +365,9 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
         this.serviceId = data().deepCopy(fields()[4].schema(), other.serviceId);
         fieldSetFlags()[4] = true;
       }
-      if (isValidValue(fields()[5], other.buildNumber)) {
-        this.buildNumber = data().deepCopy(fields()[5].schema(), other.buildNumber);
+      if (isValidValue(fields()[5], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[5].schema(), other.timestamp);
         fieldSetFlags()[5] = true;
-      }
-      if (isValidValue(fields()[6], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[6].schema(), other.timestamp);
-        fieldSetFlags()[6] = true;
       }
     }
 
@@ -656,50 +622,6 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
     }
 
     /**
-      * Gets the value of the 'buildNumber' field.
-      * build number
-      * @return The value.
-      */
-    public java.lang.String getBuildNumber() {
-      return buildNumber;
-    }
-
-
-    /**
-      * Sets the value of the 'buildNumber' field.
-      * build number
-      * @param value The value of 'buildNumber'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.MarketServiceDeletedEvent.Builder setBuildNumber(java.lang.String value) {
-      validate(fields()[5], value);
-      this.buildNumber = value;
-      fieldSetFlags()[5] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'buildNumber' field has been set.
-      * build number
-      * @return True if the 'buildNumber' field has been set, false otherwise.
-      */
-    public boolean hasBuildNumber() {
-      return fieldSetFlags()[5];
-    }
-
-
-    /**
-      * Clears the value of the 'buildNumber' field.
-      * build number
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.MarketServiceDeletedEvent.Builder clearBuildNumber() {
-      buildNumber = null;
-      fieldSetFlags()[5] = false;
-      return this;
-    }
-
-    /**
       * Gets the value of the 'timestamp' field.
       * time the event is recorded
       * @return The value.
@@ -716,9 +638,9 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
       * @return This builder.
       */
     public net.lightapi.portal.market.MarketServiceDeletedEvent.Builder setTimestamp(long value) {
-      validate(fields()[6], value);
+      validate(fields()[5], value);
       this.timestamp = value;
-      fieldSetFlags()[6] = true;
+      fieldSetFlags()[5] = true;
       return this;
     }
 
@@ -728,7 +650,7 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
       * @return True if the 'timestamp' field has been set, false otherwise.
       */
     public boolean hasTimestamp() {
-      return fieldSetFlags()[6];
+      return fieldSetFlags()[5];
     }
 
 
@@ -738,7 +660,7 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
       * @return This builder.
       */
     public net.lightapi.portal.market.MarketServiceDeletedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[6] = false;
+      fieldSetFlags()[5] = false;
       return this;
     }
 
@@ -761,8 +683,7 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
         record.host = fieldSetFlags()[2] ? this.host : (java.lang.String) defaultValue(fields()[2]);
         record.style = fieldSetFlags()[3] ? this.style : (java.lang.String) defaultValue(fields()[3]);
         record.serviceId = fieldSetFlags()[4] ? this.serviceId : (java.lang.String) defaultValue(fields()[4]);
-        record.buildNumber = fieldSetFlags()[5] ? this.buildNumber : (java.lang.String) defaultValue(fields()[5]);
-        record.timestamp = fieldSetFlags()[6] ? this.timestamp : (java.lang.Long) defaultValue(fields()[6]);
+        record.timestamp = fieldSetFlags()[5] ? this.timestamp : (java.lang.Long) defaultValue(fields()[5]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -805,14 +726,6 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
 
     out.writeString(this.serviceId);
 
-    if (this.buildNumber == null) {
-      out.writeIndex(0);
-      out.writeNull();
-    } else {
-      out.writeIndex(1);
-      out.writeString(this.buildNumber);
-    }
-
     out.writeLong(this.timestamp);
 
   }
@@ -835,17 +748,10 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
 
       this.serviceId = in.readString();
 
-      if (in.readIndex() != 1) {
-        in.readNull();
-        this.buildNumber = null;
-      } else {
-        this.buildNumber = in.readString();
-      }
-
       this.timestamp = in.readLong();
 
     } else {
-      for (int i = 0; i < 7; i++) {
+      for (int i = 0; i < 6; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -871,15 +777,6 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
           break;
 
         case 5:
-          if (in.readIndex() != 1) {
-            in.readNull();
-            this.buildNumber = null;
-          } else {
-            this.buildNumber = in.readString();
-          }
-          break;
-
-        case 6:
           this.timestamp = in.readLong();
           break;
 

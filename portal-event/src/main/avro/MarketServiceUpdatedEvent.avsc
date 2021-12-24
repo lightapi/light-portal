@@ -50,12 +50,6 @@
       "doc": "service id"
     },
     {
-      "name": "buildNumber",
-      "type": ["null", "string"],
-      "default": null,
-      "doc": "build number"
-    },
-    {
       "name": "value",
       "type": "string",
       "doc": "service detail in JSON"

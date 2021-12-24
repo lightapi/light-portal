@@ -635,16 +635,36 @@ public class HybridQueryClient {
     }
 
     /**
-     * Get service detail by serviceId and buildNumber. The result contains a map of properties.
+     * Get service for host with exchange, url and optional style. The result contains a list of service.
+     *
+     * @param exchange HttpServerExchange
+     * @param url url of target server
+     * @param host host name
+     * @param style service style
+     * @param offset of the records
+     * @param limit of the records
+     * @return Result list of service in JSON
+     */
+    public static Result<String> getService(HttpServerExchange exchange, String url, String host, String style, int offset, int limit) {
+        String s;
+        if(style != null) {
+            s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getService\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"style\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, style, offset, limit);
+        } else {
+            s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getService\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
+        }
+        return callQueryExchangeUrl(s, exchange, url);
+    }
+
+    /**
+     * Get service detail by serviceId. The result contains a map of properties.
      *
      * @param exchange HttpServerExchange
      * @param url host of instance that contains the state store
      * @param serviceId service id
-     * @param buildNumber build number
      * @return Result of client object in JSON
      */
-    public static Result<String> getServiceById(HttpServerExchange exchange, String url, String serviceId, String buildNumber) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getServiceById\",\"version\":\"0.1.0\",\"data\":{\"serviceId\":\"%s\",\"buildNumber\":\"%s\"}}", serviceId, buildNumber);
+    public static Result<String> getServiceById(HttpServerExchange exchange, String url, String serviceId) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getServiceById\",\"version\":\"0.1.0\",\"data\":{\"serviceId\":\"%s\"}}", serviceId);
         return callQueryExchangeUrl(s, exchange, url);
     }
 

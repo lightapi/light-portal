@@ -14,8 +14,8 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class MarketServiceUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -1286934548746768496L;
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"MarketServiceUpdatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"keyId\",\"type\":\"int\",\"doc\":\"keyId 0 serviceId plus optional buildNumber 1 host\"},{\"name\":\"host\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host\"},{\"name\":\"style\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api style\"},{\"name\":\"serviceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service id\"},{\"name\":\"buildNumber\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"build number\",\"default\":null},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service detail in JSON\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  private static final long serialVersionUID = 2807409868244715572L;
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"MarketServiceUpdatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"keyId\",\"type\":\"int\",\"doc\":\"keyId 0 serviceId plus optional buildNumber 1 host\"},{\"name\":\"host\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host\"},{\"name\":\"style\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api style\"},{\"name\":\"serviceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service id\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service detail in JSON\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static SpecificData MODEL$ = new SpecificData();
@@ -80,8 +80,6 @@ public class MarketServiceUpdatedEvent extends org.apache.avro.specific.Specific
    private java.lang.String style;
   /** service id */
    private java.lang.String serviceId;
-  /** build number */
-   private java.lang.String buildNumber;
   /** service detail in JSON */
    private java.lang.String value;
   /** time the event is recorded */
@@ -101,17 +99,15 @@ public class MarketServiceUpdatedEvent extends org.apache.avro.specific.Specific
    * @param host host
    * @param style api style
    * @param serviceId service id
-   * @param buildNumber build number
    * @param value service detail in JSON
    * @param timestamp time the event is recorded
    */
-  public MarketServiceUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.Integer keyId, java.lang.String host, java.lang.String style, java.lang.String serviceId, java.lang.String buildNumber, java.lang.String value, java.lang.Long timestamp) {
+  public MarketServiceUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.Integer keyId, java.lang.String host, java.lang.String style, java.lang.String serviceId, java.lang.String value, java.lang.Long timestamp) {
     this.EventId = EventId;
     this.keyId = keyId;
     this.host = host;
     this.style = style;
     this.serviceId = serviceId;
-    this.buildNumber = buildNumber;
     this.value = value;
     this.timestamp = timestamp;
   }
@@ -126,9 +122,8 @@ public class MarketServiceUpdatedEvent extends org.apache.avro.specific.Specific
     case 2: return host;
     case 3: return style;
     case 4: return serviceId;
-    case 5: return buildNumber;
-    case 6: return value;
-    case 7: return timestamp;
+    case 5: return value;
+    case 6: return timestamp;
     default: throw new org.apache.avro.AvroRuntimeException("Bad index");
     }
   }
@@ -142,9 +137,8 @@ public class MarketServiceUpdatedEvent extends org.apache.avro.specific.Specific
     case 2: host = value$ != null ? value$.toString() : null; break;
     case 3: style = value$ != null ? value$.toString() : null; break;
     case 4: serviceId = value$ != null ? value$.toString() : null; break;
-    case 5: buildNumber = value$ != null ? value$.toString() : null; break;
-    case 6: value = value$ != null ? value$.toString() : null; break;
-    case 7: timestamp = (java.lang.Long)value$; break;
+    case 5: value = value$ != null ? value$.toString() : null; break;
+    case 6: timestamp = (java.lang.Long)value$; break;
     default: throw new org.apache.avro.AvroRuntimeException("Bad index");
     }
   }
@@ -239,24 +233,6 @@ public class MarketServiceUpdatedEvent extends org.apache.avro.specific.Specific
   }
 
   /**
-   * Gets the value of the 'buildNumber' field.
-   * @return build number
-   */
-  public java.lang.String getBuildNumber() {
-    return buildNumber;
-  }
-
-
-  /**
-   * Sets the value of the 'buildNumber' field.
-   * build number
-   * @param value the value to set.
-   */
-  public void setBuildNumber(java.lang.String value) {
-    this.buildNumber = value;
-  }
-
-  /**
    * Gets the value of the 'value' field.
    * @return service detail in JSON
    */
@@ -343,8 +319,6 @@ public class MarketServiceUpdatedEvent extends org.apache.avro.specific.Specific
     private java.lang.String style;
     /** service id */
     private java.lang.String serviceId;
-    /** build number */
-    private java.lang.String buildNumber;
     /** service detail in JSON */
     private java.lang.String value;
     /** time the event is recorded */
@@ -384,17 +358,13 @@ public class MarketServiceUpdatedEvent extends org.apache.avro.specific.Specific
         this.serviceId = data().deepCopy(fields()[4].schema(), other.serviceId);
         fieldSetFlags()[4] = other.fieldSetFlags()[4];
       }
-      if (isValidValue(fields()[5], other.buildNumber)) {
-        this.buildNumber = data().deepCopy(fields()[5].schema(), other.buildNumber);
+      if (isValidValue(fields()[5], other.value)) {
+        this.value = data().deepCopy(fields()[5].schema(), other.value);
         fieldSetFlags()[5] = other.fieldSetFlags()[5];
       }
-      if (isValidValue(fields()[6], other.value)) {
-        this.value = data().deepCopy(fields()[6].schema(), other.value);
+      if (isValidValue(fields()[6], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[6].schema(), other.timestamp);
         fieldSetFlags()[6] = other.fieldSetFlags()[6];
-      }
-      if (isValidValue(fields()[7], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[7].schema(), other.timestamp);
-        fieldSetFlags()[7] = other.fieldSetFlags()[7];
       }
     }
 
@@ -425,17 +395,13 @@ public class MarketServiceUpdatedEvent extends org.apache.avro.specific.Specific
         this.serviceId = data().deepCopy(fields()[4].schema(), other.serviceId);
         fieldSetFlags()[4] = true;
       }
-      if (isValidValue(fields()[5], other.buildNumber)) {
-        this.buildNumber = data().deepCopy(fields()[5].schema(), other.buildNumber);
+      if (isValidValue(fields()[5], other.value)) {
+        this.value = data().deepCopy(fields()[5].schema(), other.value);
         fieldSetFlags()[5] = true;
       }
-      if (isValidValue(fields()[6], other.value)) {
-        this.value = data().deepCopy(fields()[6].schema(), other.value);
+      if (isValidValue(fields()[6], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[6].schema(), other.timestamp);
         fieldSetFlags()[6] = true;
-      }
-      if (isValidValue(fields()[7], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[7].schema(), other.timestamp);
-        fieldSetFlags()[7] = true;
       }
     }
 
@@ -690,50 +656,6 @@ public class MarketServiceUpdatedEvent extends org.apache.avro.specific.Specific
     }
 
     /**
-      * Gets the value of the 'buildNumber' field.
-      * build number
-      * @return The value.
-      */
-    public java.lang.String getBuildNumber() {
-      return buildNumber;
-    }
-
-
-    /**
-      * Sets the value of the 'buildNumber' field.
-      * build number
-      * @param value The value of 'buildNumber'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.MarketServiceUpdatedEvent.Builder setBuildNumber(java.lang.String value) {
-      validate(fields()[5], value);
-      this.buildNumber = value;
-      fieldSetFlags()[5] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'buildNumber' field has been set.
-      * build number
-      * @return True if the 'buildNumber' field has been set, false otherwise.
-      */
-    public boolean hasBuildNumber() {
-      return fieldSetFlags()[5];
-    }
-
-
-    /**
-      * Clears the value of the 'buildNumber' field.
-      * build number
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.MarketServiceUpdatedEvent.Builder clearBuildNumber() {
-      buildNumber = null;
-      fieldSetFlags()[5] = false;
-      return this;
-    }
-
-    /**
       * Gets the value of the 'value' field.
       * service detail in JSON
       * @return The value.
@@ -750,9 +672,9 @@ public class MarketServiceUpdatedEvent extends org.apache.avro.specific.Specific
       * @return This builder.
       */
     public net.lightapi.portal.market.MarketServiceUpdatedEvent.Builder setValue(java.lang.String value) {
-      validate(fields()[6], value);
+      validate(fields()[5], value);
       this.value = value;
-      fieldSetFlags()[6] = true;
+      fieldSetFlags()[5] = true;
       return this;
     }
 
@@ -762,7 +684,7 @@ public class MarketServiceUpdatedEvent extends org.apache.avro.specific.Specific
       * @return True if the 'value' field has been set, false otherwise.
       */
     public boolean hasValue() {
-      return fieldSetFlags()[6];
+      return fieldSetFlags()[5];
     }
 
 
@@ -773,7 +695,7 @@ public class MarketServiceUpdatedEvent extends org.apache.avro.specific.Specific
       */
     public net.lightapi.portal.market.MarketServiceUpdatedEvent.Builder clearValue() {
       value = null;
-      fieldSetFlags()[6] = false;
+      fieldSetFlags()[5] = false;
       return this;
     }
 
@@ -794,9 +716,9 @@ public class MarketServiceUpdatedEvent extends org.apache.avro.specific.Specific
       * @return This builder.
       */
     public net.lightapi.portal.market.MarketServiceUpdatedEvent.Builder setTimestamp(long value) {
-      validate(fields()[7], value);
+      validate(fields()[6], value);
       this.timestamp = value;
-      fieldSetFlags()[7] = true;
+      fieldSetFlags()[6] = true;
       return this;
     }
 
@@ -806,7 +728,7 @@ public class MarketServiceUpdatedEvent extends org.apache.avro.specific.Specific
       * @return True if the 'timestamp' field has been set, false otherwise.
       */
     public boolean hasTimestamp() {
-      return fieldSetFlags()[7];
+      return fieldSetFlags()[6];
     }
 
 
@@ -816,7 +738,7 @@ public class MarketServiceUpdatedEvent extends org.apache.avro.specific.Specific
       * @return This builder.
       */
     public net.lightapi.portal.market.MarketServiceUpdatedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[7] = false;
+      fieldSetFlags()[6] = false;
       return this;
     }
 
@@ -839,9 +761,8 @@ public class MarketServiceUpdatedEvent extends org.apache.avro.specific.Specific
         record.host = fieldSetFlags()[2] ? this.host : (java.lang.String) defaultValue(fields()[2]);
         record.style = fieldSetFlags()[3] ? this.style : (java.lang.String) defaultValue(fields()[3]);
         record.serviceId = fieldSetFlags()[4] ? this.serviceId : (java.lang.String) defaultValue(fields()[4]);
-        record.buildNumber = fieldSetFlags()[5] ? this.buildNumber : (java.lang.String) defaultValue(fields()[5]);
-        record.value = fieldSetFlags()[6] ? this.value : (java.lang.String) defaultValue(fields()[6]);
-        record.timestamp = fieldSetFlags()[7] ? this.timestamp : (java.lang.Long) defaultValue(fields()[7]);
+        record.value = fieldSetFlags()[5] ? this.value : (java.lang.String) defaultValue(fields()[5]);
+        record.timestamp = fieldSetFlags()[6] ? this.timestamp : (java.lang.Long) defaultValue(fields()[6]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -884,14 +805,6 @@ public class MarketServiceUpdatedEvent extends org.apache.avro.specific.Specific
 
     out.writeString(this.serviceId);
 
-    if (this.buildNumber == null) {
-      out.writeIndex(0);
-      out.writeNull();
-    } else {
-      out.writeIndex(1);
-      out.writeString(this.buildNumber);
-    }
-
     out.writeString(this.value);
 
     out.writeLong(this.timestamp);
@@ -916,19 +829,12 @@ public class MarketServiceUpdatedEvent extends org.apache.avro.specific.Specific
 
       this.serviceId = in.readString();
 
-      if (in.readIndex() != 1) {
-        in.readNull();
-        this.buildNumber = null;
-      } else {
-        this.buildNumber = in.readString();
-      }
-
       this.value = in.readString();
 
       this.timestamp = in.readLong();
 
     } else {
-      for (int i = 0; i < 8; i++) {
+      for (int i = 0; i < 7; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -954,19 +860,10 @@ public class MarketServiceUpdatedEvent extends org.apache.avro.specific.Specific
           break;
 
         case 5:
-          if (in.readIndex() != 1) {
-            in.readNull();
-            this.buildNumber = null;
-          } else {
-            this.buildNumber = in.readString();
-          }
-          break;
-
-        case 6:
           this.value = in.readString();
           break;
 
-        case 7:
+        case 6:
           this.timestamp = in.readLong();
           break;
 
