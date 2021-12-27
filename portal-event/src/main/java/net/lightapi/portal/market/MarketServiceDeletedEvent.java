@@ -14,8 +14,8 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class MarketServiceDeletedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -1319740732762295891L;
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"MarketServiceDeletedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the id\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"keyId\",\"type\":\"int\",\"doc\":\"keyId 0 serviceId plus optional buildNumber 1 host\"},{\"name\":\"host\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host\"},{\"name\":\"style\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api style\"},{\"name\":\"serviceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service id\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  private static final long serialVersionUID = 5509520475529187769L;
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"MarketServiceDeletedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the id\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"keyId\",\"type\":\"int\",\"doc\":\"keyId 0 serviceId plus optional buildNumber 1 host\"},{\"name\":\"host\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host\"},{\"name\":\"serviceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service id\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static SpecificData MODEL$ = new SpecificData();
@@ -76,8 +76,6 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
    private int keyId;
   /** host */
    private java.lang.String host;
-  /** api style */
-   private java.lang.String style;
   /** service id */
    private java.lang.String serviceId;
   /** time the event is recorded */
@@ -95,15 +93,13 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
    * @param EventId The new value for EventId
    * @param keyId keyId 0 serviceId plus optional buildNumber 1 host
    * @param host host
-   * @param style api style
    * @param serviceId service id
    * @param timestamp time the event is recorded
    */
-  public MarketServiceDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.Integer keyId, java.lang.String host, java.lang.String style, java.lang.String serviceId, java.lang.Long timestamp) {
+  public MarketServiceDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.Integer keyId, java.lang.String host, java.lang.String serviceId, java.lang.Long timestamp) {
     this.EventId = EventId;
     this.keyId = keyId;
     this.host = host;
-    this.style = style;
     this.serviceId = serviceId;
     this.timestamp = timestamp;
   }
@@ -116,9 +112,8 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
     case 0: return EventId;
     case 1: return keyId;
     case 2: return host;
-    case 3: return style;
-    case 4: return serviceId;
-    case 5: return timestamp;
+    case 3: return serviceId;
+    case 4: return timestamp;
     default: throw new org.apache.avro.AvroRuntimeException("Bad index");
     }
   }
@@ -130,9 +125,8 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
     case 1: keyId = (java.lang.Integer)value$; break;
     case 2: host = value$ != null ? value$.toString() : null; break;
-    case 3: style = value$ != null ? value$.toString() : null; break;
-    case 4: serviceId = value$ != null ? value$.toString() : null; break;
-    case 5: timestamp = (java.lang.Long)value$; break;
+    case 3: serviceId = value$ != null ? value$.toString() : null; break;
+    case 4: timestamp = (java.lang.Long)value$; break;
     default: throw new org.apache.avro.AvroRuntimeException("Bad index");
     }
   }
@@ -188,24 +182,6 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
    */
   public void setHost(java.lang.String value) {
     this.host = value;
-  }
-
-  /**
-   * Gets the value of the 'style' field.
-   * @return api style
-   */
-  public java.lang.String getStyle() {
-    return style;
-  }
-
-
-  /**
-   * Sets the value of the 'style' field.
-   * api style
-   * @param value the value to set.
-   */
-  public void setStyle(java.lang.String value) {
-    this.style = value;
   }
 
   /**
@@ -291,8 +267,6 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
     private int keyId;
     /** host */
     private java.lang.String host;
-    /** api style */
-    private java.lang.String style;
     /** service id */
     private java.lang.String serviceId;
     /** time the event is recorded */
@@ -324,17 +298,13 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
         this.host = data().deepCopy(fields()[2].schema(), other.host);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.style)) {
-        this.style = data().deepCopy(fields()[3].schema(), other.style);
+      if (isValidValue(fields()[3], other.serviceId)) {
+        this.serviceId = data().deepCopy(fields()[3].schema(), other.serviceId);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
-      if (isValidValue(fields()[4], other.serviceId)) {
-        this.serviceId = data().deepCopy(fields()[4].schema(), other.serviceId);
+      if (isValidValue(fields()[4], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[4].schema(), other.timestamp);
         fieldSetFlags()[4] = other.fieldSetFlags()[4];
-      }
-      if (isValidValue(fields()[5], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[5].schema(), other.timestamp);
-        fieldSetFlags()[5] = other.fieldSetFlags()[5];
       }
     }
 
@@ -357,17 +327,13 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
         this.host = data().deepCopy(fields()[2].schema(), other.host);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.style)) {
-        this.style = data().deepCopy(fields()[3].schema(), other.style);
+      if (isValidValue(fields()[3], other.serviceId)) {
+        this.serviceId = data().deepCopy(fields()[3].schema(), other.serviceId);
         fieldSetFlags()[3] = true;
       }
-      if (isValidValue(fields()[4], other.serviceId)) {
-        this.serviceId = data().deepCopy(fields()[4].schema(), other.serviceId);
+      if (isValidValue(fields()[4], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[4].schema(), other.timestamp);
         fieldSetFlags()[4] = true;
-      }
-      if (isValidValue(fields()[5], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[5].schema(), other.timestamp);
-        fieldSetFlags()[5] = true;
       }
     }
 
@@ -534,50 +500,6 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
     }
 
     /**
-      * Gets the value of the 'style' field.
-      * api style
-      * @return The value.
-      */
-    public java.lang.String getStyle() {
-      return style;
-    }
-
-
-    /**
-      * Sets the value of the 'style' field.
-      * api style
-      * @param value The value of 'style'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.MarketServiceDeletedEvent.Builder setStyle(java.lang.String value) {
-      validate(fields()[3], value);
-      this.style = value;
-      fieldSetFlags()[3] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'style' field has been set.
-      * api style
-      * @return True if the 'style' field has been set, false otherwise.
-      */
-    public boolean hasStyle() {
-      return fieldSetFlags()[3];
-    }
-
-
-    /**
-      * Clears the value of the 'style' field.
-      * api style
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.MarketServiceDeletedEvent.Builder clearStyle() {
-      style = null;
-      fieldSetFlags()[3] = false;
-      return this;
-    }
-
-    /**
       * Gets the value of the 'serviceId' field.
       * service id
       * @return The value.
@@ -594,9 +516,9 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
       * @return This builder.
       */
     public net.lightapi.portal.market.MarketServiceDeletedEvent.Builder setServiceId(java.lang.String value) {
-      validate(fields()[4], value);
+      validate(fields()[3], value);
       this.serviceId = value;
-      fieldSetFlags()[4] = true;
+      fieldSetFlags()[3] = true;
       return this;
     }
 
@@ -606,7 +528,7 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
       * @return True if the 'serviceId' field has been set, false otherwise.
       */
     public boolean hasServiceId() {
-      return fieldSetFlags()[4];
+      return fieldSetFlags()[3];
     }
 
 
@@ -617,7 +539,7 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
       */
     public net.lightapi.portal.market.MarketServiceDeletedEvent.Builder clearServiceId() {
       serviceId = null;
-      fieldSetFlags()[4] = false;
+      fieldSetFlags()[3] = false;
       return this;
     }
 
@@ -638,9 +560,9 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
       * @return This builder.
       */
     public net.lightapi.portal.market.MarketServiceDeletedEvent.Builder setTimestamp(long value) {
-      validate(fields()[5], value);
+      validate(fields()[4], value);
       this.timestamp = value;
-      fieldSetFlags()[5] = true;
+      fieldSetFlags()[4] = true;
       return this;
     }
 
@@ -650,7 +572,7 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
       * @return True if the 'timestamp' field has been set, false otherwise.
       */
     public boolean hasTimestamp() {
-      return fieldSetFlags()[5];
+      return fieldSetFlags()[4];
     }
 
 
@@ -660,7 +582,7 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
       * @return This builder.
       */
     public net.lightapi.portal.market.MarketServiceDeletedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[5] = false;
+      fieldSetFlags()[4] = false;
       return this;
     }
 
@@ -681,9 +603,8 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
         }
         record.keyId = fieldSetFlags()[1] ? this.keyId : (java.lang.Integer) defaultValue(fields()[1]);
         record.host = fieldSetFlags()[2] ? this.host : (java.lang.String) defaultValue(fields()[2]);
-        record.style = fieldSetFlags()[3] ? this.style : (java.lang.String) defaultValue(fields()[3]);
-        record.serviceId = fieldSetFlags()[4] ? this.serviceId : (java.lang.String) defaultValue(fields()[4]);
-        record.timestamp = fieldSetFlags()[5] ? this.timestamp : (java.lang.Long) defaultValue(fields()[5]);
+        record.serviceId = fieldSetFlags()[3] ? this.serviceId : (java.lang.String) defaultValue(fields()[3]);
+        record.timestamp = fieldSetFlags()[4] ? this.timestamp : (java.lang.Long) defaultValue(fields()[4]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -722,8 +643,6 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
 
     out.writeString(this.host);
 
-    out.writeString(this.style);
-
     out.writeString(this.serviceId);
 
     out.writeLong(this.timestamp);
@@ -744,14 +663,12 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
 
       this.host = in.readString();
 
-      this.style = in.readString();
-
       this.serviceId = in.readString();
 
       this.timestamp = in.readLong();
 
     } else {
-      for (int i = 0; i < 6; i++) {
+      for (int i = 0; i < 5; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -769,14 +686,10 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
           break;
 
         case 3:
-          this.style = in.readString();
-          break;
-
-        case 4:
           this.serviceId = in.readString();
           break;
 
-        case 5:
+        case 4:
           this.timestamp = in.readLong();
           break;
 

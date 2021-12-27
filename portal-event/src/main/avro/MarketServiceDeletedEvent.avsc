@@ -40,11 +40,6 @@
       "doc": "host"
     },
     {
-      "name": "style",
-      "type": "string",
-      "doc": "api style"
-    },
-    {
       "name": "serviceId",
       "type": "string",
       "doc": "service id"
