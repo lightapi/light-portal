@@ -1228,5 +1228,32 @@ public class HybridQueryClient {
         return callQueryExchangeUrl(s, exchange, url);
     }
 
+    /**
+     * Get rule list for host with rule type, exchange and url. The result contains a list of rules.
+     *
+     * @param exchange HttpServerExchange
+     * @param url url of target server
+     * @param host host name
+     * @param ruleType rule type
+     * @return Result list of rule objects in JSON
+     */
+    public static Result<String> getRuleByType(HttpServerExchange exchange, String url, String host, String ruleType) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getRuleByType\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"ruleType\":\"%s\"}}", host, ruleType);
+        return callQueryExchangeUrl(s, exchange, url);
+    }
+
+    /**
+     * Get rule list for host with rule group id, exchange and url. The result contains a list of rules.
+     *
+     * @param exchange HttpServerExchange
+     * @param url url of target server
+     * @param host host name
+     * @param groupId rule groupId
+     * @return Result list of rule objects in JSON
+     */
+    public static Result<String> getRuleByGroup(HttpServerExchange exchange, String url, String host, String groupId) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getRuleByGroup\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"groupId\":\"%s\"}}", host, groupId);
+        return callQueryExchangeUrl(s, exchange, url);
+    }
 
 }

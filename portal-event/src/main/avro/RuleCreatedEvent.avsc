@@ -50,6 +50,17 @@
       "doc": "rule type"
     },
     {
+      "name": "groupId",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "group id"
+    },
+    {
+      "name": "visibility",
+      "type": "string",
+      "doc": "rule visibility"
+    },
+    {
       "name": "desc",
       "type": "string",
       "doc": "rule description"
