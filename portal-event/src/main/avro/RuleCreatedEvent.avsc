@@ -45,6 +45,11 @@
       "doc": "rule id"
     },
     {
+      "name": "ruleType",
+      "type": "string",
+      "doc": "rule type"
+    },
+    {
       "name": "desc",
       "type": "string",
       "doc": "rule description"
@@ -53,18 +58,6 @@
       "name": "value",
       "type": "string",
       "doc": "rule detail in YAML"
-    },
-    {
-      "name": "serviceId",
-      "type": ["null", "string"],
-      "default": null,
-      "doc": "optional service id filter for the rule"
-    },
-    {
-      "name": "buildNumber",
-      "type": ["null", "string"],
-      "default": null,
-      "doc": "optional build number for service id filter"
     },
     {
       "name": "owner",
