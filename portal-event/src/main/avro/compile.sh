@@ -49,6 +49,7 @@ java -jar /home/steve/tool/avro-tools-1.9.2.jar compile -string schema MarketSer
 java -jar /home/steve/tool/avro-tools-1.9.2.jar compile -string schema MarketServiceUpdatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.9.2.jar compile -string schema MarketServiceDeletedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.9.2.jar compile -string schema ServiceSpecUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.9.2.jar compile -string schema ServiceRuleUpdatedEvent.avsc .
 
 java -jar /home/steve/tool/avro-tools-1.9.2.jar compile -string schema MarketTokenCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.9.2.jar compile -string schema MarketTokenDeletedEvent.avsc .
@@ -145,6 +146,8 @@ mv net/lightapi/portal/market/MarketServiceCreatedEvent.java ../java/net/lightap
 mv net/lightapi/portal/market/MarketServiceUpdatedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/MarketServiceDeletedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/ServiceSpecUpdatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/ServiceRuleUpdatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/ServiceRule.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/MarketTokenCreatedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/MarketTokenDeletedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/MarketCodeCreatedEvent.java ../java/net/lightapi/portal/market
