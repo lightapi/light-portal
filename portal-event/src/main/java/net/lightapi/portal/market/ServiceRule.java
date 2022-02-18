@@ -14,8 +14,8 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class ServiceRule extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -7534027068841233445L;
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ServiceRule\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"ruleId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule id\"},{\"name\":\"variables\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"rule variables if any\",\"default\":null}]}");
+  private static final long serialVersionUID = 1138808138606214883L;
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ServiceRule\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"ruleId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule id\"},{\"name\":\"roles\",\"type\":[\"null\",{\"type\":\"array\",\"items\":{\"type\":\"string\",\"avro.java.string\":\"String\"}}],\"doc\":\"roles that accesses the endpoint\",\"default\":null},{\"name\":\"variables\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"rule variables if any\",\"default\":null}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static SpecificData MODEL$ = new SpecificData();
@@ -73,6 +73,8 @@ public class ServiceRule extends org.apache.avro.specific.SpecificRecordBase imp
 
   /** rule id */
    private java.lang.String ruleId;
+  /** roles that accesses the endpoint */
+   private java.util.List<java.lang.String> roles;
   /** rule variables if any */
    private java.lang.String variables;
 
@@ -86,10 +88,12 @@ public class ServiceRule extends org.apache.avro.specific.SpecificRecordBase imp
   /**
    * All-args constructor.
    * @param ruleId rule id
+   * @param roles roles that accesses the endpoint
    * @param variables rule variables if any
    */
-  public ServiceRule(java.lang.String ruleId, java.lang.String variables) {
+  public ServiceRule(java.lang.String ruleId, java.util.List<java.lang.String> roles, java.lang.String variables) {
     this.ruleId = ruleId;
+    this.roles = roles;
     this.variables = variables;
   }
 
@@ -99,7 +103,8 @@ public class ServiceRule extends org.apache.avro.specific.SpecificRecordBase imp
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return ruleId;
-    case 1: return variables;
+    case 1: return roles;
+    case 2: return variables;
     default: throw new org.apache.avro.AvroRuntimeException("Bad index");
     }
   }
@@ -109,7 +114,8 @@ public class ServiceRule extends org.apache.avro.specific.SpecificRecordBase imp
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
     case 0: ruleId = value$ != null ? value$.toString() : null; break;
-    case 1: variables = value$ != null ? value$.toString() : null; break;
+    case 1: roles = (java.util.List<java.lang.String>)value$; break;
+    case 2: variables = value$ != null ? value$.toString() : null; break;
     default: throw new org.apache.avro.AvroRuntimeException("Bad index");
     }
   }
@@ -130,6 +136,24 @@ public class ServiceRule extends org.apache.avro.specific.SpecificRecordBase imp
    */
   public void setRuleId(java.lang.String value) {
     this.ruleId = value;
+  }
+
+  /**
+   * Gets the value of the 'roles' field.
+   * @return roles that accesses the endpoint
+   */
+  public java.util.List<java.lang.String> getRoles() {
+    return roles;
+  }
+
+
+  /**
+   * Sets the value of the 'roles' field.
+   * roles that accesses the endpoint
+   * @param value the value to set.
+   */
+  public void setRoles(java.util.List<java.lang.String> value) {
+    this.roles = value;
   }
 
   /**
@@ -193,6 +217,8 @@ public class ServiceRule extends org.apache.avro.specific.SpecificRecordBase imp
 
     /** rule id */
     private java.lang.String ruleId;
+    /** roles that accesses the endpoint */
+    private java.util.List<java.lang.String> roles;
     /** rule variables if any */
     private java.lang.String variables;
 
@@ -211,9 +237,13 @@ public class ServiceRule extends org.apache.avro.specific.SpecificRecordBase imp
         this.ruleId = data().deepCopy(fields()[0].schema(), other.ruleId);
         fieldSetFlags()[0] = other.fieldSetFlags()[0];
       }
-      if (isValidValue(fields()[1], other.variables)) {
-        this.variables = data().deepCopy(fields()[1].schema(), other.variables);
+      if (isValidValue(fields()[1], other.roles)) {
+        this.roles = data().deepCopy(fields()[1].schema(), other.roles);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
+      }
+      if (isValidValue(fields()[2], other.variables)) {
+        this.variables = data().deepCopy(fields()[2].schema(), other.variables);
+        fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
     }
 
@@ -227,9 +257,13 @@ public class ServiceRule extends org.apache.avro.specific.SpecificRecordBase imp
         this.ruleId = data().deepCopy(fields()[0].schema(), other.ruleId);
         fieldSetFlags()[0] = true;
       }
-      if (isValidValue(fields()[1], other.variables)) {
-        this.variables = data().deepCopy(fields()[1].schema(), other.variables);
+      if (isValidValue(fields()[1], other.roles)) {
+        this.roles = data().deepCopy(fields()[1].schema(), other.roles);
         fieldSetFlags()[1] = true;
+      }
+      if (isValidValue(fields()[2], other.variables)) {
+        this.variables = data().deepCopy(fields()[2].schema(), other.variables);
+        fieldSetFlags()[2] = true;
       }
     }
 
@@ -278,6 +312,50 @@ public class ServiceRule extends org.apache.avro.specific.SpecificRecordBase imp
     }
 
     /**
+      * Gets the value of the 'roles' field.
+      * roles that accesses the endpoint
+      * @return The value.
+      */
+    public java.util.List<java.lang.String> getRoles() {
+      return roles;
+    }
+
+
+    /**
+      * Sets the value of the 'roles' field.
+      * roles that accesses the endpoint
+      * @param value The value of 'roles'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.market.ServiceRule.Builder setRoles(java.util.List<java.lang.String> value) {
+      validate(fields()[1], value);
+      this.roles = value;
+      fieldSetFlags()[1] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'roles' field has been set.
+      * roles that accesses the endpoint
+      * @return True if the 'roles' field has been set, false otherwise.
+      */
+    public boolean hasRoles() {
+      return fieldSetFlags()[1];
+    }
+
+
+    /**
+      * Clears the value of the 'roles' field.
+      * roles that accesses the endpoint
+      * @return This builder.
+      */
+    public net.lightapi.portal.market.ServiceRule.Builder clearRoles() {
+      roles = null;
+      fieldSetFlags()[1] = false;
+      return this;
+    }
+
+    /**
       * Gets the value of the 'variables' field.
       * rule variables if any
       * @return The value.
@@ -294,9 +372,9 @@ public class ServiceRule extends org.apache.avro.specific.SpecificRecordBase imp
       * @return This builder.
       */
     public net.lightapi.portal.market.ServiceRule.Builder setVariables(java.lang.String value) {
-      validate(fields()[1], value);
+      validate(fields()[2], value);
       this.variables = value;
-      fieldSetFlags()[1] = true;
+      fieldSetFlags()[2] = true;
       return this;
     }
 
@@ -306,7 +384,7 @@ public class ServiceRule extends org.apache.avro.specific.SpecificRecordBase imp
       * @return True if the 'variables' field has been set, false otherwise.
       */
     public boolean hasVariables() {
-      return fieldSetFlags()[1];
+      return fieldSetFlags()[2];
     }
 
 
@@ -317,7 +395,7 @@ public class ServiceRule extends org.apache.avro.specific.SpecificRecordBase imp
       */
     public net.lightapi.portal.market.ServiceRule.Builder clearVariables() {
       variables = null;
-      fieldSetFlags()[1] = false;
+      fieldSetFlags()[2] = false;
       return this;
     }
 
@@ -327,7 +405,8 @@ public class ServiceRule extends org.apache.avro.specific.SpecificRecordBase imp
       try {
         ServiceRule record = new ServiceRule();
         record.ruleId = fieldSetFlags()[0] ? this.ruleId : (java.lang.String) defaultValue(fields()[0]);
-        record.variables = fieldSetFlags()[1] ? this.variables : (java.lang.String) defaultValue(fields()[1]);
+        record.roles = fieldSetFlags()[1] ? this.roles : (java.util.List<java.lang.String>) defaultValue(fields()[1]);
+        record.variables = fieldSetFlags()[2] ? this.variables : (java.lang.String) defaultValue(fields()[2]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -362,6 +441,25 @@ public class ServiceRule extends org.apache.avro.specific.SpecificRecordBase imp
   {
     out.writeString(this.ruleId);
 
+    if (this.roles == null) {
+      out.writeIndex(0);
+      out.writeNull();
+    } else {
+      out.writeIndex(1);
+      long size0 = this.roles.size();
+      out.writeArrayStart();
+      out.setItemCount(size0);
+      long actualSize0 = 0;
+      for (java.lang.String e0: this.roles) {
+        actualSize0++;
+        out.startItem();
+        out.writeString(e0);
+      }
+      out.writeArrayEnd();
+      if (actualSize0 != size0)
+        throw new java.util.ConcurrentModificationException("Array-size written was " + size0 + ", but element count was " + actualSize0 + ".");
+    }
+
     if (this.variables == null) {
       out.writeIndex(0);
       out.writeNull();
@@ -381,19 +479,61 @@ public class ServiceRule extends org.apache.avro.specific.SpecificRecordBase imp
 
       if (in.readIndex() != 1) {
         in.readNull();
+        this.roles = null;
+      } else {
+        long size0 = in.readArrayStart();
+        java.util.List<java.lang.String> a0 = this.roles;
+        if (a0 == null) {
+          a0 = new SpecificData.Array<java.lang.String>((int)size0, SCHEMA$.getField("roles").schema().getTypes().get(1));
+          this.roles = a0;
+        } else a0.clear();
+        SpecificData.Array<java.lang.String> ga0 = (a0 instanceof SpecificData.Array ? (SpecificData.Array<java.lang.String>)a0 : null);
+        for ( ; 0 < size0; size0 = in.arrayNext()) {
+          for ( ; size0 != 0; size0--) {
+            java.lang.String e0 = (ga0 != null ? ga0.peek() : null);
+            e0 = in.readString();
+            a0.add(e0);
+          }
+        }
+      }
+
+      if (in.readIndex() != 1) {
+        in.readNull();
         this.variables = null;
       } else {
         this.variables = in.readString();
       }
 
     } else {
-      for (int i = 0; i < 2; i++) {
+      for (int i = 0; i < 3; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           this.ruleId = in.readString();
           break;
 
         case 1:
+          if (in.readIndex() != 1) {
+            in.readNull();
+            this.roles = null;
+          } else {
+            long size0 = in.readArrayStart();
+            java.util.List<java.lang.String> a0 = this.roles;
+            if (a0 == null) {
+              a0 = new SpecificData.Array<java.lang.String>((int)size0, SCHEMA$.getField("roles").schema().getTypes().get(1));
+              this.roles = a0;
+            } else a0.clear();
+            SpecificData.Array<java.lang.String> ga0 = (a0 instanceof SpecificData.Array ? (SpecificData.Array<java.lang.String>)a0 : null);
+            for ( ; 0 < size0; size0 = in.arrayNext()) {
+              for ( ; size0 != 0; size0--) {
+                java.lang.String e0 = (ga0 != null ? ga0.peek() : null);
+                e0 = in.readString();
+                a0.add(e0);
+              }
+            }
+          }
+          break;
+
+        case 2:
           if (in.readIndex() != 1) {
             in.readNull();
             this.variables = null;

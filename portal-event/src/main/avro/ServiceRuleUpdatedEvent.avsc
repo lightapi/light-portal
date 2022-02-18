@@ -69,6 +69,17 @@
               "doc": "rule id"
             },
             {
+              "name": "roles",
+              "type": ["null",
+                {
+                  "type": "array",
+                  "items": "string"
+                }
+              ],
+              "default": null,
+              "doc": "roles that accesses the endpoint"
+            },
+            {
               "name": "variables",
               "type": ["null", "string"],
               "default": null,

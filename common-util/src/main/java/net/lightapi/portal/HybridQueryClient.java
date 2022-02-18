@@ -669,6 +669,19 @@ public class HybridQueryClient {
     }
 
     /**
+     * Get service roles by serviceId. The result contains a map of role to role for dropdown menu on the UI.
+     *
+     * @param exchange HttpServerExchange
+     * @param url host of instance that contains the state store
+     * @param serviceId service id
+     * @return Result of role/role map in JSON
+     */
+    public static Result<String> getServiceRoleById(HttpServerExchange exchange, String url, String serviceId) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getServiceRoleById\",\"version\":\"0.1.0\",\"data\":{\"serviceId\":\"%s\"}}", serviceId);
+        return callQueryExchangeUrl(s, exchange, url);
+    }
+
+    /**
      * Get refreshToken detail. The result contains a map of properties.
      *
      * @param exchange HttpServerExchange
