@@ -15,10 +15,12 @@ import org.apache.avro.message.SchemaStore;
 @org.apache.avro.specific.AvroGenerated
 public class CovidEntityUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
   private static final long serialVersionUID = 7668591573425695107L;
+
+
   public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"CovidEntityUpdatedEvent\",\"namespace\":\"net.lightapi.portal.covid\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"key\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"country, province and city combination\"},{\"name\":\"keyId\",\"type\":\"int\",\"doc\":\"keyId 0 entityId 1 map category 1 map subcategory\",\"default\":0},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the unique user id\"},{\"name\":\"category\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"category\"},{\"name\":\"subcategory\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"subcategory\"},{\"name\":\"latitude\",\"type\":\"double\",\"doc\":\"latitude\"},{\"name\":\"longitude\",\"type\":\"double\",\"doc\":\"city longitude\"},{\"name\":\"introduction\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"introduction\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
-  private static SpecificData MODEL$ = new SpecificData();
+  private static final SpecificData MODEL$ = new SpecificData();
 
   private static final BinaryMessageEncoder<CovidEntityUpdatedEvent> ENCODER =
       new BinaryMessageEncoder<CovidEntityUpdatedEvent>(MODEL$, SCHEMA$);
@@ -71,25 +73,25 @@ public class CovidEntityUpdatedEvent extends org.apache.avro.specific.SpecificRe
     return DECODER.decode(b);
   }
 
-   private com.networknt.kafka.common.EventId EventId;
+  private com.networknt.kafka.common.EventId EventId;
   /** country, province and city combination */
-   private java.lang.String key;
+  private java.lang.String key;
   /** keyId 0 entityId 1 map category 1 map subcategory */
-   private int keyId;
+  private int keyId;
   /** the unique user id */
-   private java.lang.String userId;
+  private java.lang.String userId;
   /** category */
-   private java.lang.String category;
+  private java.lang.String category;
   /** subcategory */
-   private java.lang.String subcategory;
+  private java.lang.String subcategory;
   /** latitude */
-   private double latitude;
+  private double latitude;
   /** city longitude */
-   private double longitude;
+  private double longitude;
   /** introduction */
-   private java.lang.String introduction;
+  private java.lang.String introduction;
   /** time the event is recorded */
-   private long timestamp;
+  private long timestamp;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -139,7 +141,7 @@ public class CovidEntityUpdatedEvent extends org.apache.avro.specific.SpecificRe
     case 7: return longitude;
     case 8: return introduction;
     case 9: return timestamp;
-    default: throw new org.apache.avro.AvroRuntimeException("Bad index");
+    default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
 
@@ -157,7 +159,7 @@ public class CovidEntityUpdatedEvent extends org.apache.avro.specific.SpecificRe
     case 7: longitude = (java.lang.Double)value$; break;
     case 8: introduction = value$ != null ? value$.toString() : null; break;
     case 9: timestamp = (java.lang.Long)value$; break;
-    default: throw new org.apache.avro.AvroRuntimeException("Bad index");
+    default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
 
@@ -404,7 +406,7 @@ public class CovidEntityUpdatedEvent extends org.apache.avro.specific.SpecificRe
 
     /** Creates a new Builder */
     private Builder() {
-      super(SCHEMA$);
+      super(SCHEMA$, MODEL$);
     }
 
     /**
@@ -463,7 +465,7 @@ public class CovidEntityUpdatedEvent extends org.apache.avro.specific.SpecificRe
      * @param other The existing instance to copy.
      */
     private Builder(net.lightapi.portal.covid.CovidEntityUpdatedEvent other) {
-      super(SCHEMA$);
+      super(SCHEMA$, MODEL$);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
         fieldSetFlags()[0] = true;
@@ -557,6 +559,7 @@ public class CovidEntityUpdatedEvent extends org.apache.avro.specific.SpecificRe
      * @param value The builder instance that must be set.
      * @return This builder.
      */
+
     public net.lightapi.portal.covid.CovidEntityUpdatedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
       clearEventId();
       EventIdBuilder = value;

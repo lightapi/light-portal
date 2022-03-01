@@ -15,10 +15,12 @@ import org.apache.avro.message.SchemaStore;
 @org.apache.avro.specific.AvroGenerated
 public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
   private static final long serialVersionUID = 5060477572765838196L;
+
+
   public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"UserUpdatedEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the id\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"host\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host organization of the user\"},{\"name\":\"email\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"email address of the updated user\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique user id\"},{\"name\":\"keyId\",\"type\":\"int\",\"doc\":\"keyId 0 email 1 map category 2 map subcategory\",\"default\":0},{\"name\":\"language\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the preferred language of the user\"},{\"name\":\"value\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"user detail in JSON, include firstName, lastName, gender, birthday, postCode, address\",\"default\":null},{\"name\":\"taijiWallet\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"taiji blockchain address of the user\",\"default\":null},{\"name\":\"country\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"country of the user\",\"default\":null},{\"name\":\"province\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"province of the user\",\"default\":null},{\"name\":\"city\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"city of the user\",\"default\":null},{\"name\":\"oldCountry\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"old country of the user, used to move the maproot\",\"default\":null},{\"name\":\"oldProvince\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"old province of the user, used to move the maproot\",\"default\":null},{\"name\":\"oldCity\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"old city of the user, used to move the maproot\",\"default\":null},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
-  private static SpecificData MODEL$ = new SpecificData();
+  private static final SpecificData MODEL$ = new SpecificData();
 
   private static final BinaryMessageEncoder<UserUpdatedEvent> ENCODER =
       new BinaryMessageEncoder<UserUpdatedEvent>(MODEL$, SCHEMA$);
@@ -71,35 +73,35 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
     return DECODER.decode(b);
   }
 
-   private com.networknt.kafka.common.EventId EventId;
+  private com.networknt.kafka.common.EventId EventId;
   /** the host organization of the user */
-   private java.lang.String host;
+  private java.lang.String host;
   /** email address of the updated user */
-   private java.lang.String email;
+  private java.lang.String email;
   /** a unique user id */
-   private java.lang.String userId;
+  private java.lang.String userId;
   /** keyId 0 email 1 map category 2 map subcategory */
-   private int keyId;
+  private int keyId;
   /** the preferred language of the user */
-   private java.lang.String language;
+  private java.lang.String language;
   /** user detail in JSON, include firstName, lastName, gender, birthday, postCode, address */
-   private java.lang.String value;
+  private java.lang.String value;
   /** taiji blockchain address of the user */
-   private java.lang.String taijiWallet;
+  private java.lang.String taijiWallet;
   /** country of the user */
-   private java.lang.String country;
+  private java.lang.String country;
   /** province of the user */
-   private java.lang.String province;
+  private java.lang.String province;
   /** city of the user */
-   private java.lang.String city;
+  private java.lang.String city;
   /** old country of the user, used to move the maproot */
-   private java.lang.String oldCountry;
+  private java.lang.String oldCountry;
   /** old province of the user, used to move the maproot */
-   private java.lang.String oldProvince;
+  private java.lang.String oldProvince;
   /** old city of the user, used to move the maproot */
-   private java.lang.String oldCity;
+  private java.lang.String oldCity;
   /** time the event is recorded */
-   private long timestamp;
+  private long timestamp;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -164,7 +166,7 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
     case 12: return oldProvince;
     case 13: return oldCity;
     case 14: return timestamp;
-    default: throw new org.apache.avro.AvroRuntimeException("Bad index");
+    default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
 
@@ -187,7 +189,7 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
     case 12: oldProvince = value$ != null ? value$.toString() : null; break;
     case 13: oldCity = value$ != null ? value$.toString() : null; break;
     case 14: timestamp = (java.lang.Long)value$; break;
-    default: throw new org.apache.avro.AvroRuntimeException("Bad index");
+    default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
 
@@ -534,7 +536,7 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
 
     /** Creates a new Builder */
     private Builder() {
-      super(SCHEMA$);
+      super(SCHEMA$, MODEL$);
     }
 
     /**
@@ -613,7 +615,7 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
      * @param other The existing instance to copy.
      */
     private Builder(net.lightapi.portal.user.UserUpdatedEvent other) {
-      super(SCHEMA$);
+      super(SCHEMA$, MODEL$);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
         fieldSetFlags()[0] = true;
@@ -727,6 +729,7 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
      * @param value The builder instance that must be set.
      * @return This builder.
      */
+
     public net.lightapi.portal.user.UserUpdatedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
       clearEventId();
       EventIdBuilder = value;

@@ -15,10 +15,12 @@ import org.apache.avro.message.SchemaStore;
 @org.apache.avro.specific.AvroGenerated
 public class ServiceRule extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
   private static final long serialVersionUID = 1138808138606214883L;
+
+
   public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ServiceRule\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"ruleId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule id\"},{\"name\":\"roles\",\"type\":[\"null\",{\"type\":\"array\",\"items\":{\"type\":\"string\",\"avro.java.string\":\"String\"}}],\"doc\":\"roles that accesses the endpoint\",\"default\":null},{\"name\":\"variables\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"rule variables if any\",\"default\":null}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
-  private static SpecificData MODEL$ = new SpecificData();
+  private static final SpecificData MODEL$ = new SpecificData();
 
   private static final BinaryMessageEncoder<ServiceRule> ENCODER =
       new BinaryMessageEncoder<ServiceRule>(MODEL$, SCHEMA$);
@@ -72,11 +74,11 @@ public class ServiceRule extends org.apache.avro.specific.SpecificRecordBase imp
   }
 
   /** rule id */
-   private java.lang.String ruleId;
+  private java.lang.String ruleId;
   /** roles that accesses the endpoint */
-   private java.util.List<java.lang.String> roles;
+  private java.util.List<java.lang.String> roles;
   /** rule variables if any */
-   private java.lang.String variables;
+  private java.lang.String variables;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -105,7 +107,7 @@ public class ServiceRule extends org.apache.avro.specific.SpecificRecordBase imp
     case 0: return ruleId;
     case 1: return roles;
     case 2: return variables;
-    default: throw new org.apache.avro.AvroRuntimeException("Bad index");
+    default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
 
@@ -116,7 +118,7 @@ public class ServiceRule extends org.apache.avro.specific.SpecificRecordBase imp
     case 0: ruleId = value$ != null ? value$.toString() : null; break;
     case 1: roles = (java.util.List<java.lang.String>)value$; break;
     case 2: variables = value$ != null ? value$.toString() : null; break;
-    default: throw new org.apache.avro.AvroRuntimeException("Bad index");
+    default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
 
@@ -224,7 +226,7 @@ public class ServiceRule extends org.apache.avro.specific.SpecificRecordBase imp
 
     /** Creates a new Builder */
     private Builder() {
-      super(SCHEMA$);
+      super(SCHEMA$, MODEL$);
     }
 
     /**
@@ -252,7 +254,7 @@ public class ServiceRule extends org.apache.avro.specific.SpecificRecordBase imp
      * @param other The existing instance to copy.
      */
     private Builder(net.lightapi.portal.market.ServiceRule other) {
-      super(SCHEMA$);
+      super(SCHEMA$, MODEL$);
       if (isValidValue(fields()[0], other.ruleId)) {
         this.ruleId = data().deepCopy(fields()[0].schema(), other.ruleId);
         fieldSetFlags()[0] = true;

@@ -15,10 +15,12 @@ import org.apache.avro.message.SchemaStore;
 @org.apache.avro.specific.AvroGenerated
 public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
   private static final long serialVersionUID = -8895996526013361263L;
+
+
   public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"PrivateMessageSentEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"fromId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"From userId that matches the EventId.id email\"},{\"name\":\"toEmail\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"The target email\"},{\"name\":\"subject\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"Subject of the message\"},{\"name\":\"content\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"Content of the message\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
-  private static SpecificData MODEL$ = new SpecificData();
+  private static final SpecificData MODEL$ = new SpecificData();
 
   private static final BinaryMessageEncoder<PrivateMessageSentEvent> ENCODER =
       new BinaryMessageEncoder<PrivateMessageSentEvent>(MODEL$, SCHEMA$);
@@ -71,17 +73,17 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
     return DECODER.decode(b);
   }
 
-   private com.networknt.kafka.common.EventId EventId;
+  private com.networknt.kafka.common.EventId EventId;
   /** From userId that matches the EventId.id email */
-   private java.lang.String fromId;
+  private java.lang.String fromId;
   /** The target email */
-   private java.lang.String toEmail;
+  private java.lang.String toEmail;
   /** Subject of the message */
-   private java.lang.String subject;
+  private java.lang.String subject;
   /** Content of the message */
-   private java.lang.String content;
+  private java.lang.String content;
   /** time the event is recorded */
-   private long timestamp;
+  private long timestamp;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -119,7 +121,7 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
     case 3: return subject;
     case 4: return content;
     case 5: return timestamp;
-    default: throw new org.apache.avro.AvroRuntimeException("Bad index");
+    default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
 
@@ -133,7 +135,7 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
     case 3: subject = value$ != null ? value$.toString() : null; break;
     case 4: content = value$ != null ? value$.toString() : null; break;
     case 5: timestamp = (java.lang.Long)value$; break;
-    default: throw new org.apache.avro.AvroRuntimeException("Bad index");
+    default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
 
@@ -300,7 +302,7 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
 
     /** Creates a new Builder */
     private Builder() {
-      super(SCHEMA$);
+      super(SCHEMA$, MODEL$);
     }
 
     /**
@@ -343,7 +345,7 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
      * @param other The existing instance to copy.
      */
     private Builder(net.lightapi.portal.user.PrivateMessageSentEvent other) {
-      super(SCHEMA$);
+      super(SCHEMA$, MODEL$);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
         fieldSetFlags()[0] = true;
@@ -421,6 +423,7 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
      * @param value The builder instance that must be set.
      * @return This builder.
      */
+
     public net.lightapi.portal.user.PrivateMessageSentEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
       clearEventId();
       EventIdBuilder = value;

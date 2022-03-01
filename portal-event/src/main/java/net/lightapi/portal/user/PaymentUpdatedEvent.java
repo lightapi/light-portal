@@ -15,10 +15,12 @@ import org.apache.avro.message.SchemaStore;
 @org.apache.avro.specific.AvroGenerated
 public class PaymentUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
   private static final long serialVersionUID = 457045816866678910L;
+
+
   public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"PaymentUpdatedEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the id\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"email\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"email of the merchant\"},{\"name\":\"payments\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"An array of payment configurations\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
-  private static SpecificData MODEL$ = new SpecificData();
+  private static final SpecificData MODEL$ = new SpecificData();
 
   private static final BinaryMessageEncoder<PaymentUpdatedEvent> ENCODER =
       new BinaryMessageEncoder<PaymentUpdatedEvent>(MODEL$, SCHEMA$);
@@ -71,13 +73,13 @@ public class PaymentUpdatedEvent extends org.apache.avro.specific.SpecificRecord
     return DECODER.decode(b);
   }
 
-   private com.networknt.kafka.common.EventId EventId;
+  private com.networknt.kafka.common.EventId EventId;
   /** email of the merchant */
-   private java.lang.String email;
+  private java.lang.String email;
   /** An array of payment configurations */
-   private java.lang.String payments;
+  private java.lang.String payments;
   /** time the event is recorded */
-   private long timestamp;
+  private long timestamp;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -109,7 +111,7 @@ public class PaymentUpdatedEvent extends org.apache.avro.specific.SpecificRecord
     case 1: return email;
     case 2: return payments;
     case 3: return timestamp;
-    default: throw new org.apache.avro.AvroRuntimeException("Bad index");
+    default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
 
@@ -121,7 +123,7 @@ public class PaymentUpdatedEvent extends org.apache.avro.specific.SpecificRecord
     case 1: email = value$ != null ? value$.toString() : null; break;
     case 2: payments = value$ != null ? value$.toString() : null; break;
     case 3: timestamp = (java.lang.Long)value$; break;
-    default: throw new org.apache.avro.AvroRuntimeException("Bad index");
+    default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
 
@@ -248,7 +250,7 @@ public class PaymentUpdatedEvent extends org.apache.avro.specific.SpecificRecord
 
     /** Creates a new Builder */
     private Builder() {
-      super(SCHEMA$);
+      super(SCHEMA$, MODEL$);
     }
 
     /**
@@ -283,7 +285,7 @@ public class PaymentUpdatedEvent extends org.apache.avro.specific.SpecificRecord
      * @param other The existing instance to copy.
      */
     private Builder(net.lightapi.portal.user.PaymentUpdatedEvent other) {
-      super(SCHEMA$);
+      super(SCHEMA$, MODEL$);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
         fieldSetFlags()[0] = true;
@@ -353,6 +355,7 @@ public class PaymentUpdatedEvent extends org.apache.avro.specific.SpecificRecord
      * @param value The builder instance that must be set.
      * @return This builder.
      */
+
     public net.lightapi.portal.user.PaymentUpdatedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
       clearEventId();
       EventIdBuilder = value;

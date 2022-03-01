@@ -15,10 +15,12 @@ import org.apache.avro.message.SchemaStore;
 @org.apache.avro.specific.AvroGenerated
 public class PeerStatusUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
   private static final long serialVersionUID = 6553373235304928203L;
+
+
   public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"PeerStatusUpdatedEvent\",\"namespace\":\"net.lightapi.portal.covid\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the id\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"email\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"email of the status owner\"},{\"name\":\"keyId\",\"type\":\"int\",\"doc\":\"keyId 0 email 1 map category 2 map subcategory\",\"default\":0},{\"name\":\"status\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"status in string format\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
-  private static SpecificData MODEL$ = new SpecificData();
+  private static final SpecificData MODEL$ = new SpecificData();
 
   private static final BinaryMessageEncoder<PeerStatusUpdatedEvent> ENCODER =
       new BinaryMessageEncoder<PeerStatusUpdatedEvent>(MODEL$, SCHEMA$);
@@ -71,15 +73,15 @@ public class PeerStatusUpdatedEvent extends org.apache.avro.specific.SpecificRec
     return DECODER.decode(b);
   }
 
-   private com.networknt.kafka.common.EventId EventId;
+  private com.networknt.kafka.common.EventId EventId;
   /** email of the status owner */
-   private java.lang.String email;
+  private java.lang.String email;
   /** keyId 0 email 1 map category 2 map subcategory */
-   private int keyId;
+  private int keyId;
   /** status in string format */
-   private java.lang.String status;
+  private java.lang.String status;
   /** time the event is recorded */
-   private long timestamp;
+  private long timestamp;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -114,7 +116,7 @@ public class PeerStatusUpdatedEvent extends org.apache.avro.specific.SpecificRec
     case 2: return keyId;
     case 3: return status;
     case 4: return timestamp;
-    default: throw new org.apache.avro.AvroRuntimeException("Bad index");
+    default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
 
@@ -127,7 +129,7 @@ public class PeerStatusUpdatedEvent extends org.apache.avro.specific.SpecificRec
     case 2: keyId = (java.lang.Integer)value$; break;
     case 3: status = value$ != null ? value$.toString() : null; break;
     case 4: timestamp = (java.lang.Long)value$; break;
-    default: throw new org.apache.avro.AvroRuntimeException("Bad index");
+    default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
 
@@ -274,7 +276,7 @@ public class PeerStatusUpdatedEvent extends org.apache.avro.specific.SpecificRec
 
     /** Creates a new Builder */
     private Builder() {
-      super(SCHEMA$);
+      super(SCHEMA$, MODEL$);
     }
 
     /**
@@ -313,7 +315,7 @@ public class PeerStatusUpdatedEvent extends org.apache.avro.specific.SpecificRec
      * @param other The existing instance to copy.
      */
     private Builder(net.lightapi.portal.covid.PeerStatusUpdatedEvent other) {
-      super(SCHEMA$);
+      super(SCHEMA$, MODEL$);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
         fieldSetFlags()[0] = true;
@@ -387,6 +389,7 @@ public class PeerStatusUpdatedEvent extends org.apache.avro.specific.SpecificRec
      * @param value The builder instance that must be set.
      * @return This builder.
      */
+
     public net.lightapi.portal.covid.PeerStatusUpdatedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
       clearEventId();
       EventIdBuilder = value;

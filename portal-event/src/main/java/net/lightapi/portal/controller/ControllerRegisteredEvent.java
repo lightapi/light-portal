@@ -15,10 +15,12 @@ import org.apache.avro.message.SchemaStore;
 @org.apache.avro.specific.AvroGenerated
 public class ControllerRegisteredEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
   private static final long serialVersionUID = -7826280093360404892L;
+
+
   public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ControllerRegisteredEvent\",\"namespace\":\"net.lightapi.portal.controller\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"host\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host\"},{\"name\":\"key\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"key id that might be service or service plus tag if tag is not null\"},{\"name\":\"serviceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"serviceId of the registered service from server.yml\"},{\"name\":\"protocol\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"protocol of the service that controller is connecting to. http or https\"},{\"name\":\"tag\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"the environment tag of the service\",\"default\":null},{\"name\":\"address\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the ip address of the service\"},{\"name\":\"port\",\"type\":\"int\",\"doc\":\"the port number of the service\"},{\"name\":\"check\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the health info from the registry request body\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
-  private static SpecificData MODEL$ = new SpecificData();
+  private static final SpecificData MODEL$ = new SpecificData();
 
   private static final BinaryMessageEncoder<ControllerRegisteredEvent> ENCODER =
       new BinaryMessageEncoder<ControllerRegisteredEvent>(MODEL$, SCHEMA$);
@@ -71,25 +73,25 @@ public class ControllerRegisteredEvent extends org.apache.avro.specific.Specific
     return DECODER.decode(b);
   }
 
-   private com.networknt.kafka.common.EventId EventId;
+  private com.networknt.kafka.common.EventId EventId;
   /** host */
-   private java.lang.String host;
+  private java.lang.String host;
   /** key id that might be service or service plus tag if tag is not null */
-   private java.lang.String key;
+  private java.lang.String key;
   /** serviceId of the registered service from server.yml */
-   private java.lang.String serviceId;
+  private java.lang.String serviceId;
   /** protocol of the service that controller is connecting to. http or https */
-   private java.lang.String protocol;
+  private java.lang.String protocol;
   /** the environment tag of the service */
-   private java.lang.String tag;
+  private java.lang.String tag;
   /** the ip address of the service */
-   private java.lang.String address;
+  private java.lang.String address;
   /** the port number of the service */
-   private int port;
+  private int port;
   /** the health info from the registry request body */
-   private java.lang.String check;
+  private java.lang.String check;
   /** time the event is recorded */
-   private long timestamp;
+  private long timestamp;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -139,7 +141,7 @@ public class ControllerRegisteredEvent extends org.apache.avro.specific.Specific
     case 7: return port;
     case 8: return check;
     case 9: return timestamp;
-    default: throw new org.apache.avro.AvroRuntimeException("Bad index");
+    default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
 
@@ -157,7 +159,7 @@ public class ControllerRegisteredEvent extends org.apache.avro.specific.Specific
     case 7: port = (java.lang.Integer)value$; break;
     case 8: check = value$ != null ? value$.toString() : null; break;
     case 9: timestamp = (java.lang.Long)value$; break;
-    default: throw new org.apache.avro.AvroRuntimeException("Bad index");
+    default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
 
@@ -404,7 +406,7 @@ public class ControllerRegisteredEvent extends org.apache.avro.specific.Specific
 
     /** Creates a new Builder */
     private Builder() {
-      super(SCHEMA$);
+      super(SCHEMA$, MODEL$);
     }
 
     /**
@@ -463,7 +465,7 @@ public class ControllerRegisteredEvent extends org.apache.avro.specific.Specific
      * @param other The existing instance to copy.
      */
     private Builder(net.lightapi.portal.controller.ControllerRegisteredEvent other) {
-      super(SCHEMA$);
+      super(SCHEMA$, MODEL$);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
         fieldSetFlags()[0] = true;
@@ -557,6 +559,7 @@ public class ControllerRegisteredEvent extends org.apache.avro.specific.Specific
      * @param value The builder instance that must be set.
      * @return This builder.
      */
+
     public net.lightapi.portal.controller.ControllerRegisteredEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
       clearEventId();
       EventIdBuilder = value;

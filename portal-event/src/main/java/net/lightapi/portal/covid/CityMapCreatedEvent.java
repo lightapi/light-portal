@@ -15,10 +15,12 @@ import org.apache.avro.message.SchemaStore;
 @org.apache.avro.specific.AvroGenerated
 public class CityMapCreatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
   private static final long serialVersionUID = -9148672086573096837L;
+
+
   public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"CityMapCreatedEvent\",\"namespace\":\"net.lightapi.portal.covid\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"country\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"country\"},{\"name\":\"province\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"province\"},{\"name\":\"city\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"city\"},{\"name\":\"latitude\",\"type\":\"double\",\"doc\":\"city latitude\"},{\"name\":\"longitude\",\"type\":\"double\",\"doc\":\"city longitude\"},{\"name\":\"zoom\",\"type\":\"int\",\"doc\":\"initial zoom\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
-  private static SpecificData MODEL$ = new SpecificData();
+  private static final SpecificData MODEL$ = new SpecificData();
 
   private static final BinaryMessageEncoder<CityMapCreatedEvent> ENCODER =
       new BinaryMessageEncoder<CityMapCreatedEvent>(MODEL$, SCHEMA$);
@@ -71,21 +73,21 @@ public class CityMapCreatedEvent extends org.apache.avro.specific.SpecificRecord
     return DECODER.decode(b);
   }
 
-   private com.networknt.kafka.common.EventId EventId;
+  private com.networknt.kafka.common.EventId EventId;
   /** country */
-   private java.lang.String country;
+  private java.lang.String country;
   /** province */
-   private java.lang.String province;
+  private java.lang.String province;
   /** city */
-   private java.lang.String city;
+  private java.lang.String city;
   /** city latitude */
-   private double latitude;
+  private double latitude;
   /** city longitude */
-   private double longitude;
+  private double longitude;
   /** initial zoom */
-   private int zoom;
+  private int zoom;
   /** time the event is recorded */
-   private long timestamp;
+  private long timestamp;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -129,7 +131,7 @@ public class CityMapCreatedEvent extends org.apache.avro.specific.SpecificRecord
     case 5: return longitude;
     case 6: return zoom;
     case 7: return timestamp;
-    default: throw new org.apache.avro.AvroRuntimeException("Bad index");
+    default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
 
@@ -145,7 +147,7 @@ public class CityMapCreatedEvent extends org.apache.avro.specific.SpecificRecord
     case 5: longitude = (java.lang.Double)value$; break;
     case 6: zoom = (java.lang.Integer)value$; break;
     case 7: timestamp = (java.lang.Long)value$; break;
-    default: throw new org.apache.avro.AvroRuntimeException("Bad index");
+    default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
 
@@ -352,7 +354,7 @@ public class CityMapCreatedEvent extends org.apache.avro.specific.SpecificRecord
 
     /** Creates a new Builder */
     private Builder() {
-      super(SCHEMA$);
+      super(SCHEMA$, MODEL$);
     }
 
     /**
@@ -403,7 +405,7 @@ public class CityMapCreatedEvent extends org.apache.avro.specific.SpecificRecord
      * @param other The existing instance to copy.
      */
     private Builder(net.lightapi.portal.covid.CityMapCreatedEvent other) {
-      super(SCHEMA$);
+      super(SCHEMA$, MODEL$);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
         fieldSetFlags()[0] = true;
@@ -489,6 +491,7 @@ public class CityMapCreatedEvent extends org.apache.avro.specific.SpecificRecord
      * @param value The builder instance that must be set.
      * @return This builder.
      */
+
     public net.lightapi.portal.covid.CityMapCreatedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
       clearEventId();
       EventIdBuilder = value;

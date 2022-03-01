@@ -15,10 +15,12 @@ import org.apache.avro.message.SchemaStore;
 @org.apache.avro.specific.AvroGenerated
 public class SocialUserCreatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
   private static final long serialVersionUID = 3493824459801906173L;
+
+
   public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"SocialUserCreatedEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"host\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host organization of the user\"},{\"name\":\"email\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the email of the user\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the unique user id\"},{\"name\":\"language\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the preferred language of the user\"},{\"name\":\"value\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"user detail in JSON, include firstName, lastName and other fields\",\"default\":null},{\"name\":\"verified\",\"type\":\"boolean\",\"doc\":\"If the email is verified\",\"default\":false},{\"name\":\"roles\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a list of roles for the user\",\"default\":\"user\"},{\"name\":\"locked\",\"type\":\"boolean\",\"doc\":\"If the account is locked\",\"default\":false},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
-  private static SpecificData MODEL$ = new SpecificData();
+  private static final SpecificData MODEL$ = new SpecificData();
 
   private static final BinaryMessageEncoder<SocialUserCreatedEvent> ENCODER =
       new BinaryMessageEncoder<SocialUserCreatedEvent>(MODEL$, SCHEMA$);
@@ -71,25 +73,25 @@ public class SocialUserCreatedEvent extends org.apache.avro.specific.SpecificRec
     return DECODER.decode(b);
   }
 
-   private com.networknt.kafka.common.EventId EventId;
+  private com.networknt.kafka.common.EventId EventId;
   /** the host organization of the user */
-   private java.lang.String host;
+  private java.lang.String host;
   /** the email of the user */
-   private java.lang.String email;
+  private java.lang.String email;
   /** the unique user id */
-   private java.lang.String userId;
+  private java.lang.String userId;
   /** the preferred language of the user */
-   private java.lang.String language;
+  private java.lang.String language;
   /** user detail in JSON, include firstName, lastName and other fields */
-   private java.lang.String value;
+  private java.lang.String value;
   /** If the email is verified */
-   private boolean verified;
+  private boolean verified;
   /** a list of roles for the user */
-   private java.lang.String roles;
+  private java.lang.String roles;
   /** If the account is locked */
-   private boolean locked;
+  private boolean locked;
   /** time the event is recorded */
-   private long timestamp;
+  private long timestamp;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -139,7 +141,7 @@ public class SocialUserCreatedEvent extends org.apache.avro.specific.SpecificRec
     case 7: return roles;
     case 8: return locked;
     case 9: return timestamp;
-    default: throw new org.apache.avro.AvroRuntimeException("Bad index");
+    default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
 
@@ -157,7 +159,7 @@ public class SocialUserCreatedEvent extends org.apache.avro.specific.SpecificRec
     case 7: roles = value$ != null ? value$.toString() : null; break;
     case 8: locked = (java.lang.Boolean)value$; break;
     case 9: timestamp = (java.lang.Long)value$; break;
-    default: throw new org.apache.avro.AvroRuntimeException("Bad index");
+    default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
 
@@ -404,7 +406,7 @@ public class SocialUserCreatedEvent extends org.apache.avro.specific.SpecificRec
 
     /** Creates a new Builder */
     private Builder() {
-      super(SCHEMA$);
+      super(SCHEMA$, MODEL$);
     }
 
     /**
@@ -463,7 +465,7 @@ public class SocialUserCreatedEvent extends org.apache.avro.specific.SpecificRec
      * @param other The existing instance to copy.
      */
     private Builder(net.lightapi.portal.user.SocialUserCreatedEvent other) {
-      super(SCHEMA$);
+      super(SCHEMA$, MODEL$);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
         fieldSetFlags()[0] = true;
@@ -557,6 +559,7 @@ public class SocialUserCreatedEvent extends org.apache.avro.specific.SpecificRec
      * @param value The builder instance that must be set.
      * @return This builder.
      */
+
     public net.lightapi.portal.user.SocialUserCreatedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
       clearEventId();
       EventIdBuilder = value;

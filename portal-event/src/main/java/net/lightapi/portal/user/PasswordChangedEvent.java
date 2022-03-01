@@ -15,10 +15,12 @@ import org.apache.avro.message.SchemaStore;
 @org.apache.avro.specific.AvroGenerated
 public class PasswordChangedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
   private static final long serialVersionUID = 629263874579099298L;
+
+
   public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"PasswordChangedEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the id\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"password\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"new hashed password for the email account\"},{\"name\":\"oldPassword\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"old password for verification on the event processing\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
-  private static SpecificData MODEL$ = new SpecificData();
+  private static final SpecificData MODEL$ = new SpecificData();
 
   private static final BinaryMessageEncoder<PasswordChangedEvent> ENCODER =
       new BinaryMessageEncoder<PasswordChangedEvent>(MODEL$, SCHEMA$);
@@ -71,13 +73,13 @@ public class PasswordChangedEvent extends org.apache.avro.specific.SpecificRecor
     return DECODER.decode(b);
   }
 
-   private com.networknt.kafka.common.EventId EventId;
+  private com.networknt.kafka.common.EventId EventId;
   /** new hashed password for the email account */
-   private java.lang.String password;
+  private java.lang.String password;
   /** old password for verification on the event processing */
-   private java.lang.String oldPassword;
+  private java.lang.String oldPassword;
   /** time the event is recorded */
-   private long timestamp;
+  private long timestamp;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -109,7 +111,7 @@ public class PasswordChangedEvent extends org.apache.avro.specific.SpecificRecor
     case 1: return password;
     case 2: return oldPassword;
     case 3: return timestamp;
-    default: throw new org.apache.avro.AvroRuntimeException("Bad index");
+    default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
 
@@ -121,7 +123,7 @@ public class PasswordChangedEvent extends org.apache.avro.specific.SpecificRecor
     case 1: password = value$ != null ? value$.toString() : null; break;
     case 2: oldPassword = value$ != null ? value$.toString() : null; break;
     case 3: timestamp = (java.lang.Long)value$; break;
-    default: throw new org.apache.avro.AvroRuntimeException("Bad index");
+    default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
 
@@ -248,7 +250,7 @@ public class PasswordChangedEvent extends org.apache.avro.specific.SpecificRecor
 
     /** Creates a new Builder */
     private Builder() {
-      super(SCHEMA$);
+      super(SCHEMA$, MODEL$);
     }
 
     /**
@@ -283,7 +285,7 @@ public class PasswordChangedEvent extends org.apache.avro.specific.SpecificRecor
      * @param other The existing instance to copy.
      */
     private Builder(net.lightapi.portal.user.PasswordChangedEvent other) {
-      super(SCHEMA$);
+      super(SCHEMA$, MODEL$);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
         fieldSetFlags()[0] = true;
@@ -353,6 +355,7 @@ public class PasswordChangedEvent extends org.apache.avro.specific.SpecificRecor
      * @param value The builder instance that must be set.
      * @return This builder.
      */
+
     public net.lightapi.portal.user.PasswordChangedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
       clearEventId();
       EventIdBuilder = value;

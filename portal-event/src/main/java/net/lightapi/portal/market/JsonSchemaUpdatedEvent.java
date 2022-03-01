@@ -15,10 +15,12 @@ import org.apache.avro.message.SchemaStore;
 @org.apache.avro.specific.AvroGenerated
 public class JsonSchemaUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
   private static final long serialVersionUID = 8348881194854523643L;
+
+
   public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"JsonSchemaUpdatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"keyId\",\"type\":\"int\",\"doc\":\"keyId 0 schema 1 host\"},{\"name\":\"host\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host\"},{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"id\"},{\"name\":\"categories\",\"type\":{\"type\":\"array\",\"items\":{\"type\":\"string\",\"avro.java.string\":\"String\"}}},{\"name\":\"tags\",\"type\":{\"type\":\"array\",\"items\":{\"type\":\"string\",\"avro.java.string\":\"String\"}}},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"detail in JSON\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
-  private static SpecificData MODEL$ = new SpecificData();
+  private static final SpecificData MODEL$ = new SpecificData();
 
   private static final BinaryMessageEncoder<JsonSchemaUpdatedEvent> ENCODER =
       new BinaryMessageEncoder<JsonSchemaUpdatedEvent>(MODEL$, SCHEMA$);
@@ -71,19 +73,19 @@ public class JsonSchemaUpdatedEvent extends org.apache.avro.specific.SpecificRec
     return DECODER.decode(b);
   }
 
-   private com.networknt.kafka.common.EventId EventId;
+  private com.networknt.kafka.common.EventId EventId;
   /** keyId 0 schema 1 host */
-   private int keyId;
+  private int keyId;
   /** host */
-   private java.lang.String host;
+  private java.lang.String host;
   /** id */
-   private java.lang.String id;
-   private java.util.List<java.lang.String> categories;
-   private java.util.List<java.lang.String> tags;
+  private java.lang.String id;
+  private java.util.List<java.lang.String> categories;
+  private java.util.List<java.lang.String> tags;
   /** detail in JSON */
-   private java.lang.String value;
+  private java.lang.String value;
   /** time the event is recorded */
-   private long timestamp;
+  private long timestamp;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -127,7 +129,7 @@ public class JsonSchemaUpdatedEvent extends org.apache.avro.specific.SpecificRec
     case 5: return tags;
     case 6: return value;
     case 7: return timestamp;
-    default: throw new org.apache.avro.AvroRuntimeException("Bad index");
+    default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
 
@@ -143,7 +145,7 @@ public class JsonSchemaUpdatedEvent extends org.apache.avro.specific.SpecificRec
     case 5: tags = (java.util.List<java.lang.String>)value$; break;
     case 6: value = value$ != null ? value$.toString() : null; break;
     case 7: timestamp = (java.lang.Long)value$; break;
-    default: throw new org.apache.avro.AvroRuntimeException("Bad index");
+    default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
 
@@ -346,7 +348,7 @@ public class JsonSchemaUpdatedEvent extends org.apache.avro.specific.SpecificRec
 
     /** Creates a new Builder */
     private Builder() {
-      super(SCHEMA$);
+      super(SCHEMA$, MODEL$);
     }
 
     /**
@@ -397,7 +399,7 @@ public class JsonSchemaUpdatedEvent extends org.apache.avro.specific.SpecificRec
      * @param other The existing instance to copy.
      */
     private Builder(net.lightapi.portal.market.JsonSchemaUpdatedEvent other) {
-      super(SCHEMA$);
+      super(SCHEMA$, MODEL$);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
         fieldSetFlags()[0] = true;
@@ -483,6 +485,7 @@ public class JsonSchemaUpdatedEvent extends org.apache.avro.specific.SpecificRec
      * @param value The builder instance that must be set.
      * @return This builder.
      */
+
     public net.lightapi.portal.market.JsonSchemaUpdatedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
       clearEventId();
       EventIdBuilder = value;

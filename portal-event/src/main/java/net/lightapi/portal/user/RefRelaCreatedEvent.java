@@ -15,10 +15,12 @@ import org.apache.avro.message.SchemaStore;
 @org.apache.avro.specific.AvroGenerated
 public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
   private static final long serialVersionUID = 3926011084462174691L;
+
+
   public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"RefRelaCreatedEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"rela\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"reference rela name\"},{\"name\":\"language\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"value label language\"},{\"name\":\"from\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"From value of the relationship\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"reference value\"},{\"name\":\"label\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"value label in language\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
-  private static SpecificData MODEL$ = new SpecificData();
+  private static final SpecificData MODEL$ = new SpecificData();
 
   private static final BinaryMessageEncoder<RefRelaCreatedEvent> ENCODER =
       new BinaryMessageEncoder<RefRelaCreatedEvent>(MODEL$, SCHEMA$);
@@ -71,19 +73,19 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
     return DECODER.decode(b);
   }
 
-   private com.networknt.kafka.common.EventId EventId;
+  private com.networknt.kafka.common.EventId EventId;
   /** reference rela name */
-   private java.lang.String rela;
+  private java.lang.String rela;
   /** value label language */
-   private java.lang.String language;
+  private java.lang.String language;
   /** From value of the relationship */
-   private java.lang.String from;
+  private java.lang.String from;
   /** reference value */
-   private java.lang.String value;
+  private java.lang.String value;
   /** value label in language */
-   private java.lang.String label;
+  private java.lang.String label;
   /** time the event is recorded */
-   private long timestamp;
+  private long timestamp;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -124,7 +126,7 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
     case 4: return value;
     case 5: return label;
     case 6: return timestamp;
-    default: throw new org.apache.avro.AvroRuntimeException("Bad index");
+    default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
 
@@ -139,7 +141,7 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
     case 4: value = value$ != null ? value$.toString() : null; break;
     case 5: label = value$ != null ? value$.toString() : null; break;
     case 6: timestamp = (java.lang.Long)value$; break;
-    default: throw new org.apache.avro.AvroRuntimeException("Bad index");
+    default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
 
@@ -326,7 +328,7 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
 
     /** Creates a new Builder */
     private Builder() {
-      super(SCHEMA$);
+      super(SCHEMA$, MODEL$);
     }
 
     /**
@@ -373,7 +375,7 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
      * @param other The existing instance to copy.
      */
     private Builder(net.lightapi.portal.user.RefRelaCreatedEvent other) {
-      super(SCHEMA$);
+      super(SCHEMA$, MODEL$);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
         fieldSetFlags()[0] = true;
@@ -455,6 +457,7 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
      * @param value The builder instance that must be set.
      * @return This builder.
      */
+
     public net.lightapi.portal.user.RefRelaCreatedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
       clearEventId();
       EventIdBuilder = value;
