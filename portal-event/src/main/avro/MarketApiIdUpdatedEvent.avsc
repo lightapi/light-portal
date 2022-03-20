@@ -1,0 +1,59 @@
+{
+  "type": "record",
+  "name": "MarketApiIdUpdatedEvent",
+  "namespace": "net.lightapi.portal.market",
+  "fields": [
+    {
+      "name": "EventId",
+      "type": {
+        "type": "record",
+        "name": "EventId",
+        "namespace": "com.networknt.kafka.common",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "doc": "a unique identifier"
+          },
+          {
+            "name": "nonce",
+            "type": "long",
+            "doc": "the number of the transactions for the user"
+          },
+          {
+            "name": "derived",
+            "type": "boolean",
+            "default": false,
+            "doc": "indicate if the event is derived from event processor"
+          }
+        ]
+      }
+    },
+    {
+      "name": "keyId",
+      "type": "int",
+      "doc": "keyId 0 host"
+    },
+    {
+      "name": "host",
+      "type": "string",
+      "doc": "host"
+    },
+    {
+      "name": "apiId",
+      "type": "string",
+      "doc": "api id"
+    },
+    {
+      "name": "serviceId",
+      "type": "string",
+      "doc": "service id"
+    },
+    {
+      "name": "timestamp",
+      "type": "long",
+      "default": 0,
+      "doc": "time the event is recorded"
+    }
+  ]
+}

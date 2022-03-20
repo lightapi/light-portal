@@ -90,6 +90,9 @@ java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema JsonSche
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema RuleCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema RuleUpdatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema RuleDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema MarketApiIdCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema MarketApiIdUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema MarketApiIdDeletedEvent.avsc .
 
 
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema ControllerRegisteredEvent.avsc .
@@ -186,6 +189,9 @@ mv net/lightapi/portal/market/JsonSchemaDeletedEvent.java ../java/net/lightapi/p
 mv net/lightapi/portal/market/RuleCreatedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/RuleUpdatedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/RuleDeletedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/MarketApiIdCreatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/MarketApiIdUpdatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/MarketApiIdDeletedEvent.java ../java/net/lightapi/portal/market
 
 mv net/lightapi/portal/controller/ControllerRegisteredEvent.java ../java/net/lightapi/portal/controller
 mv net/lightapi/portal/controller/ControllerDeregisteredEvent.java ../java/net/lightapi/portal/controller

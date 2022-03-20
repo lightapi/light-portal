@@ -848,11 +848,11 @@ public class HybridQueryClient {
     }
 
     /**
-     * Get a list of hosts from reference api
+     * Get a list of hosts from reference api for host dropdowns in the UI.
      *
      * @return Result of list of host object in JSON
      */
-    public static Result<String> getHost() {
+    public static Result<String> getHosts() {
         String path = "/r/data?name=host";
         Result<String> result = null;
         ClientConnection conn = null;
@@ -881,6 +881,37 @@ public class HybridQueryClient {
             IoUtils.safeClose(conn);
         }
         return result;
+    }
+
+    /**
+     * Get all the entities associated with a particular host. This method is called from the main getHost
+     * endpoint to get remote host if it is not on the local store.
+     *
+     * @param exchange HttpServerExchange
+     * @param url url of target server
+     * @param host host name
+     * @return Result map of entities in JSON
+     */
+    public static Result<String> getHost(HttpServerExchange exchange, String url, String host) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getHost\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\"}}", host);
+        return callQueryExchangeUrl(s, exchange, url);
+    }
+
+    /**
+     * Get all the entities associated with a particular host. This method is called by the createHost
+     * or updateHost command side endpoints.
+     *
+     * @param exchange HttpServerExchange
+     * @param host host name
+     * @return Result map of entities in JSON
+     */
+    public static Result<String> getHost(HttpServerExchange exchange, String host) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getHost\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\"}}", host);
+        if (config.isPortalByServiceUrl()) {
+            return callQueryExchangeUrl(s, exchange, config.getPortalQueryServiceUrl());
+        } else {
+            return callQueryExchange(s, exchange);
+        }
     }
 
     /**
