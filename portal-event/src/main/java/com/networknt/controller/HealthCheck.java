@@ -15,10 +15,12 @@ import org.apache.avro.message.SchemaStore;
 @org.apache.avro.specific.AvroGenerated
 public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
   private static final long serialVersionUID = -6697768552917720523L;
+
+
   public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"HealthCheck\",\"namespace\":\"com.networknt.controller\",\"fields\":[{\"name\":\"host\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"}},{\"name\":\"lastExecuteTimestamp\",\"type\":\"long\"},{\"name\":\"lastFailedTimestamp\",\"type\":\"long\"},{\"name\":\"serviceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"}},{\"name\":\"tag\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"default\":null},{\"name\":\"protocol\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"}},{\"name\":\"address\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"}},{\"name\":\"port\",\"type\":\"int\"},{\"name\":\"tlsSkipVerify\",\"type\":\"boolean\"},{\"name\":\"interval\",\"type\":\"int\"},{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"}},{\"name\":\"deregisterCriticalServiceAfter\",\"type\":\"int\"},{\"name\":\"healthPath\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"}}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
-  private static SpecificData MODEL$ = new SpecificData();
+  private static final SpecificData MODEL$ = new SpecificData();
 
   private static final BinaryMessageEncoder<HealthCheck> ENCODER =
       new BinaryMessageEncoder<HealthCheck>(MODEL$, SCHEMA$);
@@ -71,19 +73,19 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
     return DECODER.decode(b);
   }
 
-   private java.lang.String host;
-   private long lastExecuteTimestamp;
-   private long lastFailedTimestamp;
-   private java.lang.String serviceId;
-   private java.lang.String tag;
-   private java.lang.String protocol;
-   private java.lang.String address;
-   private int port;
-   private boolean tlsSkipVerify;
-   private int interval;
-   private java.lang.String id;
-   private int deregisterCriticalServiceAfter;
-   private java.lang.String healthPath;
+  private java.lang.String host;
+  private long lastExecuteTimestamp;
+  private long lastFailedTimestamp;
+  private java.lang.String serviceId;
+  private java.lang.String tag;
+  private java.lang.String protocol;
+  private java.lang.String address;
+  private int port;
+  private boolean tlsSkipVerify;
+  private int interval;
+  private java.lang.String id;
+  private int deregisterCriticalServiceAfter;
+  private java.lang.String healthPath;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -445,7 +447,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
 
     /** Creates a new Builder */
     private Builder() {
-      super(SCHEMA$);
+      super(SCHEMA$, MODEL$);
     }
 
     /**
@@ -513,7 +515,7 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
      * @param other The existing instance to copy.
      */
     private Builder(com.networknt.controller.HealthCheck other) {
-      super(SCHEMA$);
+      super(SCHEMA$, MODEL$);
       if (isValidValue(fields()[0], other.host)) {
         this.host = data().deepCopy(fields()[0].schema(), other.host);
         fieldSetFlags()[0] = true;

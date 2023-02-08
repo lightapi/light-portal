@@ -15,10 +15,12 @@ import org.apache.avro.message.SchemaStore;
 @org.apache.avro.specific.AvroGenerated
 public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
   private static final long serialVersionUID = 410678981943919853L;
+
+
   public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"TaskDefinition\",\"namespace\":\"com.networknt.scheduler\",\"fields\":[{\"name\":\"host\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"}},{\"name\":\"name\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"}},{\"name\":\"action\",\"type\":{\"type\":\"enum\",\"name\":\"DefinitionAction\",\"symbols\":[\"INSERT\",\"UPDATE\",\"DELETE\"]}},{\"name\":\"frequency\",\"type\":[\"null\",{\"type\":\"record\",\"name\":\"TaskFrequency\",\"fields\":[{\"name\":\"timeUnit\",\"type\":{\"type\":\"enum\",\"name\":\"TimeUnit\",\"symbols\":[\"MILLISECONDS\",\"SECONDS\",\"MINUTES\",\"HOURS\",\"DAYS\"]}},{\"name\":\"time\",\"type\":\"int\"}]}],\"default\":null},{\"name\":\"topic\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"}},{\"name\":\"start\",\"type\":\"long\"},{\"name\":\"data\",\"type\":[\"null\",{\"type\":\"map\",\"values\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"avro.java.string\":\"String\"}],\"default\":null}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
-  private static SpecificData MODEL$ = new SpecificData();
+  private static final SpecificData MODEL$ = new SpecificData();
 
   private static final BinaryMessageEncoder<TaskDefinition> ENCODER =
       new BinaryMessageEncoder<TaskDefinition>(MODEL$, SCHEMA$);
@@ -71,13 +73,13 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
     return DECODER.decode(b);
   }
 
-   private java.lang.String host;
-   private java.lang.String name;
-   private com.networknt.scheduler.DefinitionAction action;
-   private com.networknt.scheduler.TaskFrequency frequency;
-   private java.lang.String topic;
-   private long start;
-   private java.util.Map<java.lang.String,java.lang.String> data;
+  private java.lang.String host;
+  private java.lang.String name;
+  private com.networknt.scheduler.DefinitionAction action;
+  private com.networknt.scheduler.TaskFrequency frequency;
+  private java.lang.String topic;
+  private long start;
+  private java.util.Map<java.lang.String,java.lang.String> data;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -308,7 +310,7 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
 
     /** Creates a new Builder */
     private Builder() {
-      super(SCHEMA$);
+      super(SCHEMA$, MODEL$);
     }
 
     /**
@@ -355,7 +357,7 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
      * @param other The existing instance to copy.
      */
     private Builder(com.networknt.scheduler.TaskDefinition other) {
-      super(SCHEMA$);
+      super(SCHEMA$, MODEL$);
       if (isValidValue(fields()[0], other.host)) {
         this.host = data().deepCopy(fields()[0].schema(), other.host);
         fieldSetFlags()[0] = true;

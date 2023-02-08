@@ -15,10 +15,12 @@ import org.apache.avro.message.SchemaStore;
 @org.apache.avro.specific.AvroGenerated
 public class TaskDefinitionKey extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
   private static final long serialVersionUID = 2475168499173960391L;
+
+
   public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"TaskDefinitionKey\",\"namespace\":\"com.networknt.scheduler\",\"fields\":[{\"name\":\"host\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"}},{\"name\":\"name\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"}}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
-  private static SpecificData MODEL$ = new SpecificData();
+  private static final SpecificData MODEL$ = new SpecificData();
 
   private static final BinaryMessageEncoder<TaskDefinitionKey> ENCODER =
       new BinaryMessageEncoder<TaskDefinitionKey>(MODEL$, SCHEMA$);
@@ -71,8 +73,8 @@ public class TaskDefinitionKey extends org.apache.avro.specific.SpecificRecordBa
     return DECODER.decode(b);
   }
 
-   private java.lang.String host;
-   private java.lang.String name;
+  private java.lang.String host;
+  private java.lang.String name;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -192,7 +194,7 @@ public class TaskDefinitionKey extends org.apache.avro.specific.SpecificRecordBa
 
     /** Creates a new Builder */
     private Builder() {
-      super(SCHEMA$);
+      super(SCHEMA$, MODEL$);
     }
 
     /**
@@ -216,7 +218,7 @@ public class TaskDefinitionKey extends org.apache.avro.specific.SpecificRecordBa
      * @param other The existing instance to copy.
      */
     private Builder(com.networknt.scheduler.TaskDefinitionKey other) {
-      super(SCHEMA$);
+      super(SCHEMA$, MODEL$);
       if (isValidValue(fields()[0], other.host)) {
         this.host = data().deepCopy(fields()[0].schema(), other.host);
         fieldSetFlags()[0] = true;

@@ -15,10 +15,12 @@ import org.apache.avro.message.SchemaStore;
 @org.apache.avro.specific.AvroGenerated
 public class TaskFrequency extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
   private static final long serialVersionUID = 4563439155687697697L;
+
+
   public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"TaskFrequency\",\"namespace\":\"com.networknt.scheduler\",\"fields\":[{\"name\":\"timeUnit\",\"type\":{\"type\":\"enum\",\"name\":\"TimeUnit\",\"symbols\":[\"MILLISECONDS\",\"SECONDS\",\"MINUTES\",\"HOURS\",\"DAYS\"]}},{\"name\":\"time\",\"type\":\"int\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
-  private static SpecificData MODEL$ = new SpecificData();
+  private static final SpecificData MODEL$ = new SpecificData();
 
   private static final BinaryMessageEncoder<TaskFrequency> ENCODER =
       new BinaryMessageEncoder<TaskFrequency>(MODEL$, SCHEMA$);
@@ -71,8 +73,8 @@ public class TaskFrequency extends org.apache.avro.specific.SpecificRecordBase i
     return DECODER.decode(b);
   }
 
-   private com.networknt.scheduler.TimeUnit timeUnit;
-   private int time;
+  private com.networknt.scheduler.TimeUnit timeUnit;
+  private int time;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -192,7 +194,7 @@ public class TaskFrequency extends org.apache.avro.specific.SpecificRecordBase i
 
     /** Creates a new Builder */
     private Builder() {
-      super(SCHEMA$);
+      super(SCHEMA$, MODEL$);
     }
 
     /**
@@ -216,7 +218,7 @@ public class TaskFrequency extends org.apache.avro.specific.SpecificRecordBase i
      * @param other The existing instance to copy.
      */
     private Builder(com.networknt.scheduler.TaskFrequency other) {
-      super(SCHEMA$);
+      super(SCHEMA$, MODEL$);
       if (isValidValue(fields()[0], other.timeUnit)) {
         this.timeUnit = data().deepCopy(fields()[0].schema(), other.timeUnit);
         fieldSetFlags()[0] = true;
