@@ -1,5 +1,12 @@
 # Change Log
 
+## [2.1.8](https://github.com/networknt/light-portal/tree/2.1.8) (2023-03-06)
+
+
+**Merged pull requests:**
+
+
+- fixes \#42 Add events for host creation, update, delete and query [\#43](https://github.com/lightapi/light-portal/pull/43) ([stevehu](https://github.com/stevehu))
 ## [2.1.7](https://github.com/networknt/light-portal/tree/2.1.7) (2023-02-14)
 
 
