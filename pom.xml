@@ -154,6 +154,7 @@
         <module>common-util</module>
         <module>portal-event</module>
         <module>command-common</module>
+        <module>db-provider</module>
     </modules>
 
 
@@ -172,6 +173,11 @@
             <dependency>
                 <groupId>net.lightapi</groupId>
                 <artifactId>command-common</artifactId>
+                <version>${version.light-4j}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.lightapi</groupId>
+                <artifactId>db-provider</artifactId>
                 <version>${version.light-4j}</version>
             </dependency>
             <dependency>
