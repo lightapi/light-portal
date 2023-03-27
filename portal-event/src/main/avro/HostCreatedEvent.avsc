@@ -45,6 +45,11 @@
       "doc": "host"
     },
     {
+      "name": "name",
+      "type": "string",
+      "doc": "The name of the organization"
+    },
+    {
       "name": "desc",
       "type": "string",
       "doc": "A short description of the organization"
