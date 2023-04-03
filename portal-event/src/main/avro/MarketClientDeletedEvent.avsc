@@ -30,19 +30,14 @@
       }
     },
     {
-      "name": "keyId",
-      "type": "int",
-      "doc": "keyId 0 clientId 1 host"
-    },
-    {
       "name": "host",
       "type": "string",
       "doc": "host"
     },
     {
-      "name": "clientId",
+      "name": "applicationId",
       "type": "string",
-      "doc": "client id"
+      "doc": "application id"
     },
     {
       "name": "timestamp",

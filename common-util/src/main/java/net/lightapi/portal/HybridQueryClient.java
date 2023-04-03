@@ -150,7 +150,10 @@ public class HybridQueryClient {
             String message = "/portal/query?cmd=" + URLEncoder.encode(command, "UTF-8");
             final ClientRequest request = new ClientRequest().setMethod(Methods.GET).setPath(message);
             String token = exchange.getRequestHeaders().getFirst(Headers.AUTHORIZATION);
-            if(token != null) request.getRequestHeaders().put(Headers.AUTHORIZATION, token);
+            if(token != null)
+                request.getRequestHeaders().put(Headers.AUTHORIZATION, token);
+            else
+                request.getRequestHeaders().put(Headers.AUTHORIZATION, "Bearer " + config.getBootstrapToken());
             request.getRequestHeaders().put(Headers.HOST, "localhost");
             connection.sendRequest(request, client.createClientCallback(reference, latch));
             latch.await();

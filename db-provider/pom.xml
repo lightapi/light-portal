@@ -11,7 +11,6 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <groupId>net.lightapi</groupId>
     <artifactId>db-provider</artifactId>
     <packaging>jar</packaging>
 
@@ -36,6 +35,11 @@
             <groupId>net.lightapi</groupId>
             <artifactId>portal-event</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.networknt</groupId>
+            <artifactId>cache-manager</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>com.github.ben-manes.caffeine</groupId>
             <artifactId>caffeine</artifactId>

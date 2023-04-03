@@ -30,19 +30,14 @@
       }
     },
     {
-      "name": "keyId",
-      "type": "int",
-      "doc": "keyId 0 serviceId plus optional buildNumber 1 host"
-    },
-    {
       "name": "host",
       "type": "string",
       "doc": "host"
     },
     {
-      "name": "serviceId",
+      "name": "apiId",
       "type": "string",
-      "doc": "service id"
+      "doc": "api id"
     },
     {
       "name": "timestamp",

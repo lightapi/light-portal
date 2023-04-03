@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class MarketCodeDeletedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 3704173093340149770L;
+  private static final long serialVersionUID = 8148085771080783009L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"MarketCodeDeletedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"keyId\",\"type\":\"int\",\"doc\":\"keyId 0 authCode 1 host\"},{\"name\":\"host\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host\"},{\"name\":\"authCode\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"authorization code\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"MarketCodeDeletedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"host\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host\"},{\"name\":\"authCode\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"authorization code\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -74,8 +74,6 @@ public class MarketCodeDeletedEvent extends org.apache.avro.specific.SpecificRec
   }
 
   private com.networknt.kafka.common.EventId EventId;
-  /** keyId 0 authCode 1 host */
-  private int keyId;
   /** host */
   private java.lang.String host;
   /** authorization code */
@@ -93,14 +91,12 @@ public class MarketCodeDeletedEvent extends org.apache.avro.specific.SpecificRec
   /**
    * All-args constructor.
    * @param EventId The new value for EventId
-   * @param keyId keyId 0 authCode 1 host
    * @param host host
    * @param authCode authorization code
    * @param timestamp time the event is recorded
    */
-  public MarketCodeDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.Integer keyId, java.lang.String host, java.lang.String authCode, java.lang.Long timestamp) {
+  public MarketCodeDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String host, java.lang.String authCode, java.lang.Long timestamp) {
     this.EventId = EventId;
-    this.keyId = keyId;
     this.host = host;
     this.authCode = authCode;
     this.timestamp = timestamp;
@@ -112,10 +108,9 @@ public class MarketCodeDeletedEvent extends org.apache.avro.specific.SpecificRec
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return EventId;
-    case 1: return keyId;
-    case 2: return host;
-    case 3: return authCode;
-    case 4: return timestamp;
+    case 1: return host;
+    case 2: return authCode;
+    case 3: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -125,10 +120,9 @@ public class MarketCodeDeletedEvent extends org.apache.avro.specific.SpecificRec
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
-    case 1: keyId = (java.lang.Integer)value$; break;
-    case 2: host = value$ != null ? value$.toString() : null; break;
-    case 3: authCode = value$ != null ? value$.toString() : null; break;
-    case 4: timestamp = (java.lang.Long)value$; break;
+    case 1: host = value$ != null ? value$.toString() : null; break;
+    case 2: authCode = value$ != null ? value$.toString() : null; break;
+    case 3: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -148,24 +142,6 @@ public class MarketCodeDeletedEvent extends org.apache.avro.specific.SpecificRec
    */
   public void setEventId(com.networknt.kafka.common.EventId value) {
     this.EventId = value;
-  }
-
-  /**
-   * Gets the value of the 'keyId' field.
-   * @return keyId 0 authCode 1 host
-   */
-  public int getKeyId() {
-    return keyId;
-  }
-
-
-  /**
-   * Sets the value of the 'keyId' field.
-   * keyId 0 authCode 1 host
-   * @param value the value to set.
-   */
-  public void setKeyId(int value) {
-    this.keyId = value;
   }
 
   /**
@@ -265,8 +241,6 @@ public class MarketCodeDeletedEvent extends org.apache.avro.specific.SpecificRec
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
-    /** keyId 0 authCode 1 host */
-    private int keyId;
     /** host */
     private java.lang.String host;
     /** authorization code */
@@ -292,21 +266,17 @@ public class MarketCodeDeletedEvent extends org.apache.avro.specific.SpecificRec
       if (other.hasEventIdBuilder()) {
         this.EventIdBuilder = com.networknt.kafka.common.EventId.newBuilder(other.getEventIdBuilder());
       }
-      if (isValidValue(fields()[1], other.keyId)) {
-        this.keyId = data().deepCopy(fields()[1].schema(), other.keyId);
+      if (isValidValue(fields()[1], other.host)) {
+        this.host = data().deepCopy(fields()[1].schema(), other.host);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
-      if (isValidValue(fields()[2], other.host)) {
-        this.host = data().deepCopy(fields()[2].schema(), other.host);
+      if (isValidValue(fields()[2], other.authCode)) {
+        this.authCode = data().deepCopy(fields()[2].schema(), other.authCode);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.authCode)) {
-        this.authCode = data().deepCopy(fields()[3].schema(), other.authCode);
+      if (isValidValue(fields()[3], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[3].schema(), other.timestamp);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
-      }
-      if (isValidValue(fields()[4], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[4].schema(), other.timestamp);
-        fieldSetFlags()[4] = other.fieldSetFlags()[4];
       }
     }
 
@@ -321,21 +291,17 @@ public class MarketCodeDeletedEvent extends org.apache.avro.specific.SpecificRec
         fieldSetFlags()[0] = true;
       }
       this.EventIdBuilder = null;
-      if (isValidValue(fields()[1], other.keyId)) {
-        this.keyId = data().deepCopy(fields()[1].schema(), other.keyId);
+      if (isValidValue(fields()[1], other.host)) {
+        this.host = data().deepCopy(fields()[1].schema(), other.host);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.host)) {
-        this.host = data().deepCopy(fields()[2].schema(), other.host);
+      if (isValidValue(fields()[2], other.authCode)) {
+        this.authCode = data().deepCopy(fields()[2].schema(), other.authCode);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.authCode)) {
-        this.authCode = data().deepCopy(fields()[3].schema(), other.authCode);
+      if (isValidValue(fields()[3], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[3].schema(), other.timestamp);
         fieldSetFlags()[3] = true;
-      }
-      if (isValidValue(fields()[4], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[4].schema(), other.timestamp);
-        fieldSetFlags()[4] = true;
       }
     }
 
@@ -416,49 +382,6 @@ public class MarketCodeDeletedEvent extends org.apache.avro.specific.SpecificRec
     }
 
     /**
-      * Gets the value of the 'keyId' field.
-      * keyId 0 authCode 1 host
-      * @return The value.
-      */
-    public int getKeyId() {
-      return keyId;
-    }
-
-
-    /**
-      * Sets the value of the 'keyId' field.
-      * keyId 0 authCode 1 host
-      * @param value The value of 'keyId'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.MarketCodeDeletedEvent.Builder setKeyId(int value) {
-      validate(fields()[1], value);
-      this.keyId = value;
-      fieldSetFlags()[1] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'keyId' field has been set.
-      * keyId 0 authCode 1 host
-      * @return True if the 'keyId' field has been set, false otherwise.
-      */
-    public boolean hasKeyId() {
-      return fieldSetFlags()[1];
-    }
-
-
-    /**
-      * Clears the value of the 'keyId' field.
-      * keyId 0 authCode 1 host
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.MarketCodeDeletedEvent.Builder clearKeyId() {
-      fieldSetFlags()[1] = false;
-      return this;
-    }
-
-    /**
       * Gets the value of the 'host' field.
       * host
       * @return The value.
@@ -475,9 +398,9 @@ public class MarketCodeDeletedEvent extends org.apache.avro.specific.SpecificRec
       * @return This builder.
       */
     public net.lightapi.portal.market.MarketCodeDeletedEvent.Builder setHost(java.lang.String value) {
-      validate(fields()[2], value);
+      validate(fields()[1], value);
       this.host = value;
-      fieldSetFlags()[2] = true;
+      fieldSetFlags()[1] = true;
       return this;
     }
 
@@ -487,7 +410,7 @@ public class MarketCodeDeletedEvent extends org.apache.avro.specific.SpecificRec
       * @return True if the 'host' field has been set, false otherwise.
       */
     public boolean hasHost() {
-      return fieldSetFlags()[2];
+      return fieldSetFlags()[1];
     }
 
 
@@ -498,7 +421,7 @@ public class MarketCodeDeletedEvent extends org.apache.avro.specific.SpecificRec
       */
     public net.lightapi.portal.market.MarketCodeDeletedEvent.Builder clearHost() {
       host = null;
-      fieldSetFlags()[2] = false;
+      fieldSetFlags()[1] = false;
       return this;
     }
 
@@ -519,9 +442,9 @@ public class MarketCodeDeletedEvent extends org.apache.avro.specific.SpecificRec
       * @return This builder.
       */
     public net.lightapi.portal.market.MarketCodeDeletedEvent.Builder setAuthCode(java.lang.String value) {
-      validate(fields()[3], value);
+      validate(fields()[2], value);
       this.authCode = value;
-      fieldSetFlags()[3] = true;
+      fieldSetFlags()[2] = true;
       return this;
     }
 
@@ -531,7 +454,7 @@ public class MarketCodeDeletedEvent extends org.apache.avro.specific.SpecificRec
       * @return True if the 'authCode' field has been set, false otherwise.
       */
     public boolean hasAuthCode() {
-      return fieldSetFlags()[3];
+      return fieldSetFlags()[2];
     }
 
 
@@ -542,7 +465,7 @@ public class MarketCodeDeletedEvent extends org.apache.avro.specific.SpecificRec
       */
     public net.lightapi.portal.market.MarketCodeDeletedEvent.Builder clearAuthCode() {
       authCode = null;
-      fieldSetFlags()[3] = false;
+      fieldSetFlags()[2] = false;
       return this;
     }
 
@@ -563,9 +486,9 @@ public class MarketCodeDeletedEvent extends org.apache.avro.specific.SpecificRec
       * @return This builder.
       */
     public net.lightapi.portal.market.MarketCodeDeletedEvent.Builder setTimestamp(long value) {
-      validate(fields()[4], value);
+      validate(fields()[3], value);
       this.timestamp = value;
-      fieldSetFlags()[4] = true;
+      fieldSetFlags()[3] = true;
       return this;
     }
 
@@ -575,7 +498,7 @@ public class MarketCodeDeletedEvent extends org.apache.avro.specific.SpecificRec
       * @return True if the 'timestamp' field has been set, false otherwise.
       */
     public boolean hasTimestamp() {
-      return fieldSetFlags()[4];
+      return fieldSetFlags()[3];
     }
 
 
@@ -585,7 +508,7 @@ public class MarketCodeDeletedEvent extends org.apache.avro.specific.SpecificRec
       * @return This builder.
       */
     public net.lightapi.portal.market.MarketCodeDeletedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[4] = false;
+      fieldSetFlags()[3] = false;
       return this;
     }
 
@@ -604,10 +527,9 @@ public class MarketCodeDeletedEvent extends org.apache.avro.specific.SpecificRec
         } else {
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
-        record.keyId = fieldSetFlags()[1] ? this.keyId : (java.lang.Integer) defaultValue(fields()[1]);
-        record.host = fieldSetFlags()[2] ? this.host : (java.lang.String) defaultValue(fields()[2]);
-        record.authCode = fieldSetFlags()[3] ? this.authCode : (java.lang.String) defaultValue(fields()[3]);
-        record.timestamp = fieldSetFlags()[4] ? this.timestamp : (java.lang.Long) defaultValue(fields()[4]);
+        record.host = fieldSetFlags()[1] ? this.host : (java.lang.String) defaultValue(fields()[1]);
+        record.authCode = fieldSetFlags()[2] ? this.authCode : (java.lang.String) defaultValue(fields()[2]);
+        record.timestamp = fieldSetFlags()[3] ? this.timestamp : (java.lang.Long) defaultValue(fields()[3]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -642,8 +564,6 @@ public class MarketCodeDeletedEvent extends org.apache.avro.specific.SpecificRec
   {
     this.EventId.customEncode(out);
 
-    out.writeInt(this.keyId);
-
     out.writeString(this.host);
 
     out.writeString(this.authCode);
@@ -662,8 +582,6 @@ public class MarketCodeDeletedEvent extends org.apache.avro.specific.SpecificRec
       }
       this.EventId.customDecode(in);
 
-      this.keyId = in.readInt();
-
       this.host = in.readString();
 
       this.authCode = in.readString();
@@ -671,7 +589,7 @@ public class MarketCodeDeletedEvent extends org.apache.avro.specific.SpecificRec
       this.timestamp = in.readLong();
 
     } else {
-      for (int i = 0; i < 5; i++) {
+      for (int i = 0; i < 4; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -681,18 +599,14 @@ public class MarketCodeDeletedEvent extends org.apache.avro.specific.SpecificRec
           break;
 
         case 1:
-          this.keyId = in.readInt();
-          break;
-
-        case 2:
           this.host = in.readString();
           break;
 
-        case 3:
+        case 2:
           this.authCode = in.readString();
           break;
 
-        case 4:
+        case 3:
           this.timestamp = in.readLong();
           break;
 

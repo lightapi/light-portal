@@ -17,6 +17,7 @@ public class PortalClientConfig {
     String portalQueryServiceId;
     String portalCommandServiceId;
     String portalReferenceServiceId;
+    String bootstrapToken; // this token will be used to call hybrid-query services if incoming request doesn't have a token.
 
     public PortalClientConfig() {
     }
@@ -67,5 +68,13 @@ public class PortalClientConfig {
 
     public void setPortalReferenceServiceId(String portalReferenceServiceId) {
         this.portalReferenceServiceId = portalReferenceServiceId;
+    }
+
+    public String getBootstrapToken() {
+        return bootstrapToken;
+    }
+
+    public void setBootstrapToken(String bootstrapToken) {
+        this.bootstrapToken = bootstrapToken;
     }
 }
