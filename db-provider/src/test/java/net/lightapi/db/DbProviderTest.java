@@ -1,9 +1,9 @@
 package net.lightapi.db;
 
 import com.networknt.config.Config;
+import com.networknt.db.provider.DbProviderConfig;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-import net.lightapi.portal.db.DbConfig;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -13,7 +13,7 @@ public class DbProviderTest {
     @Test
     @Disabled
     public void testDbConnection() {
-        DbConfig config = (DbConfig) Config.getInstance().getJsonObjectConfig(DbConfig.CONFIG_NAME, DbConfig.class);
+        DbProviderConfig config = (DbProviderConfig) Config.getInstance().getJsonObjectConfig(DbProviderConfig.CONFIG_NAME, DbProviderConfig.class);
 
         HikariConfig hikariConfig = new HikariConfig();
         hikariConfig.setDriverClassName(config.getDriverClassName());

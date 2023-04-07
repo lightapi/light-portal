@@ -1,1 +1,13 @@
-db.jdbcUrl: jdbc:postgresql://localhost:5432/configserver
+# db-provider.yml
+# For postgres database running in a docker container, you have to use the driverClassName.
+db-provider.driverClassName: org.postgresql.Driver
+db-provider.jdbcUrl: jdbc:postgresql://localhost:5432/configserver
+db-provider.username: postgres
+db-provider.password: secret
+db-provider.maximumPoolSize: 3
+
+# cache.yml
+cache.caches:
+  - cacheName: portal-data
+    expiryInMinutes: 60
+    maxSize: 1000

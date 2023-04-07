@@ -15,10 +15,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static java.sql.Types.NULL;
-import static net.lightapi.portal.db.SqlDbStartupHook.cacheManager;
-import static net.lightapi.portal.db.SqlDbStartupHook.ds;
+import static com.networknt.db.provider.SqlDbStartupHook.cacheManager;
+import static com.networknt.db.provider.SqlDbStartupHook.ds;
 
-public class SqlProviderImpl implements DbProvider {
+public class PortalDbProviderImpl implements PortalDbProvider {
     public static final String SQL_EXCEPTION = "ERR10017";
     public static final String GENERIC_EXCEPTION = "ERR10014";
     public static final String OBJECT_NOT_FOUND = "ERR11637";

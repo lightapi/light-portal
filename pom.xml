@@ -247,6 +247,11 @@
                 <artifactId>cache-manager</artifactId>
                 <version>${version.light-4j}</version>
             </dependency>
+            <dependency>
+                <groupId>com.networknt</groupId>
+                <artifactId>db-provider</artifactId>
+                <version>${version.light-4j}</version>
+            </dependency>
 
             <dependency>
                 <groupId>com.github.ben-manes.caffeine</groupId>
