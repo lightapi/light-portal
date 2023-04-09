@@ -30,11 +30,6 @@
       }
     },
     {
-      "name": "keyId",
-      "type": "int",
-      "doc": "keyId 0 host"
-    },
-    {
       "name": "host",
       "type": "string",
       "doc": "host name is used to delete as we have to ensure that the email domain is matched"

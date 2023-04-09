@@ -30,11 +30,6 @@
       }
     },
     {
-      "name": "keyId",
-      "type": "int",
-      "doc": "keyId 0 host"
-    },
-    {
       "name": "host",
       "type": "string",
       "doc": "host name is used as the key as we check if the mail is match the host domain"

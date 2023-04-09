@@ -1660,7 +1660,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     statement.setNull(13, NULL);
                 }
                 statement.setString(14, event.getEventId().getId());
-                statement.setTimestamp(15, new Timestamp(System.currentTimeMillis()));
+                statement.setTimestamp(15, new Timestamp(event.getTimestamp()));
                 statement.setString(16, event.getHost());
                 statement.setString(17, event.getApiId());
 
@@ -1785,5 +1785,290 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } else {
             return Failure.of(new Status(OBJECT_NOT_FOUND, "auth code not found"));
         }
+    }
+
+    @Override
+    public Result<String> createHost(HostCreatedEvent event) {
+        final String insertHost = "INSERT INTO host_t (id, host, org_name, org_desc, org_owner, update_user, update_timestamp) " +
+                "VALUES (?, ?, ?, ?, ?,   ?, ?)";
+        Result<String> result;
+        Map<String, Object> map = JsonMapper.string2Map(event.getValue());
+        Connection conn = null;
+        try {
+            conn = ds.getConnection();
+            conn.setAutoCommit(false);
+            // no duplicate record, insert the user into database and write a success notification.
+            try (PreparedStatement statement = conn.prepareStatement(insertHost)) {
+                statement.setString(1, event.getId());
+                statement.setString(2, event.getHost());
+                statement.setString(3, event.getName());
+                statement.setString(4, event.getDesc());
+                statement.setString(5, event.getOwner());
+                statement.setString(6, event.getEventId().getId());
+                statement.setTimestamp(7, new Timestamp(event.getTimestamp()));
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "failed to insert the host " + event.getHost());
+                } else {
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                }
+            }
+            updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
+            // as this is a brand-new user, there is no nonce to be updated. By default, the nonce is 0.
+            conn.commit();
+            result = Success.of(event.getHost());
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            try {
+                if(conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            try {
+                if(conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        } finally {
+            try {
+                if (conn != null) {
+                    conn.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> updateHost(HostUpdatedEvent event) {
+        final String updateHost = "UPDATE host_t SET org_name = ?, org_desc = ?, org_owner = ?, update_user = ? " +
+                "update_timestamp = ? " +
+                "WHERE host = ?";
+
+        Result<String> result = null;
+        Map<String, Object> map = JsonMapper.string2Map(event.getValue());
+        Connection conn = null;
+        try {
+            conn = ds.getConnection();
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement statement = conn.prepareStatement(updateHost)) {
+                if(event.getName() != null) {
+                    statement.setString(1, event.getName());
+                } else {
+                    statement.setNull(1, NULL);
+                }
+                if(event.getDesc() != null) {
+                    statement.setString(2, event.getDesc());
+                } else {
+                    statement.setNull(2, NULL);
+                }
+                if(event.getOwner() != null) {
+                    statement.setString(3, event.getOwner());
+                } else {
+                    statement.setNull(3, NULL);
+                }
+                statement.setString(4, event.getEventId().getId());
+                statement.setTimestamp(5, new Timestamp(event.getTimestamp()));
+                statement.setString(6, event.getHost());
+
+                int count = statement.executeUpdate();
+                if(count == 0) {
+                    // no record is updated, write an error notification.
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no record is updated by host " + event.getHost());
+                    return result;
+                } else {
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
+                }
+                updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
+            }
+            // as this is a brand-new user, there is no nonce to be updated. By default, the nonce is 0.
+            conn.commit();
+            result = Success.of(event.getHost());
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            try {
+                if(conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            try {
+                if(conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        } finally {
+            try {
+                if (conn != null) {
+                    conn.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deleteHost(HostDeletedEvent event) {
+        final String deleteHost = "DELETE from host_t WHERE host = ?";
+        Result<String> result;
+        Connection conn = null;
+        try {
+            conn = ds.getConnection();
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(deleteHost)) {
+                statement.setString(1, event.getHost());
+                int count = statement.executeUpdate();
+                if(count == 0) {
+                    // no record is deleted, write an error notification.
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no host record is deleted for host " + event.getHost());
+                } else {
+                    // record is deleted, write a success notification.
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                }
+            }
+            updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
+            conn.commit();
+            result = Success.of(event.getEventId().getId());
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            try {
+                if(conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            try {
+                if(conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        } finally {
+            try {
+                if (conn != null) {
+                    conn.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public Result<Map<String, Object>> queryHostByHost(String host) {
+        final String queryHostByHost = "SELECT * from host_t WHERE host = ?";
+        Result<Map<String, Object>> result;
+        try (final Connection conn = ds.getConnection()) {
+            Map<String, Object> map = new HashMap<>();
+            try (PreparedStatement statement = conn.prepareStatement(queryHostByHost)) {
+                statement.setString(1, host);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        map.put("id", resultSet.getString("id"));
+                        map.put("host", resultSet.getString("host"));
+                        map.put("orgName", resultSet.getString("org_name"));
+                        map.put("orgDesc", resultSet.getString("org_desc"));
+                        map.put("orgOwner", resultSet.getBoolean("org_owner"));
+                        map.put("updateUser", resultSet.getString("update_user"));
+                        map.put("update_timestamp", resultSet.getTimestamp("update_timestamp"));
+                    }
+                }
+            }
+            if(map.size() == 0)
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "host with host ", host));
+            else
+                result = Success.of(map);
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<Map<String, Object>> queryHostById(String id) {
+        final String queryHostById = "SELECT * from host_t WHERE id = ?";
+        Result<Map<String, Object>> result;
+        try (final Connection conn = ds.getConnection()) {
+            Map<String, Object> map = new HashMap<>();
+            try (PreparedStatement statement = conn.prepareStatement(queryHostById)) {
+                statement.setString(1, id);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        map.put("id", resultSet.getString("id"));
+                        map.put("host", resultSet.getString("host"));
+                        map.put("orgName", resultSet.getString("org_name"));
+                        map.put("orgDesc", resultSet.getString("org_desc"));
+                        map.put("orgOwner", resultSet.getBoolean("org_owner"));
+                        map.put("updateUser", resultSet.getString("update_user"));
+                        map.put("update_timestamp", resultSet.getTimestamp("update_timestamp"));
+                    }
+                }
+            }
+            if(map.size() == 0)
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "host with id ", id));
+            else
+                result = Success.of(map);
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
+    public Result<Map<String, Object>> queryHostByOwner(String owner) {
+        final String queryHostByOwner = "SELECT * from host_t WHERE org_owner = ?";
+        Result<Map<String, Object>> result;
+        try (final Connection conn = ds.getConnection()) {
+            Map<String, Object> map = new HashMap<>();
+            try (PreparedStatement statement = conn.prepareStatement(queryHostByOwner)) {
+                statement.setString(1, owner);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        map.put("id", resultSet.getString("id"));
+                        map.put("host", resultSet.getString("host"));
+                        map.put("orgName", resultSet.getString("org_name"));
+                        map.put("orgDesc", resultSet.getString("org_desc"));
+                        map.put("orgOwner", resultSet.getBoolean("org_owner"));
+                        map.put("updateUser", resultSet.getString("update_user"));
+                        map.put("update_timestamp", resultSet.getTimestamp("update_timestamp"));
+                    }
+                }
+            }
+            if(map.size() == 0)
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "host with owner ", owner));
+            else
+                result = Success.of(map);
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
     }
 }
