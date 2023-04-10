@@ -20,7 +20,6 @@ import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.xnio.IoUtils;
 import org.xnio.OptionMap;
 
 import java.net.URI;
@@ -59,12 +58,11 @@ public class HybridQueryClient {
 
     public static Result<String> callQueryWithToken(String command, String token) {
         Result<String> result = null;
-        URI uri  = null;
         SimpleConnectionHolder.ConnectionToken connectionToken = null;
         try {
             String host = cluster.serviceToUrl("https", config.getPortalQueryServiceId(), tag, null);
             if(logger.isTraceEnabled()) logger.trace("serviceId " + config.getPortalQueryServiceId() + " with result " + host);
-            uri = new URI(host);
+            URI uri = new URI(host);
             connectionToken = client.borrow(uri, Http2Client.WORKER, client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true));
             ClientConnection connection = (ClientConnection) connectionToken.getRawConnection();
             // Create one CountDownLatch that will be reset in the callback function
@@ -88,17 +86,16 @@ public class HybridQueryClient {
             Status status = new Status(GENERIC_EXCEPTION, e.getMessage());
             result = Failure.of(status);
         } finally {
-            if(connectionToken != null) client.restore(uri, connectionToken);
+            client.restore(connectionToken);
         }
         return result;
     }
 
     public static Result<String> callQueryExchangeUrl(String command, HttpServerExchange exchange, String url) {
         Result<String> result = null;
-        URI uri = null;
         SimpleConnectionHolder.ConnectionToken connectionToken = null;
         try {
-            uri = new URI(url);
+            URI uri = new URI(url);
             connectionToken = client.borrow(uri, Http2Client.WORKER, client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true));
             ClientConnection connection = (ClientConnection) connectionToken.getRawConnection();
             // Create one CountDownLatch that will be reset in the callback function
@@ -123,19 +120,18 @@ public class HybridQueryClient {
             Status status = new Status(GENERIC_EXCEPTION, e.getMessage());
             result = Failure.of(status);
         } finally {
-            client.restore(uri, connectionToken);
+            client.restore(connectionToken);
         }
         return result;
     }
 
     public static Result<String> callQueryExchange(String command, HttpServerExchange exchange) {
         Result<String> result = null;
-        URI uri = null;
         SimpleConnectionHolder.ConnectionToken connectionToken = null;
         try {
             String host = cluster.serviceToUrl("https", config.getPortalQueryServiceId(), tag, null);
             if(logger.isTraceEnabled()) logger.trace("serviceId " + config.getPortalQueryServiceId() + " with result " + host);
-            uri = new URI(host);
+            URI uri = new URI(host);
             connectionToken = client.borrow(uri, Http2Client.WORKER, client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true));
             ClientConnection connection = (ClientConnection) connectionToken.getRawConnection();
             // Create one CountDownLatch that will be reset in the callback function
@@ -163,17 +159,16 @@ public class HybridQueryClient {
             Status status = new Status(GENERIC_EXCEPTION, e.getMessage());
             result = Failure.of(status);
         } finally {
-            client.restore(uri, connectionToken);
+            client.restore(connectionToken);
         }
         return result;
     }
 
     public static Result<String> callQueryUrl(String command, String url) {
         Result<String> result = null;
-        URI uri = null;
         SimpleConnectionHolder.ConnectionToken connectionToken = null;
         try {
-            uri = new URI(url);
+            URI uri = new URI(url);
             connectionToken = client.borrow(uri, Http2Client.WORKER, client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true));
             ClientConnection connection = (ClientConnection) connectionToken.getRawConnection();
             // Create one CountDownLatch that will be reset in the callback function
@@ -196,17 +191,16 @@ public class HybridQueryClient {
             Status status = new Status(GENERIC_EXCEPTION, e.getMessage());
             result = Failure.of(status);
         } finally {
-            client.restore(uri, connectionToken);
+            client.restore(connectionToken);
         }
         return result;
     }
 
     public static Result<String> callQueryTokenUrl(String command, String token, String url) {
         Result<String> result = null;
-        URI uri = null;
         SimpleConnectionHolder.ConnectionToken connectionToken = null;
         try {
-            uri = new URI(url);
+            URI uri = new URI(url);
             connectionToken = client.borrow(uri, Http2Client.WORKER, client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true));
             ClientConnection connection = (ClientConnection) connectionToken.getRawConnection();
             // Create one CountDownLatch that will be reset in the callback function
@@ -230,7 +224,7 @@ public class HybridQueryClient {
             Status status = new Status(GENERIC_EXCEPTION, e.getMessage());
             result = Failure.of(status);
         } finally {
-            client.restore(uri, connectionToken);
+            client.restore(connectionToken);
         }
         return result;
     }
@@ -859,11 +853,10 @@ public class HybridQueryClient {
     public static Result<String> getHosts() {
         String path = "/r/data?name=host";
         Result<String> result = null;
-        URI uri = null;
         SimpleConnectionHolder.ConnectionToken connectionToken = null;
         try {
             String host = cluster.serviceToUrl(Http2Client.HTTPS, config.getPortalReferenceServiceId(), tag, null);
-            uri = new URI(host);
+            URI uri = new URI(host);
             connectionToken = client.borrow(uri, Http2Client.WORKER, client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true));
             ClientConnection connection = (ClientConnection) connectionToken.getRawConnection();
             // Create one CountDownLatch that will be reset in the callback function
@@ -885,7 +878,7 @@ public class HybridQueryClient {
             Status status = new Status(GENERIC_EXCEPTION, e.getMessage());
             result = Failure.of(status);
         } finally {
-            client.restore(uri, connectionToken);
+            client.restore(connectionToken);
         }
         return result;
     }
