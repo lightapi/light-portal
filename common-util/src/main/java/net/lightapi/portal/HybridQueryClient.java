@@ -111,6 +111,7 @@ public class HybridQueryClient {
             latch.await();
             int statusCode = reference.get().getResponseCode();
             String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
+            if(logger.isTraceEnabled()) logger.trace("statusCode = " + statusCode + " body = " + body);
             if(statusCode != 200) {
                 Status status = Config.getInstance().getMapper().readValue(body, Status.class);
                 result = Failure.of(status);

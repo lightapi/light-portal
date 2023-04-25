@@ -1,0 +1,20 @@
+# portal-client.yml
+
+# Indicate id portal service will be service url or not, if it is false, the portal service call will use
+# service discovery based on the service id. Default value is false which indicates service discovery.
+portalByServiceUrl: ${portal-client.portalByServiceUrl:false}
+# When url is used, portal query service url is required.
+portalQueryServiceUrl: ${portal-client.portalQueryServiceUrl:}
+# When url is used, portal command service url is required.
+portalCommandServiceUrl: ${portal-client.portalCommandServiceUrl:}
+
+# When service discovery is used, portal query service id is required.
+portalQueryServiceId: ${portal-client.portalQueryServiceId:com.networknt.portal.hybrid.query-1.0.0}
+# When service discovery is used, portal command service id is required.
+portalCommandServiceId: ${portal-client.portalCommandServiceId:com.networknt.portal.hybrid.command-1.0.0}
+# When service discovery is used, portal reference service id is required.
+portalReferenceServiceId: ${portal-client.portalReferenceServiceId:com.networknt.reference-1.0.0}
+
+# portal client token which is a client credentials token used to call the hybrid-query services if the
+# incoming call doesn't have token. For example create a new user needs to check if the email exists.
+bootstrapToken: ${portal-client.bootstrapToken:eyJraWQiOiIxMDAiLCJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJ1cm46Y29tOm5ldHdvcmtudDpvYXV0aDI6djEiLCJhdWQiOiJ1cm46Y29tLm5ldHdvcmtudCIsImV4cCI6MTk2MDMwOTk4MywianRpIjoiSllkbExici16Qm8tOF9sb3RyODNQdyIsImlhdCI6MTY0NDk0OTk4MywibmJmIjoxNjQ0OTQ5ODYzLCJ2ZXJzaW9uIjoiMS4wIiwiY2xpZW50X2lkIjoiZjdkNDIzNDgtYzY0Ny00ZWZiLWE1MmQtNGM1Nzg3NDIxZTczIiwic2NvcGUiOlsicG9ydGFsLnIiLCJwb3J0YWwudyJdfQ.rhwozi6h2RxxYFECS0xusuZLui9STpKP-tipnTSTKU45EXP5k_OBXUWiTJ9m30yFC_GC6vY5gRgHprjCx0s2dOERZXf4xxsolHJ0jkqZuBoxyemqHsIeo5grJahZps58cz6m_kj9IMoG9uReVLYSIwjTprURSAWORGCOOCuzS7v4JG_iGA9fFs2hkA06pifAcu-UGJTbGlkjff6FgJExPTLHXUwsxcmAm1CMCPleRl38wUINbPXtOMCaJ_nb3wyZwYAoYkc2dGDry01lRCW0jj0P_1xykv_OCzebq7r3pz48ZDdmXRCeQYWTfHGentX2C-Gn5HCz9TW205LYuLYaJg}
