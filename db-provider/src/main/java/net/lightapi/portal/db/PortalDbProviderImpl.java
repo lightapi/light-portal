@@ -1983,7 +1983,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("host", resultSet.getString("host"));
                         map.put("orgName", resultSet.getString("org_name"));
                         map.put("orgDesc", resultSet.getString("org_desc"));
-                        map.put("orgOwner", resultSet.getBoolean("org_owner"));
+                        map.put("orgOwner", resultSet.getString("org_owner"));
                         map.put("updateUser", resultSet.getString("update_user"));
                         map.put("update_timestamp", resultSet.getTimestamp("update_timestamp"));
                     }
@@ -2017,7 +2017,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("host", resultSet.getString("host"));
                         map.put("orgName", resultSet.getString("org_name"));
                         map.put("orgDesc", resultSet.getString("org_desc"));
-                        map.put("orgOwner", resultSet.getBoolean("org_owner"));
+                        map.put("orgOwner", resultSet.getString("org_owner"));
                         map.put("updateUser", resultSet.getString("update_user"));
                         map.put("update_timestamp", resultSet.getTimestamp("update_timestamp"));
                     }
@@ -2052,7 +2052,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("host", resultSet.getString("host"));
                         map.put("orgName", resultSet.getString("org_name"));
                         map.put("orgDesc", resultSet.getString("org_desc"));
-                        map.put("orgOwner", resultSet.getBoolean("org_owner"));
+                        map.put("orgOwner", resultSet.getString("org_owner"));
                         map.put("updateUser", resultSet.getString("update_user"));
                         map.put("update_timestamp", resultSet.getTimestamp("update_timestamp"));
                     }
