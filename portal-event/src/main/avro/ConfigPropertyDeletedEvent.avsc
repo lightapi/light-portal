@@ -1,7 +1,7 @@
 {
   "type": "record",
-  "name": "HostUpdatedEvent",
-  "namespace": "net.lightapi.portal.user",
+  "name": "ConfigPropertyDeletedEvent",
+  "namespace": "net.lightapi.portal.market",
   "fields": [
     {
       "name": "EventId",
@@ -30,34 +30,14 @@
       }
     },
     {
-      "name": "host",
-      "type": "string",
-      "doc": "host name is used as the key as we check if the mail is match the host domain"
-    },
-    {
-      "name": "name",
-      "type": "string",
-      "doc": "The name of the organization"
-    },
-    {
-      "name": "desc",
-      "type": "string",
-      "doc": "A short description of the organization"
+      "name": "propertyId",
+      "type": "int",
+      "doc": "property id"
     },
     {
       "name": "owner",
       "type": "string",
-      "doc": "host owner id"
-    },
-    {
-      "name": "value",
-      "type": "string",
-      "doc": "host detail in JSON for other properties"
-    },
-    {
-      "name": "user",
-      "type": "string",
-      "doc": "event user id"
+      "doc": "user id"
     },
     {
       "name": "timestamp",

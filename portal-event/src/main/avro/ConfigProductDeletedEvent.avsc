@@ -1,6 +1,6 @@
 {
   "type": "record",
-  "name": "MarketApiIdCreatedEvent",
+  "name": "ConfigProductDeletedEvent",
   "namespace": "net.lightapi.portal.market",
   "fields": [
     {
@@ -30,24 +30,14 @@
       }
     },
     {
-      "name": "keyId",
+      "name": "propertyId",
       "type": "int",
-      "doc": "keyId 0 host"
+      "doc": "property id"
     },
     {
-      "name": "host",
+      "name": "owner",
       "type": "string",
-      "doc": "host"
-    },
-    {
-      "name": "apiId",
-      "type": "string",
-      "doc": "api id"
-    },
-    {
-      "name": "serviceId",
-      "type": "string",
-      "doc": "service id"
+      "doc": "user id"
     },
     {
       "name": "timestamp",

@@ -1,7 +1,7 @@
 {
   "type": "record",
-  "name": "HostUpdatedEvent",
-  "namespace": "net.lightapi.portal.user",
+  "name": "ConfigCreatedEvent",
+  "namespace": "net.lightapi.portal.market",
   "fields": [
     {
       "name": "EventId",
@@ -30,34 +30,35 @@
       }
     },
     {
-      "name": "host",
+      "name": "configId",
       "type": "string",
-      "doc": "host name is used as the key as we check if the mail is match the host domain"
+      "doc": "configuration Id"
     },
     {
-      "name": "name",
+      "name": "configType",
       "type": "string",
-      "doc": "The name of the organization"
+      "doc": "configuration type D Deployment H Handler M Module"
     },
     {
-      "name": "desc",
+      "name": "infraType",
       "type": "string",
-      "doc": "A short description of the organization"
+      "default": "GN",
+      "doc": "infrastructure type: GN Generic LN Linux WD Windows KB Kubernetes OS Openshift AW AWS AZ Azure GC GCP"
+    },
+    {
+      "name": "classPath",
+      "type": "string",
+      "doc": "class path"
+    },
+    {
+      "name": "configDesc",
+      "type": "string",
+      "doc": "configuration description"
     },
     {
       "name": "owner",
       "type": "string",
-      "doc": "host owner id"
-    },
-    {
-      "name": "value",
-      "type": "string",
-      "doc": "host detail in JSON for other properties"
-    },
-    {
-      "name": "user",
-      "type": "string",
-      "doc": "event user id"
+      "doc": "user id"
     },
     {
       "name": "timestamp",

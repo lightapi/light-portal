@@ -1,7 +1,7 @@
 {
   "type": "record",
-  "name": "MarketApiIdUpdatedEvent",
-  "namespace": "net.lightapi.portal.market",
+  "name": "EnvironmentDeletedEvent",
+  "namespace": "net.lightapi.portal.user",
   "fields": [
     {
       "name": "EventId",
@@ -30,24 +30,14 @@
       }
     },
     {
-      "name": "keyId",
+      "name": "id",
       "type": "int",
-      "doc": "keyId 0 host"
+      "doc": "environment id"
     },
     {
-      "name": "host",
+      "name": "user",
       "type": "string",
-      "doc": "host"
-    },
-    {
-      "name": "apiId",
-      "type": "string",
-      "doc": "api id"
-    },
-    {
-      "name": "serviceId",
-      "type": "string",
-      "doc": "service id"
+      "doc": "event user id"
     },
     {
       "name": "timestamp",

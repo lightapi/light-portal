@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class HostUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 3700002508029785529L;
+  private static final long serialVersionUID = -8131101911674728196L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"HostUpdatedEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"host\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host name is used as the key as we check if the mail is match the host domain\"},{\"name\":\"name\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"The name of the organization\"},{\"name\":\"desc\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"A short description of the organization\"},{\"name\":\"owner\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host owner id\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host detail in JSON for other properties\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"HostUpdatedEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"host\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host name is used as the key as we check if the mail is match the host domain\"},{\"name\":\"name\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"The name of the organization\"},{\"name\":\"desc\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"A short description of the organization\"},{\"name\":\"owner\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host owner id\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host detail in JSON for other properties\"},{\"name\":\"user\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"event user id\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -84,6 +84,8 @@ public class HostUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
   private java.lang.String owner;
   /** host detail in JSON for other properties */
   private java.lang.String value;
+  /** event user id */
+  private java.lang.String user;
   /** time the event is recorded */
   private long timestamp;
 
@@ -102,15 +104,17 @@ public class HostUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
    * @param desc A short description of the organization
    * @param owner host owner id
    * @param value host detail in JSON for other properties
+   * @param user event user id
    * @param timestamp time the event is recorded
    */
-  public HostUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String host, java.lang.String name, java.lang.String desc, java.lang.String owner, java.lang.String value, java.lang.Long timestamp) {
+  public HostUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String host, java.lang.String name, java.lang.String desc, java.lang.String owner, java.lang.String value, java.lang.String user, java.lang.Long timestamp) {
     this.EventId = EventId;
     this.host = host;
     this.name = name;
     this.desc = desc;
     this.owner = owner;
     this.value = value;
+    this.user = user;
     this.timestamp = timestamp;
   }
 
@@ -125,7 +129,8 @@ public class HostUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
     case 3: return desc;
     case 4: return owner;
     case 5: return value;
-    case 6: return timestamp;
+    case 6: return user;
+    case 7: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -140,7 +145,8 @@ public class HostUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
     case 3: desc = value$ != null ? value$.toString() : null; break;
     case 4: owner = value$ != null ? value$.toString() : null; break;
     case 5: value = value$ != null ? value$.toString() : null; break;
-    case 6: timestamp = (java.lang.Long)value$; break;
+    case 6: user = value$ != null ? value$.toString() : null; break;
+    case 7: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -253,6 +259,24 @@ public class HostUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
   }
 
   /**
+   * Gets the value of the 'user' field.
+   * @return event user id
+   */
+  public java.lang.String getUser() {
+    return user;
+  }
+
+
+  /**
+   * Sets the value of the 'user' field.
+   * event user id
+   * @param value the value to set.
+   */
+  public void setUser(java.lang.String value) {
+    this.user = value;
+  }
+
+  /**
    * Gets the value of the 'timestamp' field.
    * @return time the event is recorded
    */
@@ -323,6 +347,8 @@ public class HostUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
     private java.lang.String owner;
     /** host detail in JSON for other properties */
     private java.lang.String value;
+    /** event user id */
+    private java.lang.String user;
     /** time the event is recorded */
     private long timestamp;
 
@@ -364,9 +390,13 @@ public class HostUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
         this.value = data().deepCopy(fields()[5].schema(), other.value);
         fieldSetFlags()[5] = other.fieldSetFlags()[5];
       }
-      if (isValidValue(fields()[6], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[6].schema(), other.timestamp);
+      if (isValidValue(fields()[6], other.user)) {
+        this.user = data().deepCopy(fields()[6].schema(), other.user);
         fieldSetFlags()[6] = other.fieldSetFlags()[6];
+      }
+      if (isValidValue(fields()[7], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[7].schema(), other.timestamp);
+        fieldSetFlags()[7] = other.fieldSetFlags()[7];
       }
     }
 
@@ -401,9 +431,13 @@ public class HostUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
         this.value = data().deepCopy(fields()[5].schema(), other.value);
         fieldSetFlags()[5] = true;
       }
-      if (isValidValue(fields()[6], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[6].schema(), other.timestamp);
+      if (isValidValue(fields()[6], other.user)) {
+        this.user = data().deepCopy(fields()[6].schema(), other.user);
         fieldSetFlags()[6] = true;
+      }
+      if (isValidValue(fields()[7], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[7].schema(), other.timestamp);
+        fieldSetFlags()[7] = true;
       }
     }
 
@@ -704,6 +738,50 @@ public class HostUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
     }
 
     /**
+      * Gets the value of the 'user' field.
+      * event user id
+      * @return The value.
+      */
+    public java.lang.String getUser() {
+      return user;
+    }
+
+
+    /**
+      * Sets the value of the 'user' field.
+      * event user id
+      * @param value The value of 'user'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.user.HostUpdatedEvent.Builder setUser(java.lang.String value) {
+      validate(fields()[6], value);
+      this.user = value;
+      fieldSetFlags()[6] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'user' field has been set.
+      * event user id
+      * @return True if the 'user' field has been set, false otherwise.
+      */
+    public boolean hasUser() {
+      return fieldSetFlags()[6];
+    }
+
+
+    /**
+      * Clears the value of the 'user' field.
+      * event user id
+      * @return This builder.
+      */
+    public net.lightapi.portal.user.HostUpdatedEvent.Builder clearUser() {
+      user = null;
+      fieldSetFlags()[6] = false;
+      return this;
+    }
+
+    /**
       * Gets the value of the 'timestamp' field.
       * time the event is recorded
       * @return The value.
@@ -720,9 +798,9 @@ public class HostUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.user.HostUpdatedEvent.Builder setTimestamp(long value) {
-      validate(fields()[6], value);
+      validate(fields()[7], value);
       this.timestamp = value;
-      fieldSetFlags()[6] = true;
+      fieldSetFlags()[7] = true;
       return this;
     }
 
@@ -732,7 +810,7 @@ public class HostUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return True if the 'timestamp' field has been set, false otherwise.
       */
     public boolean hasTimestamp() {
-      return fieldSetFlags()[6];
+      return fieldSetFlags()[7];
     }
 
 
@@ -742,7 +820,7 @@ public class HostUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.user.HostUpdatedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[6] = false;
+      fieldSetFlags()[7] = false;
       return this;
     }
 
@@ -766,7 +844,8 @@ public class HostUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
         record.desc = fieldSetFlags()[3] ? this.desc : (java.lang.String) defaultValue(fields()[3]);
         record.owner = fieldSetFlags()[4] ? this.owner : (java.lang.String) defaultValue(fields()[4]);
         record.value = fieldSetFlags()[5] ? this.value : (java.lang.String) defaultValue(fields()[5]);
-        record.timestamp = fieldSetFlags()[6] ? this.timestamp : (java.lang.Long) defaultValue(fields()[6]);
+        record.user = fieldSetFlags()[6] ? this.user : (java.lang.String) defaultValue(fields()[6]);
+        record.timestamp = fieldSetFlags()[7] ? this.timestamp : (java.lang.Long) defaultValue(fields()[7]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -811,6 +890,8 @@ public class HostUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
 
     out.writeString(this.value);
 
+    out.writeString(this.user);
+
     out.writeLong(this.timestamp);
 
   }
@@ -835,10 +916,12 @@ public class HostUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
 
       this.value = in.readString();
 
+      this.user = in.readString();
+
       this.timestamp = in.readLong();
 
     } else {
-      for (int i = 0; i < 7; i++) {
+      for (int i = 0; i < 8; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -868,6 +951,10 @@ public class HostUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
           break;
 
         case 6:
+          this.user = in.readString();
+          break;
+
+        case 7:
           this.timestamp = in.readLong();
           break;
 

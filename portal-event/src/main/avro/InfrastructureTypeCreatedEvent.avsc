@@ -1,6 +1,6 @@
 {
   "type": "record",
-  "name": "HostUpdatedEvent",
+  "name": "InfrastructureTypeCreatedEvent",
   "namespace": "net.lightapi.portal.user",
   "fields": [
     {
@@ -30,29 +30,9 @@
       }
     },
     {
-      "name": "host",
-      "type": "string",
-      "doc": "host name is used as the key as we check if the mail is match the host domain"
-    },
-    {
       "name": "name",
       "type": "string",
-      "doc": "The name of the organization"
-    },
-    {
-      "name": "desc",
-      "type": "string",
-      "doc": "A short description of the organization"
-    },
-    {
-      "name": "owner",
-      "type": "string",
-      "doc": "host owner id"
-    },
-    {
-      "name": "value",
-      "type": "string",
-      "doc": "host detail in JSON for other properties"
+      "doc": "The name of the environment"
     },
     {
       "name": "user",

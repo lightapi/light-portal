@@ -1,6 +1,6 @@
 {
   "type": "record",
-  "name": "MarketApiIdDeletedEvent",
+  "name": "ConfigUpdatedEvent",
   "namespace": "net.lightapi.portal.market",
   "fields": [
     {
@@ -18,7 +18,7 @@
           {
             "name": "nonce",
             "type": "long",
-            "doc": "the number of the transactions for the id"
+            "doc": "the number of the transactions for the user"
           },
           {
             "name": "derived",
@@ -30,19 +30,35 @@
       }
     },
     {
-      "name": "keyId",
-      "type": "int",
-      "doc": "keyId 0 host"
+      "name": "configId",
+      "type": "string",
+      "doc": "configuration id"
     },
     {
-      "name": "host",
+      "name": "configType",
       "type": "string",
-      "doc": "host"
+      "doc": "configuration type D Deployment H Handler M Module"
     },
     {
-      "name": "apiId",
+      "name": "infraType",
       "type": "string",
-      "doc": "apiId id"
+      "default": "GN",
+      "doc": "infrastructure type: GN Generic LN Linux WD Windows KB Kubernetes OS Openshift AW AWS AZ Azure GC GCP"
+    },
+    {
+      "name": "classPath",
+      "type": "string",
+      "doc": "class path"
+    },
+    {
+      "name": "configDesc",
+      "type": "string",
+      "doc": "configuration description"
+    },
+    {
+      "name": "owner",
+      "type": "string",
+      "doc": "user id"
     },
     {
       "name": "timestamp",
