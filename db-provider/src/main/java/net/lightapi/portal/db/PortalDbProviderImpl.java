@@ -19,6 +19,7 @@ import static com.networknt.db.provider.SqlDbStartupHook.cacheManager;
 import static com.networknt.db.provider.SqlDbStartupHook.ds;
 
 public class PortalDbProviderImpl implements PortalDbProvider {
+    public static final String AUTH_CODE_CACHE = "auth_code";
     public static final String SQL_EXCEPTION = "ERR10017";
     public static final String GENERIC_EXCEPTION = "ERR10014";
     public static final String OBJECT_NOT_FOUND = "ERR11637";
@@ -1758,27 +1759,24 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     public Result<String> createMarketCode(MarketCodeCreatedEvent event) {
-        Cache<Object, Object> authCodeCache = cacheManager.getCache("auth_code");
         if(logger.isTraceEnabled()) logger.trace("insert into the cache auth_code with key " + event.getAuthCode() + " value " + event.getValue());
-        if(logger.isTraceEnabled()) logger.trace("estimate the size of the cache auth_code before is " + authCodeCache.estimatedSize());
-        authCodeCache.put(event.getAuthCode(), event.getValue());
-        if(logger.isTraceEnabled()) logger.trace("estimate the size of the cache auth_code after is " + authCodeCache.estimatedSize());
+        if(logger.isTraceEnabled()) logger.trace("estimate the size of the cache auth_code before is " + cacheManager.getSize(AUTH_CODE_CACHE));
+        cacheManager.put(AUTH_CODE_CACHE, event.getAuthCode(), event.getValue());
+        if(logger.isTraceEnabled()) logger.trace("estimate the size of the cache auth_code after is " + cacheManager.getSize(AUTH_CODE_CACHE));
         return Success.of(event.getAuthCode());
     }
 
     public Result<String> deleteMarketCode(MarketCodeDeletedEvent event) {
-        Cache<Object, Object> authCodeCache = cacheManager.getCache("auth_code");
         if(logger.isTraceEnabled()) logger.trace("insert into the cache auth_code with key " + event.getAuthCode() + " value ");
-        if(logger.isTraceEnabled()) logger.trace("estimate the size of the cache auth_code before is " + authCodeCache.estimatedSize());
-        authCodeCache.invalidate(event.getAuthCode());
-        if(logger.isTraceEnabled()) logger.trace("estimate the size of the cache auth_code after is " + authCodeCache.estimatedSize());
+        if(logger.isTraceEnabled()) logger.trace("estimate the size of the cache auth_code before is " + cacheManager.getSize(AUTH_CODE_CACHE));
+        cacheManager.delete(AUTH_CODE_CACHE, event.getAuthCode());
+        if(logger.isTraceEnabled()) logger.trace("estimate the size of the cache auth_code after is " + cacheManager.getSize(AUTH_CODE_CACHE));
         return Success.of(event.getAuthCode());
     }
 
     public Result<String> queryMarketCode(String authCode) {
-        Cache<Object, Object> authCodeCache = cacheManager.getCache("auth_code");
-        if(logger.isTraceEnabled()) logger.trace("estimate the size of the cache auth_code is " + authCodeCache.estimatedSize());
-        String value = (String)authCodeCache.getIfPresent(authCode);
+        if(logger.isTraceEnabled()) logger.trace("estimate the size of the cache auth_code is " + cacheManager.getSize(AUTH_CODE_CACHE));
+        String value = (String)cacheManager.get(AUTH_CODE_CACHE, authCode);
         if(logger.isTraceEnabled()) logger.trace("retrieve cache auth_code with key " + authCode + " value " + value);
         if(value != null) {
             return Success.of(value);
@@ -2070,5 +2068,254 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
         return result;
+    }
+
+    @Override
+    public Result<String> createConfig(ConfigCreatedEvent event) {
+        final String insertHost = "INSERT INTO configuration_t (configuration_id, configuration_type, infrastructure_type_id, class_path, configuration_description, update_user, update_timestamp) " +
+                "VALUES (?, ?, ?, ?, ?,   ?, ?)";
+        Result<String> result;
+        Connection conn = null;
+        try {
+            conn = ds.getConnection();
+            conn.setAutoCommit(false);
+            // no duplicate record, insert the user into database and write a success notification.
+            try (PreparedStatement statement = conn.prepareStatement(insertHost)) {
+                statement.setString(1, event.getConfigId());
+                statement.setString(2, event.getConfigType());
+                statement.setString(3, event.getInfraType());
+                statement.setString(4, event.getClassPath());
+                statement.setString(5, event.getConfigDesc());
+                statement.setString(6, event.getEventId().getId());
+                statement.setTimestamp(7, new Timestamp(event.getTimestamp()));
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "failed to insert the configuration with id " + event.getConfigId());
+                } else {
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                }
+            }
+            updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
+            // as this is a brand-new user, there is no nonce to be updated. By default, the nonce is 0.
+            conn.commit();
+            result = Success.of(event.getConfigId());
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            try {
+                if(conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            try {
+                if(conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        } finally {
+            try {
+                if (conn != null) {
+                    conn.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+        return result;
+    }
+    @Override
+    public Result<String> updateConfig(ConfigUpdatedEvent event) {
+        final String updateHost = "UPDATE configuration_t SET configuration_type = ?, infrastructure_type_id = ?, class_path = ?, configuration_description = ?, update_user = ? " +
+                "update_timestamp = ? " +
+                "WHERE configuration_id = ?";
+
+        Result<String> result = null;
+        Connection conn = null;
+        try {
+            conn = ds.getConnection();
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement statement = conn.prepareStatement(updateHost)) {
+                if(event.getConfigType() != null) {
+                    statement.setString(1, event.getConfigType());
+                } else {
+                    statement.setNull(1, NULL);
+                }
+                if(event.getInfraType() != null) {
+                    statement.setString(2, event.getInfraType());
+                } else {
+                    statement.setNull(2, NULL);
+                }
+                if(event.getClassPath() != null) {
+                    statement.setString(3, event.getClassPath());
+                } else {
+                    statement.setNull(3, NULL);
+                }
+                if(event.getConfigDesc() != null) {
+                    statement.setString(4, event.getConfigDesc());
+                } else {
+                    statement.setNull(4, NULL);
+                }
+                statement.setString(5, event.getEventId().getId());
+                statement.setTimestamp(6, new Timestamp(event.getTimestamp()));
+                statement.setString(7, event.getConfigId());
+
+                int count = statement.executeUpdate();
+                if(count == 0) {
+                    // no record is updated, write an error notification.
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no record is updated by configuration id " + event.getConfigId());
+                    return result;
+                } else {
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
+                }
+                updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
+            }
+            // as this is a brand-new user, there is no nonce to be updated. By default, the nonce is 0.
+            conn.commit();
+            result = Success.of(event.getConfigId());
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            try {
+                if(conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            try {
+                if(conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        } finally {
+            try {
+                if (conn != null) {
+                    conn.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+        return result;
+    }
+    @Override
+    public Result<String> deleteConfig(ConfigDeletedEvent event) {
+        final String deleteHost = "DELETE from configuration_t WHERE configuration_id = ?";
+        Result<String> result;
+        Connection conn = null;
+        try {
+            conn = ds.getConnection();
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(deleteHost)) {
+                statement.setString(1, event.getConfigId());
+                int count = statement.executeUpdate();
+                if(count == 0) {
+                    // no record is deleted, write an error notification.
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no configuration record is deleted for id " + event.getConfigId());
+                } else {
+                    // record is deleted, write a success notification.
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                }
+            }
+            updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
+            conn.commit();
+            result = Success.of(event.getEventId().getId());
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            try {
+                if(conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            try {
+                if(conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        } finally {
+            try {
+                if (conn != null) {
+                    conn.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+        return result;
+    }
+    @Override
+    public Result<Map<String, Object>> queryConfig() {
+        final String queryConfig = "SELECT * from configuration_t";
+        Result<Map<String, Object>> result;
+        try (final Connection conn = ds.getConnection()) {
+            Map<String, Object> map = new HashMap<>();
+            try (PreparedStatement statement = conn.prepareStatement(queryConfig)) {
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        map.put("configId", resultSet.getString("configuration_id"));
+                        map.put("configType", resultSet.getString("configuration_type"));
+                        map.put("infraType", resultSet.getString("infrastructure_type_id"));
+                        map.put("classPath", resultSet.getString("class_path"));
+                        map.put("configDesc", resultSet.getString("configuration_desc"));
+                        map.put("updateUser", resultSet.getString("update_user"));
+                        map.put("update_timestamp", resultSet.getTimestamp("update_timestamp"));
+                    }
+                }
+            }
+            if(map.size() == 0)
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "configuration entry is registered"));
+            else
+                result = Success.of(map);
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+    @Override
+    public Result<Map<String, Object>> queryConfigById(String configId) {
+        final String queryHostById = "SELECT * from configuration_t WHERE configuration_id = ?";
+        Result<Map<String, Object>> result;
+        try (final Connection conn = ds.getConnection()) {
+            Map<String, Object> map = new HashMap<>();
+            try (PreparedStatement statement = conn.prepareStatement(queryHostById)) {
+                statement.setString(1, configId);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        map.put("configId", resultSet.getString("configuration_id"));
+                        map.put("configType", resultSet.getString("configuration_type"));
+                        map.put("infraType", resultSet.getString("infrastructure_type_id"));
+                        map.put("classPath", resultSet.getString("class_path"));
+                        map.put("configDesc", resultSet.getString("configuration_desc"));
+                        map.put("updateUser", resultSet.getString("update_user"));
+                        map.put("update_timestamp", resultSet.getTimestamp("update_timestamp"));
+                    }
+                }
+            }
+            if(map.size() == 0)
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "configuration with id ", configId));
+            else
+                result = Success.of(map);
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
     }
 }

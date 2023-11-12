@@ -11,3 +11,6 @@ cache.caches:
   - cacheName: portal-data
     expiryInMinutes: 60
     maxSize: 1000
+  - cacheName: auth_code
+    expiryInMinutes: 15
+    maxSize: 1000

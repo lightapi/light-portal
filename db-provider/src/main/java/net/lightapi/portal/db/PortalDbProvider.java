@@ -58,4 +58,9 @@ public interface PortalDbProvider extends DbProvider {
     Result<Map<String, Object>> queryHostById(String id);
     Result<Map<String, Object>> queryHostByOwner(String owner);
 
+    Result<String> createConfig(ConfigCreatedEvent event);
+    Result<String> updateConfig(ConfigUpdatedEvent event);
+    Result<String> deleteConfig(ConfigDeletedEvent event);
+    Result<Map<String, Object>> queryConfig();
+    Result<Map<String, Object>> queryConfigById(String configId);
 }

@@ -9,6 +9,7 @@ import com.networknt.monad.Result;
 import com.networknt.monad.Success;
 import com.networknt.security.JwtVerifier;
 import com.networknt.server.Server;
+import com.networknt.server.ServerConfig;
 import com.networknt.service.SingletonServiceFactory;
 import com.networknt.status.Status;
 import io.undertow.UndertowOptions;
@@ -39,7 +40,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class HybridCommandClient {
     static final Logger logger = LoggerFactory.getLogger(HybridCommandClient.class);
     public static final PortalClientConfig config = (PortalClientConfig) Config.getInstance().getJsonObjectConfig(PortalClientConfig.CONFIG_NAME, PortalClientConfig.class);
-    static String tag = Server.getServerConfig().getEnvironment();
+    static String tag = ServerConfig.getInstance().getEnvironment();
     // Get the singleton Cluster instance
     static Cluster cluster = SingletonServiceFactory.getBean(Cluster.class);
     // Get the singleton Http2Client instance
