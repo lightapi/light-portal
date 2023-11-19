@@ -7,6 +7,8 @@
 
 
 - fixes \#55 refactor module registry and cache manager [\#56](https://github.com/lightapi/light-portal/pull/56) ([stevehu](https://github.com/stevehu))
+
+
 ## [2.1.28](https://github.com/networknt/light-portal/tree/2.1.28) (2023-10-24)
 
 
