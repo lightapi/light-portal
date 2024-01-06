@@ -35,6 +35,11 @@
       "doc": "host name is used to delete as we have to ensure that the email domain is matched"
     },
     {
+      "name": "id",
+      "type": "string",
+      "doc": "host id which is a unique identifier"
+    },
+    {
       "name": "user",
       "type": "string",
       "doc": "event user id"
