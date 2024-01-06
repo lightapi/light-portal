@@ -6,10 +6,13 @@ import com.networknt.kafka.common.AvroConverter;
 import com.networknt.monad.Failure;
 import com.networknt.monad.Result;
 import com.networknt.monad.Success;
+import com.networknt.security.KeyUtil;
 import com.networknt.status.Status;
+import com.networknt.utility.HashUtil;
 import net.lightapi.portal.market.*;
 import net.lightapi.portal.user.*;
 
+import java.security.KeyPair;
 import java.sql.*;
 import java.util.HashMap;
 import java.util.Map;
@@ -1387,7 +1390,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<Map<String, Object>> queryClientByClientId(String clientId) {
         Result<Map<String, Object>> result;
         String sql =
-                "SELECT host, application_id, application_name, application_description, is_kafka_application, client_id, " +
+                "SELECT host_id, application_id, application_name, application_description, is_kafka_application, client_id, " +
                         "client_type, client_profile, client_secret, client_scope, custom_claim, redirect_uri, authenticate_class, " +
                         "deref_client_id, operation_owner, delivery_owner, update_user, update_timestamp " +
                         "FROM application_t WHERE client_id = ?";
@@ -1397,7 +1400,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, clientId);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
-                        map.put("host", resultSet.getString("host"));
+                        map.put("hostId", resultSet.getString("host_id"));
                         map.put("applicationId", resultSet.getString("application_id"));
                         map.put("applicationDescription", resultSet.getString("application_description"));
                         map.put("isKafkaApplication", resultSet.getBoolean("is_kafka_application"));
@@ -1433,21 +1436,21 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<Map<String, Object>> queryClientByHostAppId(String host, String applicationId) {
+    public Result<Map<String, Object>> queryClientByHostAppId(String host_id, String applicationId) {
         Result<Map<String, Object>> result;
         String sql =
-                "SELECT host, application_id, application_name, application_description, is_kafka_application, client_id, " +
+                "SELECT host_id, application_id, application_name, application_description, is_kafka_application, client_id, " +
                         "client_type, client_profile, client_secret, client_scope, custom_claim, redirect_uri, authenticate_class, " +
                         "deref_client_id, operation_owner, delivery_owner, update_user, update_timestamp " +
                         "FROM application_t WHERE host = ? AND application_id = ?";
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, host);
+                statement.setString(1, host_id);
                 statement.setString(2, applicationId);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
-                        map.put("host", resultSet.getString("host"));
+                        map.put("hostId", resultSet.getString("host_id"));
                         map.put("applicationIdd", resultSet.getString("application_id"));
                         map.put("applicationDescription", resultSet.getString("application_description"));
                         map.put("isKafkaApplication", resultSet.getBoolean("is_kafka_application"));
@@ -1463,7 +1466,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("operationOwner", resultSet.getString("operation_owner"));
                         map.put("deliveryOwner", resultSet.getString("delivery_owner"));
                         map.put("updateUser", resultSet.getString("update_user"));
-                        map.put("update_timestamp", resultSet.getTimestamp("update_timestamp"));
+                        map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
                     }
                 }
             }
@@ -1484,7 +1487,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createService(MarketServiceCreatedEvent event) {
-        final String insertUser = "INSERT INTO api_t (host, api_id, api_name, service_id, api_description, operation_owner, " +
+        final String insertUser = "INSERT INTO api_t (host_id, api_id, api_name, service_id, api_description, operation_owner, " +
                 "delivery_owner, api_type_id, region_id, lob_id, platform_id, capability_id, api_marketplace_team_id, " +
                 "git_repository, update_user, update_timestamp) " +
                 "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?)";
@@ -1587,7 +1590,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         final String updateApi = "UPDATE api_t SET api_name = ?, service_id = ?, service_type = ?, api_description = ? " +
                 "operation_owner = ?, delivery_owner = ?, api_type_id = ?, region_id = ?, lob_id = ?, platform_id = ?, " +
                 "capability_id = ?, api_marketplace_team_id = ?, git_repository = ?, update_user = ?, update_timestamp = ? " +
-                "WHERE host = ? AND api_id = ?";
+                "WHERE host_id = ? AND api_id = ?";
 
         Result<String> result = null;
         Map<String, Object> map = JsonMapper.string2Map(event.getValue());
@@ -1751,7 +1754,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     conn.close();
                 }
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("SQLException:", e);
             }
         }
         return result;
@@ -1787,12 +1790,25 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createHost(HostCreatedEvent event) {
-        final String insertHost = "INSERT INTO host_t (id, host, org_name, org_desc, org_owner, update_user, update_timestamp) " +
-                "VALUES (?, ?, ?, ?, ?,   ?, ?)";
+        final String insertHost = "INSERT INTO host_t (host_id, host, org_name, org_desc, org_owner, jwk, update_user, update_timestamp) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        final String insertHostKey = "INSERT INTO host_key_t (host_id, kid, public_key, private_key, key_type, update_user, update_timestamp) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?)";
+
         Result<String> result;
         Map<String, Object> map = JsonMapper.string2Map(event.getValue());
         Connection conn = null;
         try {
+            // we create the key pair for the host here so that each environment will have different key pairs. This also avoids to put
+            // the keys in the events which might be used to promote from env to env or from one host to another host.
+            KeyPair longKeyPair = KeyUtil.generateKeyPair("RSA", 2048);
+            String longKeyId = HashUtil.generateUUID();
+            KeyPair currKeyPair = KeyUtil.generateKeyPair("RSA", 2048);
+            String currKeyId = HashUtil.generateUUID();
+            if(logger.isTraceEnabled()) logger.trace("longKeyId is " + longKeyId + " currKeyId is " + currKeyId);
+            // prevKey and prevKeyId are null for the first time create the host. They are available during the key rotation.
+            String jwk = KeyUtil.generateJwk(longKeyPair.getPublic(), longKeyId, currKeyPair.getPublic(), currKeyId, null, null);
+            if(logger.isTraceEnabled()) logger.trace("jwk is " + jwk);
             conn = ds.getConnection();
             conn.setAutoCommit(false);
             // no duplicate record, insert the user into database and write a success notification.
@@ -1802,8 +1818,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(3, event.getName());
                 statement.setString(4, event.getDesc());
                 statement.setString(5, event.getOwner());
-                statement.setString(6, event.getEventId().getId());
-                statement.setTimestamp(7, new Timestamp(event.getTimestamp()));
+                statement.setString(6, jwk);
+                statement.setString(7, event.getEventId().getId());
+                statement.setTimestamp(8, new Timestamp(event.getTimestamp()));
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "failed to insert the host " + event.getHost());
@@ -1811,10 +1828,42 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
                 }
             }
+            // insert the long key pair
+            try (PreparedStatement statement = conn.prepareStatement(insertHostKey)) {
+                statement.setString(1, event.getId());
+                statement.setString(2, longKeyId);
+                statement.setString(3, KeyUtil.serializePublicKey(longKeyPair.getPublic()));
+                statement.setString(4, KeyUtil.serializePrivateKey(longKeyPair.getPrivate()));
+                statement.setString(5, "L");
+                statement.setString(6, event.getEventId().getId());
+                statement.setTimestamp(7, new Timestamp(event.getTimestamp()));
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "failed to insert the host_key for host " + event.getHost() + " kid " + longKeyId);
+                } else {
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                }
+            }
+            // insert the current key pair
+            try (PreparedStatement statement = conn.prepareStatement(insertHostKey)) {
+                statement.setString(1, event.getId());
+                statement.setString(2, currKeyId);
+                statement.setString(3, KeyUtil.serializePublicKey(currKeyPair.getPublic()));
+                statement.setString(4, KeyUtil.serializePrivateKey(currKeyPair.getPrivate()));
+                statement.setString(5, "C");
+                statement.setString(6, event.getEventId().getId());
+                statement.setTimestamp(7, new Timestamp(event.getTimestamp()));
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "failed to insert the host_key for host " + event.getHost() + " kid " + longKeyId);
+                } else {
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                }
+            }
             updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
             // as this is a brand-new user, there is no nonce to be updated. By default, the nonce is 0.
             conn.commit();
-            result = Success.of(event.getHost());
+            result = Success.of(event.getId());
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
@@ -1837,7 +1886,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     conn.close();
                 }
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("SQLException:", e);
             }
         }
         return result;
@@ -1847,10 +1896,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> updateHost(HostUpdatedEvent event) {
         final String updateHost = "UPDATE host_t SET org_name = ?, org_desc = ?, org_owner = ?, update_user = ? " +
                 "update_timestamp = ? " +
-                "WHERE host = ?";
+                "WHERE host_id = ?";
 
         Result<String> result = null;
-        Map<String, Object> map = JsonMapper.string2Map(event.getValue());
         Connection conn = null;
         try {
             conn = ds.getConnection();
@@ -1874,7 +1922,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 statement.setString(4, event.getEventId().getId());
                 statement.setTimestamp(5, new Timestamp(event.getTimestamp()));
-                statement.setString(6, event.getHost());
+                statement.setString(6, event.getId());
 
                 int count = statement.executeUpdate();
                 if(count == 0) {
@@ -1888,7 +1936,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             }
             // as this is a brand-new user, there is no nonce to be updated. By default, the nonce is 0.
             conn.commit();
-            result = Success.of(event.getHost());
+            result = Success.of(event.getId());
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
@@ -1911,7 +1959,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     conn.close();
                 }
             } catch (SQLException e) {
-                e.printStackTrace();
+                logger.error("SQLException:", e);
             }
         }
         return result;
@@ -1919,14 +1967,27 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> deleteHost(HostDeletedEvent event) {
-        final String deleteHost = "DELETE from host_t WHERE host = ?";
+        final String deleteHost = "DELETE from host_t WHERE host_id = ?";
+        final String deleteHostKey = "DELETE from host_key_t WHERE host_id = ?";
+
         Result<String> result;
         Connection conn = null;
         try {
             conn = ds.getConnection();
             conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(deleteHostKey)) {
+                statement.setString(1, event.getId());
+                int count = statement.executeUpdate();
+                if(count == 0) {
+                    // no record is deleted, write an error notification.
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no host_key record is deleted for host " + event.getHost());
+                } else {
+                    // record is deleted, write a success notification.
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                }
+            }
             try (PreparedStatement statement = conn.prepareStatement(deleteHost)) {
-                statement.setString(1, event.getHost());
+                statement.setString(1, event.getId());
                 int count = statement.executeUpdate();
                 if(count == 0) {
                     // no record is deleted, write an error notification.
@@ -1977,13 +2038,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, host);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
-                        map.put("id", resultSet.getString("id"));
+                        map.put("host_id", resultSet.getString("host_id"));
                         map.put("host", resultSet.getString("host"));
                         map.put("orgName", resultSet.getString("org_name"));
                         map.put("orgDesc", resultSet.getString("org_desc"));
                         map.put("orgOwner", resultSet.getString("org_owner"));
+                        map.put("jwk", resultSet.getString("jwk"));
                         map.put("updateUser", resultSet.getString("update_user"));
-                        map.put("update_timestamp", resultSet.getTimestamp("update_timestamp"));
+                        map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
                     }
                 }
             }
@@ -2003,7 +2065,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<Map<String, Object>> queryHostById(String id) {
-        final String queryHostById = "SELECT * from host_t WHERE id = ?";
+        final String queryHostById = "SELECT * from host_t WHERE host_id = ?";
         Result<Map<String, Object>> result;
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
@@ -2011,18 +2073,19 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, id);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
-                        map.put("id", resultSet.getString("id"));
+                        map.put("host_id", resultSet.getString("host_id"));
                         map.put("host", resultSet.getString("host"));
                         map.put("orgName", resultSet.getString("org_name"));
                         map.put("orgDesc", resultSet.getString("org_desc"));
                         map.put("orgOwner", resultSet.getString("org_owner"));
+                        map.put("jwk", resultSet.getString("jwk"));
                         map.put("updateUser", resultSet.getString("update_user"));
-                        map.put("update_timestamp", resultSet.getTimestamp("update_timestamp"));
+                        map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
                     }
                 }
             }
             if(map.size() == 0)
-                result = Failure.of(new Status(OBJECT_NOT_FOUND, "host with id ", id));
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "host with id", id));
             else
                 result = Success.of(map);
         } catch (SQLException e) {
@@ -2046,13 +2109,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, owner);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
-                        map.put("id", resultSet.getString("id"));
+                        map.put("host_id", resultSet.getString("host_id"));
                         map.put("host", resultSet.getString("host"));
                         map.put("orgName", resultSet.getString("org_name"));
                         map.put("orgDesc", resultSet.getString("org_desc"));
                         map.put("orgOwner", resultSet.getString("org_owner"));
+                        map.put("jwk", resultSet.getString("jwk"));
                         map.put("updateUser", resultSet.getString("update_user"));
-                        map.put("update_timestamp", resultSet.getTimestamp("update_timestamp"));
+                        map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
                     }
                 }
             }
@@ -2267,7 +2331,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("classPath", resultSet.getString("class_path"));
                         map.put("configDesc", resultSet.getString("configuration_desc"));
                         map.put("updateUser", resultSet.getString("update_user"));
-                        map.put("update_timestamp", resultSet.getTimestamp("update_timestamp"));
+                        map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
                     }
                 }
             }
@@ -2286,11 +2350,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
     @Override
     public Result<Map<String, Object>> queryConfigById(String configId) {
-        final String queryHostById = "SELECT * from configuration_t WHERE configuration_id = ?";
+        final String queryConfigById = "SELECT * from configuration_t WHERE configuration_id = ?";
         Result<Map<String, Object>> result;
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
-            try (PreparedStatement statement = conn.prepareStatement(queryHostById)) {
+            try (PreparedStatement statement = conn.prepareStatement(queryConfigById)) {
                 statement.setString(1, configId);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
@@ -2300,7 +2364,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("classPath", resultSet.getString("class_path"));
                         map.put("configDesc", resultSet.getString("configuration_desc"));
                         map.put("updateUser", resultSet.getString("update_user"));
-                        map.put("update_timestamp", resultSet.getTimestamp("update_timestamp"));
+                        map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
                     }
                 }
             }
@@ -2317,5 +2381,73 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         }
         return result;
 
+    }
+
+    @Override
+    public Result<Map<String, Object>> queryCurrentHostKey(String hostId) {
+        final String queryConfigById = "SELECT * from host_key_t WHERE host_id = ? AND key_type = 'C'";
+        Result<Map<String, Object>> result;
+        try (final Connection conn = ds.getConnection()) {
+            Map<String, Object> map = new HashMap<>();
+            try (PreparedStatement statement = conn.prepareStatement(queryConfigById)) {
+                statement.setString(1, hostId);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        map.put("hostId", resultSet.getString("host_id"));
+                        map.put("kid", resultSet.getString("kid"));
+                        map.put("publicKey", resultSet.getString("public_key"));
+                        map.put("privateKey", resultSet.getString("private_key"));
+                        map.put("keyType", resultSet.getString("key_type"));
+                        map.put("updateUser", resultSet.getString("update_user"));
+                        map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
+                    }
+                }
+            }
+            if(map.isEmpty())
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "host key with id", hostId));
+            else
+                result = Success.of(map);
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<Map<String, Object>> queryLongLiveHostKey(String hostId) {
+        final String queryConfigById = "SELECT * from host_key_t WHERE host_id = ? AND key_type = 'L'";
+        Result<Map<String, Object>> result;
+        try (final Connection conn = ds.getConnection()) {
+            Map<String, Object> map = new HashMap<>();
+            try (PreparedStatement statement = conn.prepareStatement(queryConfigById)) {
+                statement.setString(1, hostId);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        map.put("hostId", resultSet.getString("host_id"));
+                        map.put("kid", resultSet.getString("kid"));
+                        map.put("publicKey", resultSet.getString("public_key"));
+                        map.put("privateKey", resultSet.getString("private_key"));
+                        map.put("keyType", resultSet.getString("key_type"));
+                        map.put("updateUser", resultSet.getString("update_user"));
+                        map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
+                    }
+                }
+            }
+            if(map.isEmpty())
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "host key with id", hostId));
+            else
+                result = Success.of(map);
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
     }
 }

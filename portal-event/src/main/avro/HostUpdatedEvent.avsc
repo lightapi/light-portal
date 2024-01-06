@@ -35,6 +35,11 @@
       "doc": "host name is used as the key as we check if the mail is match the host domain"
     },
     {
+      "name": "id",
+      "type": "string",
+      "doc": "host id which is a unique identifier"
+    },
+    {
       "name": "name",
       "type": "string",
       "doc": "The name of the organization"
