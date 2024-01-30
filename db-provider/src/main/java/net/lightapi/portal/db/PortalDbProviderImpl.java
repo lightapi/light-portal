@@ -35,7 +35,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> queryUserByEmail(String email) {
         Result<String> result = null;
         String sql =
-                "SELECT host, user_id, first_name, last_name, email, roles, language, gender, birthday, taiji_wallet, " +
+                "SELECT host_id, user_id, first_name, last_name, email, roles, language, gender, birthday, taiji_wallet, " +
                         "country, province, city, post_code, address, verified, token, locked, password, nonce FROM user_t " +
                         "WHERE email = ?";
         try (final Connection conn = ds.getConnection()) {
@@ -44,7 +44,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, email);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
-                        map.put("host", resultSet.getString("host"));
+                        map.put("hostId", resultSet.getString("host_id"));
                         map.put("userId", resultSet.getString("user_id"));
                         map.put("firstName", resultSet.getString("first_name"));
                         map.put("lastName", resultSet.getString("last_name"));
@@ -85,7 +85,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> queryUserById(String userId) {
         Result<String> result = null;
         String sql =
-                "SELECT host, user_id, first_name, last_name, email, roles, language, gender, birthday, " +
+                "SELECT host_id, user_id, first_name, last_name, email, roles, language, gender, birthday, " +
                         "taiji_wallet, country, province, city, post_code, address, verified, token, locked FROM user_t " +
                         "WHERE user_id = ?";
         try (final Connection conn = ds.getConnection()) {
@@ -94,7 +94,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, userId);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
-                        map.put("host", resultSet.getInt("host"));
+                        map.put("hostId", resultSet.getInt("host_id"));
                         map.put("userId", resultSet.getString("user_id"));
                         map.put("firstName", resultSet.getInt("first_name"));
                         map.put("lastName", resultSet.getString("last_name"));
@@ -133,7 +133,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> queryUserByWallet(String wallet) {
         Result<String> result = null;
         String sql =
-                "SELECT host, user_id, first_name, last_name, email, roles, language, gender, birthday, " +
+                "SELECT host_id, user_id, first_name, last_name, email, roles, language, gender, birthday, " +
                         "taiji_wallet, country, province, city, post_code, address, verified, token, locked FROM user_t " +
                         "WHERE taiji_wallet = ?";
         try (final Connection conn = ds.getConnection()) {
@@ -142,7 +142,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, wallet);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
-                        map.put("host", resultSet.getInt("host"));
+                        map.put("hostId", resultSet.getInt("host_id"));
                         map.put("userId", resultSet.getString("user_id"));
                         map.put("firstName", resultSet.getInt("first_name"));
                         map.put("lastName", resultSet.getString("last_name"));
@@ -494,7 +494,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> createSocialUser(SocialUserCreatedEvent event) {
         final String queryIdEmail = "SELECT nonce FROM user_t WHERE user_id = ? OR email = ?";
-        final String insertUser = "INSERT INTO user_t (host, user_id, first_name, last_name, email, roles, language, " +
+        final String insertUser = "INSERT INTO user_t (host_id, user_id, first_name, last_name, email, roles, language, " +
                 "verified, gender, birthday, country, province, city, post_code, address) " +
                 "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?, ?)";
         Result<String> result = null;
@@ -615,7 +615,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> updateUser(UserUpdatedEvent event) {
         final String queryUserIdByWallet = "SELECT user_id FROM user_t WHERE taiji_wallet = ?";
-        final String updateUser = "UPDATE user_t SET host = ?, language = ?, taiji_wallet = ?, country = ?, province = ?, " +
+        final String updateUser = "UPDATE user_t SET host_id = ?, language = ?, taiji_wallet = ?, country = ?, province = ?, " +
                 "city = ?, post_code = ?, address = ?, first_name = ?, last_name = ?, gender = ?, birthday = ?, nonce = ? " +
                 "WHERE email = ?";
         Result<String> result = null;
