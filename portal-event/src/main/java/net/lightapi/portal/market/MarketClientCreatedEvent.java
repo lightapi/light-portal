@@ -704,13 +704,3 @@ public class MarketClientCreatedEvent extends org.apache.avro.specific.SpecificR
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

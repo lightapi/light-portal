@@ -703,13 +703,3 @@ public class MarketRefDeletedEvent extends org.apache.avro.specific.SpecificReco
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

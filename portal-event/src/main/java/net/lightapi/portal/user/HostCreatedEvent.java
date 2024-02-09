@@ -1052,13 +1052,3 @@ public class HostCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

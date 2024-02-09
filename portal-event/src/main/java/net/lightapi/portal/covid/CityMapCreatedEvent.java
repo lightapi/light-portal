@@ -962,13 +962,3 @@ public class CityMapCreatedEvent extends org.apache.avro.specific.SpecificRecord
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

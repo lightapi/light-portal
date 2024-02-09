@@ -617,13 +617,3 @@ public class OrderCreatedEvent extends org.apache.avro.specific.SpecificRecordBa
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

@@ -1153,13 +1153,3 @@ public class SocialUserCreatedEvent extends org.apache.avro.specific.SpecificRec
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

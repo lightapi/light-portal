@@ -703,13 +703,3 @@ public class DocumentDeletedEvent extends org.apache.avro.specific.SpecificRecor
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

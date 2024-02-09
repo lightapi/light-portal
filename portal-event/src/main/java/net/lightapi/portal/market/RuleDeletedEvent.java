@@ -703,13 +703,3 @@ public class RuleDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

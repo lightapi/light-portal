@@ -878,13 +878,3 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

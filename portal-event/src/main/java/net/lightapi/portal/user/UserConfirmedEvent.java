@@ -530,13 +530,3 @@ public class UserConfirmedEvent extends org.apache.avro.specific.SpecificRecordB
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

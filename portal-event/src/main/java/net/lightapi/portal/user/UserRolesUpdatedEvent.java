@@ -617,13 +617,3 @@ public class UserRolesUpdatedEvent extends org.apache.avro.specific.SpecificReco
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

@@ -1012,13 +1012,3 @@ public class CovidWebsiteUpdatedEvent extends org.apache.avro.specific.SpecificR
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

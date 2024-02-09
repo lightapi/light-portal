@@ -704,13 +704,3 @@ public class OrderDeliveredEvent extends org.apache.avro.specific.SpecificRecord
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

@@ -703,13 +703,3 @@ public class PageDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

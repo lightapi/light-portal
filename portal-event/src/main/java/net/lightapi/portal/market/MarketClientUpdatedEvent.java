@@ -704,13 +704,3 @@ public class MarketClientUpdatedEvent extends org.apache.avro.specific.SpecificR
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

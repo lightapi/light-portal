@@ -703,13 +703,3 @@ public class JsonSchemaDeletedEvent extends org.apache.avro.specific.SpecificRec
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

@@ -617,13 +617,3 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

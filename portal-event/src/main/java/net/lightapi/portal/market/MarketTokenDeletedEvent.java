@@ -703,13 +703,3 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

@@ -704,13 +704,3 @@ public class ReferenceDeletedEvent extends org.apache.avro.specific.SpecificReco
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

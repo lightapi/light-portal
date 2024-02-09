@@ -551,13 +551,3 @@ public class ServiceRule extends org.apache.avro.specific.SpecificRecordBase imp
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

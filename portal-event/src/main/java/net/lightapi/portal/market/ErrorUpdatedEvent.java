@@ -790,13 +790,3 @@ public class ErrorUpdatedEvent extends org.apache.avro.specific.SpecificRecordBa
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

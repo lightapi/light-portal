@@ -1271,13 +1271,3 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

@@ -617,13 +617,3 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

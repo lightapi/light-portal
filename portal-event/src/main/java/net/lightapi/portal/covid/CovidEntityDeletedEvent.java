@@ -703,13 +703,3 @@ public class CovidEntityDeletedEvent extends org.apache.avro.specific.SpecificRe
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

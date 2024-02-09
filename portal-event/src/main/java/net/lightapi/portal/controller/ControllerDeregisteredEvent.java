@@ -1067,13 +1067,3 @@ public class ControllerDeregisteredEvent extends org.apache.avro.specific.Specif
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

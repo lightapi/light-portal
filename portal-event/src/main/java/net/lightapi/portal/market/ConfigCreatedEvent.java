@@ -965,13 +965,3 @@ public class ConfigCreatedEvent extends org.apache.avro.specific.SpecificRecordB
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

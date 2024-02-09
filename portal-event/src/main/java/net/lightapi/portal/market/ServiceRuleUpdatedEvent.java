@@ -1007,13 +1007,3 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

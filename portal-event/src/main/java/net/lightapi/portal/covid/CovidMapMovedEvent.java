@@ -790,13 +790,3 @@ public class CovidMapMovedEvent extends org.apache.avro.specific.SpecificRecordB
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

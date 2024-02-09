@@ -1024,13 +1024,3 @@ public class DocumentUpdatedEvent extends org.apache.avro.specific.SpecificRecor
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

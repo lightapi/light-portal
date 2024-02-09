@@ -965,13 +965,3 @@ public class ReferenceUpdatedEvent extends org.apache.avro.specific.SpecificReco
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

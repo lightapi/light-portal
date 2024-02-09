@@ -791,13 +791,3 @@ public class RefRelaDeletedEvent extends org.apache.avro.specific.SpecificRecord
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

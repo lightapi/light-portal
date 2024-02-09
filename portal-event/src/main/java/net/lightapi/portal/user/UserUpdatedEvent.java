@@ -1701,13 +1701,3 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

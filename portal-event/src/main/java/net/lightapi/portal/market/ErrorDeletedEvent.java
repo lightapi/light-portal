@@ -703,13 +703,3 @@ public class ErrorDeletedEvent extends org.apache.avro.specific.SpecificRecordBa
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

@@ -1136,13 +1136,3 @@ public class CovidEntityCreatedEvent extends org.apache.avro.specific.SpecificRe
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

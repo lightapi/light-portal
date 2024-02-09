@@ -1024,13 +1024,3 @@ public class PageCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

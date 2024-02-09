@@ -790,13 +790,3 @@ public class MarketTokenCreatedEvent extends org.apache.avro.specific.SpecificRe
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

@@ -703,13 +703,3 @@ public class TemplateDeletedEvent extends org.apache.avro.specific.SpecificRecor
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

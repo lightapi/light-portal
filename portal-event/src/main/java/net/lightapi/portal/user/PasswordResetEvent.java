@@ -704,13 +704,3 @@ public class PasswordResetEvent extends org.apache.avro.specific.SpecificRecordB
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
