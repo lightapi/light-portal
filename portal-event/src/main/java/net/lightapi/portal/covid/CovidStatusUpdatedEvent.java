@@ -1012,13 +1012,3 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

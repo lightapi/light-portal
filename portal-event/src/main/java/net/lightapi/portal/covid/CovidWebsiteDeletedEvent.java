@@ -616,13 +616,3 @@ public class CovidWebsiteDeletedEvent extends org.apache.avro.specific.SpecificR
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

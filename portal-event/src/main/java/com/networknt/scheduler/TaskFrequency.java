@@ -380,13 +380,3 @@ public class TaskFrequency extends org.apache.avro.specific.SpecificRecordBase i
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

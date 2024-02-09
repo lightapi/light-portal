@@ -704,13 +704,3 @@ public class MarketCodeCreatedEvent extends org.apache.avro.specific.SpecificRec
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

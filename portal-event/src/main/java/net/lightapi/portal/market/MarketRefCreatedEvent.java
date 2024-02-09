@@ -790,13 +790,3 @@ public class MarketRefCreatedEvent extends org.apache.avro.specific.SpecificReco
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

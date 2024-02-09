@@ -703,13 +703,3 @@ public class BlogDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

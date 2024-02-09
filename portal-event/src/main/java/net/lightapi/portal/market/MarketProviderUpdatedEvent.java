@@ -790,13 +790,3 @@ public class MarketProviderUpdatedEvent extends org.apache.avro.specific.Specifi
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

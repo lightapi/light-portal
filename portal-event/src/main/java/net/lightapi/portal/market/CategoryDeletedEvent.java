@@ -617,13 +617,3 @@ public class CategoryDeletedEvent extends org.apache.avro.specific.SpecificRecor
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

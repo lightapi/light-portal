@@ -704,13 +704,3 @@ public class TaxonomyCreatedEvent extends org.apache.avro.specific.SpecificRecor
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

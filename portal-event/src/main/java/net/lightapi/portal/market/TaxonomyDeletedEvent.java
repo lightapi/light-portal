@@ -704,13 +704,3 @@ public class TaxonomyDeletedEvent extends org.apache.avro.specific.SpecificRecor
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

@@ -877,13 +877,3 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

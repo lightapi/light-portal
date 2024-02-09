@@ -1241,13 +1241,3 @@ public class RuleUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

@@ -530,13 +530,3 @@ public class UserLockedEvent extends org.apache.avro.specific.SpecificRecordBase
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

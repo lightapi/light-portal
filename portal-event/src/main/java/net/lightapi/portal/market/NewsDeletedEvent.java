@@ -703,13 +703,3 @@ public class NewsDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

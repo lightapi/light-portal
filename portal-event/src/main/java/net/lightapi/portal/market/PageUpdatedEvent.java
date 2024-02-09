@@ -1024,13 +1024,3 @@ public class PageUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

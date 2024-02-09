@@ -1024,13 +1024,3 @@ public class TemplateCreatedEvent extends org.apache.avro.specific.SpecificRecor
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

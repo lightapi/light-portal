@@ -617,13 +617,3 @@ public class PasswordForgotEvent extends org.apache.avro.specific.SpecificRecord
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

@@ -1739,13 +1739,3 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

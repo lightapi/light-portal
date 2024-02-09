@@ -791,13 +791,3 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

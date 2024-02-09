@@ -704,13 +704,3 @@ public class CityMapDeletedEvent extends org.apache.avro.specific.SpecificRecord
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

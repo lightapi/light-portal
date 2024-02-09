@@ -1154,13 +1154,3 @@ public class ControllerRegisteredEvent extends org.apache.avro.specific.Specific
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

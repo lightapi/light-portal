@@ -703,13 +703,3 @@ public class MarketProviderDeletedEvent extends org.apache.avro.specific.Specifi
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

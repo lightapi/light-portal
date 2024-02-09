@@ -965,13 +965,3 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

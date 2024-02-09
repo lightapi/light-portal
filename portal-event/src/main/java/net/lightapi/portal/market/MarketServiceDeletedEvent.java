@@ -617,13 +617,3 @@ public class MarketServiceDeletedEvent extends org.apache.avro.specific.Specific
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

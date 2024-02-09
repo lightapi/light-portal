@@ -704,13 +704,3 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

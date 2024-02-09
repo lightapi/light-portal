@@ -617,13 +617,3 @@ public class PasswordChangedEvent extends org.apache.avro.specific.SpecificRecor
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

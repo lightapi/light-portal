@@ -530,13 +530,3 @@ public class UserUnlockedEvent extends org.apache.avro.specific.SpecificRecordBa
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

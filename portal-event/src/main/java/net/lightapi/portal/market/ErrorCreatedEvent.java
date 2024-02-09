@@ -790,13 +790,3 @@ public class ErrorCreatedEvent extends org.apache.avro.specific.SpecificRecordBa
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

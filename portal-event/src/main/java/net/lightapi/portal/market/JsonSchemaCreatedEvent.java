@@ -1024,13 +1024,3 @@ public class JsonSchemaCreatedEvent extends org.apache.avro.specific.SpecificRec
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

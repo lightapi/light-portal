@@ -530,13 +530,3 @@ public class PaymentDeletedEvent extends org.apache.avro.specific.SpecificRecord
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

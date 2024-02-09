@@ -790,13 +790,3 @@ public class MarketProviderCreatedEvent extends org.apache.avro.specific.Specifi
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

@@ -704,13 +704,3 @@ public class MarketServiceCreatedEvent extends org.apache.avro.specific.Specific
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

@@ -1024,13 +1024,3 @@ public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

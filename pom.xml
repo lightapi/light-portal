@@ -411,11 +411,11 @@
                         <groupId>org.junit.jupiter</groupId>
                         <artifactId>junit-jupiter-engine</artifactId>
                         <version>${version.junit}</version>
-                    </dependency>                    
+                    </dependency>
                 </dependencies>
                 <configuration>
                     <argLine>${argLine}</argLine>
-                </configuration>                
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

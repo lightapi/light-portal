@@ -617,13 +617,3 @@ public class PaymentUpdatedEvent extends org.apache.avro.specific.SpecificRecord
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

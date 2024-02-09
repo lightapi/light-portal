@@ -704,13 +704,3 @@ public class OrderCancelledEvent extends org.apache.avro.specific.SpecificRecord
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

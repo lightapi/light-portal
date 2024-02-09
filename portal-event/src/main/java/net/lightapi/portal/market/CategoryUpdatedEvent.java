@@ -704,13 +704,3 @@ public class CategoryUpdatedEvent extends org.apache.avro.specific.SpecificRecor
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
