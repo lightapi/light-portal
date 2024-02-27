@@ -9,5 +9,7 @@ public enum DefinitionAction implements org.apache.avro.generic.GenericEnumSymbo
   INSERT, UPDATE, DELETE  ;
   public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"enum\",\"name\":\"DefinitionAction\",\"namespace\":\"com.networknt.scheduler\",\"symbols\":[\"INSERT\",\"UPDATE\",\"DELETE\"]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
+
+  @Override
   public org.apache.avro.Schema getSchema() { return SCHEMA$; }
 }

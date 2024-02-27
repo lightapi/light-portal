@@ -9,6 +9,8 @@
 - [pre-commit.ci] pre-commit autoupdate [\#63](https://github.com/lightapi/light-portal/pull/63) ([pre-commit-ci](https://github.com/apps/pre-commit-ci))
 - fixes \#61 add pre-commit hook and apply it [\#62](https://github.com/lightapi/light-portal/pull/62) ([stevehu](https://github.com/stevehu))
 - fixes \#59 update db provider to change the host to host_id for user_t [\#60](https://github.com/lightapi/light-portal/pull/60) ([stevehu](https://github.com/stevehu))
+
+
 ## [2.1.31](https://github.com/networknt/light-portal/tree/2.1.31) (2024-01-16)
 
 
