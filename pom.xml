@@ -132,7 +132,7 @@
         <version.javamail>1.6.2</version.javamail>
         <version.caffeine>3.1.5</version.caffeine>
         <version.hikaricp>5.0.0</version.hikaricp>
-        <version.postgresql>42.6.0</version.postgresql>
+        <version.postgres>42.6.0</version.postgres>
         <version.h2>2.2.220</version.h2>
         <version.avro>1.11.3</version.avro>
         <version.confluent>7.6.0</version.confluent>
@@ -266,7 +266,7 @@
             <dependency>
                 <groupId>org.postgresql</groupId>
                 <artifactId>postgresql</artifactId>
-                <version>${version.postgresql}</version>
+                <version>${version.postgres}</version>
             </dependency>
 
             <dependency>
