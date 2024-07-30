@@ -90,6 +90,8 @@ java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema JsonSche
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema RuleCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema RuleUpdatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema RuleDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema ApiRuleCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema ApiRuleDeletedEvent.avsc .
 
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema HostCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema HostUpdatedEvent.avsc .
@@ -197,6 +199,8 @@ mv net/lightapi/portal/market/JsonSchemaDeletedEvent.java ../java/net/lightapi/p
 mv net/lightapi/portal/market/RuleCreatedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/RuleUpdatedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/RuleDeletedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/ApiRuleCreatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/ApiRuleDeletedEvent.java ../java/net/lightapi/portal/market
 
 mv net/lightapi/portal/market/ConfigCreatedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/ConfigUpdatedEvent.java ../java/net/lightapi/portal/market
