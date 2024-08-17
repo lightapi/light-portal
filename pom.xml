@@ -111,7 +111,7 @@
         <version.hikaricp>5.0.0</version.hikaricp>
         <version.postgres>42.7.2</version.postgres>
         <version.h2>2.2.220</version.h2>
-        <version.avro>1.11.3</version.avro>
+        <version.avro>1.12.0</version.avro>
         <version.confluent>7.6.0</version.confluent>
         <version.jcommander>1.82</version.jcommander>
         <version.avroConverter>0.2.9</version.avroConverter>
