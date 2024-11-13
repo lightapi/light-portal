@@ -715,10 +715,11 @@ public class HybridQueryClient {
      * @param exchange HttpServerExchange
      * @param url host of instance that contains the state store
      * @param authCode auth code
+     * @param derived boolean flag to derive the auth code
      * @return Result of authCode object in JSON
      */
-    public static Result<String> getAuthCodeDetail(HttpServerExchange exchange, String url, String authCode) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getAuthCodeDetail\",\"version\":\"0.1.0\",\"data\":{\"authCode\":\"%s\"}}", authCode);
+    public static Result<String> getAuthCodeDetail(HttpServerExchange exchange, String url, String authCode, boolean derived) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getAuthCodeDetail\",\"version\":\"0.1.0\",\"data\":{\"authCode\":\"%s\",\"derived\":%b}}", authCode, derived);
         return callQueryExchangeUrl(s, exchange, url);
     }
 
@@ -729,10 +730,11 @@ public class HybridQueryClient {
      *
      * @param authCode Auth Code
      * @param token a client credential JWT token
+     * @param derive boolean flag to derive the auth code
      * @return Result of authCode
      */
-    public static Result<String> getAuthCodeDetail(String authCode, String token) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getAuthCodeDetail\",\"version\":\"0.1.0\",\"data\":{\"authCode\":\"%s\"}}", authCode);
+    public static Result<String> getAuthCodeDetail(String authCode, String token, boolean derive) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getAuthCodeDetail\",\"version\":\"0.1.0\",\"data\":{\"authCode\":\"%s\",\"derived\":%b}}", authCode, derive);
         if (config.isPortalByServiceUrl()) {
             return callQueryTokenUrl(s, token, config.getPortalQueryServiceUrl());
         } else {
