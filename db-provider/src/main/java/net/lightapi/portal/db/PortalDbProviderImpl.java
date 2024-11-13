@@ -11,6 +11,8 @@ import com.networknt.status.Status;
 import com.networknt.utility.HashUtil;
 import net.lightapi.portal.market.*;
 import net.lightapi.portal.user.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.security.KeyPair;
 import java.sql.*;
@@ -24,6 +26,7 @@ import static com.networknt.db.provider.SqlDbStartupHook.cacheManager;
 import static com.networknt.db.provider.SqlDbStartupHook.ds;
 
 public class PortalDbProviderImpl implements PortalDbProvider {
+    public static final Logger logger = LoggerFactory.getLogger(PortalDbProviderImpl.class);
     public static final String AUTH_CODE_CACHE = "auth_code";
     public static final String SQL_EXCEPTION = "ERR10017";
     public static final String GENERIC_EXCEPTION = "ERR10014";
