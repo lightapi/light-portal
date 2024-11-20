@@ -30,15 +30,14 @@
       }
     },
     {
+      "name": "hostId",
+      "type": "string",
+      "doc": "host id"
+    },
+    {
       "name": "email",
       "type": "string",
       "doc": "email of the status owner"
-    },
-    {
-      "name": "keyId",
-      "type": "int",
-      "default": 0,
-      "doc": "keyId 0 email 1 map category 2 map subcategory"
     },
     {
       "name": "status",

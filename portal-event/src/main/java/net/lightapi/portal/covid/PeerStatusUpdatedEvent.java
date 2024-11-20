@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class PeerStatusUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 6553373235304928203L;
+  private static final long serialVersionUID = -5068196436411011574L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"PeerStatusUpdatedEvent\",\"namespace\":\"net.lightapi.portal.covid\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the id\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"email\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"email of the status owner\"},{\"name\":\"keyId\",\"type\":\"int\",\"doc\":\"keyId 0 email 1 map category 2 map subcategory\",\"default\":0},{\"name\":\"status\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"status in string format\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"PeerStatusUpdatedEvent\",\"namespace\":\"net.lightapi.portal.covid\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the id\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"email\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"email of the status owner\"},{\"name\":\"status\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"status in string format\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -74,10 +74,10 @@ public class PeerStatusUpdatedEvent extends org.apache.avro.specific.SpecificRec
   }
 
   private com.networknt.kafka.common.EventId EventId;
+  /** host id */
+  private java.lang.String hostId;
   /** email of the status owner */
   private java.lang.String email;
-  /** keyId 0 email 1 map category 2 map subcategory */
-  private int keyId;
   /** status in string format */
   private java.lang.String status;
   /** time the event is recorded */
@@ -93,15 +93,15 @@ public class PeerStatusUpdatedEvent extends org.apache.avro.specific.SpecificRec
   /**
    * All-args constructor.
    * @param EventId The new value for EventId
+   * @param hostId host id
    * @param email email of the status owner
-   * @param keyId keyId 0 email 1 map category 2 map subcategory
    * @param status status in string format
    * @param timestamp time the event is recorded
    */
-  public PeerStatusUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String email, java.lang.Integer keyId, java.lang.String status, java.lang.Long timestamp) {
+  public PeerStatusUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String email, java.lang.String status, java.lang.Long timestamp) {
     this.EventId = EventId;
+    this.hostId = hostId;
     this.email = email;
-    this.keyId = keyId;
     this.status = status;
     this.timestamp = timestamp;
   }
@@ -112,8 +112,8 @@ public class PeerStatusUpdatedEvent extends org.apache.avro.specific.SpecificRec
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return EventId;
-    case 1: return email;
-    case 2: return keyId;
+    case 1: return hostId;
+    case 2: return email;
     case 3: return status;
     case 4: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
@@ -125,8 +125,8 @@ public class PeerStatusUpdatedEvent extends org.apache.avro.specific.SpecificRec
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
-    case 1: email = value$ != null ? value$.toString() : null; break;
-    case 2: keyId = (java.lang.Integer)value$; break;
+    case 1: hostId = value$ != null ? value$.toString() : null; break;
+    case 2: email = value$ != null ? value$.toString() : null; break;
     case 3: status = value$ != null ? value$.toString() : null; break;
     case 4: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
@@ -151,6 +151,24 @@ public class PeerStatusUpdatedEvent extends org.apache.avro.specific.SpecificRec
   }
 
   /**
+   * Gets the value of the 'hostId' field.
+   * @return host id
+   */
+  public java.lang.String getHostId() {
+    return hostId;
+  }
+
+
+  /**
+   * Sets the value of the 'hostId' field.
+   * host id
+   * @param value the value to set.
+   */
+  public void setHostId(java.lang.String value) {
+    this.hostId = value;
+  }
+
+  /**
    * Gets the value of the 'email' field.
    * @return email of the status owner
    */
@@ -166,24 +184,6 @@ public class PeerStatusUpdatedEvent extends org.apache.avro.specific.SpecificRec
    */
   public void setEmail(java.lang.String value) {
     this.email = value;
-  }
-
-  /**
-   * Gets the value of the 'keyId' field.
-   * @return keyId 0 email 1 map category 2 map subcategory
-   */
-  public int getKeyId() {
-    return keyId;
-  }
-
-
-  /**
-   * Sets the value of the 'keyId' field.
-   * keyId 0 email 1 map category 2 map subcategory
-   * @param value the value to set.
-   */
-  public void setKeyId(int value) {
-    this.keyId = value;
   }
 
   /**
@@ -265,10 +265,10 @@ public class PeerStatusUpdatedEvent extends org.apache.avro.specific.SpecificRec
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
+    /** host id */
+    private java.lang.String hostId;
     /** email of the status owner */
     private java.lang.String email;
-    /** keyId 0 email 1 map category 2 map subcategory */
-    private int keyId;
     /** status in string format */
     private java.lang.String status;
     /** time the event is recorded */
@@ -292,12 +292,12 @@ public class PeerStatusUpdatedEvent extends org.apache.avro.specific.SpecificRec
       if (other.hasEventIdBuilder()) {
         this.EventIdBuilder = com.networknt.kafka.common.EventId.newBuilder(other.getEventIdBuilder());
       }
-      if (isValidValue(fields()[1], other.email)) {
-        this.email = data().deepCopy(fields()[1].schema(), other.email);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
-      if (isValidValue(fields()[2], other.keyId)) {
-        this.keyId = data().deepCopy(fields()[2].schema(), other.keyId);
+      if (isValidValue(fields()[2], other.email)) {
+        this.email = data().deepCopy(fields()[2].schema(), other.email);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
       if (isValidValue(fields()[3], other.status)) {
@@ -321,12 +321,12 @@ public class PeerStatusUpdatedEvent extends org.apache.avro.specific.SpecificRec
         fieldSetFlags()[0] = true;
       }
       this.EventIdBuilder = null;
-      if (isValidValue(fields()[1], other.email)) {
-        this.email = data().deepCopy(fields()[1].schema(), other.email);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.keyId)) {
-        this.keyId = data().deepCopy(fields()[2].schema(), other.keyId);
+      if (isValidValue(fields()[2], other.email)) {
+        this.email = data().deepCopy(fields()[2].schema(), other.email);
         fieldSetFlags()[2] = true;
       }
       if (isValidValue(fields()[3], other.status)) {
@@ -416,6 +416,50 @@ public class PeerStatusUpdatedEvent extends org.apache.avro.specific.SpecificRec
     }
 
     /**
+      * Gets the value of the 'hostId' field.
+      * host id
+      * @return The value.
+      */
+    public java.lang.String getHostId() {
+      return hostId;
+    }
+
+
+    /**
+      * Sets the value of the 'hostId' field.
+      * host id
+      * @param value The value of 'hostId'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.covid.PeerStatusUpdatedEvent.Builder setHostId(java.lang.String value) {
+      validate(fields()[1], value);
+      this.hostId = value;
+      fieldSetFlags()[1] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'hostId' field has been set.
+      * host id
+      * @return True if the 'hostId' field has been set, false otherwise.
+      */
+    public boolean hasHostId() {
+      return fieldSetFlags()[1];
+    }
+
+
+    /**
+      * Clears the value of the 'hostId' field.
+      * host id
+      * @return This builder.
+      */
+    public net.lightapi.portal.covid.PeerStatusUpdatedEvent.Builder clearHostId() {
+      hostId = null;
+      fieldSetFlags()[1] = false;
+      return this;
+    }
+
+    /**
       * Gets the value of the 'email' field.
       * email of the status owner
       * @return The value.
@@ -432,9 +476,9 @@ public class PeerStatusUpdatedEvent extends org.apache.avro.specific.SpecificRec
       * @return This builder.
       */
     public net.lightapi.portal.covid.PeerStatusUpdatedEvent.Builder setEmail(java.lang.String value) {
-      validate(fields()[1], value);
+      validate(fields()[2], value);
       this.email = value;
-      fieldSetFlags()[1] = true;
+      fieldSetFlags()[2] = true;
       return this;
     }
 
@@ -444,7 +488,7 @@ public class PeerStatusUpdatedEvent extends org.apache.avro.specific.SpecificRec
       * @return True if the 'email' field has been set, false otherwise.
       */
     public boolean hasEmail() {
-      return fieldSetFlags()[1];
+      return fieldSetFlags()[2];
     }
 
 
@@ -455,49 +499,6 @@ public class PeerStatusUpdatedEvent extends org.apache.avro.specific.SpecificRec
       */
     public net.lightapi.portal.covid.PeerStatusUpdatedEvent.Builder clearEmail() {
       email = null;
-      fieldSetFlags()[1] = false;
-      return this;
-    }
-
-    /**
-      * Gets the value of the 'keyId' field.
-      * keyId 0 email 1 map category 2 map subcategory
-      * @return The value.
-      */
-    public int getKeyId() {
-      return keyId;
-    }
-
-
-    /**
-      * Sets the value of the 'keyId' field.
-      * keyId 0 email 1 map category 2 map subcategory
-      * @param value The value of 'keyId'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.covid.PeerStatusUpdatedEvent.Builder setKeyId(int value) {
-      validate(fields()[2], value);
-      this.keyId = value;
-      fieldSetFlags()[2] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'keyId' field has been set.
-      * keyId 0 email 1 map category 2 map subcategory
-      * @return True if the 'keyId' field has been set, false otherwise.
-      */
-    public boolean hasKeyId() {
-      return fieldSetFlags()[2];
-    }
-
-
-    /**
-      * Clears the value of the 'keyId' field.
-      * keyId 0 email 1 map category 2 map subcategory
-      * @return This builder.
-      */
-    public net.lightapi.portal.covid.PeerStatusUpdatedEvent.Builder clearKeyId() {
       fieldSetFlags()[2] = false;
       return this;
     }
@@ -604,8 +605,8 @@ public class PeerStatusUpdatedEvent extends org.apache.avro.specific.SpecificRec
         } else {
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
-        record.email = fieldSetFlags()[1] ? this.email : (java.lang.String) defaultValue(fields()[1]);
-        record.keyId = fieldSetFlags()[2] ? this.keyId : (java.lang.Integer) defaultValue(fields()[2]);
+        record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
+        record.email = fieldSetFlags()[2] ? this.email : (java.lang.String) defaultValue(fields()[2]);
         record.status = fieldSetFlags()[3] ? this.status : (java.lang.String) defaultValue(fields()[3]);
         record.timestamp = fieldSetFlags()[4] ? this.timestamp : (java.lang.Long) defaultValue(fields()[4]);
         return record;
@@ -642,9 +643,9 @@ public class PeerStatusUpdatedEvent extends org.apache.avro.specific.SpecificRec
   {
     this.EventId.customEncode(out);
 
-    out.writeString(this.email);
+    out.writeString(this.hostId);
 
-    out.writeInt(this.keyId);
+    out.writeString(this.email);
 
     out.writeString(this.status);
 
@@ -662,9 +663,9 @@ public class PeerStatusUpdatedEvent extends org.apache.avro.specific.SpecificRec
       }
       this.EventId.customDecode(in);
 
-      this.email = in.readString();
+      this.hostId = in.readString();
 
-      this.keyId = in.readInt();
+      this.email = in.readString();
 
       this.status = in.readString();
 
@@ -681,11 +682,11 @@ public class PeerStatusUpdatedEvent extends org.apache.avro.specific.SpecificRec
           break;
 
         case 1:
-          this.email = in.readString();
+          this.hostId = in.readString();
           break;
 
         case 2:
-          this.keyId = in.readInt();
+          this.email = in.readString();
           break;
 
         case 3:

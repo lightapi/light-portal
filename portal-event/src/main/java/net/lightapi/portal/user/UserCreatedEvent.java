@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -2801676580326874928L;
+  private static final long serialVersionUID = 1811816121706658981L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"UserCreatedEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"host\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host organization of the user\"},{\"name\":\"email\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the email of the user\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the unique user id\"},{\"name\":\"language\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the preferred language of the user\"},{\"name\":\"password\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the password of the user\"},{\"name\":\"value\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"user detail in JSON, include firstName, lastName, gender, birthday, postCode, address\",\"default\":null},{\"name\":\"taijiWallet\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"taiji blockchain address of the user\",\"default\":null},{\"name\":\"country\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"country of the user\",\"default\":null},{\"name\":\"province\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"province of the user\",\"default\":null},{\"name\":\"city\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"city of the user\",\"default\":null},{\"name\":\"verified\",\"type\":\"boolean\",\"doc\":\"If the email is verified\",\"default\":false},{\"name\":\"token\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"A UUID that is used for email verification\"},{\"name\":\"roles\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a list of roles for the user\",\"default\":\"user\"},{\"name\":\"locked\",\"type\":\"boolean\",\"doc\":\"If the account is locked\",\"default\":false},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"UserCreatedEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"email\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the email of the user\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the unique user id\"},{\"name\":\"language\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the preferred language of the user\"},{\"name\":\"password\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the password of the user\"},{\"name\":\"value\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"user detail in JSON, include firstName, lastName, gender, birthday, postCode, address\",\"default\":null},{\"name\":\"taijiWallet\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"taiji blockchain address of the user\",\"default\":null},{\"name\":\"country\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"country of the user\",\"default\":null},{\"name\":\"province\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"province of the user\",\"default\":null},{\"name\":\"city\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"city of the user\",\"default\":null},{\"name\":\"verified\",\"type\":\"boolean\",\"doc\":\"If the email is verified\",\"default\":false},{\"name\":\"token\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"A UUID that is used for email verification\"},{\"name\":\"roles\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a list of roles for the user\",\"default\":\"user\"},{\"name\":\"locked\",\"type\":\"boolean\",\"doc\":\"If the account is locked\",\"default\":false},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -74,8 +74,8 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
   }
 
   private com.networknt.kafka.common.EventId EventId;
-  /** the host organization of the user */
-  private java.lang.String host;
+  /** host id */
+  private java.lang.String hostId;
   /** the email of the user */
   private java.lang.String email;
   /** the unique user id */
@@ -115,7 +115,7 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
   /**
    * All-args constructor.
    * @param EventId The new value for EventId
-   * @param host the host organization of the user
+   * @param hostId host id
    * @param email the email of the user
    * @param userId the unique user id
    * @param language the preferred language of the user
@@ -131,9 +131,9 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
    * @param locked If the account is locked
    * @param timestamp time the event is recorded
    */
-  public UserCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String host, java.lang.String email, java.lang.String userId, java.lang.String language, java.lang.String password, java.lang.String value, java.lang.String taijiWallet, java.lang.String country, java.lang.String province, java.lang.String city, java.lang.Boolean verified, java.lang.String token, java.lang.String roles, java.lang.Boolean locked, java.lang.Long timestamp) {
+  public UserCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String email, java.lang.String userId, java.lang.String language, java.lang.String password, java.lang.String value, java.lang.String taijiWallet, java.lang.String country, java.lang.String province, java.lang.String city, java.lang.Boolean verified, java.lang.String token, java.lang.String roles, java.lang.Boolean locked, java.lang.Long timestamp) {
     this.EventId = EventId;
-    this.host = host;
+    this.hostId = hostId;
     this.email = email;
     this.userId = userId;
     this.language = language;
@@ -156,7 +156,7 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return EventId;
-    case 1: return host;
+    case 1: return hostId;
     case 2: return email;
     case 3: return userId;
     case 4: return language;
@@ -180,7 +180,7 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
-    case 1: host = value$ != null ? value$.toString() : null; break;
+    case 1: hostId = value$ != null ? value$.toString() : null; break;
     case 2: email = value$ != null ? value$.toString() : null; break;
     case 3: userId = value$ != null ? value$.toString() : null; break;
     case 4: language = value$ != null ? value$.toString() : null; break;
@@ -217,21 +217,21 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
   }
 
   /**
-   * Gets the value of the 'host' field.
-   * @return the host organization of the user
+   * Gets the value of the 'hostId' field.
+   * @return host id
    */
-  public java.lang.String getHost() {
-    return host;
+  public java.lang.String getHostId() {
+    return hostId;
   }
 
 
   /**
-   * Sets the value of the 'host' field.
-   * the host organization of the user
+   * Sets the value of the 'hostId' field.
+   * host id
    * @param value the value to set.
    */
-  public void setHost(java.lang.String value) {
-    this.host = value;
+  public void setHostId(java.lang.String value) {
+    this.hostId = value;
   }
 
   /**
@@ -529,8 +529,8 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
-    /** the host organization of the user */
-    private java.lang.String host;
+    /** host id */
+    private java.lang.String hostId;
     /** the email of the user */
     private java.lang.String email;
     /** the unique user id */
@@ -578,8 +578,8 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       if (other.hasEventIdBuilder()) {
         this.EventIdBuilder = com.networknt.kafka.common.EventId.newBuilder(other.getEventIdBuilder());
       }
-      if (isValidValue(fields()[1], other.host)) {
-        this.host = data().deepCopy(fields()[1].schema(), other.host);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
       if (isValidValue(fields()[2], other.email)) {
@@ -651,8 +651,8 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
         fieldSetFlags()[0] = true;
       }
       this.EventIdBuilder = null;
-      if (isValidValue(fields()[1], other.host)) {
-        this.host = data().deepCopy(fields()[1].schema(), other.host);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = true;
       }
       if (isValidValue(fields()[2], other.email)) {
@@ -790,45 +790,45 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
     }
 
     /**
-      * Gets the value of the 'host' field.
-      * the host organization of the user
+      * Gets the value of the 'hostId' field.
+      * host id
       * @return The value.
       */
-    public java.lang.String getHost() {
-      return host;
+    public java.lang.String getHostId() {
+      return hostId;
     }
 
 
     /**
-      * Sets the value of the 'host' field.
-      * the host organization of the user
-      * @param value The value of 'host'.
+      * Sets the value of the 'hostId' field.
+      * host id
+      * @param value The value of 'hostId'.
       * @return This builder.
       */
-    public net.lightapi.portal.user.UserCreatedEvent.Builder setHost(java.lang.String value) {
+    public net.lightapi.portal.user.UserCreatedEvent.Builder setHostId(java.lang.String value) {
       validate(fields()[1], value);
-      this.host = value;
+      this.hostId = value;
       fieldSetFlags()[1] = true;
       return this;
     }
 
     /**
-      * Checks whether the 'host' field has been set.
-      * the host organization of the user
-      * @return True if the 'host' field has been set, false otherwise.
+      * Checks whether the 'hostId' field has been set.
+      * host id
+      * @return True if the 'hostId' field has been set, false otherwise.
       */
-    public boolean hasHost() {
+    public boolean hasHostId() {
       return fieldSetFlags()[1];
     }
 
 
     /**
-      * Clears the value of the 'host' field.
-      * the host organization of the user
+      * Clears the value of the 'hostId' field.
+      * host id
       * @return This builder.
       */
-    public net.lightapi.portal.user.UserCreatedEvent.Builder clearHost() {
-      host = null;
+    public net.lightapi.portal.user.UserCreatedEvent.Builder clearHostId() {
+      hostId = null;
       fieldSetFlags()[1] = false;
       return this;
     }
@@ -1461,7 +1461,7 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
         } else {
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
-        record.host = fieldSetFlags()[1] ? this.host : (java.lang.String) defaultValue(fields()[1]);
+        record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
         record.email = fieldSetFlags()[2] ? this.email : (java.lang.String) defaultValue(fields()[2]);
         record.userId = fieldSetFlags()[3] ? this.userId : (java.lang.String) defaultValue(fields()[3]);
         record.language = fieldSetFlags()[4] ? this.language : (java.lang.String) defaultValue(fields()[4]);
@@ -1510,7 +1510,7 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
   {
     this.EventId.customEncode(out);
 
-    out.writeString(this.host);
+    out.writeString(this.hostId);
 
     out.writeString(this.email);
 
@@ -1582,7 +1582,7 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       }
       this.EventId.customDecode(in);
 
-      this.host = in.readString();
+      this.hostId = in.readString();
 
       this.email = in.readString();
 
@@ -1648,7 +1648,7 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
           break;
 
         case 1:
-          this.host = in.readString();
+          this.hostId = in.readString();
           break;
 
         case 2:

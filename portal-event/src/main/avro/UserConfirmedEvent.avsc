@@ -30,6 +30,11 @@
       }
     },
     {
+      "name": "hostId",
+      "type": "string",
+      "doc": "host id"
+    },
+    {
       "name": "token",
       "type": "string",
       "doc": "A UUID token that is sent to the user through email"

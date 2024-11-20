@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -8895996526013361263L;
+  private static final long serialVersionUID = 7830280675111963840L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"PrivateMessageSentEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"fromId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"From userId that matches the EventId.id email\"},{\"name\":\"toEmail\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"The target email\"},{\"name\":\"subject\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"Subject of the message\"},{\"name\":\"content\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"Content of the message\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"PrivateMessageSentEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"fromId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"From userId that matches the EventId.id email\"},{\"name\":\"toEmail\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"The target email\"},{\"name\":\"subject\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"Subject of the message\"},{\"name\":\"content\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"Content of the message\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -74,6 +74,8 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
   }
 
   private com.networknt.kafka.common.EventId EventId;
+  /** host id */
+  private java.lang.String hostId;
   /** From userId that matches the EventId.id email */
   private java.lang.String fromId;
   /** The target email */
@@ -95,14 +97,16 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
   /**
    * All-args constructor.
    * @param EventId The new value for EventId
+   * @param hostId host id
    * @param fromId From userId that matches the EventId.id email
    * @param toEmail The target email
    * @param subject Subject of the message
    * @param content Content of the message
    * @param timestamp time the event is recorded
    */
-  public PrivateMessageSentEvent(com.networknt.kafka.common.EventId EventId, java.lang.String fromId, java.lang.String toEmail, java.lang.String subject, java.lang.String content, java.lang.Long timestamp) {
+  public PrivateMessageSentEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String fromId, java.lang.String toEmail, java.lang.String subject, java.lang.String content, java.lang.Long timestamp) {
     this.EventId = EventId;
+    this.hostId = hostId;
     this.fromId = fromId;
     this.toEmail = toEmail;
     this.subject = subject;
@@ -116,11 +120,12 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return EventId;
-    case 1: return fromId;
-    case 2: return toEmail;
-    case 3: return subject;
-    case 4: return content;
-    case 5: return timestamp;
+    case 1: return hostId;
+    case 2: return fromId;
+    case 3: return toEmail;
+    case 4: return subject;
+    case 5: return content;
+    case 6: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -130,11 +135,12 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
-    case 1: fromId = value$ != null ? value$.toString() : null; break;
-    case 2: toEmail = value$ != null ? value$.toString() : null; break;
-    case 3: subject = value$ != null ? value$.toString() : null; break;
-    case 4: content = value$ != null ? value$.toString() : null; break;
-    case 5: timestamp = (java.lang.Long)value$; break;
+    case 1: hostId = value$ != null ? value$.toString() : null; break;
+    case 2: fromId = value$ != null ? value$.toString() : null; break;
+    case 3: toEmail = value$ != null ? value$.toString() : null; break;
+    case 4: subject = value$ != null ? value$.toString() : null; break;
+    case 5: content = value$ != null ? value$.toString() : null; break;
+    case 6: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -154,6 +160,24 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
    */
   public void setEventId(com.networknt.kafka.common.EventId value) {
     this.EventId = value;
+  }
+
+  /**
+   * Gets the value of the 'hostId' field.
+   * @return host id
+   */
+  public java.lang.String getHostId() {
+    return hostId;
+  }
+
+
+  /**
+   * Sets the value of the 'hostId' field.
+   * host id
+   * @param value the value to set.
+   */
+  public void setHostId(java.lang.String value) {
+    this.hostId = value;
   }
 
   /**
@@ -289,6 +313,8 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
+    /** host id */
+    private java.lang.String hostId;
     /** From userId that matches the EventId.id email */
     private java.lang.String fromId;
     /** The target email */
@@ -318,25 +344,29 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
       if (other.hasEventIdBuilder()) {
         this.EventIdBuilder = com.networknt.kafka.common.EventId.newBuilder(other.getEventIdBuilder());
       }
-      if (isValidValue(fields()[1], other.fromId)) {
-        this.fromId = data().deepCopy(fields()[1].schema(), other.fromId);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
-      if (isValidValue(fields()[2], other.toEmail)) {
-        this.toEmail = data().deepCopy(fields()[2].schema(), other.toEmail);
+      if (isValidValue(fields()[2], other.fromId)) {
+        this.fromId = data().deepCopy(fields()[2].schema(), other.fromId);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.subject)) {
-        this.subject = data().deepCopy(fields()[3].schema(), other.subject);
+      if (isValidValue(fields()[3], other.toEmail)) {
+        this.toEmail = data().deepCopy(fields()[3].schema(), other.toEmail);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
-      if (isValidValue(fields()[4], other.content)) {
-        this.content = data().deepCopy(fields()[4].schema(), other.content);
+      if (isValidValue(fields()[4], other.subject)) {
+        this.subject = data().deepCopy(fields()[4].schema(), other.subject);
         fieldSetFlags()[4] = other.fieldSetFlags()[4];
       }
-      if (isValidValue(fields()[5], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[5].schema(), other.timestamp);
+      if (isValidValue(fields()[5], other.content)) {
+        this.content = data().deepCopy(fields()[5].schema(), other.content);
         fieldSetFlags()[5] = other.fieldSetFlags()[5];
+      }
+      if (isValidValue(fields()[6], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[6].schema(), other.timestamp);
+        fieldSetFlags()[6] = other.fieldSetFlags()[6];
       }
     }
 
@@ -351,25 +381,29 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
         fieldSetFlags()[0] = true;
       }
       this.EventIdBuilder = null;
-      if (isValidValue(fields()[1], other.fromId)) {
-        this.fromId = data().deepCopy(fields()[1].schema(), other.fromId);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.toEmail)) {
-        this.toEmail = data().deepCopy(fields()[2].schema(), other.toEmail);
+      if (isValidValue(fields()[2], other.fromId)) {
+        this.fromId = data().deepCopy(fields()[2].schema(), other.fromId);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.subject)) {
-        this.subject = data().deepCopy(fields()[3].schema(), other.subject);
+      if (isValidValue(fields()[3], other.toEmail)) {
+        this.toEmail = data().deepCopy(fields()[3].schema(), other.toEmail);
         fieldSetFlags()[3] = true;
       }
-      if (isValidValue(fields()[4], other.content)) {
-        this.content = data().deepCopy(fields()[4].schema(), other.content);
+      if (isValidValue(fields()[4], other.subject)) {
+        this.subject = data().deepCopy(fields()[4].schema(), other.subject);
         fieldSetFlags()[4] = true;
       }
-      if (isValidValue(fields()[5], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[5].schema(), other.timestamp);
+      if (isValidValue(fields()[5], other.content)) {
+        this.content = data().deepCopy(fields()[5].schema(), other.content);
         fieldSetFlags()[5] = true;
+      }
+      if (isValidValue(fields()[6], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[6].schema(), other.timestamp);
+        fieldSetFlags()[6] = true;
       }
     }
 
@@ -450,6 +484,50 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
     }
 
     /**
+      * Gets the value of the 'hostId' field.
+      * host id
+      * @return The value.
+      */
+    public java.lang.String getHostId() {
+      return hostId;
+    }
+
+
+    /**
+      * Sets the value of the 'hostId' field.
+      * host id
+      * @param value The value of 'hostId'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.user.PrivateMessageSentEvent.Builder setHostId(java.lang.String value) {
+      validate(fields()[1], value);
+      this.hostId = value;
+      fieldSetFlags()[1] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'hostId' field has been set.
+      * host id
+      * @return True if the 'hostId' field has been set, false otherwise.
+      */
+    public boolean hasHostId() {
+      return fieldSetFlags()[1];
+    }
+
+
+    /**
+      * Clears the value of the 'hostId' field.
+      * host id
+      * @return This builder.
+      */
+    public net.lightapi.portal.user.PrivateMessageSentEvent.Builder clearHostId() {
+      hostId = null;
+      fieldSetFlags()[1] = false;
+      return this;
+    }
+
+    /**
       * Gets the value of the 'fromId' field.
       * From userId that matches the EventId.id email
       * @return The value.
@@ -466,9 +544,9 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.user.PrivateMessageSentEvent.Builder setFromId(java.lang.String value) {
-      validate(fields()[1], value);
+      validate(fields()[2], value);
       this.fromId = value;
-      fieldSetFlags()[1] = true;
+      fieldSetFlags()[2] = true;
       return this;
     }
 
@@ -478,7 +556,7 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
       * @return True if the 'fromId' field has been set, false otherwise.
       */
     public boolean hasFromId() {
-      return fieldSetFlags()[1];
+      return fieldSetFlags()[2];
     }
 
 
@@ -489,7 +567,7 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
       */
     public net.lightapi.portal.user.PrivateMessageSentEvent.Builder clearFromId() {
       fromId = null;
-      fieldSetFlags()[1] = false;
+      fieldSetFlags()[2] = false;
       return this;
     }
 
@@ -510,9 +588,9 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.user.PrivateMessageSentEvent.Builder setToEmail(java.lang.String value) {
-      validate(fields()[2], value);
+      validate(fields()[3], value);
       this.toEmail = value;
-      fieldSetFlags()[2] = true;
+      fieldSetFlags()[3] = true;
       return this;
     }
 
@@ -522,7 +600,7 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
       * @return True if the 'toEmail' field has been set, false otherwise.
       */
     public boolean hasToEmail() {
-      return fieldSetFlags()[2];
+      return fieldSetFlags()[3];
     }
 
 
@@ -533,7 +611,7 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
       */
     public net.lightapi.portal.user.PrivateMessageSentEvent.Builder clearToEmail() {
       toEmail = null;
-      fieldSetFlags()[2] = false;
+      fieldSetFlags()[3] = false;
       return this;
     }
 
@@ -554,9 +632,9 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.user.PrivateMessageSentEvent.Builder setSubject(java.lang.String value) {
-      validate(fields()[3], value);
+      validate(fields()[4], value);
       this.subject = value;
-      fieldSetFlags()[3] = true;
+      fieldSetFlags()[4] = true;
       return this;
     }
 
@@ -566,7 +644,7 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
       * @return True if the 'subject' field has been set, false otherwise.
       */
     public boolean hasSubject() {
-      return fieldSetFlags()[3];
+      return fieldSetFlags()[4];
     }
 
 
@@ -577,7 +655,7 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
       */
     public net.lightapi.portal.user.PrivateMessageSentEvent.Builder clearSubject() {
       subject = null;
-      fieldSetFlags()[3] = false;
+      fieldSetFlags()[4] = false;
       return this;
     }
 
@@ -598,9 +676,9 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.user.PrivateMessageSentEvent.Builder setContent(java.lang.String value) {
-      validate(fields()[4], value);
+      validate(fields()[5], value);
       this.content = value;
-      fieldSetFlags()[4] = true;
+      fieldSetFlags()[5] = true;
       return this;
     }
 
@@ -610,7 +688,7 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
       * @return True if the 'content' field has been set, false otherwise.
       */
     public boolean hasContent() {
-      return fieldSetFlags()[4];
+      return fieldSetFlags()[5];
     }
 
 
@@ -621,7 +699,7 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
       */
     public net.lightapi.portal.user.PrivateMessageSentEvent.Builder clearContent() {
       content = null;
-      fieldSetFlags()[4] = false;
+      fieldSetFlags()[5] = false;
       return this;
     }
 
@@ -642,9 +720,9 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.user.PrivateMessageSentEvent.Builder setTimestamp(long value) {
-      validate(fields()[5], value);
+      validate(fields()[6], value);
       this.timestamp = value;
-      fieldSetFlags()[5] = true;
+      fieldSetFlags()[6] = true;
       return this;
     }
 
@@ -654,7 +732,7 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
       * @return True if the 'timestamp' field has been set, false otherwise.
       */
     public boolean hasTimestamp() {
-      return fieldSetFlags()[5];
+      return fieldSetFlags()[6];
     }
 
 
@@ -664,7 +742,7 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.user.PrivateMessageSentEvent.Builder clearTimestamp() {
-      fieldSetFlags()[5] = false;
+      fieldSetFlags()[6] = false;
       return this;
     }
 
@@ -683,11 +761,12 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
         } else {
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
-        record.fromId = fieldSetFlags()[1] ? this.fromId : (java.lang.String) defaultValue(fields()[1]);
-        record.toEmail = fieldSetFlags()[2] ? this.toEmail : (java.lang.String) defaultValue(fields()[2]);
-        record.subject = fieldSetFlags()[3] ? this.subject : (java.lang.String) defaultValue(fields()[3]);
-        record.content = fieldSetFlags()[4] ? this.content : (java.lang.String) defaultValue(fields()[4]);
-        record.timestamp = fieldSetFlags()[5] ? this.timestamp : (java.lang.Long) defaultValue(fields()[5]);
+        record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
+        record.fromId = fieldSetFlags()[2] ? this.fromId : (java.lang.String) defaultValue(fields()[2]);
+        record.toEmail = fieldSetFlags()[3] ? this.toEmail : (java.lang.String) defaultValue(fields()[3]);
+        record.subject = fieldSetFlags()[4] ? this.subject : (java.lang.String) defaultValue(fields()[4]);
+        record.content = fieldSetFlags()[5] ? this.content : (java.lang.String) defaultValue(fields()[5]);
+        record.timestamp = fieldSetFlags()[6] ? this.timestamp : (java.lang.Long) defaultValue(fields()[6]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -722,6 +801,8 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
   {
     this.EventId.customEncode(out);
 
+    out.writeString(this.hostId);
+
     out.writeString(this.fromId);
 
     out.writeString(this.toEmail);
@@ -744,6 +825,8 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
       }
       this.EventId.customDecode(in);
 
+      this.hostId = in.readString();
+
       this.fromId = in.readString();
 
       this.toEmail = in.readString();
@@ -755,7 +838,7 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
       this.timestamp = in.readLong();
 
     } else {
-      for (int i = 0; i < 6; i++) {
+      for (int i = 0; i < 7; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -765,22 +848,26 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
           break;
 
         case 1:
-          this.fromId = in.readString();
+          this.hostId = in.readString();
           break;
 
         case 2:
-          this.toEmail = in.readString();
+          this.fromId = in.readString();
           break;
 
         case 3:
-          this.subject = in.readString();
+          this.toEmail = in.readString();
           break;
 
         case 4:
-          this.content = in.readString();
+          this.subject = in.readString();
           break;
 
         case 5:
+          this.content = in.readString();
+          break;
+
+        case 6:
           this.timestamp = in.readLong();
           break;
 

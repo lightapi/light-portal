@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class UserConfirmedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 2903957582537092262L;
+  private static final long serialVersionUID = -5982499313851605311L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"UserConfirmedEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"token\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"A UUID token that is sent to the user through email\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"UserConfirmedEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"token\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"A UUID token that is sent to the user through email\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -74,6 +74,8 @@ public class UserConfirmedEvent extends org.apache.avro.specific.SpecificRecordB
   }
 
   private com.networknt.kafka.common.EventId EventId;
+  /** host id */
+  private java.lang.String hostId;
   /** A UUID token that is sent to the user through email */
   private java.lang.String token;
   /** time the event is recorded */
@@ -89,11 +91,13 @@ public class UserConfirmedEvent extends org.apache.avro.specific.SpecificRecordB
   /**
    * All-args constructor.
    * @param EventId The new value for EventId
+   * @param hostId host id
    * @param token A UUID token that is sent to the user through email
    * @param timestamp time the event is recorded
    */
-  public UserConfirmedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String token, java.lang.Long timestamp) {
+  public UserConfirmedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String token, java.lang.Long timestamp) {
     this.EventId = EventId;
+    this.hostId = hostId;
     this.token = token;
     this.timestamp = timestamp;
   }
@@ -104,8 +108,9 @@ public class UserConfirmedEvent extends org.apache.avro.specific.SpecificRecordB
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return EventId;
-    case 1: return token;
-    case 2: return timestamp;
+    case 1: return hostId;
+    case 2: return token;
+    case 3: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -115,8 +120,9 @@ public class UserConfirmedEvent extends org.apache.avro.specific.SpecificRecordB
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
-    case 1: token = value$ != null ? value$.toString() : null; break;
-    case 2: timestamp = (java.lang.Long)value$; break;
+    case 1: hostId = value$ != null ? value$.toString() : null; break;
+    case 2: token = value$ != null ? value$.toString() : null; break;
+    case 3: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -136,6 +142,24 @@ public class UserConfirmedEvent extends org.apache.avro.specific.SpecificRecordB
    */
   public void setEventId(com.networknt.kafka.common.EventId value) {
     this.EventId = value;
+  }
+
+  /**
+   * Gets the value of the 'hostId' field.
+   * @return host id
+   */
+  public java.lang.String getHostId() {
+    return hostId;
+  }
+
+
+  /**
+   * Sets the value of the 'hostId' field.
+   * host id
+   * @param value the value to set.
+   */
+  public void setHostId(java.lang.String value) {
+    this.hostId = value;
   }
 
   /**
@@ -217,6 +241,8 @@ public class UserConfirmedEvent extends org.apache.avro.specific.SpecificRecordB
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
+    /** host id */
+    private java.lang.String hostId;
     /** A UUID token that is sent to the user through email */
     private java.lang.String token;
     /** time the event is recorded */
@@ -240,13 +266,17 @@ public class UserConfirmedEvent extends org.apache.avro.specific.SpecificRecordB
       if (other.hasEventIdBuilder()) {
         this.EventIdBuilder = com.networknt.kafka.common.EventId.newBuilder(other.getEventIdBuilder());
       }
-      if (isValidValue(fields()[1], other.token)) {
-        this.token = data().deepCopy(fields()[1].schema(), other.token);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
-      if (isValidValue(fields()[2], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[2].schema(), other.timestamp);
+      if (isValidValue(fields()[2], other.token)) {
+        this.token = data().deepCopy(fields()[2].schema(), other.token);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
+      }
+      if (isValidValue(fields()[3], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[3].schema(), other.timestamp);
+        fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
     }
 
@@ -261,13 +291,17 @@ public class UserConfirmedEvent extends org.apache.avro.specific.SpecificRecordB
         fieldSetFlags()[0] = true;
       }
       this.EventIdBuilder = null;
-      if (isValidValue(fields()[1], other.token)) {
-        this.token = data().deepCopy(fields()[1].schema(), other.token);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[2].schema(), other.timestamp);
+      if (isValidValue(fields()[2], other.token)) {
+        this.token = data().deepCopy(fields()[2].schema(), other.token);
         fieldSetFlags()[2] = true;
+      }
+      if (isValidValue(fields()[3], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[3].schema(), other.timestamp);
+        fieldSetFlags()[3] = true;
       }
     }
 
@@ -348,6 +382,50 @@ public class UserConfirmedEvent extends org.apache.avro.specific.SpecificRecordB
     }
 
     /**
+      * Gets the value of the 'hostId' field.
+      * host id
+      * @return The value.
+      */
+    public java.lang.String getHostId() {
+      return hostId;
+    }
+
+
+    /**
+      * Sets the value of the 'hostId' field.
+      * host id
+      * @param value The value of 'hostId'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.user.UserConfirmedEvent.Builder setHostId(java.lang.String value) {
+      validate(fields()[1], value);
+      this.hostId = value;
+      fieldSetFlags()[1] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'hostId' field has been set.
+      * host id
+      * @return True if the 'hostId' field has been set, false otherwise.
+      */
+    public boolean hasHostId() {
+      return fieldSetFlags()[1];
+    }
+
+
+    /**
+      * Clears the value of the 'hostId' field.
+      * host id
+      * @return This builder.
+      */
+    public net.lightapi.portal.user.UserConfirmedEvent.Builder clearHostId() {
+      hostId = null;
+      fieldSetFlags()[1] = false;
+      return this;
+    }
+
+    /**
       * Gets the value of the 'token' field.
       * A UUID token that is sent to the user through email
       * @return The value.
@@ -364,9 +442,9 @@ public class UserConfirmedEvent extends org.apache.avro.specific.SpecificRecordB
       * @return This builder.
       */
     public net.lightapi.portal.user.UserConfirmedEvent.Builder setToken(java.lang.String value) {
-      validate(fields()[1], value);
+      validate(fields()[2], value);
       this.token = value;
-      fieldSetFlags()[1] = true;
+      fieldSetFlags()[2] = true;
       return this;
     }
 
@@ -376,7 +454,7 @@ public class UserConfirmedEvent extends org.apache.avro.specific.SpecificRecordB
       * @return True if the 'token' field has been set, false otherwise.
       */
     public boolean hasToken() {
-      return fieldSetFlags()[1];
+      return fieldSetFlags()[2];
     }
 
 
@@ -387,7 +465,7 @@ public class UserConfirmedEvent extends org.apache.avro.specific.SpecificRecordB
       */
     public net.lightapi.portal.user.UserConfirmedEvent.Builder clearToken() {
       token = null;
-      fieldSetFlags()[1] = false;
+      fieldSetFlags()[2] = false;
       return this;
     }
 
@@ -408,9 +486,9 @@ public class UserConfirmedEvent extends org.apache.avro.specific.SpecificRecordB
       * @return This builder.
       */
     public net.lightapi.portal.user.UserConfirmedEvent.Builder setTimestamp(long value) {
-      validate(fields()[2], value);
+      validate(fields()[3], value);
       this.timestamp = value;
-      fieldSetFlags()[2] = true;
+      fieldSetFlags()[3] = true;
       return this;
     }
 
@@ -420,7 +498,7 @@ public class UserConfirmedEvent extends org.apache.avro.specific.SpecificRecordB
       * @return True if the 'timestamp' field has been set, false otherwise.
       */
     public boolean hasTimestamp() {
-      return fieldSetFlags()[2];
+      return fieldSetFlags()[3];
     }
 
 
@@ -430,7 +508,7 @@ public class UserConfirmedEvent extends org.apache.avro.specific.SpecificRecordB
       * @return This builder.
       */
     public net.lightapi.portal.user.UserConfirmedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[2] = false;
+      fieldSetFlags()[3] = false;
       return this;
     }
 
@@ -449,8 +527,9 @@ public class UserConfirmedEvent extends org.apache.avro.specific.SpecificRecordB
         } else {
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
-        record.token = fieldSetFlags()[1] ? this.token : (java.lang.String) defaultValue(fields()[1]);
-        record.timestamp = fieldSetFlags()[2] ? this.timestamp : (java.lang.Long) defaultValue(fields()[2]);
+        record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
+        record.token = fieldSetFlags()[2] ? this.token : (java.lang.String) defaultValue(fields()[2]);
+        record.timestamp = fieldSetFlags()[3] ? this.timestamp : (java.lang.Long) defaultValue(fields()[3]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -485,6 +564,8 @@ public class UserConfirmedEvent extends org.apache.avro.specific.SpecificRecordB
   {
     this.EventId.customEncode(out);
 
+    out.writeString(this.hostId);
+
     out.writeString(this.token);
 
     out.writeLong(this.timestamp);
@@ -501,12 +582,14 @@ public class UserConfirmedEvent extends org.apache.avro.specific.SpecificRecordB
       }
       this.EventId.customDecode(in);
 
+      this.hostId = in.readString();
+
       this.token = in.readString();
 
       this.timestamp = in.readLong();
 
     } else {
-      for (int i = 0; i < 3; i++) {
+      for (int i = 0; i < 4; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -516,10 +599,14 @@ public class UserConfirmedEvent extends org.apache.avro.specific.SpecificRecordB
           break;
 
         case 1:
-          this.token = in.readString();
+          this.hostId = in.readString();
           break;
 
         case 2:
+          this.token = in.readString();
+          break;
+
+        case 3:
           this.timestamp = in.readLong();
           break;
 

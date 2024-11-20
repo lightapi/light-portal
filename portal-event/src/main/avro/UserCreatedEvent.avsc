@@ -30,9 +30,9 @@
       }
     },
     {
-      "name": "host",
+      "name": "hostId",
       "type": "string",
-      "doc": "the host organization of the user"
+      "doc": "host id"
     },
     {
       "name": "email",

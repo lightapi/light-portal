@@ -35,12 +35,6 @@
       "doc": "the email of the user"
     },
     {
-      "name": "keyId",
-      "type": "int",
-      "default": 0,
-      "doc": "keyId 0 email 1 map category 2 map subcategory"
-    },
-    {
       "name": "timestamp",
       "type": "long",
       "default": 0,

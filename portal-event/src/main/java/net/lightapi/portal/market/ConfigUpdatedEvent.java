@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 2042435211669219338L;
+  private static final long serialVersionUID = -830973767819712119L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ConfigUpdatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"configId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"configuration id\"},{\"name\":\"configType\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"configuration type D Deployment H Handler M Module\"},{\"name\":\"infraType\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"infrastructure type: GN Generic LN Linux WD Windows KB Kubernetes OS Openshift AW AWS AZ Azure GC GCP\",\"default\":\"GN\"},{\"name\":\"classPath\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"class path\"},{\"name\":\"configDesc\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"configuration description\"},{\"name\":\"owner\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"user id\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ConfigUpdatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"configId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"configuration id\"},{\"name\":\"configType\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"configuration type D Deployment H Handler M Module\"},{\"name\":\"infraType\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"infrastructure type: GN Generic LN Linux WD Windows KB Kubernetes OS Openshift AW AWS AZ Azure GC GCP\",\"default\":\"GN\"},{\"name\":\"classPath\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"class path\"},{\"name\":\"configDesc\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"configuration description\"},{\"name\":\"owner\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"user id\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -74,6 +74,8 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
   }
 
   private com.networknt.kafka.common.EventId EventId;
+  /** host id */
+  private java.lang.String hostId;
   /** configuration id */
   private java.lang.String configId;
   /** configuration type D Deployment H Handler M Module */
@@ -99,6 +101,7 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
   /**
    * All-args constructor.
    * @param EventId The new value for EventId
+   * @param hostId host id
    * @param configId configuration id
    * @param configType configuration type D Deployment H Handler M Module
    * @param infraType infrastructure type: GN Generic LN Linux WD Windows KB Kubernetes OS Openshift AW AWS AZ Azure GC GCP
@@ -107,8 +110,9 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
    * @param owner user id
    * @param timestamp time the event is recorded
    */
-  public ConfigUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String configId, java.lang.String configType, java.lang.String infraType, java.lang.String classPath, java.lang.String configDesc, java.lang.String owner, java.lang.Long timestamp) {
+  public ConfigUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String configId, java.lang.String configType, java.lang.String infraType, java.lang.String classPath, java.lang.String configDesc, java.lang.String owner, java.lang.Long timestamp) {
     this.EventId = EventId;
+    this.hostId = hostId;
     this.configId = configId;
     this.configType = configType;
     this.infraType = infraType;
@@ -124,13 +128,14 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return EventId;
-    case 1: return configId;
-    case 2: return configType;
-    case 3: return infraType;
-    case 4: return classPath;
-    case 5: return configDesc;
-    case 6: return owner;
-    case 7: return timestamp;
+    case 1: return hostId;
+    case 2: return configId;
+    case 3: return configType;
+    case 4: return infraType;
+    case 5: return classPath;
+    case 6: return configDesc;
+    case 7: return owner;
+    case 8: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -140,13 +145,14 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
-    case 1: configId = value$ != null ? value$.toString() : null; break;
-    case 2: configType = value$ != null ? value$.toString() : null; break;
-    case 3: infraType = value$ != null ? value$.toString() : null; break;
-    case 4: classPath = value$ != null ? value$.toString() : null; break;
-    case 5: configDesc = value$ != null ? value$.toString() : null; break;
-    case 6: owner = value$ != null ? value$.toString() : null; break;
-    case 7: timestamp = (java.lang.Long)value$; break;
+    case 1: hostId = value$ != null ? value$.toString() : null; break;
+    case 2: configId = value$ != null ? value$.toString() : null; break;
+    case 3: configType = value$ != null ? value$.toString() : null; break;
+    case 4: infraType = value$ != null ? value$.toString() : null; break;
+    case 5: classPath = value$ != null ? value$.toString() : null; break;
+    case 6: configDesc = value$ != null ? value$.toString() : null; break;
+    case 7: owner = value$ != null ? value$.toString() : null; break;
+    case 8: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -166,6 +172,24 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
    */
   public void setEventId(com.networknt.kafka.common.EventId value) {
     this.EventId = value;
+  }
+
+  /**
+   * Gets the value of the 'hostId' field.
+   * @return host id
+   */
+  public java.lang.String getHostId() {
+    return hostId;
+  }
+
+
+  /**
+   * Sets the value of the 'hostId' field.
+   * host id
+   * @param value the value to set.
+   */
+  public void setHostId(java.lang.String value) {
+    this.hostId = value;
   }
 
   /**
@@ -337,6 +361,8 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
+    /** host id */
+    private java.lang.String hostId;
     /** configuration id */
     private java.lang.String configId;
     /** configuration type D Deployment H Handler M Module */
@@ -370,33 +396,37 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
       if (other.hasEventIdBuilder()) {
         this.EventIdBuilder = com.networknt.kafka.common.EventId.newBuilder(other.getEventIdBuilder());
       }
-      if (isValidValue(fields()[1], other.configId)) {
-        this.configId = data().deepCopy(fields()[1].schema(), other.configId);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
-      if (isValidValue(fields()[2], other.configType)) {
-        this.configType = data().deepCopy(fields()[2].schema(), other.configType);
+      if (isValidValue(fields()[2], other.configId)) {
+        this.configId = data().deepCopy(fields()[2].schema(), other.configId);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.infraType)) {
-        this.infraType = data().deepCopy(fields()[3].schema(), other.infraType);
+      if (isValidValue(fields()[3], other.configType)) {
+        this.configType = data().deepCopy(fields()[3].schema(), other.configType);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
-      if (isValidValue(fields()[4], other.classPath)) {
-        this.classPath = data().deepCopy(fields()[4].schema(), other.classPath);
+      if (isValidValue(fields()[4], other.infraType)) {
+        this.infraType = data().deepCopy(fields()[4].schema(), other.infraType);
         fieldSetFlags()[4] = other.fieldSetFlags()[4];
       }
-      if (isValidValue(fields()[5], other.configDesc)) {
-        this.configDesc = data().deepCopy(fields()[5].schema(), other.configDesc);
+      if (isValidValue(fields()[5], other.classPath)) {
+        this.classPath = data().deepCopy(fields()[5].schema(), other.classPath);
         fieldSetFlags()[5] = other.fieldSetFlags()[5];
       }
-      if (isValidValue(fields()[6], other.owner)) {
-        this.owner = data().deepCopy(fields()[6].schema(), other.owner);
+      if (isValidValue(fields()[6], other.configDesc)) {
+        this.configDesc = data().deepCopy(fields()[6].schema(), other.configDesc);
         fieldSetFlags()[6] = other.fieldSetFlags()[6];
       }
-      if (isValidValue(fields()[7], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[7].schema(), other.timestamp);
+      if (isValidValue(fields()[7], other.owner)) {
+        this.owner = data().deepCopy(fields()[7].schema(), other.owner);
         fieldSetFlags()[7] = other.fieldSetFlags()[7];
+      }
+      if (isValidValue(fields()[8], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[8].schema(), other.timestamp);
+        fieldSetFlags()[8] = other.fieldSetFlags()[8];
       }
     }
 
@@ -411,33 +441,37 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
         fieldSetFlags()[0] = true;
       }
       this.EventIdBuilder = null;
-      if (isValidValue(fields()[1], other.configId)) {
-        this.configId = data().deepCopy(fields()[1].schema(), other.configId);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.configType)) {
-        this.configType = data().deepCopy(fields()[2].schema(), other.configType);
+      if (isValidValue(fields()[2], other.configId)) {
+        this.configId = data().deepCopy(fields()[2].schema(), other.configId);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.infraType)) {
-        this.infraType = data().deepCopy(fields()[3].schema(), other.infraType);
+      if (isValidValue(fields()[3], other.configType)) {
+        this.configType = data().deepCopy(fields()[3].schema(), other.configType);
         fieldSetFlags()[3] = true;
       }
-      if (isValidValue(fields()[4], other.classPath)) {
-        this.classPath = data().deepCopy(fields()[4].schema(), other.classPath);
+      if (isValidValue(fields()[4], other.infraType)) {
+        this.infraType = data().deepCopy(fields()[4].schema(), other.infraType);
         fieldSetFlags()[4] = true;
       }
-      if (isValidValue(fields()[5], other.configDesc)) {
-        this.configDesc = data().deepCopy(fields()[5].schema(), other.configDesc);
+      if (isValidValue(fields()[5], other.classPath)) {
+        this.classPath = data().deepCopy(fields()[5].schema(), other.classPath);
         fieldSetFlags()[5] = true;
       }
-      if (isValidValue(fields()[6], other.owner)) {
-        this.owner = data().deepCopy(fields()[6].schema(), other.owner);
+      if (isValidValue(fields()[6], other.configDesc)) {
+        this.configDesc = data().deepCopy(fields()[6].schema(), other.configDesc);
         fieldSetFlags()[6] = true;
       }
-      if (isValidValue(fields()[7], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[7].schema(), other.timestamp);
+      if (isValidValue(fields()[7], other.owner)) {
+        this.owner = data().deepCopy(fields()[7].schema(), other.owner);
         fieldSetFlags()[7] = true;
+      }
+      if (isValidValue(fields()[8], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[8].schema(), other.timestamp);
+        fieldSetFlags()[8] = true;
       }
     }
 
@@ -518,6 +552,50 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
     }
 
     /**
+      * Gets the value of the 'hostId' field.
+      * host id
+      * @return The value.
+      */
+    public java.lang.String getHostId() {
+      return hostId;
+    }
+
+
+    /**
+      * Sets the value of the 'hostId' field.
+      * host id
+      * @param value The value of 'hostId'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.market.ConfigUpdatedEvent.Builder setHostId(java.lang.String value) {
+      validate(fields()[1], value);
+      this.hostId = value;
+      fieldSetFlags()[1] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'hostId' field has been set.
+      * host id
+      * @return True if the 'hostId' field has been set, false otherwise.
+      */
+    public boolean hasHostId() {
+      return fieldSetFlags()[1];
+    }
+
+
+    /**
+      * Clears the value of the 'hostId' field.
+      * host id
+      * @return This builder.
+      */
+    public net.lightapi.portal.market.ConfigUpdatedEvent.Builder clearHostId() {
+      hostId = null;
+      fieldSetFlags()[1] = false;
+      return this;
+    }
+
+    /**
       * Gets the value of the 'configId' field.
       * configuration id
       * @return The value.
@@ -534,9 +612,9 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
       * @return This builder.
       */
     public net.lightapi.portal.market.ConfigUpdatedEvent.Builder setConfigId(java.lang.String value) {
-      validate(fields()[1], value);
+      validate(fields()[2], value);
       this.configId = value;
-      fieldSetFlags()[1] = true;
+      fieldSetFlags()[2] = true;
       return this;
     }
 
@@ -546,7 +624,7 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
       * @return True if the 'configId' field has been set, false otherwise.
       */
     public boolean hasConfigId() {
-      return fieldSetFlags()[1];
+      return fieldSetFlags()[2];
     }
 
 
@@ -557,7 +635,7 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
       */
     public net.lightapi.portal.market.ConfigUpdatedEvent.Builder clearConfigId() {
       configId = null;
-      fieldSetFlags()[1] = false;
+      fieldSetFlags()[2] = false;
       return this;
     }
 
@@ -578,9 +656,9 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
       * @return This builder.
       */
     public net.lightapi.portal.market.ConfigUpdatedEvent.Builder setConfigType(java.lang.String value) {
-      validate(fields()[2], value);
+      validate(fields()[3], value);
       this.configType = value;
-      fieldSetFlags()[2] = true;
+      fieldSetFlags()[3] = true;
       return this;
     }
 
@@ -590,7 +668,7 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
       * @return True if the 'configType' field has been set, false otherwise.
       */
     public boolean hasConfigType() {
-      return fieldSetFlags()[2];
+      return fieldSetFlags()[3];
     }
 
 
@@ -601,7 +679,7 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
       */
     public net.lightapi.portal.market.ConfigUpdatedEvent.Builder clearConfigType() {
       configType = null;
-      fieldSetFlags()[2] = false;
+      fieldSetFlags()[3] = false;
       return this;
     }
 
@@ -622,9 +700,9 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
       * @return This builder.
       */
     public net.lightapi.portal.market.ConfigUpdatedEvent.Builder setInfraType(java.lang.String value) {
-      validate(fields()[3], value);
+      validate(fields()[4], value);
       this.infraType = value;
-      fieldSetFlags()[3] = true;
+      fieldSetFlags()[4] = true;
       return this;
     }
 
@@ -634,7 +712,7 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
       * @return True if the 'infraType' field has been set, false otherwise.
       */
     public boolean hasInfraType() {
-      return fieldSetFlags()[3];
+      return fieldSetFlags()[4];
     }
 
 
@@ -645,7 +723,7 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
       */
     public net.lightapi.portal.market.ConfigUpdatedEvent.Builder clearInfraType() {
       infraType = null;
-      fieldSetFlags()[3] = false;
+      fieldSetFlags()[4] = false;
       return this;
     }
 
@@ -666,9 +744,9 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
       * @return This builder.
       */
     public net.lightapi.portal.market.ConfigUpdatedEvent.Builder setClassPath(java.lang.String value) {
-      validate(fields()[4], value);
+      validate(fields()[5], value);
       this.classPath = value;
-      fieldSetFlags()[4] = true;
+      fieldSetFlags()[5] = true;
       return this;
     }
 
@@ -678,7 +756,7 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
       * @return True if the 'classPath' field has been set, false otherwise.
       */
     public boolean hasClassPath() {
-      return fieldSetFlags()[4];
+      return fieldSetFlags()[5];
     }
 
 
@@ -689,7 +767,7 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
       */
     public net.lightapi.portal.market.ConfigUpdatedEvent.Builder clearClassPath() {
       classPath = null;
-      fieldSetFlags()[4] = false;
+      fieldSetFlags()[5] = false;
       return this;
     }
 
@@ -710,9 +788,9 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
       * @return This builder.
       */
     public net.lightapi.portal.market.ConfigUpdatedEvent.Builder setConfigDesc(java.lang.String value) {
-      validate(fields()[5], value);
+      validate(fields()[6], value);
       this.configDesc = value;
-      fieldSetFlags()[5] = true;
+      fieldSetFlags()[6] = true;
       return this;
     }
 
@@ -722,7 +800,7 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
       * @return True if the 'configDesc' field has been set, false otherwise.
       */
     public boolean hasConfigDesc() {
-      return fieldSetFlags()[5];
+      return fieldSetFlags()[6];
     }
 
 
@@ -733,7 +811,7 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
       */
     public net.lightapi.portal.market.ConfigUpdatedEvent.Builder clearConfigDesc() {
       configDesc = null;
-      fieldSetFlags()[5] = false;
+      fieldSetFlags()[6] = false;
       return this;
     }
 
@@ -754,9 +832,9 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
       * @return This builder.
       */
     public net.lightapi.portal.market.ConfigUpdatedEvent.Builder setOwner(java.lang.String value) {
-      validate(fields()[6], value);
+      validate(fields()[7], value);
       this.owner = value;
-      fieldSetFlags()[6] = true;
+      fieldSetFlags()[7] = true;
       return this;
     }
 
@@ -766,7 +844,7 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
       * @return True if the 'owner' field has been set, false otherwise.
       */
     public boolean hasOwner() {
-      return fieldSetFlags()[6];
+      return fieldSetFlags()[7];
     }
 
 
@@ -777,7 +855,7 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
       */
     public net.lightapi.portal.market.ConfigUpdatedEvent.Builder clearOwner() {
       owner = null;
-      fieldSetFlags()[6] = false;
+      fieldSetFlags()[7] = false;
       return this;
     }
 
@@ -798,9 +876,9 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
       * @return This builder.
       */
     public net.lightapi.portal.market.ConfigUpdatedEvent.Builder setTimestamp(long value) {
-      validate(fields()[7], value);
+      validate(fields()[8], value);
       this.timestamp = value;
-      fieldSetFlags()[7] = true;
+      fieldSetFlags()[8] = true;
       return this;
     }
 
@@ -810,7 +888,7 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
       * @return True if the 'timestamp' field has been set, false otherwise.
       */
     public boolean hasTimestamp() {
-      return fieldSetFlags()[7];
+      return fieldSetFlags()[8];
     }
 
 
@@ -820,7 +898,7 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
       * @return This builder.
       */
     public net.lightapi.portal.market.ConfigUpdatedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[7] = false;
+      fieldSetFlags()[8] = false;
       return this;
     }
 
@@ -839,13 +917,14 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
         } else {
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
-        record.configId = fieldSetFlags()[1] ? this.configId : (java.lang.String) defaultValue(fields()[1]);
-        record.configType = fieldSetFlags()[2] ? this.configType : (java.lang.String) defaultValue(fields()[2]);
-        record.infraType = fieldSetFlags()[3] ? this.infraType : (java.lang.String) defaultValue(fields()[3]);
-        record.classPath = fieldSetFlags()[4] ? this.classPath : (java.lang.String) defaultValue(fields()[4]);
-        record.configDesc = fieldSetFlags()[5] ? this.configDesc : (java.lang.String) defaultValue(fields()[5]);
-        record.owner = fieldSetFlags()[6] ? this.owner : (java.lang.String) defaultValue(fields()[6]);
-        record.timestamp = fieldSetFlags()[7] ? this.timestamp : (java.lang.Long) defaultValue(fields()[7]);
+        record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
+        record.configId = fieldSetFlags()[2] ? this.configId : (java.lang.String) defaultValue(fields()[2]);
+        record.configType = fieldSetFlags()[3] ? this.configType : (java.lang.String) defaultValue(fields()[3]);
+        record.infraType = fieldSetFlags()[4] ? this.infraType : (java.lang.String) defaultValue(fields()[4]);
+        record.classPath = fieldSetFlags()[5] ? this.classPath : (java.lang.String) defaultValue(fields()[5]);
+        record.configDesc = fieldSetFlags()[6] ? this.configDesc : (java.lang.String) defaultValue(fields()[6]);
+        record.owner = fieldSetFlags()[7] ? this.owner : (java.lang.String) defaultValue(fields()[7]);
+        record.timestamp = fieldSetFlags()[8] ? this.timestamp : (java.lang.Long) defaultValue(fields()[8]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -880,6 +959,8 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
   {
     this.EventId.customEncode(out);
 
+    out.writeString(this.hostId);
+
     out.writeString(this.configId);
 
     out.writeString(this.configType);
@@ -906,6 +987,8 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
       }
       this.EventId.customDecode(in);
 
+      this.hostId = in.readString();
+
       this.configId = in.readString();
 
       this.configType = in.readString();
@@ -921,7 +1004,7 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
       this.timestamp = in.readLong();
 
     } else {
-      for (int i = 0; i < 8; i++) {
+      for (int i = 0; i < 9; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -931,30 +1014,34 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
           break;
 
         case 1:
-          this.configId = in.readString();
+          this.hostId = in.readString();
           break;
 
         case 2:
-          this.configType = in.readString();
+          this.configId = in.readString();
           break;
 
         case 3:
-          this.infraType = in.readString();
+          this.configType = in.readString();
           break;
 
         case 4:
-          this.classPath = in.readString();
+          this.infraType = in.readString();
           break;
 
         case 5:
-          this.configDesc = in.readString();
+          this.classPath = in.readString();
           break;
 
         case 6:
-          this.owner = in.readString();
+          this.configDesc = in.readString();
           break;
 
         case 7:
+          this.owner = in.readString();
+          break;
+
+        case 8:
           this.timestamp = in.readLong();
           break;
 

@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 3926011084462174691L;
+  private static final long serialVersionUID = 6195799918448859267L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"RefRelaCreatedEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"rela\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"reference rela name\"},{\"name\":\"language\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"value label language\"},{\"name\":\"from\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"From value of the relationship\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"reference value\"},{\"name\":\"label\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"value label in language\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"RefRelaCreatedEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"rela\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"reference rela name\"},{\"name\":\"language\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"value label language\"},{\"name\":\"from\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"From value of the relationship\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"reference value\"},{\"name\":\"label\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"value label in language\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -74,6 +74,8 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
   }
 
   private com.networknt.kafka.common.EventId EventId;
+  /** host id */
+  private java.lang.String hostId;
   /** reference rela name */
   private java.lang.String rela;
   /** value label language */
@@ -97,6 +99,7 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
   /**
    * All-args constructor.
    * @param EventId The new value for EventId
+   * @param hostId host id
    * @param rela reference rela name
    * @param language value label language
    * @param from From value of the relationship
@@ -104,8 +107,9 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
    * @param label value label in language
    * @param timestamp time the event is recorded
    */
-  public RefRelaCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String rela, java.lang.String language, java.lang.String from, java.lang.String value, java.lang.String label, java.lang.Long timestamp) {
+  public RefRelaCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String rela, java.lang.String language, java.lang.String from, java.lang.String value, java.lang.String label, java.lang.Long timestamp) {
     this.EventId = EventId;
+    this.hostId = hostId;
     this.rela = rela;
     this.language = language;
     this.from = from;
@@ -120,12 +124,13 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return EventId;
-    case 1: return rela;
-    case 2: return language;
-    case 3: return from;
-    case 4: return value;
-    case 5: return label;
-    case 6: return timestamp;
+    case 1: return hostId;
+    case 2: return rela;
+    case 3: return language;
+    case 4: return from;
+    case 5: return value;
+    case 6: return label;
+    case 7: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -135,12 +140,13 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
-    case 1: rela = value$ != null ? value$.toString() : null; break;
-    case 2: language = value$ != null ? value$.toString() : null; break;
-    case 3: from = value$ != null ? value$.toString() : null; break;
-    case 4: value = value$ != null ? value$.toString() : null; break;
-    case 5: label = value$ != null ? value$.toString() : null; break;
-    case 6: timestamp = (java.lang.Long)value$; break;
+    case 1: hostId = value$ != null ? value$.toString() : null; break;
+    case 2: rela = value$ != null ? value$.toString() : null; break;
+    case 3: language = value$ != null ? value$.toString() : null; break;
+    case 4: from = value$ != null ? value$.toString() : null; break;
+    case 5: value = value$ != null ? value$.toString() : null; break;
+    case 6: label = value$ != null ? value$.toString() : null; break;
+    case 7: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -160,6 +166,24 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
    */
   public void setEventId(com.networknt.kafka.common.EventId value) {
     this.EventId = value;
+  }
+
+  /**
+   * Gets the value of the 'hostId' field.
+   * @return host id
+   */
+  public java.lang.String getHostId() {
+    return hostId;
+  }
+
+
+  /**
+   * Sets the value of the 'hostId' field.
+   * host id
+   * @param value the value to set.
+   */
+  public void setHostId(java.lang.String value) {
+    this.hostId = value;
   }
 
   /**
@@ -313,6 +337,8 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
+    /** host id */
+    private java.lang.String hostId;
     /** reference rela name */
     private java.lang.String rela;
     /** value label language */
@@ -344,29 +370,33 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
       if (other.hasEventIdBuilder()) {
         this.EventIdBuilder = com.networknt.kafka.common.EventId.newBuilder(other.getEventIdBuilder());
       }
-      if (isValidValue(fields()[1], other.rela)) {
-        this.rela = data().deepCopy(fields()[1].schema(), other.rela);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
-      if (isValidValue(fields()[2], other.language)) {
-        this.language = data().deepCopy(fields()[2].schema(), other.language);
+      if (isValidValue(fields()[2], other.rela)) {
+        this.rela = data().deepCopy(fields()[2].schema(), other.rela);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.from)) {
-        this.from = data().deepCopy(fields()[3].schema(), other.from);
+      if (isValidValue(fields()[3], other.language)) {
+        this.language = data().deepCopy(fields()[3].schema(), other.language);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
-      if (isValidValue(fields()[4], other.value)) {
-        this.value = data().deepCopy(fields()[4].schema(), other.value);
+      if (isValidValue(fields()[4], other.from)) {
+        this.from = data().deepCopy(fields()[4].schema(), other.from);
         fieldSetFlags()[4] = other.fieldSetFlags()[4];
       }
-      if (isValidValue(fields()[5], other.label)) {
-        this.label = data().deepCopy(fields()[5].schema(), other.label);
+      if (isValidValue(fields()[5], other.value)) {
+        this.value = data().deepCopy(fields()[5].schema(), other.value);
         fieldSetFlags()[5] = other.fieldSetFlags()[5];
       }
-      if (isValidValue(fields()[6], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[6].schema(), other.timestamp);
+      if (isValidValue(fields()[6], other.label)) {
+        this.label = data().deepCopy(fields()[6].schema(), other.label);
         fieldSetFlags()[6] = other.fieldSetFlags()[6];
+      }
+      if (isValidValue(fields()[7], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[7].schema(), other.timestamp);
+        fieldSetFlags()[7] = other.fieldSetFlags()[7];
       }
     }
 
@@ -381,29 +411,33 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
         fieldSetFlags()[0] = true;
       }
       this.EventIdBuilder = null;
-      if (isValidValue(fields()[1], other.rela)) {
-        this.rela = data().deepCopy(fields()[1].schema(), other.rela);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.language)) {
-        this.language = data().deepCopy(fields()[2].schema(), other.language);
+      if (isValidValue(fields()[2], other.rela)) {
+        this.rela = data().deepCopy(fields()[2].schema(), other.rela);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.from)) {
-        this.from = data().deepCopy(fields()[3].schema(), other.from);
+      if (isValidValue(fields()[3], other.language)) {
+        this.language = data().deepCopy(fields()[3].schema(), other.language);
         fieldSetFlags()[3] = true;
       }
-      if (isValidValue(fields()[4], other.value)) {
-        this.value = data().deepCopy(fields()[4].schema(), other.value);
+      if (isValidValue(fields()[4], other.from)) {
+        this.from = data().deepCopy(fields()[4].schema(), other.from);
         fieldSetFlags()[4] = true;
       }
-      if (isValidValue(fields()[5], other.label)) {
-        this.label = data().deepCopy(fields()[5].schema(), other.label);
+      if (isValidValue(fields()[5], other.value)) {
+        this.value = data().deepCopy(fields()[5].schema(), other.value);
         fieldSetFlags()[5] = true;
       }
-      if (isValidValue(fields()[6], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[6].schema(), other.timestamp);
+      if (isValidValue(fields()[6], other.label)) {
+        this.label = data().deepCopy(fields()[6].schema(), other.label);
         fieldSetFlags()[6] = true;
+      }
+      if (isValidValue(fields()[7], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[7].schema(), other.timestamp);
+        fieldSetFlags()[7] = true;
       }
     }
 
@@ -484,6 +518,50 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
     }
 
     /**
+      * Gets the value of the 'hostId' field.
+      * host id
+      * @return The value.
+      */
+    public java.lang.String getHostId() {
+      return hostId;
+    }
+
+
+    /**
+      * Sets the value of the 'hostId' field.
+      * host id
+      * @param value The value of 'hostId'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.user.RefRelaCreatedEvent.Builder setHostId(java.lang.String value) {
+      validate(fields()[1], value);
+      this.hostId = value;
+      fieldSetFlags()[1] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'hostId' field has been set.
+      * host id
+      * @return True if the 'hostId' field has been set, false otherwise.
+      */
+    public boolean hasHostId() {
+      return fieldSetFlags()[1];
+    }
+
+
+    /**
+      * Clears the value of the 'hostId' field.
+      * host id
+      * @return This builder.
+      */
+    public net.lightapi.portal.user.RefRelaCreatedEvent.Builder clearHostId() {
+      hostId = null;
+      fieldSetFlags()[1] = false;
+      return this;
+    }
+
+    /**
       * Gets the value of the 'rela' field.
       * reference rela name
       * @return The value.
@@ -500,9 +578,9 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return This builder.
       */
     public net.lightapi.portal.user.RefRelaCreatedEvent.Builder setRela(java.lang.String value) {
-      validate(fields()[1], value);
+      validate(fields()[2], value);
       this.rela = value;
-      fieldSetFlags()[1] = true;
+      fieldSetFlags()[2] = true;
       return this;
     }
 
@@ -512,7 +590,7 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return True if the 'rela' field has been set, false otherwise.
       */
     public boolean hasRela() {
-      return fieldSetFlags()[1];
+      return fieldSetFlags()[2];
     }
 
 
@@ -523,7 +601,7 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
       */
     public net.lightapi.portal.user.RefRelaCreatedEvent.Builder clearRela() {
       rela = null;
-      fieldSetFlags()[1] = false;
+      fieldSetFlags()[2] = false;
       return this;
     }
 
@@ -544,9 +622,9 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return This builder.
       */
     public net.lightapi.portal.user.RefRelaCreatedEvent.Builder setLanguage(java.lang.String value) {
-      validate(fields()[2], value);
+      validate(fields()[3], value);
       this.language = value;
-      fieldSetFlags()[2] = true;
+      fieldSetFlags()[3] = true;
       return this;
     }
 
@@ -556,7 +634,7 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return True if the 'language' field has been set, false otherwise.
       */
     public boolean hasLanguage() {
-      return fieldSetFlags()[2];
+      return fieldSetFlags()[3];
     }
 
 
@@ -567,7 +645,7 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
       */
     public net.lightapi.portal.user.RefRelaCreatedEvent.Builder clearLanguage() {
       language = null;
-      fieldSetFlags()[2] = false;
+      fieldSetFlags()[3] = false;
       return this;
     }
 
@@ -588,9 +666,9 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return This builder.
       */
     public net.lightapi.portal.user.RefRelaCreatedEvent.Builder setFrom(java.lang.String value) {
-      validate(fields()[3], value);
+      validate(fields()[4], value);
       this.from = value;
-      fieldSetFlags()[3] = true;
+      fieldSetFlags()[4] = true;
       return this;
     }
 
@@ -600,7 +678,7 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return True if the 'from' field has been set, false otherwise.
       */
     public boolean hasFrom() {
-      return fieldSetFlags()[3];
+      return fieldSetFlags()[4];
     }
 
 
@@ -611,7 +689,7 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
       */
     public net.lightapi.portal.user.RefRelaCreatedEvent.Builder clearFrom() {
       from = null;
-      fieldSetFlags()[3] = false;
+      fieldSetFlags()[4] = false;
       return this;
     }
 
@@ -632,9 +710,9 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return This builder.
       */
     public net.lightapi.portal.user.RefRelaCreatedEvent.Builder setValue(java.lang.String value) {
-      validate(fields()[4], value);
+      validate(fields()[5], value);
       this.value = value;
-      fieldSetFlags()[4] = true;
+      fieldSetFlags()[5] = true;
       return this;
     }
 
@@ -644,7 +722,7 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return True if the 'value' field has been set, false otherwise.
       */
     public boolean hasValue() {
-      return fieldSetFlags()[4];
+      return fieldSetFlags()[5];
     }
 
 
@@ -655,7 +733,7 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
       */
     public net.lightapi.portal.user.RefRelaCreatedEvent.Builder clearValue() {
       value = null;
-      fieldSetFlags()[4] = false;
+      fieldSetFlags()[5] = false;
       return this;
     }
 
@@ -676,9 +754,9 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return This builder.
       */
     public net.lightapi.portal.user.RefRelaCreatedEvent.Builder setLabel(java.lang.String value) {
-      validate(fields()[5], value);
+      validate(fields()[6], value);
       this.label = value;
-      fieldSetFlags()[5] = true;
+      fieldSetFlags()[6] = true;
       return this;
     }
 
@@ -688,7 +766,7 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return True if the 'label' field has been set, false otherwise.
       */
     public boolean hasLabel() {
-      return fieldSetFlags()[5];
+      return fieldSetFlags()[6];
     }
 
 
@@ -699,7 +777,7 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
       */
     public net.lightapi.portal.user.RefRelaCreatedEvent.Builder clearLabel() {
       label = null;
-      fieldSetFlags()[5] = false;
+      fieldSetFlags()[6] = false;
       return this;
     }
 
@@ -720,9 +798,9 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return This builder.
       */
     public net.lightapi.portal.user.RefRelaCreatedEvent.Builder setTimestamp(long value) {
-      validate(fields()[6], value);
+      validate(fields()[7], value);
       this.timestamp = value;
-      fieldSetFlags()[6] = true;
+      fieldSetFlags()[7] = true;
       return this;
     }
 
@@ -732,7 +810,7 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return True if the 'timestamp' field has been set, false otherwise.
       */
     public boolean hasTimestamp() {
-      return fieldSetFlags()[6];
+      return fieldSetFlags()[7];
     }
 
 
@@ -742,7 +820,7 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return This builder.
       */
     public net.lightapi.portal.user.RefRelaCreatedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[6] = false;
+      fieldSetFlags()[7] = false;
       return this;
     }
 
@@ -761,12 +839,13 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
         } else {
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
-        record.rela = fieldSetFlags()[1] ? this.rela : (java.lang.String) defaultValue(fields()[1]);
-        record.language = fieldSetFlags()[2] ? this.language : (java.lang.String) defaultValue(fields()[2]);
-        record.from = fieldSetFlags()[3] ? this.from : (java.lang.String) defaultValue(fields()[3]);
-        record.value = fieldSetFlags()[4] ? this.value : (java.lang.String) defaultValue(fields()[4]);
-        record.label = fieldSetFlags()[5] ? this.label : (java.lang.String) defaultValue(fields()[5]);
-        record.timestamp = fieldSetFlags()[6] ? this.timestamp : (java.lang.Long) defaultValue(fields()[6]);
+        record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
+        record.rela = fieldSetFlags()[2] ? this.rela : (java.lang.String) defaultValue(fields()[2]);
+        record.language = fieldSetFlags()[3] ? this.language : (java.lang.String) defaultValue(fields()[3]);
+        record.from = fieldSetFlags()[4] ? this.from : (java.lang.String) defaultValue(fields()[4]);
+        record.value = fieldSetFlags()[5] ? this.value : (java.lang.String) defaultValue(fields()[5]);
+        record.label = fieldSetFlags()[6] ? this.label : (java.lang.String) defaultValue(fields()[6]);
+        record.timestamp = fieldSetFlags()[7] ? this.timestamp : (java.lang.Long) defaultValue(fields()[7]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -801,6 +880,8 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
   {
     this.EventId.customEncode(out);
 
+    out.writeString(this.hostId);
+
     out.writeString(this.rela);
 
     out.writeString(this.language);
@@ -825,6 +906,8 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
       }
       this.EventId.customDecode(in);
 
+      this.hostId = in.readString();
+
       this.rela = in.readString();
 
       this.language = in.readString();
@@ -838,7 +921,7 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
       this.timestamp = in.readLong();
 
     } else {
-      for (int i = 0; i < 7; i++) {
+      for (int i = 0; i < 8; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -848,26 +931,30 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
           break;
 
         case 1:
-          this.rela = in.readString();
+          this.hostId = in.readString();
           break;
 
         case 2:
-          this.language = in.readString();
+          this.rela = in.readString();
           break;
 
         case 3:
-          this.from = in.readString();
+          this.language = in.readString();
           break;
 
         case 4:
-          this.value = in.readString();
+          this.from = in.readString();
           break;
 
         case 5:
-          this.label = in.readString();
+          this.value = in.readString();
           break;
 
         case 6:
+          this.label = in.readString();
+          break;
+
+        case 7:
           this.timestamp = in.readLong();
           break;
 

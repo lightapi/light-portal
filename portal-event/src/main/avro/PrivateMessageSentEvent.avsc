@@ -30,6 +30,11 @@
       }
     },
     {
+      "name": "hostId",
+      "type": "string",
+      "doc": "host id"
+    },
+    {
       "name": "fromId",
       "type": "string",
       "doc": "From userId that matches the EventId.id email"

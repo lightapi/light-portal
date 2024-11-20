@@ -35,9 +35,9 @@
       "doc": "environment id"
     },
     {
-      "name": "host",
+      "name": "hostId",
       "type": "string",
-      "doc": "host"
+      "doc": "host id"
     },
     {
       "name": "name",

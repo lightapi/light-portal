@@ -30,14 +30,9 @@
       }
     },
     {
-      "name": "keyId",
-      "type": "int",
-      "doc": "keyId 0 serviceId"
-    },
-    {
-      "name": "host",
+      "name": "hostId",
       "type": "string",
-      "doc": "host"
+      "doc": "host id"
     },
     {
       "name": "serviceId",

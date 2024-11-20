@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 3480185760850875767L;
+  private static final long serialVersionUID = -706268170523299332L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ReferenceCreatedEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"table\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"reference table\"},{\"name\":\"language\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"value label language\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"reference value\"},{\"name\":\"label\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"value label in language\"},{\"name\":\"email\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"owner email\"},{\"name\":\"desc\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"value description\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ReferenceCreatedEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"table\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"reference table\"},{\"name\":\"language\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"value label language\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"reference value\"},{\"name\":\"label\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"value label in language\"},{\"name\":\"email\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"owner email\"},{\"name\":\"desc\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"value description\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -74,6 +74,8 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
   }
 
   private com.networknt.kafka.common.EventId EventId;
+  /** host id */
+  private java.lang.String hostId;
   /** reference table */
   private java.lang.String table;
   /** value label language */
@@ -99,6 +101,7 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
   /**
    * All-args constructor.
    * @param EventId The new value for EventId
+   * @param hostId host id
    * @param table reference table
    * @param language value label language
    * @param value reference value
@@ -107,8 +110,9 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
    * @param desc value description
    * @param timestamp time the event is recorded
    */
-  public ReferenceCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String table, java.lang.String language, java.lang.String value, java.lang.String label, java.lang.String email, java.lang.String desc, java.lang.Long timestamp) {
+  public ReferenceCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String table, java.lang.String language, java.lang.String value, java.lang.String label, java.lang.String email, java.lang.String desc, java.lang.Long timestamp) {
     this.EventId = EventId;
+    this.hostId = hostId;
     this.table = table;
     this.language = language;
     this.value = value;
@@ -124,13 +128,14 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return EventId;
-    case 1: return table;
-    case 2: return language;
-    case 3: return value;
-    case 4: return label;
-    case 5: return email;
-    case 6: return desc;
-    case 7: return timestamp;
+    case 1: return hostId;
+    case 2: return table;
+    case 3: return language;
+    case 4: return value;
+    case 5: return label;
+    case 6: return email;
+    case 7: return desc;
+    case 8: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -140,13 +145,14 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
-    case 1: table = value$ != null ? value$.toString() : null; break;
-    case 2: language = value$ != null ? value$.toString() : null; break;
-    case 3: value = value$ != null ? value$.toString() : null; break;
-    case 4: label = value$ != null ? value$.toString() : null; break;
-    case 5: email = value$ != null ? value$.toString() : null; break;
-    case 6: desc = value$ != null ? value$.toString() : null; break;
-    case 7: timestamp = (java.lang.Long)value$; break;
+    case 1: hostId = value$ != null ? value$.toString() : null; break;
+    case 2: table = value$ != null ? value$.toString() : null; break;
+    case 3: language = value$ != null ? value$.toString() : null; break;
+    case 4: value = value$ != null ? value$.toString() : null; break;
+    case 5: label = value$ != null ? value$.toString() : null; break;
+    case 6: email = value$ != null ? value$.toString() : null; break;
+    case 7: desc = value$ != null ? value$.toString() : null; break;
+    case 8: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -166,6 +172,24 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
    */
   public void setEventId(com.networknt.kafka.common.EventId value) {
     this.EventId = value;
+  }
+
+  /**
+   * Gets the value of the 'hostId' field.
+   * @return host id
+   */
+  public java.lang.String getHostId() {
+    return hostId;
+  }
+
+
+  /**
+   * Sets the value of the 'hostId' field.
+   * host id
+   * @param value the value to set.
+   */
+  public void setHostId(java.lang.String value) {
+    this.hostId = value;
   }
 
   /**
@@ -337,6 +361,8 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
+    /** host id */
+    private java.lang.String hostId;
     /** reference table */
     private java.lang.String table;
     /** value label language */
@@ -370,33 +396,37 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
       if (other.hasEventIdBuilder()) {
         this.EventIdBuilder = com.networknt.kafka.common.EventId.newBuilder(other.getEventIdBuilder());
       }
-      if (isValidValue(fields()[1], other.table)) {
-        this.table = data().deepCopy(fields()[1].schema(), other.table);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
-      if (isValidValue(fields()[2], other.language)) {
-        this.language = data().deepCopy(fields()[2].schema(), other.language);
+      if (isValidValue(fields()[2], other.table)) {
+        this.table = data().deepCopy(fields()[2].schema(), other.table);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.value)) {
-        this.value = data().deepCopy(fields()[3].schema(), other.value);
+      if (isValidValue(fields()[3], other.language)) {
+        this.language = data().deepCopy(fields()[3].schema(), other.language);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
-      if (isValidValue(fields()[4], other.label)) {
-        this.label = data().deepCopy(fields()[4].schema(), other.label);
+      if (isValidValue(fields()[4], other.value)) {
+        this.value = data().deepCopy(fields()[4].schema(), other.value);
         fieldSetFlags()[4] = other.fieldSetFlags()[4];
       }
-      if (isValidValue(fields()[5], other.email)) {
-        this.email = data().deepCopy(fields()[5].schema(), other.email);
+      if (isValidValue(fields()[5], other.label)) {
+        this.label = data().deepCopy(fields()[5].schema(), other.label);
         fieldSetFlags()[5] = other.fieldSetFlags()[5];
       }
-      if (isValidValue(fields()[6], other.desc)) {
-        this.desc = data().deepCopy(fields()[6].schema(), other.desc);
+      if (isValidValue(fields()[6], other.email)) {
+        this.email = data().deepCopy(fields()[6].schema(), other.email);
         fieldSetFlags()[6] = other.fieldSetFlags()[6];
       }
-      if (isValidValue(fields()[7], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[7].schema(), other.timestamp);
+      if (isValidValue(fields()[7], other.desc)) {
+        this.desc = data().deepCopy(fields()[7].schema(), other.desc);
         fieldSetFlags()[7] = other.fieldSetFlags()[7];
+      }
+      if (isValidValue(fields()[8], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[8].schema(), other.timestamp);
+        fieldSetFlags()[8] = other.fieldSetFlags()[8];
       }
     }
 
@@ -411,33 +441,37 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
         fieldSetFlags()[0] = true;
       }
       this.EventIdBuilder = null;
-      if (isValidValue(fields()[1], other.table)) {
-        this.table = data().deepCopy(fields()[1].schema(), other.table);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.language)) {
-        this.language = data().deepCopy(fields()[2].schema(), other.language);
+      if (isValidValue(fields()[2], other.table)) {
+        this.table = data().deepCopy(fields()[2].schema(), other.table);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.value)) {
-        this.value = data().deepCopy(fields()[3].schema(), other.value);
+      if (isValidValue(fields()[3], other.language)) {
+        this.language = data().deepCopy(fields()[3].schema(), other.language);
         fieldSetFlags()[3] = true;
       }
-      if (isValidValue(fields()[4], other.label)) {
-        this.label = data().deepCopy(fields()[4].schema(), other.label);
+      if (isValidValue(fields()[4], other.value)) {
+        this.value = data().deepCopy(fields()[4].schema(), other.value);
         fieldSetFlags()[4] = true;
       }
-      if (isValidValue(fields()[5], other.email)) {
-        this.email = data().deepCopy(fields()[5].schema(), other.email);
+      if (isValidValue(fields()[5], other.label)) {
+        this.label = data().deepCopy(fields()[5].schema(), other.label);
         fieldSetFlags()[5] = true;
       }
-      if (isValidValue(fields()[6], other.desc)) {
-        this.desc = data().deepCopy(fields()[6].schema(), other.desc);
+      if (isValidValue(fields()[6], other.email)) {
+        this.email = data().deepCopy(fields()[6].schema(), other.email);
         fieldSetFlags()[6] = true;
       }
-      if (isValidValue(fields()[7], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[7].schema(), other.timestamp);
+      if (isValidValue(fields()[7], other.desc)) {
+        this.desc = data().deepCopy(fields()[7].schema(), other.desc);
         fieldSetFlags()[7] = true;
+      }
+      if (isValidValue(fields()[8], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[8].schema(), other.timestamp);
+        fieldSetFlags()[8] = true;
       }
     }
 
@@ -518,6 +552,50 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
     }
 
     /**
+      * Gets the value of the 'hostId' field.
+      * host id
+      * @return The value.
+      */
+    public java.lang.String getHostId() {
+      return hostId;
+    }
+
+
+    /**
+      * Sets the value of the 'hostId' field.
+      * host id
+      * @param value The value of 'hostId'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.user.ReferenceCreatedEvent.Builder setHostId(java.lang.String value) {
+      validate(fields()[1], value);
+      this.hostId = value;
+      fieldSetFlags()[1] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'hostId' field has been set.
+      * host id
+      * @return True if the 'hostId' field has been set, false otherwise.
+      */
+    public boolean hasHostId() {
+      return fieldSetFlags()[1];
+    }
+
+
+    /**
+      * Clears the value of the 'hostId' field.
+      * host id
+      * @return This builder.
+      */
+    public net.lightapi.portal.user.ReferenceCreatedEvent.Builder clearHostId() {
+      hostId = null;
+      fieldSetFlags()[1] = false;
+      return this;
+    }
+
+    /**
       * Gets the value of the 'table' field.
       * reference table
       * @return The value.
@@ -534,9 +612,9 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
       * @return This builder.
       */
     public net.lightapi.portal.user.ReferenceCreatedEvent.Builder setTable(java.lang.String value) {
-      validate(fields()[1], value);
+      validate(fields()[2], value);
       this.table = value;
-      fieldSetFlags()[1] = true;
+      fieldSetFlags()[2] = true;
       return this;
     }
 
@@ -546,7 +624,7 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
       * @return True if the 'table' field has been set, false otherwise.
       */
     public boolean hasTable() {
-      return fieldSetFlags()[1];
+      return fieldSetFlags()[2];
     }
 
 
@@ -557,7 +635,7 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
       */
     public net.lightapi.portal.user.ReferenceCreatedEvent.Builder clearTable() {
       table = null;
-      fieldSetFlags()[1] = false;
+      fieldSetFlags()[2] = false;
       return this;
     }
 
@@ -578,9 +656,9 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
       * @return This builder.
       */
     public net.lightapi.portal.user.ReferenceCreatedEvent.Builder setLanguage(java.lang.String value) {
-      validate(fields()[2], value);
+      validate(fields()[3], value);
       this.language = value;
-      fieldSetFlags()[2] = true;
+      fieldSetFlags()[3] = true;
       return this;
     }
 
@@ -590,7 +668,7 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
       * @return True if the 'language' field has been set, false otherwise.
       */
     public boolean hasLanguage() {
-      return fieldSetFlags()[2];
+      return fieldSetFlags()[3];
     }
 
 
@@ -601,7 +679,7 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
       */
     public net.lightapi.portal.user.ReferenceCreatedEvent.Builder clearLanguage() {
       language = null;
-      fieldSetFlags()[2] = false;
+      fieldSetFlags()[3] = false;
       return this;
     }
 
@@ -622,9 +700,9 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
       * @return This builder.
       */
     public net.lightapi.portal.user.ReferenceCreatedEvent.Builder setValue(java.lang.String value) {
-      validate(fields()[3], value);
+      validate(fields()[4], value);
       this.value = value;
-      fieldSetFlags()[3] = true;
+      fieldSetFlags()[4] = true;
       return this;
     }
 
@@ -634,7 +712,7 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
       * @return True if the 'value' field has been set, false otherwise.
       */
     public boolean hasValue() {
-      return fieldSetFlags()[3];
+      return fieldSetFlags()[4];
     }
 
 
@@ -645,7 +723,7 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
       */
     public net.lightapi.portal.user.ReferenceCreatedEvent.Builder clearValue() {
       value = null;
-      fieldSetFlags()[3] = false;
+      fieldSetFlags()[4] = false;
       return this;
     }
 
@@ -666,9 +744,9 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
       * @return This builder.
       */
     public net.lightapi.portal.user.ReferenceCreatedEvent.Builder setLabel(java.lang.String value) {
-      validate(fields()[4], value);
+      validate(fields()[5], value);
       this.label = value;
-      fieldSetFlags()[4] = true;
+      fieldSetFlags()[5] = true;
       return this;
     }
 
@@ -678,7 +756,7 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
       * @return True if the 'label' field has been set, false otherwise.
       */
     public boolean hasLabel() {
-      return fieldSetFlags()[4];
+      return fieldSetFlags()[5];
     }
 
 
@@ -689,7 +767,7 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
       */
     public net.lightapi.portal.user.ReferenceCreatedEvent.Builder clearLabel() {
       label = null;
-      fieldSetFlags()[4] = false;
+      fieldSetFlags()[5] = false;
       return this;
     }
 
@@ -710,9 +788,9 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
       * @return This builder.
       */
     public net.lightapi.portal.user.ReferenceCreatedEvent.Builder setEmail(java.lang.String value) {
-      validate(fields()[5], value);
+      validate(fields()[6], value);
       this.email = value;
-      fieldSetFlags()[5] = true;
+      fieldSetFlags()[6] = true;
       return this;
     }
 
@@ -722,7 +800,7 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
       * @return True if the 'email' field has been set, false otherwise.
       */
     public boolean hasEmail() {
-      return fieldSetFlags()[5];
+      return fieldSetFlags()[6];
     }
 
 
@@ -733,7 +811,7 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
       */
     public net.lightapi.portal.user.ReferenceCreatedEvent.Builder clearEmail() {
       email = null;
-      fieldSetFlags()[5] = false;
+      fieldSetFlags()[6] = false;
       return this;
     }
 
@@ -754,9 +832,9 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
       * @return This builder.
       */
     public net.lightapi.portal.user.ReferenceCreatedEvent.Builder setDesc(java.lang.String value) {
-      validate(fields()[6], value);
+      validate(fields()[7], value);
       this.desc = value;
-      fieldSetFlags()[6] = true;
+      fieldSetFlags()[7] = true;
       return this;
     }
 
@@ -766,7 +844,7 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
       * @return True if the 'desc' field has been set, false otherwise.
       */
     public boolean hasDesc() {
-      return fieldSetFlags()[6];
+      return fieldSetFlags()[7];
     }
 
 
@@ -777,7 +855,7 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
       */
     public net.lightapi.portal.user.ReferenceCreatedEvent.Builder clearDesc() {
       desc = null;
-      fieldSetFlags()[6] = false;
+      fieldSetFlags()[7] = false;
       return this;
     }
 
@@ -798,9 +876,9 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
       * @return This builder.
       */
     public net.lightapi.portal.user.ReferenceCreatedEvent.Builder setTimestamp(long value) {
-      validate(fields()[7], value);
+      validate(fields()[8], value);
       this.timestamp = value;
-      fieldSetFlags()[7] = true;
+      fieldSetFlags()[8] = true;
       return this;
     }
 
@@ -810,7 +888,7 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
       * @return True if the 'timestamp' field has been set, false otherwise.
       */
     public boolean hasTimestamp() {
-      return fieldSetFlags()[7];
+      return fieldSetFlags()[8];
     }
 
 
@@ -820,7 +898,7 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
       * @return This builder.
       */
     public net.lightapi.portal.user.ReferenceCreatedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[7] = false;
+      fieldSetFlags()[8] = false;
       return this;
     }
 
@@ -839,13 +917,14 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
         } else {
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
-        record.table = fieldSetFlags()[1] ? this.table : (java.lang.String) defaultValue(fields()[1]);
-        record.language = fieldSetFlags()[2] ? this.language : (java.lang.String) defaultValue(fields()[2]);
-        record.value = fieldSetFlags()[3] ? this.value : (java.lang.String) defaultValue(fields()[3]);
-        record.label = fieldSetFlags()[4] ? this.label : (java.lang.String) defaultValue(fields()[4]);
-        record.email = fieldSetFlags()[5] ? this.email : (java.lang.String) defaultValue(fields()[5]);
-        record.desc = fieldSetFlags()[6] ? this.desc : (java.lang.String) defaultValue(fields()[6]);
-        record.timestamp = fieldSetFlags()[7] ? this.timestamp : (java.lang.Long) defaultValue(fields()[7]);
+        record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
+        record.table = fieldSetFlags()[2] ? this.table : (java.lang.String) defaultValue(fields()[2]);
+        record.language = fieldSetFlags()[3] ? this.language : (java.lang.String) defaultValue(fields()[3]);
+        record.value = fieldSetFlags()[4] ? this.value : (java.lang.String) defaultValue(fields()[4]);
+        record.label = fieldSetFlags()[5] ? this.label : (java.lang.String) defaultValue(fields()[5]);
+        record.email = fieldSetFlags()[6] ? this.email : (java.lang.String) defaultValue(fields()[6]);
+        record.desc = fieldSetFlags()[7] ? this.desc : (java.lang.String) defaultValue(fields()[7]);
+        record.timestamp = fieldSetFlags()[8] ? this.timestamp : (java.lang.Long) defaultValue(fields()[8]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -880,6 +959,8 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
   {
     this.EventId.customEncode(out);
 
+    out.writeString(this.hostId);
+
     out.writeString(this.table);
 
     out.writeString(this.language);
@@ -906,6 +987,8 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
       }
       this.EventId.customDecode(in);
 
+      this.hostId = in.readString();
+
       this.table = in.readString();
 
       this.language = in.readString();
@@ -921,7 +1004,7 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
       this.timestamp = in.readLong();
 
     } else {
-      for (int i = 0; i < 8; i++) {
+      for (int i = 0; i < 9; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -931,30 +1014,34 @@ public class ReferenceCreatedEvent extends org.apache.avro.specific.SpecificReco
           break;
 
         case 1:
-          this.table = in.readString();
+          this.hostId = in.readString();
           break;
 
         case 2:
-          this.language = in.readString();
+          this.table = in.readString();
           break;
 
         case 3:
-          this.value = in.readString();
+          this.language = in.readString();
           break;
 
         case 4:
-          this.label = in.readString();
+          this.value = in.readString();
           break;
 
         case 5:
-          this.email = in.readString();
+          this.label = in.readString();
           break;
 
         case 6:
-          this.desc = in.readString();
+          this.email = in.readString();
           break;
 
         case 7:
+          this.desc = in.readString();
+          break;
+
+        case 8:
           this.timestamp = in.readLong();
           break;
 

@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 4575772680912599352L;
+  private static final long serialVersionUID = 9151281795327384509L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"MarketTokenDeletedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"keyId\",\"type\":\"int\",\"doc\":\"keyId 0 refreshToken 1 host\"},{\"name\":\"host\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host\"},{\"name\":\"refreshToken\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"refresh token\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"MarketTokenDeletedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"refreshToken\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"refresh token\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -74,10 +74,8 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
   }
 
   private com.networknt.kafka.common.EventId EventId;
-  /** keyId 0 refreshToken 1 host */
-  private int keyId;
-  /** host */
-  private java.lang.String host;
+  /** host id */
+  private java.lang.String hostId;
   /** refresh token */
   private java.lang.String refreshToken;
   /** time the event is recorded */
@@ -93,15 +91,13 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
   /**
    * All-args constructor.
    * @param EventId The new value for EventId
-   * @param keyId keyId 0 refreshToken 1 host
-   * @param host host
+   * @param hostId host id
    * @param refreshToken refresh token
    * @param timestamp time the event is recorded
    */
-  public MarketTokenDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.Integer keyId, java.lang.String host, java.lang.String refreshToken, java.lang.Long timestamp) {
+  public MarketTokenDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String refreshToken, java.lang.Long timestamp) {
     this.EventId = EventId;
-    this.keyId = keyId;
-    this.host = host;
+    this.hostId = hostId;
     this.refreshToken = refreshToken;
     this.timestamp = timestamp;
   }
@@ -112,10 +108,9 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return EventId;
-    case 1: return keyId;
-    case 2: return host;
-    case 3: return refreshToken;
-    case 4: return timestamp;
+    case 1: return hostId;
+    case 2: return refreshToken;
+    case 3: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -125,10 +120,9 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
-    case 1: keyId = (java.lang.Integer)value$; break;
-    case 2: host = value$ != null ? value$.toString() : null; break;
-    case 3: refreshToken = value$ != null ? value$.toString() : null; break;
-    case 4: timestamp = (java.lang.Long)value$; break;
+    case 1: hostId = value$ != null ? value$.toString() : null; break;
+    case 2: refreshToken = value$ != null ? value$.toString() : null; break;
+    case 3: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -151,39 +145,21 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
   }
 
   /**
-   * Gets the value of the 'keyId' field.
-   * @return keyId 0 refreshToken 1 host
+   * Gets the value of the 'hostId' field.
+   * @return host id
    */
-  public int getKeyId() {
-    return keyId;
+  public java.lang.String getHostId() {
+    return hostId;
   }
 
 
   /**
-   * Sets the value of the 'keyId' field.
-   * keyId 0 refreshToken 1 host
+   * Sets the value of the 'hostId' field.
+   * host id
    * @param value the value to set.
    */
-  public void setKeyId(int value) {
-    this.keyId = value;
-  }
-
-  /**
-   * Gets the value of the 'host' field.
-   * @return host
-   */
-  public java.lang.String getHost() {
-    return host;
-  }
-
-
-  /**
-   * Sets the value of the 'host' field.
-   * host
-   * @param value the value to set.
-   */
-  public void setHost(java.lang.String value) {
-    this.host = value;
+  public void setHostId(java.lang.String value) {
+    this.hostId = value;
   }
 
   /**
@@ -265,10 +241,8 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
-    /** keyId 0 refreshToken 1 host */
-    private int keyId;
-    /** host */
-    private java.lang.String host;
+    /** host id */
+    private java.lang.String hostId;
     /** refresh token */
     private java.lang.String refreshToken;
     /** time the event is recorded */
@@ -292,21 +266,17 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
       if (other.hasEventIdBuilder()) {
         this.EventIdBuilder = com.networknt.kafka.common.EventId.newBuilder(other.getEventIdBuilder());
       }
-      if (isValidValue(fields()[1], other.keyId)) {
-        this.keyId = data().deepCopy(fields()[1].schema(), other.keyId);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
-      if (isValidValue(fields()[2], other.host)) {
-        this.host = data().deepCopy(fields()[2].schema(), other.host);
+      if (isValidValue(fields()[2], other.refreshToken)) {
+        this.refreshToken = data().deepCopy(fields()[2].schema(), other.refreshToken);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.refreshToken)) {
-        this.refreshToken = data().deepCopy(fields()[3].schema(), other.refreshToken);
+      if (isValidValue(fields()[3], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[3].schema(), other.timestamp);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
-      }
-      if (isValidValue(fields()[4], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[4].schema(), other.timestamp);
-        fieldSetFlags()[4] = other.fieldSetFlags()[4];
       }
     }
 
@@ -321,21 +291,17 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
         fieldSetFlags()[0] = true;
       }
       this.EventIdBuilder = null;
-      if (isValidValue(fields()[1], other.keyId)) {
-        this.keyId = data().deepCopy(fields()[1].schema(), other.keyId);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.host)) {
-        this.host = data().deepCopy(fields()[2].schema(), other.host);
+      if (isValidValue(fields()[2], other.refreshToken)) {
+        this.refreshToken = data().deepCopy(fields()[2].schema(), other.refreshToken);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.refreshToken)) {
-        this.refreshToken = data().deepCopy(fields()[3].schema(), other.refreshToken);
+      if (isValidValue(fields()[3], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[3].schema(), other.timestamp);
         fieldSetFlags()[3] = true;
-      }
-      if (isValidValue(fields()[4], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[4].schema(), other.timestamp);
-        fieldSetFlags()[4] = true;
       }
     }
 
@@ -416,89 +382,46 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
     }
 
     /**
-      * Gets the value of the 'keyId' field.
-      * keyId 0 refreshToken 1 host
+      * Gets the value of the 'hostId' field.
+      * host id
       * @return The value.
       */
-    public int getKeyId() {
-      return keyId;
+    public java.lang.String getHostId() {
+      return hostId;
     }
 
 
     /**
-      * Sets the value of the 'keyId' field.
-      * keyId 0 refreshToken 1 host
-      * @param value The value of 'keyId'.
+      * Sets the value of the 'hostId' field.
+      * host id
+      * @param value The value of 'hostId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketTokenDeletedEvent.Builder setKeyId(int value) {
+    public net.lightapi.portal.market.MarketTokenDeletedEvent.Builder setHostId(java.lang.String value) {
       validate(fields()[1], value);
-      this.keyId = value;
+      this.hostId = value;
       fieldSetFlags()[1] = true;
       return this;
     }
 
     /**
-      * Checks whether the 'keyId' field has been set.
-      * keyId 0 refreshToken 1 host
-      * @return True if the 'keyId' field has been set, false otherwise.
+      * Checks whether the 'hostId' field has been set.
+      * host id
+      * @return True if the 'hostId' field has been set, false otherwise.
       */
-    public boolean hasKeyId() {
+    public boolean hasHostId() {
       return fieldSetFlags()[1];
     }
 
 
     /**
-      * Clears the value of the 'keyId' field.
-      * keyId 0 refreshToken 1 host
+      * Clears the value of the 'hostId' field.
+      * host id
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketTokenDeletedEvent.Builder clearKeyId() {
+    public net.lightapi.portal.market.MarketTokenDeletedEvent.Builder clearHostId() {
+      hostId = null;
       fieldSetFlags()[1] = false;
-      return this;
-    }
-
-    /**
-      * Gets the value of the 'host' field.
-      * host
-      * @return The value.
-      */
-    public java.lang.String getHost() {
-      return host;
-    }
-
-
-    /**
-      * Sets the value of the 'host' field.
-      * host
-      * @param value The value of 'host'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.MarketTokenDeletedEvent.Builder setHost(java.lang.String value) {
-      validate(fields()[2], value);
-      this.host = value;
-      fieldSetFlags()[2] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'host' field has been set.
-      * host
-      * @return True if the 'host' field has been set, false otherwise.
-      */
-    public boolean hasHost() {
-      return fieldSetFlags()[2];
-    }
-
-
-    /**
-      * Clears the value of the 'host' field.
-      * host
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.MarketTokenDeletedEvent.Builder clearHost() {
-      host = null;
-      fieldSetFlags()[2] = false;
       return this;
     }
 
@@ -519,9 +442,9 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.market.MarketTokenDeletedEvent.Builder setRefreshToken(java.lang.String value) {
-      validate(fields()[3], value);
+      validate(fields()[2], value);
       this.refreshToken = value;
-      fieldSetFlags()[3] = true;
+      fieldSetFlags()[2] = true;
       return this;
     }
 
@@ -531,7 +454,7 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
       * @return True if the 'refreshToken' field has been set, false otherwise.
       */
     public boolean hasRefreshToken() {
-      return fieldSetFlags()[3];
+      return fieldSetFlags()[2];
     }
 
 
@@ -542,7 +465,7 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
       */
     public net.lightapi.portal.market.MarketTokenDeletedEvent.Builder clearRefreshToken() {
       refreshToken = null;
-      fieldSetFlags()[3] = false;
+      fieldSetFlags()[2] = false;
       return this;
     }
 
@@ -563,9 +486,9 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.market.MarketTokenDeletedEvent.Builder setTimestamp(long value) {
-      validate(fields()[4], value);
+      validate(fields()[3], value);
       this.timestamp = value;
-      fieldSetFlags()[4] = true;
+      fieldSetFlags()[3] = true;
       return this;
     }
 
@@ -575,7 +498,7 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
       * @return True if the 'timestamp' field has been set, false otherwise.
       */
     public boolean hasTimestamp() {
-      return fieldSetFlags()[4];
+      return fieldSetFlags()[3];
     }
 
 
@@ -585,7 +508,7 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.market.MarketTokenDeletedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[4] = false;
+      fieldSetFlags()[3] = false;
       return this;
     }
 
@@ -604,10 +527,9 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
         } else {
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
-        record.keyId = fieldSetFlags()[1] ? this.keyId : (java.lang.Integer) defaultValue(fields()[1]);
-        record.host = fieldSetFlags()[2] ? this.host : (java.lang.String) defaultValue(fields()[2]);
-        record.refreshToken = fieldSetFlags()[3] ? this.refreshToken : (java.lang.String) defaultValue(fields()[3]);
-        record.timestamp = fieldSetFlags()[4] ? this.timestamp : (java.lang.Long) defaultValue(fields()[4]);
+        record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
+        record.refreshToken = fieldSetFlags()[2] ? this.refreshToken : (java.lang.String) defaultValue(fields()[2]);
+        record.timestamp = fieldSetFlags()[3] ? this.timestamp : (java.lang.Long) defaultValue(fields()[3]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -642,9 +564,7 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
   {
     this.EventId.customEncode(out);
 
-    out.writeInt(this.keyId);
-
-    out.writeString(this.host);
+    out.writeString(this.hostId);
 
     out.writeString(this.refreshToken);
 
@@ -662,16 +582,14 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
       }
       this.EventId.customDecode(in);
 
-      this.keyId = in.readInt();
-
-      this.host = in.readString();
+      this.hostId = in.readString();
 
       this.refreshToken = in.readString();
 
       this.timestamp = in.readLong();
 
     } else {
-      for (int i = 0; i < 5; i++) {
+      for (int i = 0; i < 4; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -681,18 +599,14 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
           break;
 
         case 1:
-          this.keyId = in.readInt();
+          this.hostId = in.readString();
           break;
 
         case 2:
-          this.host = in.readString();
-          break;
-
-        case 3:
           this.refreshToken = in.readString();
           break;
 
-        case 4:
+        case 3:
           this.timestamp = in.readLong();
           break;
 

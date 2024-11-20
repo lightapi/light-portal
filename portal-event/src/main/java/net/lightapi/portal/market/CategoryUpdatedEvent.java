@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class CategoryUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -3732453376595088604L;
+  private static final long serialVersionUID = 2224896590851866766L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"CategoryUpdatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"host\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host\"},{\"name\":\"name\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"name\"},{\"name\":\"categories\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"categories in JSON string\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"CategoryUpdatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"name\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"name\"},{\"name\":\"categories\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"categories in JSON string\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -74,8 +74,8 @@ public class CategoryUpdatedEvent extends org.apache.avro.specific.SpecificRecor
   }
 
   private com.networknt.kafka.common.EventId EventId;
-  /** host */
-  private java.lang.String host;
+  /** host id */
+  private java.lang.String hostId;
   /** name */
   private java.lang.String name;
   /** categories in JSON string */
@@ -93,14 +93,14 @@ public class CategoryUpdatedEvent extends org.apache.avro.specific.SpecificRecor
   /**
    * All-args constructor.
    * @param EventId The new value for EventId
-   * @param host host
+   * @param hostId host id
    * @param name name
    * @param categories categories in JSON string
    * @param timestamp time the event is recorded
    */
-  public CategoryUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String host, java.lang.String name, java.lang.String categories, java.lang.Long timestamp) {
+  public CategoryUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String name, java.lang.String categories, java.lang.Long timestamp) {
     this.EventId = EventId;
-    this.host = host;
+    this.hostId = hostId;
     this.name = name;
     this.categories = categories;
     this.timestamp = timestamp;
@@ -112,7 +112,7 @@ public class CategoryUpdatedEvent extends org.apache.avro.specific.SpecificRecor
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return EventId;
-    case 1: return host;
+    case 1: return hostId;
     case 2: return name;
     case 3: return categories;
     case 4: return timestamp;
@@ -125,7 +125,7 @@ public class CategoryUpdatedEvent extends org.apache.avro.specific.SpecificRecor
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
-    case 1: host = value$ != null ? value$.toString() : null; break;
+    case 1: hostId = value$ != null ? value$.toString() : null; break;
     case 2: name = value$ != null ? value$.toString() : null; break;
     case 3: categories = value$ != null ? value$.toString() : null; break;
     case 4: timestamp = (java.lang.Long)value$; break;
@@ -151,21 +151,21 @@ public class CategoryUpdatedEvent extends org.apache.avro.specific.SpecificRecor
   }
 
   /**
-   * Gets the value of the 'host' field.
-   * @return host
+   * Gets the value of the 'hostId' field.
+   * @return host id
    */
-  public java.lang.String getHost() {
-    return host;
+  public java.lang.String getHostId() {
+    return hostId;
   }
 
 
   /**
-   * Sets the value of the 'host' field.
-   * host
+   * Sets the value of the 'hostId' field.
+   * host id
    * @param value the value to set.
    */
-  public void setHost(java.lang.String value) {
-    this.host = value;
+  public void setHostId(java.lang.String value) {
+    this.hostId = value;
   }
 
   /**
@@ -265,8 +265,8 @@ public class CategoryUpdatedEvent extends org.apache.avro.specific.SpecificRecor
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
-    /** host */
-    private java.lang.String host;
+    /** host id */
+    private java.lang.String hostId;
     /** name */
     private java.lang.String name;
     /** categories in JSON string */
@@ -292,8 +292,8 @@ public class CategoryUpdatedEvent extends org.apache.avro.specific.SpecificRecor
       if (other.hasEventIdBuilder()) {
         this.EventIdBuilder = com.networknt.kafka.common.EventId.newBuilder(other.getEventIdBuilder());
       }
-      if (isValidValue(fields()[1], other.host)) {
-        this.host = data().deepCopy(fields()[1].schema(), other.host);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
       if (isValidValue(fields()[2], other.name)) {
@@ -321,8 +321,8 @@ public class CategoryUpdatedEvent extends org.apache.avro.specific.SpecificRecor
         fieldSetFlags()[0] = true;
       }
       this.EventIdBuilder = null;
-      if (isValidValue(fields()[1], other.host)) {
-        this.host = data().deepCopy(fields()[1].schema(), other.host);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = true;
       }
       if (isValidValue(fields()[2], other.name)) {
@@ -416,45 +416,45 @@ public class CategoryUpdatedEvent extends org.apache.avro.specific.SpecificRecor
     }
 
     /**
-      * Gets the value of the 'host' field.
-      * host
+      * Gets the value of the 'hostId' field.
+      * host id
       * @return The value.
       */
-    public java.lang.String getHost() {
-      return host;
+    public java.lang.String getHostId() {
+      return hostId;
     }
 
 
     /**
-      * Sets the value of the 'host' field.
-      * host
-      * @param value The value of 'host'.
+      * Sets the value of the 'hostId' field.
+      * host id
+      * @param value The value of 'hostId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.CategoryUpdatedEvent.Builder setHost(java.lang.String value) {
+    public net.lightapi.portal.market.CategoryUpdatedEvent.Builder setHostId(java.lang.String value) {
       validate(fields()[1], value);
-      this.host = value;
+      this.hostId = value;
       fieldSetFlags()[1] = true;
       return this;
     }
 
     /**
-      * Checks whether the 'host' field has been set.
-      * host
-      * @return True if the 'host' field has been set, false otherwise.
+      * Checks whether the 'hostId' field has been set.
+      * host id
+      * @return True if the 'hostId' field has been set, false otherwise.
       */
-    public boolean hasHost() {
+    public boolean hasHostId() {
       return fieldSetFlags()[1];
     }
 
 
     /**
-      * Clears the value of the 'host' field.
-      * host
+      * Clears the value of the 'hostId' field.
+      * host id
       * @return This builder.
       */
-    public net.lightapi.portal.market.CategoryUpdatedEvent.Builder clearHost() {
-      host = null;
+    public net.lightapi.portal.market.CategoryUpdatedEvent.Builder clearHostId() {
+      hostId = null;
       fieldSetFlags()[1] = false;
       return this;
     }
@@ -605,7 +605,7 @@ public class CategoryUpdatedEvent extends org.apache.avro.specific.SpecificRecor
         } else {
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
-        record.host = fieldSetFlags()[1] ? this.host : (java.lang.String) defaultValue(fields()[1]);
+        record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
         record.name = fieldSetFlags()[2] ? this.name : (java.lang.String) defaultValue(fields()[2]);
         record.categories = fieldSetFlags()[3] ? this.categories : (java.lang.String) defaultValue(fields()[3]);
         record.timestamp = fieldSetFlags()[4] ? this.timestamp : (java.lang.Long) defaultValue(fields()[4]);
@@ -643,7 +643,7 @@ public class CategoryUpdatedEvent extends org.apache.avro.specific.SpecificRecor
   {
     this.EventId.customEncode(out);
 
-    out.writeString(this.host);
+    out.writeString(this.hostId);
 
     out.writeString(this.name);
 
@@ -663,7 +663,7 @@ public class CategoryUpdatedEvent extends org.apache.avro.specific.SpecificRecor
       }
       this.EventId.customDecode(in);
 
-      this.host = in.readString();
+      this.hostId = in.readString();
 
       this.name = in.readString();
 
@@ -682,7 +682,7 @@ public class CategoryUpdatedEvent extends org.apache.avro.specific.SpecificRecor
           break;
 
         case 1:
-          this.host = in.readString();
+          this.hostId = in.readString();
           break;
 
         case 2:

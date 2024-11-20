@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 1630275227124624968L;
+  private static final long serialVersionUID = 8539264974438593586L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"MarketClientDeletedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the id\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"host\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host\"},{\"name\":\"applicationId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"application id\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"MarketClientDeletedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the id\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"applicationId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"application id\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -74,8 +74,8 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
   }
 
   private com.networknt.kafka.common.EventId EventId;
-  /** host */
-  private java.lang.String host;
+  /** host id */
+  private java.lang.String hostId;
   /** application id */
   private java.lang.String applicationId;
   /** time the event is recorded */
@@ -91,13 +91,13 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
   /**
    * All-args constructor.
    * @param EventId The new value for EventId
-   * @param host host
+   * @param hostId host id
    * @param applicationId application id
    * @param timestamp time the event is recorded
    */
-  public MarketClientDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String host, java.lang.String applicationId, java.lang.Long timestamp) {
+  public MarketClientDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String applicationId, java.lang.Long timestamp) {
     this.EventId = EventId;
-    this.host = host;
+    this.hostId = hostId;
     this.applicationId = applicationId;
     this.timestamp = timestamp;
   }
@@ -108,7 +108,7 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return EventId;
-    case 1: return host;
+    case 1: return hostId;
     case 2: return applicationId;
     case 3: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
@@ -120,7 +120,7 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
-    case 1: host = value$ != null ? value$.toString() : null; break;
+    case 1: hostId = value$ != null ? value$.toString() : null; break;
     case 2: applicationId = value$ != null ? value$.toString() : null; break;
     case 3: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
@@ -145,21 +145,21 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
   }
 
   /**
-   * Gets the value of the 'host' field.
-   * @return host
+   * Gets the value of the 'hostId' field.
+   * @return host id
    */
-  public java.lang.String getHost() {
-    return host;
+  public java.lang.String getHostId() {
+    return hostId;
   }
 
 
   /**
-   * Sets the value of the 'host' field.
-   * host
+   * Sets the value of the 'hostId' field.
+   * host id
    * @param value the value to set.
    */
-  public void setHost(java.lang.String value) {
-    this.host = value;
+  public void setHostId(java.lang.String value) {
+    this.hostId = value;
   }
 
   /**
@@ -241,8 +241,8 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
-    /** host */
-    private java.lang.String host;
+    /** host id */
+    private java.lang.String hostId;
     /** application id */
     private java.lang.String applicationId;
     /** time the event is recorded */
@@ -266,8 +266,8 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
       if (other.hasEventIdBuilder()) {
         this.EventIdBuilder = com.networknt.kafka.common.EventId.newBuilder(other.getEventIdBuilder());
       }
-      if (isValidValue(fields()[1], other.host)) {
-        this.host = data().deepCopy(fields()[1].schema(), other.host);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
       if (isValidValue(fields()[2], other.applicationId)) {
@@ -291,8 +291,8 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
         fieldSetFlags()[0] = true;
       }
       this.EventIdBuilder = null;
-      if (isValidValue(fields()[1], other.host)) {
-        this.host = data().deepCopy(fields()[1].schema(), other.host);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = true;
       }
       if (isValidValue(fields()[2], other.applicationId)) {
@@ -382,45 +382,45 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
     }
 
     /**
-      * Gets the value of the 'host' field.
-      * host
+      * Gets the value of the 'hostId' field.
+      * host id
       * @return The value.
       */
-    public java.lang.String getHost() {
-      return host;
+    public java.lang.String getHostId() {
+      return hostId;
     }
 
 
     /**
-      * Sets the value of the 'host' field.
-      * host
-      * @param value The value of 'host'.
+      * Sets the value of the 'hostId' field.
+      * host id
+      * @param value The value of 'hostId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketClientDeletedEvent.Builder setHost(java.lang.String value) {
+    public net.lightapi.portal.market.MarketClientDeletedEvent.Builder setHostId(java.lang.String value) {
       validate(fields()[1], value);
-      this.host = value;
+      this.hostId = value;
       fieldSetFlags()[1] = true;
       return this;
     }
 
     /**
-      * Checks whether the 'host' field has been set.
-      * host
-      * @return True if the 'host' field has been set, false otherwise.
+      * Checks whether the 'hostId' field has been set.
+      * host id
+      * @return True if the 'hostId' field has been set, false otherwise.
       */
-    public boolean hasHost() {
+    public boolean hasHostId() {
       return fieldSetFlags()[1];
     }
 
 
     /**
-      * Clears the value of the 'host' field.
-      * host
+      * Clears the value of the 'hostId' field.
+      * host id
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketClientDeletedEvent.Builder clearHost() {
-      host = null;
+    public net.lightapi.portal.market.MarketClientDeletedEvent.Builder clearHostId() {
+      hostId = null;
       fieldSetFlags()[1] = false;
       return this;
     }
@@ -527,7 +527,7 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
         } else {
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
-        record.host = fieldSetFlags()[1] ? this.host : (java.lang.String) defaultValue(fields()[1]);
+        record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
         record.applicationId = fieldSetFlags()[2] ? this.applicationId : (java.lang.String) defaultValue(fields()[2]);
         record.timestamp = fieldSetFlags()[3] ? this.timestamp : (java.lang.Long) defaultValue(fields()[3]);
         return record;
@@ -564,7 +564,7 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
   {
     this.EventId.customEncode(out);
 
-    out.writeString(this.host);
+    out.writeString(this.hostId);
 
     out.writeString(this.applicationId);
 
@@ -582,7 +582,7 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
       }
       this.EventId.customDecode(in);
 
-      this.host = in.readString();
+      this.hostId = in.readString();
 
       this.applicationId = in.readString();
 
@@ -599,7 +599,7 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
           break;
 
         case 1:
-          this.host = in.readString();
+          this.hostId = in.readString();
           break;
 
         case 2:

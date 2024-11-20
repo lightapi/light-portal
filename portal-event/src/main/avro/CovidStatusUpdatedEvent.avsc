@@ -40,12 +40,6 @@
       "doc": "the unique user id to update map store"
     },
     {
-      "name": "keyId",
-      "type": "int",
-      "default": 0,
-      "doc": "keyId 0 email 1 map category 2 map subcategory"
-    },
-    {
       "name": "country",
       "type": ["null", "string"],
       "default": null,

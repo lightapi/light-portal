@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -7714327250810160337L;
+  private static final long serialVersionUID = -2047618711178963064L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ServiceSpecUpdatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"keyId\",\"type\":\"int\",\"doc\":\"keyId 0 serviceId 1 host\"},{\"name\":\"host\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host\"},{\"name\":\"style\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api style\"},{\"name\":\"serviceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service id\"},{\"name\":\"spec\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service specification in JSON or YAML based on the style\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ServiceSpecUpdatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"style\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api style\"},{\"name\":\"serviceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service id\"},{\"name\":\"spec\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service specification in JSON or YAML based on the style\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -74,10 +74,8 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
   }
 
   private com.networknt.kafka.common.EventId EventId;
-  /** keyId 0 serviceId 1 host */
-  private int keyId;
-  /** host */
-  private java.lang.String host;
+  /** host id */
+  private java.lang.String hostId;
   /** api style */
   private java.lang.String style;
   /** service id */
@@ -97,17 +95,15 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
   /**
    * All-args constructor.
    * @param EventId The new value for EventId
-   * @param keyId keyId 0 serviceId 1 host
-   * @param host host
+   * @param hostId host id
    * @param style api style
    * @param serviceId service id
    * @param spec service specification in JSON or YAML based on the style
    * @param timestamp time the event is recorded
    */
-  public ServiceSpecUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.Integer keyId, java.lang.String host, java.lang.String style, java.lang.String serviceId, java.lang.String spec, java.lang.Long timestamp) {
+  public ServiceSpecUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String style, java.lang.String serviceId, java.lang.String spec, java.lang.Long timestamp) {
     this.EventId = EventId;
-    this.keyId = keyId;
-    this.host = host;
+    this.hostId = hostId;
     this.style = style;
     this.serviceId = serviceId;
     this.spec = spec;
@@ -120,12 +116,11 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return EventId;
-    case 1: return keyId;
-    case 2: return host;
-    case 3: return style;
-    case 4: return serviceId;
-    case 5: return spec;
-    case 6: return timestamp;
+    case 1: return hostId;
+    case 2: return style;
+    case 3: return serviceId;
+    case 4: return spec;
+    case 5: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -135,12 +130,11 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
-    case 1: keyId = (java.lang.Integer)value$; break;
-    case 2: host = value$ != null ? value$.toString() : null; break;
-    case 3: style = value$ != null ? value$.toString() : null; break;
-    case 4: serviceId = value$ != null ? value$.toString() : null; break;
-    case 5: spec = value$ != null ? value$.toString() : null; break;
-    case 6: timestamp = (java.lang.Long)value$; break;
+    case 1: hostId = value$ != null ? value$.toString() : null; break;
+    case 2: style = value$ != null ? value$.toString() : null; break;
+    case 3: serviceId = value$ != null ? value$.toString() : null; break;
+    case 4: spec = value$ != null ? value$.toString() : null; break;
+    case 5: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -163,39 +157,21 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
   }
 
   /**
-   * Gets the value of the 'keyId' field.
-   * @return keyId 0 serviceId 1 host
+   * Gets the value of the 'hostId' field.
+   * @return host id
    */
-  public int getKeyId() {
-    return keyId;
+  public java.lang.String getHostId() {
+    return hostId;
   }
 
 
   /**
-   * Sets the value of the 'keyId' field.
-   * keyId 0 serviceId 1 host
+   * Sets the value of the 'hostId' field.
+   * host id
    * @param value the value to set.
    */
-  public void setKeyId(int value) {
-    this.keyId = value;
-  }
-
-  /**
-   * Gets the value of the 'host' field.
-   * @return host
-   */
-  public java.lang.String getHost() {
-    return host;
-  }
-
-
-  /**
-   * Sets the value of the 'host' field.
-   * host
-   * @param value the value to set.
-   */
-  public void setHost(java.lang.String value) {
-    this.host = value;
+  public void setHostId(java.lang.String value) {
+    this.hostId = value;
   }
 
   /**
@@ -313,10 +289,8 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
-    /** keyId 0 serviceId 1 host */
-    private int keyId;
-    /** host */
-    private java.lang.String host;
+    /** host id */
+    private java.lang.String hostId;
     /** api style */
     private java.lang.String style;
     /** service id */
@@ -344,29 +318,25 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
       if (other.hasEventIdBuilder()) {
         this.EventIdBuilder = com.networknt.kafka.common.EventId.newBuilder(other.getEventIdBuilder());
       }
-      if (isValidValue(fields()[1], other.keyId)) {
-        this.keyId = data().deepCopy(fields()[1].schema(), other.keyId);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
-      if (isValidValue(fields()[2], other.host)) {
-        this.host = data().deepCopy(fields()[2].schema(), other.host);
+      if (isValidValue(fields()[2], other.style)) {
+        this.style = data().deepCopy(fields()[2].schema(), other.style);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.style)) {
-        this.style = data().deepCopy(fields()[3].schema(), other.style);
+      if (isValidValue(fields()[3], other.serviceId)) {
+        this.serviceId = data().deepCopy(fields()[3].schema(), other.serviceId);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
-      if (isValidValue(fields()[4], other.serviceId)) {
-        this.serviceId = data().deepCopy(fields()[4].schema(), other.serviceId);
+      if (isValidValue(fields()[4], other.spec)) {
+        this.spec = data().deepCopy(fields()[4].schema(), other.spec);
         fieldSetFlags()[4] = other.fieldSetFlags()[4];
       }
-      if (isValidValue(fields()[5], other.spec)) {
-        this.spec = data().deepCopy(fields()[5].schema(), other.spec);
+      if (isValidValue(fields()[5], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[5].schema(), other.timestamp);
         fieldSetFlags()[5] = other.fieldSetFlags()[5];
-      }
-      if (isValidValue(fields()[6], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[6].schema(), other.timestamp);
-        fieldSetFlags()[6] = other.fieldSetFlags()[6];
       }
     }
 
@@ -381,29 +351,25 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
         fieldSetFlags()[0] = true;
       }
       this.EventIdBuilder = null;
-      if (isValidValue(fields()[1], other.keyId)) {
-        this.keyId = data().deepCopy(fields()[1].schema(), other.keyId);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.host)) {
-        this.host = data().deepCopy(fields()[2].schema(), other.host);
+      if (isValidValue(fields()[2], other.style)) {
+        this.style = data().deepCopy(fields()[2].schema(), other.style);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.style)) {
-        this.style = data().deepCopy(fields()[3].schema(), other.style);
+      if (isValidValue(fields()[3], other.serviceId)) {
+        this.serviceId = data().deepCopy(fields()[3].schema(), other.serviceId);
         fieldSetFlags()[3] = true;
       }
-      if (isValidValue(fields()[4], other.serviceId)) {
-        this.serviceId = data().deepCopy(fields()[4].schema(), other.serviceId);
+      if (isValidValue(fields()[4], other.spec)) {
+        this.spec = data().deepCopy(fields()[4].schema(), other.spec);
         fieldSetFlags()[4] = true;
       }
-      if (isValidValue(fields()[5], other.spec)) {
-        this.spec = data().deepCopy(fields()[5].schema(), other.spec);
+      if (isValidValue(fields()[5], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[5].schema(), other.timestamp);
         fieldSetFlags()[5] = true;
-      }
-      if (isValidValue(fields()[6], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[6].schema(), other.timestamp);
-        fieldSetFlags()[6] = true;
       }
     }
 
@@ -484,89 +450,46 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
     }
 
     /**
-      * Gets the value of the 'keyId' field.
-      * keyId 0 serviceId 1 host
+      * Gets the value of the 'hostId' field.
+      * host id
       * @return The value.
       */
-    public int getKeyId() {
-      return keyId;
+    public java.lang.String getHostId() {
+      return hostId;
     }
 
 
     /**
-      * Sets the value of the 'keyId' field.
-      * keyId 0 serviceId 1 host
-      * @param value The value of 'keyId'.
+      * Sets the value of the 'hostId' field.
+      * host id
+      * @param value The value of 'hostId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.ServiceSpecUpdatedEvent.Builder setKeyId(int value) {
+    public net.lightapi.portal.market.ServiceSpecUpdatedEvent.Builder setHostId(java.lang.String value) {
       validate(fields()[1], value);
-      this.keyId = value;
+      this.hostId = value;
       fieldSetFlags()[1] = true;
       return this;
     }
 
     /**
-      * Checks whether the 'keyId' field has been set.
-      * keyId 0 serviceId 1 host
-      * @return True if the 'keyId' field has been set, false otherwise.
+      * Checks whether the 'hostId' field has been set.
+      * host id
+      * @return True if the 'hostId' field has been set, false otherwise.
       */
-    public boolean hasKeyId() {
+    public boolean hasHostId() {
       return fieldSetFlags()[1];
     }
 
 
     /**
-      * Clears the value of the 'keyId' field.
-      * keyId 0 serviceId 1 host
+      * Clears the value of the 'hostId' field.
+      * host id
       * @return This builder.
       */
-    public net.lightapi.portal.market.ServiceSpecUpdatedEvent.Builder clearKeyId() {
+    public net.lightapi.portal.market.ServiceSpecUpdatedEvent.Builder clearHostId() {
+      hostId = null;
       fieldSetFlags()[1] = false;
-      return this;
-    }
-
-    /**
-      * Gets the value of the 'host' field.
-      * host
-      * @return The value.
-      */
-    public java.lang.String getHost() {
-      return host;
-    }
-
-
-    /**
-      * Sets the value of the 'host' field.
-      * host
-      * @param value The value of 'host'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.ServiceSpecUpdatedEvent.Builder setHost(java.lang.String value) {
-      validate(fields()[2], value);
-      this.host = value;
-      fieldSetFlags()[2] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'host' field has been set.
-      * host
-      * @return True if the 'host' field has been set, false otherwise.
-      */
-    public boolean hasHost() {
-      return fieldSetFlags()[2];
-    }
-
-
-    /**
-      * Clears the value of the 'host' field.
-      * host
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.ServiceSpecUpdatedEvent.Builder clearHost() {
-      host = null;
-      fieldSetFlags()[2] = false;
       return this;
     }
 
@@ -587,9 +510,9 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.market.ServiceSpecUpdatedEvent.Builder setStyle(java.lang.String value) {
-      validate(fields()[3], value);
+      validate(fields()[2], value);
       this.style = value;
-      fieldSetFlags()[3] = true;
+      fieldSetFlags()[2] = true;
       return this;
     }
 
@@ -599,7 +522,7 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return True if the 'style' field has been set, false otherwise.
       */
     public boolean hasStyle() {
-      return fieldSetFlags()[3];
+      return fieldSetFlags()[2];
     }
 
 
@@ -610,7 +533,7 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
       */
     public net.lightapi.portal.market.ServiceSpecUpdatedEvent.Builder clearStyle() {
       style = null;
-      fieldSetFlags()[3] = false;
+      fieldSetFlags()[2] = false;
       return this;
     }
 
@@ -631,9 +554,9 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.market.ServiceSpecUpdatedEvent.Builder setServiceId(java.lang.String value) {
-      validate(fields()[4], value);
+      validate(fields()[3], value);
       this.serviceId = value;
-      fieldSetFlags()[4] = true;
+      fieldSetFlags()[3] = true;
       return this;
     }
 
@@ -643,7 +566,7 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return True if the 'serviceId' field has been set, false otherwise.
       */
     public boolean hasServiceId() {
-      return fieldSetFlags()[4];
+      return fieldSetFlags()[3];
     }
 
 
@@ -654,7 +577,7 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
       */
     public net.lightapi.portal.market.ServiceSpecUpdatedEvent.Builder clearServiceId() {
       serviceId = null;
-      fieldSetFlags()[4] = false;
+      fieldSetFlags()[3] = false;
       return this;
     }
 
@@ -675,9 +598,9 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.market.ServiceSpecUpdatedEvent.Builder setSpec(java.lang.String value) {
-      validate(fields()[5], value);
+      validate(fields()[4], value);
       this.spec = value;
-      fieldSetFlags()[5] = true;
+      fieldSetFlags()[4] = true;
       return this;
     }
 
@@ -687,7 +610,7 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return True if the 'spec' field has been set, false otherwise.
       */
     public boolean hasSpec() {
-      return fieldSetFlags()[5];
+      return fieldSetFlags()[4];
     }
 
 
@@ -698,7 +621,7 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
       */
     public net.lightapi.portal.market.ServiceSpecUpdatedEvent.Builder clearSpec() {
       spec = null;
-      fieldSetFlags()[5] = false;
+      fieldSetFlags()[4] = false;
       return this;
     }
 
@@ -719,9 +642,9 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.market.ServiceSpecUpdatedEvent.Builder setTimestamp(long value) {
-      validate(fields()[6], value);
+      validate(fields()[5], value);
       this.timestamp = value;
-      fieldSetFlags()[6] = true;
+      fieldSetFlags()[5] = true;
       return this;
     }
 
@@ -731,7 +654,7 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return True if the 'timestamp' field has been set, false otherwise.
       */
     public boolean hasTimestamp() {
-      return fieldSetFlags()[6];
+      return fieldSetFlags()[5];
     }
 
 
@@ -741,7 +664,7 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.market.ServiceSpecUpdatedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[6] = false;
+      fieldSetFlags()[5] = false;
       return this;
     }
 
@@ -760,12 +683,11 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
         } else {
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
-        record.keyId = fieldSetFlags()[1] ? this.keyId : (java.lang.Integer) defaultValue(fields()[1]);
-        record.host = fieldSetFlags()[2] ? this.host : (java.lang.String) defaultValue(fields()[2]);
-        record.style = fieldSetFlags()[3] ? this.style : (java.lang.String) defaultValue(fields()[3]);
-        record.serviceId = fieldSetFlags()[4] ? this.serviceId : (java.lang.String) defaultValue(fields()[4]);
-        record.spec = fieldSetFlags()[5] ? this.spec : (java.lang.String) defaultValue(fields()[5]);
-        record.timestamp = fieldSetFlags()[6] ? this.timestamp : (java.lang.Long) defaultValue(fields()[6]);
+        record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
+        record.style = fieldSetFlags()[2] ? this.style : (java.lang.String) defaultValue(fields()[2]);
+        record.serviceId = fieldSetFlags()[3] ? this.serviceId : (java.lang.String) defaultValue(fields()[3]);
+        record.spec = fieldSetFlags()[4] ? this.spec : (java.lang.String) defaultValue(fields()[4]);
+        record.timestamp = fieldSetFlags()[5] ? this.timestamp : (java.lang.Long) defaultValue(fields()[5]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -800,9 +722,7 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
   {
     this.EventId.customEncode(out);
 
-    out.writeInt(this.keyId);
-
-    out.writeString(this.host);
+    out.writeString(this.hostId);
 
     out.writeString(this.style);
 
@@ -824,9 +744,7 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
       }
       this.EventId.customDecode(in);
 
-      this.keyId = in.readInt();
-
-      this.host = in.readString();
+      this.hostId = in.readString();
 
       this.style = in.readString();
 
@@ -837,7 +755,7 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
       this.timestamp = in.readLong();
 
     } else {
-      for (int i = 0; i < 7; i++) {
+      for (int i = 0; i < 6; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -847,26 +765,22 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
           break;
 
         case 1:
-          this.keyId = in.readInt();
+          this.hostId = in.readString();
           break;
 
         case 2:
-          this.host = in.readString();
-          break;
-
-        case 3:
           this.style = in.readString();
           break;
 
-        case 4:
+        case 3:
           this.serviceId = in.readString();
           break;
 
-        case 5:
+        case 4:
           this.spec = in.readString();
           break;
 
-        case 6:
+        case 5:
           this.timestamp = in.readLong();
           break;
 

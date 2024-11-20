@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class OrderCancelledEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 4234175427684080516L;
+  private static final long serialVersionUID = -4408624005137026727L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"OrderCancelledEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the id\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"email\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"email of the customer\"},{\"name\":\"merchantEmail\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"Merchant Email\"},{\"name\":\"orderId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"The orderId\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"OrderCancelledEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the id\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"email\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"email of the customer\"},{\"name\":\"merchantEmail\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"Merchant Email\"},{\"name\":\"orderId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"The orderId\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -74,6 +74,8 @@ public class OrderCancelledEvent extends org.apache.avro.specific.SpecificRecord
   }
 
   private com.networknt.kafka.common.EventId EventId;
+  /** host id */
+  private java.lang.String hostId;
   /** email of the customer */
   private java.lang.String email;
   /** Merchant Email */
@@ -93,13 +95,15 @@ public class OrderCancelledEvent extends org.apache.avro.specific.SpecificRecord
   /**
    * All-args constructor.
    * @param EventId The new value for EventId
+   * @param hostId host id
    * @param email email of the customer
    * @param merchantEmail Merchant Email
    * @param orderId The orderId
    * @param timestamp time the event is recorded
    */
-  public OrderCancelledEvent(com.networknt.kafka.common.EventId EventId, java.lang.String email, java.lang.String merchantEmail, java.lang.String orderId, java.lang.Long timestamp) {
+  public OrderCancelledEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String email, java.lang.String merchantEmail, java.lang.String orderId, java.lang.Long timestamp) {
     this.EventId = EventId;
+    this.hostId = hostId;
     this.email = email;
     this.merchantEmail = merchantEmail;
     this.orderId = orderId;
@@ -112,10 +116,11 @@ public class OrderCancelledEvent extends org.apache.avro.specific.SpecificRecord
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return EventId;
-    case 1: return email;
-    case 2: return merchantEmail;
-    case 3: return orderId;
-    case 4: return timestamp;
+    case 1: return hostId;
+    case 2: return email;
+    case 3: return merchantEmail;
+    case 4: return orderId;
+    case 5: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -125,10 +130,11 @@ public class OrderCancelledEvent extends org.apache.avro.specific.SpecificRecord
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
-    case 1: email = value$ != null ? value$.toString() : null; break;
-    case 2: merchantEmail = value$ != null ? value$.toString() : null; break;
-    case 3: orderId = value$ != null ? value$.toString() : null; break;
-    case 4: timestamp = (java.lang.Long)value$; break;
+    case 1: hostId = value$ != null ? value$.toString() : null; break;
+    case 2: email = value$ != null ? value$.toString() : null; break;
+    case 3: merchantEmail = value$ != null ? value$.toString() : null; break;
+    case 4: orderId = value$ != null ? value$.toString() : null; break;
+    case 5: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -148,6 +154,24 @@ public class OrderCancelledEvent extends org.apache.avro.specific.SpecificRecord
    */
   public void setEventId(com.networknt.kafka.common.EventId value) {
     this.EventId = value;
+  }
+
+  /**
+   * Gets the value of the 'hostId' field.
+   * @return host id
+   */
+  public java.lang.String getHostId() {
+    return hostId;
+  }
+
+
+  /**
+   * Sets the value of the 'hostId' field.
+   * host id
+   * @param value the value to set.
+   */
+  public void setHostId(java.lang.String value) {
+    this.hostId = value;
   }
 
   /**
@@ -265,6 +289,8 @@ public class OrderCancelledEvent extends org.apache.avro.specific.SpecificRecord
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
+    /** host id */
+    private java.lang.String hostId;
     /** email of the customer */
     private java.lang.String email;
     /** Merchant Email */
@@ -292,21 +318,25 @@ public class OrderCancelledEvent extends org.apache.avro.specific.SpecificRecord
       if (other.hasEventIdBuilder()) {
         this.EventIdBuilder = com.networknt.kafka.common.EventId.newBuilder(other.getEventIdBuilder());
       }
-      if (isValidValue(fields()[1], other.email)) {
-        this.email = data().deepCopy(fields()[1].schema(), other.email);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
-      if (isValidValue(fields()[2], other.merchantEmail)) {
-        this.merchantEmail = data().deepCopy(fields()[2].schema(), other.merchantEmail);
+      if (isValidValue(fields()[2], other.email)) {
+        this.email = data().deepCopy(fields()[2].schema(), other.email);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.orderId)) {
-        this.orderId = data().deepCopy(fields()[3].schema(), other.orderId);
+      if (isValidValue(fields()[3], other.merchantEmail)) {
+        this.merchantEmail = data().deepCopy(fields()[3].schema(), other.merchantEmail);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
-      if (isValidValue(fields()[4], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[4].schema(), other.timestamp);
+      if (isValidValue(fields()[4], other.orderId)) {
+        this.orderId = data().deepCopy(fields()[4].schema(), other.orderId);
         fieldSetFlags()[4] = other.fieldSetFlags()[4];
+      }
+      if (isValidValue(fields()[5], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[5].schema(), other.timestamp);
+        fieldSetFlags()[5] = other.fieldSetFlags()[5];
       }
     }
 
@@ -321,21 +351,25 @@ public class OrderCancelledEvent extends org.apache.avro.specific.SpecificRecord
         fieldSetFlags()[0] = true;
       }
       this.EventIdBuilder = null;
-      if (isValidValue(fields()[1], other.email)) {
-        this.email = data().deepCopy(fields()[1].schema(), other.email);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.merchantEmail)) {
-        this.merchantEmail = data().deepCopy(fields()[2].schema(), other.merchantEmail);
+      if (isValidValue(fields()[2], other.email)) {
+        this.email = data().deepCopy(fields()[2].schema(), other.email);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.orderId)) {
-        this.orderId = data().deepCopy(fields()[3].schema(), other.orderId);
+      if (isValidValue(fields()[3], other.merchantEmail)) {
+        this.merchantEmail = data().deepCopy(fields()[3].schema(), other.merchantEmail);
         fieldSetFlags()[3] = true;
       }
-      if (isValidValue(fields()[4], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[4].schema(), other.timestamp);
+      if (isValidValue(fields()[4], other.orderId)) {
+        this.orderId = data().deepCopy(fields()[4].schema(), other.orderId);
         fieldSetFlags()[4] = true;
+      }
+      if (isValidValue(fields()[5], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[5].schema(), other.timestamp);
+        fieldSetFlags()[5] = true;
       }
     }
 
@@ -416,6 +450,50 @@ public class OrderCancelledEvent extends org.apache.avro.specific.SpecificRecord
     }
 
     /**
+      * Gets the value of the 'hostId' field.
+      * host id
+      * @return The value.
+      */
+    public java.lang.String getHostId() {
+      return hostId;
+    }
+
+
+    /**
+      * Sets the value of the 'hostId' field.
+      * host id
+      * @param value The value of 'hostId'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.user.OrderCancelledEvent.Builder setHostId(java.lang.String value) {
+      validate(fields()[1], value);
+      this.hostId = value;
+      fieldSetFlags()[1] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'hostId' field has been set.
+      * host id
+      * @return True if the 'hostId' field has been set, false otherwise.
+      */
+    public boolean hasHostId() {
+      return fieldSetFlags()[1];
+    }
+
+
+    /**
+      * Clears the value of the 'hostId' field.
+      * host id
+      * @return This builder.
+      */
+    public net.lightapi.portal.user.OrderCancelledEvent.Builder clearHostId() {
+      hostId = null;
+      fieldSetFlags()[1] = false;
+      return this;
+    }
+
+    /**
       * Gets the value of the 'email' field.
       * email of the customer
       * @return The value.
@@ -432,9 +510,9 @@ public class OrderCancelledEvent extends org.apache.avro.specific.SpecificRecord
       * @return This builder.
       */
     public net.lightapi.portal.user.OrderCancelledEvent.Builder setEmail(java.lang.String value) {
-      validate(fields()[1], value);
+      validate(fields()[2], value);
       this.email = value;
-      fieldSetFlags()[1] = true;
+      fieldSetFlags()[2] = true;
       return this;
     }
 
@@ -444,7 +522,7 @@ public class OrderCancelledEvent extends org.apache.avro.specific.SpecificRecord
       * @return True if the 'email' field has been set, false otherwise.
       */
     public boolean hasEmail() {
-      return fieldSetFlags()[1];
+      return fieldSetFlags()[2];
     }
 
 
@@ -455,7 +533,7 @@ public class OrderCancelledEvent extends org.apache.avro.specific.SpecificRecord
       */
     public net.lightapi.portal.user.OrderCancelledEvent.Builder clearEmail() {
       email = null;
-      fieldSetFlags()[1] = false;
+      fieldSetFlags()[2] = false;
       return this;
     }
 
@@ -476,9 +554,9 @@ public class OrderCancelledEvent extends org.apache.avro.specific.SpecificRecord
       * @return This builder.
       */
     public net.lightapi.portal.user.OrderCancelledEvent.Builder setMerchantEmail(java.lang.String value) {
-      validate(fields()[2], value);
+      validate(fields()[3], value);
       this.merchantEmail = value;
-      fieldSetFlags()[2] = true;
+      fieldSetFlags()[3] = true;
       return this;
     }
 
@@ -488,7 +566,7 @@ public class OrderCancelledEvent extends org.apache.avro.specific.SpecificRecord
       * @return True if the 'merchantEmail' field has been set, false otherwise.
       */
     public boolean hasMerchantEmail() {
-      return fieldSetFlags()[2];
+      return fieldSetFlags()[3];
     }
 
 
@@ -499,7 +577,7 @@ public class OrderCancelledEvent extends org.apache.avro.specific.SpecificRecord
       */
     public net.lightapi.portal.user.OrderCancelledEvent.Builder clearMerchantEmail() {
       merchantEmail = null;
-      fieldSetFlags()[2] = false;
+      fieldSetFlags()[3] = false;
       return this;
     }
 
@@ -520,9 +598,9 @@ public class OrderCancelledEvent extends org.apache.avro.specific.SpecificRecord
       * @return This builder.
       */
     public net.lightapi.portal.user.OrderCancelledEvent.Builder setOrderId(java.lang.String value) {
-      validate(fields()[3], value);
+      validate(fields()[4], value);
       this.orderId = value;
-      fieldSetFlags()[3] = true;
+      fieldSetFlags()[4] = true;
       return this;
     }
 
@@ -532,7 +610,7 @@ public class OrderCancelledEvent extends org.apache.avro.specific.SpecificRecord
       * @return True if the 'orderId' field has been set, false otherwise.
       */
     public boolean hasOrderId() {
-      return fieldSetFlags()[3];
+      return fieldSetFlags()[4];
     }
 
 
@@ -543,7 +621,7 @@ public class OrderCancelledEvent extends org.apache.avro.specific.SpecificRecord
       */
     public net.lightapi.portal.user.OrderCancelledEvent.Builder clearOrderId() {
       orderId = null;
-      fieldSetFlags()[3] = false;
+      fieldSetFlags()[4] = false;
       return this;
     }
 
@@ -564,9 +642,9 @@ public class OrderCancelledEvent extends org.apache.avro.specific.SpecificRecord
       * @return This builder.
       */
     public net.lightapi.portal.user.OrderCancelledEvent.Builder setTimestamp(long value) {
-      validate(fields()[4], value);
+      validate(fields()[5], value);
       this.timestamp = value;
-      fieldSetFlags()[4] = true;
+      fieldSetFlags()[5] = true;
       return this;
     }
 
@@ -576,7 +654,7 @@ public class OrderCancelledEvent extends org.apache.avro.specific.SpecificRecord
       * @return True if the 'timestamp' field has been set, false otherwise.
       */
     public boolean hasTimestamp() {
-      return fieldSetFlags()[4];
+      return fieldSetFlags()[5];
     }
 
 
@@ -586,7 +664,7 @@ public class OrderCancelledEvent extends org.apache.avro.specific.SpecificRecord
       * @return This builder.
       */
     public net.lightapi.portal.user.OrderCancelledEvent.Builder clearTimestamp() {
-      fieldSetFlags()[4] = false;
+      fieldSetFlags()[5] = false;
       return this;
     }
 
@@ -605,10 +683,11 @@ public class OrderCancelledEvent extends org.apache.avro.specific.SpecificRecord
         } else {
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
-        record.email = fieldSetFlags()[1] ? this.email : (java.lang.String) defaultValue(fields()[1]);
-        record.merchantEmail = fieldSetFlags()[2] ? this.merchantEmail : (java.lang.String) defaultValue(fields()[2]);
-        record.orderId = fieldSetFlags()[3] ? this.orderId : (java.lang.String) defaultValue(fields()[3]);
-        record.timestamp = fieldSetFlags()[4] ? this.timestamp : (java.lang.Long) defaultValue(fields()[4]);
+        record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
+        record.email = fieldSetFlags()[2] ? this.email : (java.lang.String) defaultValue(fields()[2]);
+        record.merchantEmail = fieldSetFlags()[3] ? this.merchantEmail : (java.lang.String) defaultValue(fields()[3]);
+        record.orderId = fieldSetFlags()[4] ? this.orderId : (java.lang.String) defaultValue(fields()[4]);
+        record.timestamp = fieldSetFlags()[5] ? this.timestamp : (java.lang.Long) defaultValue(fields()[5]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -643,6 +722,8 @@ public class OrderCancelledEvent extends org.apache.avro.specific.SpecificRecord
   {
     this.EventId.customEncode(out);
 
+    out.writeString(this.hostId);
+
     out.writeString(this.email);
 
     out.writeString(this.merchantEmail);
@@ -663,6 +744,8 @@ public class OrderCancelledEvent extends org.apache.avro.specific.SpecificRecord
       }
       this.EventId.customDecode(in);
 
+      this.hostId = in.readString();
+
       this.email = in.readString();
 
       this.merchantEmail = in.readString();
@@ -672,7 +755,7 @@ public class OrderCancelledEvent extends org.apache.avro.specific.SpecificRecord
       this.timestamp = in.readLong();
 
     } else {
-      for (int i = 0; i < 5; i++) {
+      for (int i = 0; i < 6; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -682,18 +765,22 @@ public class OrderCancelledEvent extends org.apache.avro.specific.SpecificRecord
           break;
 
         case 1:
-          this.email = in.readString();
+          this.hostId = in.readString();
           break;
 
         case 2:
-          this.merchantEmail = in.readString();
+          this.email = in.readString();
           break;
 
         case 3:
-          this.orderId = in.readString();
+          this.merchantEmail = in.readString();
           break;
 
         case 4:
+          this.orderId = in.readString();
+          break;
+
+        case 5:
           this.timestamp = in.readLong();
           break;
 

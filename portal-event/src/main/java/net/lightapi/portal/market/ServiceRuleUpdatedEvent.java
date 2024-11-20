@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -7052336038906267683L;
+  private static final long serialVersionUID = 9182560958988539869L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ServiceRuleUpdatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"keyId\",\"type\":\"int\",\"doc\":\"keyId 0 serviceId\"},{\"name\":\"host\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host\"},{\"name\":\"serviceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service id\"},{\"name\":\"endpoint\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service endpoint\"},{\"name\":\"ruleType\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule type\"},{\"name\":\"rules\",\"type\":{\"type\":\"array\",\"items\":{\"type\":\"record\",\"name\":\"ServiceRule\",\"fields\":[{\"name\":\"ruleId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule id\"},{\"name\":\"roles\",\"type\":[\"null\",{\"type\":\"array\",\"items\":{\"type\":\"string\",\"avro.java.string\":\"String\"}}],\"doc\":\"roles that accesses the endpoint\",\"default\":null},{\"name\":\"variables\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"rule variables if any\",\"default\":null}]}},\"doc\":\"service rules\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ServiceRuleUpdatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"serviceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service id\"},{\"name\":\"endpoint\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service endpoint\"},{\"name\":\"ruleType\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule type\"},{\"name\":\"rules\",\"type\":{\"type\":\"array\",\"items\":{\"type\":\"record\",\"name\":\"ServiceRule\",\"fields\":[{\"name\":\"ruleId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule id\"},{\"name\":\"roles\",\"type\":[\"null\",{\"type\":\"array\",\"items\":{\"type\":\"string\",\"avro.java.string\":\"String\"}}],\"doc\":\"roles that accesses the endpoint\",\"default\":null},{\"name\":\"variables\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"rule variables if any\",\"default\":null}]}},\"doc\":\"service rules\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -74,10 +74,8 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
   }
 
   private com.networknt.kafka.common.EventId EventId;
-  /** keyId 0 serviceId */
-  private int keyId;
-  /** host */
-  private java.lang.String host;
+  /** host id */
+  private java.lang.String hostId;
   /** service id */
   private java.lang.String serviceId;
   /** service endpoint */
@@ -99,18 +97,16 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
   /**
    * All-args constructor.
    * @param EventId The new value for EventId
-   * @param keyId keyId 0 serviceId
-   * @param host host
+   * @param hostId host id
    * @param serviceId service id
    * @param endpoint service endpoint
    * @param ruleType rule type
    * @param rules service rules
    * @param timestamp time the event is recorded
    */
-  public ServiceRuleUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.Integer keyId, java.lang.String host, java.lang.String serviceId, java.lang.String endpoint, java.lang.String ruleType, java.util.List<net.lightapi.portal.market.ServiceRule> rules, java.lang.Long timestamp) {
+  public ServiceRuleUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String serviceId, java.lang.String endpoint, java.lang.String ruleType, java.util.List<net.lightapi.portal.market.ServiceRule> rules, java.lang.Long timestamp) {
     this.EventId = EventId;
-    this.keyId = keyId;
-    this.host = host;
+    this.hostId = hostId;
     this.serviceId = serviceId;
     this.endpoint = endpoint;
     this.ruleType = ruleType;
@@ -124,13 +120,12 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return EventId;
-    case 1: return keyId;
-    case 2: return host;
-    case 3: return serviceId;
-    case 4: return endpoint;
-    case 5: return ruleType;
-    case 6: return rules;
-    case 7: return timestamp;
+    case 1: return hostId;
+    case 2: return serviceId;
+    case 3: return endpoint;
+    case 4: return ruleType;
+    case 5: return rules;
+    case 6: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -140,13 +135,12 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
-    case 1: keyId = (java.lang.Integer)value$; break;
-    case 2: host = value$ != null ? value$.toString() : null; break;
-    case 3: serviceId = value$ != null ? value$.toString() : null; break;
-    case 4: endpoint = value$ != null ? value$.toString() : null; break;
-    case 5: ruleType = value$ != null ? value$.toString() : null; break;
-    case 6: rules = (java.util.List<net.lightapi.portal.market.ServiceRule>)value$; break;
-    case 7: timestamp = (java.lang.Long)value$; break;
+    case 1: hostId = value$ != null ? value$.toString() : null; break;
+    case 2: serviceId = value$ != null ? value$.toString() : null; break;
+    case 3: endpoint = value$ != null ? value$.toString() : null; break;
+    case 4: ruleType = value$ != null ? value$.toString() : null; break;
+    case 5: rules = (java.util.List<net.lightapi.portal.market.ServiceRule>)value$; break;
+    case 6: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -169,39 +163,21 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
   }
 
   /**
-   * Gets the value of the 'keyId' field.
-   * @return keyId 0 serviceId
+   * Gets the value of the 'hostId' field.
+   * @return host id
    */
-  public int getKeyId() {
-    return keyId;
+  public java.lang.String getHostId() {
+    return hostId;
   }
 
 
   /**
-   * Sets the value of the 'keyId' field.
-   * keyId 0 serviceId
+   * Sets the value of the 'hostId' field.
+   * host id
    * @param value the value to set.
    */
-  public void setKeyId(int value) {
-    this.keyId = value;
-  }
-
-  /**
-   * Gets the value of the 'host' field.
-   * @return host
-   */
-  public java.lang.String getHost() {
-    return host;
-  }
-
-
-  /**
-   * Sets the value of the 'host' field.
-   * host
-   * @param value the value to set.
-   */
-  public void setHost(java.lang.String value) {
-    this.host = value;
+  public void setHostId(java.lang.String value) {
+    this.hostId = value;
   }
 
   /**
@@ -337,10 +313,8 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
-    /** keyId 0 serviceId */
-    private int keyId;
-    /** host */
-    private java.lang.String host;
+    /** host id */
+    private java.lang.String hostId;
     /** service id */
     private java.lang.String serviceId;
     /** service endpoint */
@@ -370,33 +344,29 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
       if (other.hasEventIdBuilder()) {
         this.EventIdBuilder = com.networknt.kafka.common.EventId.newBuilder(other.getEventIdBuilder());
       }
-      if (isValidValue(fields()[1], other.keyId)) {
-        this.keyId = data().deepCopy(fields()[1].schema(), other.keyId);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
-      if (isValidValue(fields()[2], other.host)) {
-        this.host = data().deepCopy(fields()[2].schema(), other.host);
+      if (isValidValue(fields()[2], other.serviceId)) {
+        this.serviceId = data().deepCopy(fields()[2].schema(), other.serviceId);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.serviceId)) {
-        this.serviceId = data().deepCopy(fields()[3].schema(), other.serviceId);
+      if (isValidValue(fields()[3], other.endpoint)) {
+        this.endpoint = data().deepCopy(fields()[3].schema(), other.endpoint);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
-      if (isValidValue(fields()[4], other.endpoint)) {
-        this.endpoint = data().deepCopy(fields()[4].schema(), other.endpoint);
+      if (isValidValue(fields()[4], other.ruleType)) {
+        this.ruleType = data().deepCopy(fields()[4].schema(), other.ruleType);
         fieldSetFlags()[4] = other.fieldSetFlags()[4];
       }
-      if (isValidValue(fields()[5], other.ruleType)) {
-        this.ruleType = data().deepCopy(fields()[5].schema(), other.ruleType);
+      if (isValidValue(fields()[5], other.rules)) {
+        this.rules = data().deepCopy(fields()[5].schema(), other.rules);
         fieldSetFlags()[5] = other.fieldSetFlags()[5];
       }
-      if (isValidValue(fields()[6], other.rules)) {
-        this.rules = data().deepCopy(fields()[6].schema(), other.rules);
+      if (isValidValue(fields()[6], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[6].schema(), other.timestamp);
         fieldSetFlags()[6] = other.fieldSetFlags()[6];
-      }
-      if (isValidValue(fields()[7], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[7].schema(), other.timestamp);
-        fieldSetFlags()[7] = other.fieldSetFlags()[7];
       }
     }
 
@@ -411,33 +381,29 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
         fieldSetFlags()[0] = true;
       }
       this.EventIdBuilder = null;
-      if (isValidValue(fields()[1], other.keyId)) {
-        this.keyId = data().deepCopy(fields()[1].schema(), other.keyId);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.host)) {
-        this.host = data().deepCopy(fields()[2].schema(), other.host);
+      if (isValidValue(fields()[2], other.serviceId)) {
+        this.serviceId = data().deepCopy(fields()[2].schema(), other.serviceId);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.serviceId)) {
-        this.serviceId = data().deepCopy(fields()[3].schema(), other.serviceId);
+      if (isValidValue(fields()[3], other.endpoint)) {
+        this.endpoint = data().deepCopy(fields()[3].schema(), other.endpoint);
         fieldSetFlags()[3] = true;
       }
-      if (isValidValue(fields()[4], other.endpoint)) {
-        this.endpoint = data().deepCopy(fields()[4].schema(), other.endpoint);
+      if (isValidValue(fields()[4], other.ruleType)) {
+        this.ruleType = data().deepCopy(fields()[4].schema(), other.ruleType);
         fieldSetFlags()[4] = true;
       }
-      if (isValidValue(fields()[5], other.ruleType)) {
-        this.ruleType = data().deepCopy(fields()[5].schema(), other.ruleType);
+      if (isValidValue(fields()[5], other.rules)) {
+        this.rules = data().deepCopy(fields()[5].schema(), other.rules);
         fieldSetFlags()[5] = true;
       }
-      if (isValidValue(fields()[6], other.rules)) {
-        this.rules = data().deepCopy(fields()[6].schema(), other.rules);
+      if (isValidValue(fields()[6], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[6].schema(), other.timestamp);
         fieldSetFlags()[6] = true;
-      }
-      if (isValidValue(fields()[7], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[7].schema(), other.timestamp);
-        fieldSetFlags()[7] = true;
       }
     }
 
@@ -518,89 +484,46 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
     }
 
     /**
-      * Gets the value of the 'keyId' field.
-      * keyId 0 serviceId
+      * Gets the value of the 'hostId' field.
+      * host id
       * @return The value.
       */
-    public int getKeyId() {
-      return keyId;
+    public java.lang.String getHostId() {
+      return hostId;
     }
 
 
     /**
-      * Sets the value of the 'keyId' field.
-      * keyId 0 serviceId
-      * @param value The value of 'keyId'.
+      * Sets the value of the 'hostId' field.
+      * host id
+      * @param value The value of 'hostId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.ServiceRuleUpdatedEvent.Builder setKeyId(int value) {
+    public net.lightapi.portal.market.ServiceRuleUpdatedEvent.Builder setHostId(java.lang.String value) {
       validate(fields()[1], value);
-      this.keyId = value;
+      this.hostId = value;
       fieldSetFlags()[1] = true;
       return this;
     }
 
     /**
-      * Checks whether the 'keyId' field has been set.
-      * keyId 0 serviceId
-      * @return True if the 'keyId' field has been set, false otherwise.
+      * Checks whether the 'hostId' field has been set.
+      * host id
+      * @return True if the 'hostId' field has been set, false otherwise.
       */
-    public boolean hasKeyId() {
+    public boolean hasHostId() {
       return fieldSetFlags()[1];
     }
 
 
     /**
-      * Clears the value of the 'keyId' field.
-      * keyId 0 serviceId
+      * Clears the value of the 'hostId' field.
+      * host id
       * @return This builder.
       */
-    public net.lightapi.portal.market.ServiceRuleUpdatedEvent.Builder clearKeyId() {
+    public net.lightapi.portal.market.ServiceRuleUpdatedEvent.Builder clearHostId() {
+      hostId = null;
       fieldSetFlags()[1] = false;
-      return this;
-    }
-
-    /**
-      * Gets the value of the 'host' field.
-      * host
-      * @return The value.
-      */
-    public java.lang.String getHost() {
-      return host;
-    }
-
-
-    /**
-      * Sets the value of the 'host' field.
-      * host
-      * @param value The value of 'host'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.ServiceRuleUpdatedEvent.Builder setHost(java.lang.String value) {
-      validate(fields()[2], value);
-      this.host = value;
-      fieldSetFlags()[2] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'host' field has been set.
-      * host
-      * @return True if the 'host' field has been set, false otherwise.
-      */
-    public boolean hasHost() {
-      return fieldSetFlags()[2];
-    }
-
-
-    /**
-      * Clears the value of the 'host' field.
-      * host
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.ServiceRuleUpdatedEvent.Builder clearHost() {
-      host = null;
-      fieldSetFlags()[2] = false;
       return this;
     }
 
@@ -621,9 +544,9 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.market.ServiceRuleUpdatedEvent.Builder setServiceId(java.lang.String value) {
-      validate(fields()[3], value);
+      validate(fields()[2], value);
       this.serviceId = value;
-      fieldSetFlags()[3] = true;
+      fieldSetFlags()[2] = true;
       return this;
     }
 
@@ -633,7 +556,7 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return True if the 'serviceId' field has been set, false otherwise.
       */
     public boolean hasServiceId() {
-      return fieldSetFlags()[3];
+      return fieldSetFlags()[2];
     }
 
 
@@ -644,7 +567,7 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
       */
     public net.lightapi.portal.market.ServiceRuleUpdatedEvent.Builder clearServiceId() {
       serviceId = null;
-      fieldSetFlags()[3] = false;
+      fieldSetFlags()[2] = false;
       return this;
     }
 
@@ -665,9 +588,9 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.market.ServiceRuleUpdatedEvent.Builder setEndpoint(java.lang.String value) {
-      validate(fields()[4], value);
+      validate(fields()[3], value);
       this.endpoint = value;
-      fieldSetFlags()[4] = true;
+      fieldSetFlags()[3] = true;
       return this;
     }
 
@@ -677,7 +600,7 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return True if the 'endpoint' field has been set, false otherwise.
       */
     public boolean hasEndpoint() {
-      return fieldSetFlags()[4];
+      return fieldSetFlags()[3];
     }
 
 
@@ -688,7 +611,7 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
       */
     public net.lightapi.portal.market.ServiceRuleUpdatedEvent.Builder clearEndpoint() {
       endpoint = null;
-      fieldSetFlags()[4] = false;
+      fieldSetFlags()[3] = false;
       return this;
     }
 
@@ -709,9 +632,9 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.market.ServiceRuleUpdatedEvent.Builder setRuleType(java.lang.String value) {
-      validate(fields()[5], value);
+      validate(fields()[4], value);
       this.ruleType = value;
-      fieldSetFlags()[5] = true;
+      fieldSetFlags()[4] = true;
       return this;
     }
 
@@ -721,7 +644,7 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return True if the 'ruleType' field has been set, false otherwise.
       */
     public boolean hasRuleType() {
-      return fieldSetFlags()[5];
+      return fieldSetFlags()[4];
     }
 
 
@@ -732,7 +655,7 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
       */
     public net.lightapi.portal.market.ServiceRuleUpdatedEvent.Builder clearRuleType() {
       ruleType = null;
-      fieldSetFlags()[5] = false;
+      fieldSetFlags()[4] = false;
       return this;
     }
 
@@ -753,9 +676,9 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.market.ServiceRuleUpdatedEvent.Builder setRules(java.util.List<net.lightapi.portal.market.ServiceRule> value) {
-      validate(fields()[6], value);
+      validate(fields()[5], value);
       this.rules = value;
-      fieldSetFlags()[6] = true;
+      fieldSetFlags()[5] = true;
       return this;
     }
 
@@ -765,7 +688,7 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return True if the 'rules' field has been set, false otherwise.
       */
     public boolean hasRules() {
-      return fieldSetFlags()[6];
+      return fieldSetFlags()[5];
     }
 
 
@@ -776,7 +699,7 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
       */
     public net.lightapi.portal.market.ServiceRuleUpdatedEvent.Builder clearRules() {
       rules = null;
-      fieldSetFlags()[6] = false;
+      fieldSetFlags()[5] = false;
       return this;
     }
 
@@ -797,9 +720,9 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.market.ServiceRuleUpdatedEvent.Builder setTimestamp(long value) {
-      validate(fields()[7], value);
+      validate(fields()[6], value);
       this.timestamp = value;
-      fieldSetFlags()[7] = true;
+      fieldSetFlags()[6] = true;
       return this;
     }
 
@@ -809,7 +732,7 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return True if the 'timestamp' field has been set, false otherwise.
       */
     public boolean hasTimestamp() {
-      return fieldSetFlags()[7];
+      return fieldSetFlags()[6];
     }
 
 
@@ -819,7 +742,7 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.market.ServiceRuleUpdatedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[7] = false;
+      fieldSetFlags()[6] = false;
       return this;
     }
 
@@ -838,13 +761,12 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
         } else {
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
-        record.keyId = fieldSetFlags()[1] ? this.keyId : (java.lang.Integer) defaultValue(fields()[1]);
-        record.host = fieldSetFlags()[2] ? this.host : (java.lang.String) defaultValue(fields()[2]);
-        record.serviceId = fieldSetFlags()[3] ? this.serviceId : (java.lang.String) defaultValue(fields()[3]);
-        record.endpoint = fieldSetFlags()[4] ? this.endpoint : (java.lang.String) defaultValue(fields()[4]);
-        record.ruleType = fieldSetFlags()[5] ? this.ruleType : (java.lang.String) defaultValue(fields()[5]);
-        record.rules = fieldSetFlags()[6] ? this.rules : (java.util.List<net.lightapi.portal.market.ServiceRule>) defaultValue(fields()[6]);
-        record.timestamp = fieldSetFlags()[7] ? this.timestamp : (java.lang.Long) defaultValue(fields()[7]);
+        record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
+        record.serviceId = fieldSetFlags()[2] ? this.serviceId : (java.lang.String) defaultValue(fields()[2]);
+        record.endpoint = fieldSetFlags()[3] ? this.endpoint : (java.lang.String) defaultValue(fields()[3]);
+        record.ruleType = fieldSetFlags()[4] ? this.ruleType : (java.lang.String) defaultValue(fields()[4]);
+        record.rules = fieldSetFlags()[5] ? this.rules : (java.util.List<net.lightapi.portal.market.ServiceRule>) defaultValue(fields()[5]);
+        record.timestamp = fieldSetFlags()[6] ? this.timestamp : (java.lang.Long) defaultValue(fields()[6]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -879,9 +801,7 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
   {
     this.EventId.customEncode(out);
 
-    out.writeInt(this.keyId);
-
-    out.writeString(this.host);
+    out.writeString(this.hostId);
 
     out.writeString(this.serviceId);
 
@@ -916,9 +836,7 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
       }
       this.EventId.customDecode(in);
 
-      this.keyId = in.readInt();
-
-      this.host = in.readString();
+      this.hostId = in.readString();
 
       this.serviceId = in.readString();
 
@@ -947,7 +865,7 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
       this.timestamp = in.readLong();
 
     } else {
-      for (int i = 0; i < 8; i++) {
+      for (int i = 0; i < 7; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -957,26 +875,22 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
           break;
 
         case 1:
-          this.keyId = in.readInt();
+          this.hostId = in.readString();
           break;
 
         case 2:
-          this.host = in.readString();
-          break;
-
-        case 3:
           this.serviceId = in.readString();
           break;
 
-        case 4:
+        case 3:
           this.endpoint = in.readString();
           break;
 
-        case 5:
+        case 4:
           this.ruleType = in.readString();
           break;
 
-        case 6:
+        case 5:
           long size0 = in.readArrayStart();
           java.util.List<net.lightapi.portal.market.ServiceRule> a0 = this.rules;
           if (a0 == null) {
@@ -996,7 +910,7 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
           }
           break;
 
-        case 7:
+        case 6:
           this.timestamp = in.readLong();
           break;
 

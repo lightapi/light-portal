@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 9070036773336151777L;
+  private static final long serialVersionUID = -604885303055945689L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"BlogCreatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"keyId\",\"type\":\"int\",\"doc\":\"keyId 0 blog 1 host 2 category 3 tag 4\"},{\"name\":\"host\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host\"},{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"blog id\"},{\"name\":\"categories\",\"type\":{\"type\":\"array\",\"items\":{\"type\":\"string\",\"avro.java.string\":\"String\"}}},{\"name\":\"tags\",\"type\":{\"type\":\"array\",\"items\":{\"type\":\"string\",\"avro.java.string\":\"String\"}}},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"blog detail in JSON\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"BlogCreatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"blog id\"},{\"name\":\"categories\",\"type\":{\"type\":\"array\",\"items\":{\"type\":\"string\",\"avro.java.string\":\"String\"}}},{\"name\":\"tags\",\"type\":{\"type\":\"array\",\"items\":{\"type\":\"string\",\"avro.java.string\":\"String\"}}},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"blog detail in JSON\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -74,10 +74,8 @@ public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
   }
 
   private com.networknt.kafka.common.EventId EventId;
-  /** keyId 0 blog 1 host 2 category 3 tag 4 */
-  private int keyId;
-  /** host */
-  private java.lang.String host;
+  /** host id */
+  private java.lang.String hostId;
   /** blog id */
   private java.lang.String id;
   private java.util.List<java.lang.String> categories;
@@ -97,18 +95,16 @@ public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
   /**
    * All-args constructor.
    * @param EventId The new value for EventId
-   * @param keyId keyId 0 blog 1 host 2 category 3 tag 4
-   * @param host host
+   * @param hostId host id
    * @param id blog id
    * @param categories The new value for categories
    * @param tags The new value for tags
    * @param value blog detail in JSON
    * @param timestamp time the event is recorded
    */
-  public BlogCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.Integer keyId, java.lang.String host, java.lang.String id, java.util.List<java.lang.String> categories, java.util.List<java.lang.String> tags, java.lang.String value, java.lang.Long timestamp) {
+  public BlogCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String id, java.util.List<java.lang.String> categories, java.util.List<java.lang.String> tags, java.lang.String value, java.lang.Long timestamp) {
     this.EventId = EventId;
-    this.keyId = keyId;
-    this.host = host;
+    this.hostId = hostId;
     this.id = id;
     this.categories = categories;
     this.tags = tags;
@@ -122,13 +118,12 @@ public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return EventId;
-    case 1: return keyId;
-    case 2: return host;
-    case 3: return id;
-    case 4: return categories;
-    case 5: return tags;
-    case 6: return value;
-    case 7: return timestamp;
+    case 1: return hostId;
+    case 2: return id;
+    case 3: return categories;
+    case 4: return tags;
+    case 5: return value;
+    case 6: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -138,13 +133,12 @@ public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
-    case 1: keyId = (java.lang.Integer)value$; break;
-    case 2: host = value$ != null ? value$.toString() : null; break;
-    case 3: id = value$ != null ? value$.toString() : null; break;
-    case 4: categories = (java.util.List<java.lang.String>)value$; break;
-    case 5: tags = (java.util.List<java.lang.String>)value$; break;
-    case 6: value = value$ != null ? value$.toString() : null; break;
-    case 7: timestamp = (java.lang.Long)value$; break;
+    case 1: hostId = value$ != null ? value$.toString() : null; break;
+    case 2: id = value$ != null ? value$.toString() : null; break;
+    case 3: categories = (java.util.List<java.lang.String>)value$; break;
+    case 4: tags = (java.util.List<java.lang.String>)value$; break;
+    case 5: value = value$ != null ? value$.toString() : null; break;
+    case 6: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -167,39 +161,21 @@ public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
   }
 
   /**
-   * Gets the value of the 'keyId' field.
-   * @return keyId 0 blog 1 host 2 category 3 tag 4
+   * Gets the value of the 'hostId' field.
+   * @return host id
    */
-  public int getKeyId() {
-    return keyId;
+  public java.lang.String getHostId() {
+    return hostId;
   }
 
 
   /**
-   * Sets the value of the 'keyId' field.
-   * keyId 0 blog 1 host 2 category 3 tag 4
+   * Sets the value of the 'hostId' field.
+   * host id
    * @param value the value to set.
    */
-  public void setKeyId(int value) {
-    this.keyId = value;
-  }
-
-  /**
-   * Gets the value of the 'host' field.
-   * @return host
-   */
-  public java.lang.String getHost() {
-    return host;
-  }
-
-
-  /**
-   * Sets the value of the 'host' field.
-   * host
-   * @param value the value to set.
-   */
-  public void setHost(java.lang.String value) {
-    this.host = value;
+  public void setHostId(java.lang.String value) {
+    this.hostId = value;
   }
 
   /**
@@ -333,10 +309,8 @@ public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
-    /** keyId 0 blog 1 host 2 category 3 tag 4 */
-    private int keyId;
-    /** host */
-    private java.lang.String host;
+    /** host id */
+    private java.lang.String hostId;
     /** blog id */
     private java.lang.String id;
     private java.util.List<java.lang.String> categories;
@@ -364,33 +338,29 @@ public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       if (other.hasEventIdBuilder()) {
         this.EventIdBuilder = com.networknt.kafka.common.EventId.newBuilder(other.getEventIdBuilder());
       }
-      if (isValidValue(fields()[1], other.keyId)) {
-        this.keyId = data().deepCopy(fields()[1].schema(), other.keyId);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
-      if (isValidValue(fields()[2], other.host)) {
-        this.host = data().deepCopy(fields()[2].schema(), other.host);
+      if (isValidValue(fields()[2], other.id)) {
+        this.id = data().deepCopy(fields()[2].schema(), other.id);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.id)) {
-        this.id = data().deepCopy(fields()[3].schema(), other.id);
+      if (isValidValue(fields()[3], other.categories)) {
+        this.categories = data().deepCopy(fields()[3].schema(), other.categories);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
-      if (isValidValue(fields()[4], other.categories)) {
-        this.categories = data().deepCopy(fields()[4].schema(), other.categories);
+      if (isValidValue(fields()[4], other.tags)) {
+        this.tags = data().deepCopy(fields()[4].schema(), other.tags);
         fieldSetFlags()[4] = other.fieldSetFlags()[4];
       }
-      if (isValidValue(fields()[5], other.tags)) {
-        this.tags = data().deepCopy(fields()[5].schema(), other.tags);
+      if (isValidValue(fields()[5], other.value)) {
+        this.value = data().deepCopy(fields()[5].schema(), other.value);
         fieldSetFlags()[5] = other.fieldSetFlags()[5];
       }
-      if (isValidValue(fields()[6], other.value)) {
-        this.value = data().deepCopy(fields()[6].schema(), other.value);
+      if (isValidValue(fields()[6], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[6].schema(), other.timestamp);
         fieldSetFlags()[6] = other.fieldSetFlags()[6];
-      }
-      if (isValidValue(fields()[7], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[7].schema(), other.timestamp);
-        fieldSetFlags()[7] = other.fieldSetFlags()[7];
       }
     }
 
@@ -405,33 +375,29 @@ public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
         fieldSetFlags()[0] = true;
       }
       this.EventIdBuilder = null;
-      if (isValidValue(fields()[1], other.keyId)) {
-        this.keyId = data().deepCopy(fields()[1].schema(), other.keyId);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.host)) {
-        this.host = data().deepCopy(fields()[2].schema(), other.host);
+      if (isValidValue(fields()[2], other.id)) {
+        this.id = data().deepCopy(fields()[2].schema(), other.id);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.id)) {
-        this.id = data().deepCopy(fields()[3].schema(), other.id);
+      if (isValidValue(fields()[3], other.categories)) {
+        this.categories = data().deepCopy(fields()[3].schema(), other.categories);
         fieldSetFlags()[3] = true;
       }
-      if (isValidValue(fields()[4], other.categories)) {
-        this.categories = data().deepCopy(fields()[4].schema(), other.categories);
+      if (isValidValue(fields()[4], other.tags)) {
+        this.tags = data().deepCopy(fields()[4].schema(), other.tags);
         fieldSetFlags()[4] = true;
       }
-      if (isValidValue(fields()[5], other.tags)) {
-        this.tags = data().deepCopy(fields()[5].schema(), other.tags);
+      if (isValidValue(fields()[5], other.value)) {
+        this.value = data().deepCopy(fields()[5].schema(), other.value);
         fieldSetFlags()[5] = true;
       }
-      if (isValidValue(fields()[6], other.value)) {
-        this.value = data().deepCopy(fields()[6].schema(), other.value);
+      if (isValidValue(fields()[6], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[6].schema(), other.timestamp);
         fieldSetFlags()[6] = true;
-      }
-      if (isValidValue(fields()[7], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[7].schema(), other.timestamp);
-        fieldSetFlags()[7] = true;
       }
     }
 
@@ -512,89 +478,46 @@ public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
     }
 
     /**
-      * Gets the value of the 'keyId' field.
-      * keyId 0 blog 1 host 2 category 3 tag 4
+      * Gets the value of the 'hostId' field.
+      * host id
       * @return The value.
       */
-    public int getKeyId() {
-      return keyId;
+    public java.lang.String getHostId() {
+      return hostId;
     }
 
 
     /**
-      * Sets the value of the 'keyId' field.
-      * keyId 0 blog 1 host 2 category 3 tag 4
-      * @param value The value of 'keyId'.
+      * Sets the value of the 'hostId' field.
+      * host id
+      * @param value The value of 'hostId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.BlogCreatedEvent.Builder setKeyId(int value) {
+    public net.lightapi.portal.market.BlogCreatedEvent.Builder setHostId(java.lang.String value) {
       validate(fields()[1], value);
-      this.keyId = value;
+      this.hostId = value;
       fieldSetFlags()[1] = true;
       return this;
     }
 
     /**
-      * Checks whether the 'keyId' field has been set.
-      * keyId 0 blog 1 host 2 category 3 tag 4
-      * @return True if the 'keyId' field has been set, false otherwise.
+      * Checks whether the 'hostId' field has been set.
+      * host id
+      * @return True if the 'hostId' field has been set, false otherwise.
       */
-    public boolean hasKeyId() {
+    public boolean hasHostId() {
       return fieldSetFlags()[1];
     }
 
 
     /**
-      * Clears the value of the 'keyId' field.
-      * keyId 0 blog 1 host 2 category 3 tag 4
+      * Clears the value of the 'hostId' field.
+      * host id
       * @return This builder.
       */
-    public net.lightapi.portal.market.BlogCreatedEvent.Builder clearKeyId() {
+    public net.lightapi.portal.market.BlogCreatedEvent.Builder clearHostId() {
+      hostId = null;
       fieldSetFlags()[1] = false;
-      return this;
-    }
-
-    /**
-      * Gets the value of the 'host' field.
-      * host
-      * @return The value.
-      */
-    public java.lang.String getHost() {
-      return host;
-    }
-
-
-    /**
-      * Sets the value of the 'host' field.
-      * host
-      * @param value The value of 'host'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.BlogCreatedEvent.Builder setHost(java.lang.String value) {
-      validate(fields()[2], value);
-      this.host = value;
-      fieldSetFlags()[2] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'host' field has been set.
-      * host
-      * @return True if the 'host' field has been set, false otherwise.
-      */
-    public boolean hasHost() {
-      return fieldSetFlags()[2];
-    }
-
-
-    /**
-      * Clears the value of the 'host' field.
-      * host
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.BlogCreatedEvent.Builder clearHost() {
-      host = null;
-      fieldSetFlags()[2] = false;
       return this;
     }
 
@@ -615,9 +538,9 @@ public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.market.BlogCreatedEvent.Builder setId(java.lang.String value) {
-      validate(fields()[3], value);
+      validate(fields()[2], value);
       this.id = value;
-      fieldSetFlags()[3] = true;
+      fieldSetFlags()[2] = true;
       return this;
     }
 
@@ -627,7 +550,7 @@ public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return True if the 'id' field has been set, false otherwise.
       */
     public boolean hasId() {
-      return fieldSetFlags()[3];
+      return fieldSetFlags()[2];
     }
 
 
@@ -638,7 +561,7 @@ public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       */
     public net.lightapi.portal.market.BlogCreatedEvent.Builder clearId() {
       id = null;
-      fieldSetFlags()[3] = false;
+      fieldSetFlags()[2] = false;
       return this;
     }
 
@@ -657,9 +580,9 @@ public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.market.BlogCreatedEvent.Builder setCategories(java.util.List<java.lang.String> value) {
-      validate(fields()[4], value);
+      validate(fields()[3], value);
       this.categories = value;
-      fieldSetFlags()[4] = true;
+      fieldSetFlags()[3] = true;
       return this;
     }
 
@@ -668,7 +591,7 @@ public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return True if the 'categories' field has been set, false otherwise.
       */
     public boolean hasCategories() {
-      return fieldSetFlags()[4];
+      return fieldSetFlags()[3];
     }
 
 
@@ -678,7 +601,7 @@ public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       */
     public net.lightapi.portal.market.BlogCreatedEvent.Builder clearCategories() {
       categories = null;
-      fieldSetFlags()[4] = false;
+      fieldSetFlags()[3] = false;
       return this;
     }
 
@@ -697,9 +620,9 @@ public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.market.BlogCreatedEvent.Builder setTags(java.util.List<java.lang.String> value) {
-      validate(fields()[5], value);
+      validate(fields()[4], value);
       this.tags = value;
-      fieldSetFlags()[5] = true;
+      fieldSetFlags()[4] = true;
       return this;
     }
 
@@ -708,7 +631,7 @@ public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return True if the 'tags' field has been set, false otherwise.
       */
     public boolean hasTags() {
-      return fieldSetFlags()[5];
+      return fieldSetFlags()[4];
     }
 
 
@@ -718,7 +641,7 @@ public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       */
     public net.lightapi.portal.market.BlogCreatedEvent.Builder clearTags() {
       tags = null;
-      fieldSetFlags()[5] = false;
+      fieldSetFlags()[4] = false;
       return this;
     }
 
@@ -739,9 +662,9 @@ public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.market.BlogCreatedEvent.Builder setValue(java.lang.String value) {
-      validate(fields()[6], value);
+      validate(fields()[5], value);
       this.value = value;
-      fieldSetFlags()[6] = true;
+      fieldSetFlags()[5] = true;
       return this;
     }
 
@@ -751,7 +674,7 @@ public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return True if the 'value' field has been set, false otherwise.
       */
     public boolean hasValue() {
-      return fieldSetFlags()[6];
+      return fieldSetFlags()[5];
     }
 
 
@@ -762,7 +685,7 @@ public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       */
     public net.lightapi.portal.market.BlogCreatedEvent.Builder clearValue() {
       value = null;
-      fieldSetFlags()[6] = false;
+      fieldSetFlags()[5] = false;
       return this;
     }
 
@@ -783,9 +706,9 @@ public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.market.BlogCreatedEvent.Builder setTimestamp(long value) {
-      validate(fields()[7], value);
+      validate(fields()[6], value);
       this.timestamp = value;
-      fieldSetFlags()[7] = true;
+      fieldSetFlags()[6] = true;
       return this;
     }
 
@@ -795,7 +718,7 @@ public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return True if the 'timestamp' field has been set, false otherwise.
       */
     public boolean hasTimestamp() {
-      return fieldSetFlags()[7];
+      return fieldSetFlags()[6];
     }
 
 
@@ -805,7 +728,7 @@ public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.market.BlogCreatedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[7] = false;
+      fieldSetFlags()[6] = false;
       return this;
     }
 
@@ -824,13 +747,12 @@ public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
         } else {
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
-        record.keyId = fieldSetFlags()[1] ? this.keyId : (java.lang.Integer) defaultValue(fields()[1]);
-        record.host = fieldSetFlags()[2] ? this.host : (java.lang.String) defaultValue(fields()[2]);
-        record.id = fieldSetFlags()[3] ? this.id : (java.lang.String) defaultValue(fields()[3]);
-        record.categories = fieldSetFlags()[4] ? this.categories : (java.util.List<java.lang.String>) defaultValue(fields()[4]);
-        record.tags = fieldSetFlags()[5] ? this.tags : (java.util.List<java.lang.String>) defaultValue(fields()[5]);
-        record.value = fieldSetFlags()[6] ? this.value : (java.lang.String) defaultValue(fields()[6]);
-        record.timestamp = fieldSetFlags()[7] ? this.timestamp : (java.lang.Long) defaultValue(fields()[7]);
+        record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
+        record.id = fieldSetFlags()[2] ? this.id : (java.lang.String) defaultValue(fields()[2]);
+        record.categories = fieldSetFlags()[3] ? this.categories : (java.util.List<java.lang.String>) defaultValue(fields()[3]);
+        record.tags = fieldSetFlags()[4] ? this.tags : (java.util.List<java.lang.String>) defaultValue(fields()[4]);
+        record.value = fieldSetFlags()[5] ? this.value : (java.lang.String) defaultValue(fields()[5]);
+        record.timestamp = fieldSetFlags()[6] ? this.timestamp : (java.lang.Long) defaultValue(fields()[6]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -865,9 +787,7 @@ public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
   {
     this.EventId.customEncode(out);
 
-    out.writeInt(this.keyId);
-
-    out.writeString(this.host);
+    out.writeString(this.hostId);
 
     out.writeString(this.id);
 
@@ -913,9 +833,7 @@ public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       }
       this.EventId.customDecode(in);
 
-      this.keyId = in.readInt();
-
-      this.host = in.readString();
+      this.hostId = in.readString();
 
       this.id = in.readString();
 
@@ -954,7 +872,7 @@ public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       this.timestamp = in.readLong();
 
     } else {
-      for (int i = 0; i < 8; i++) {
+      for (int i = 0; i < 7; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -964,18 +882,14 @@ public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
           break;
 
         case 1:
-          this.keyId = in.readInt();
+          this.hostId = in.readString();
           break;
 
         case 2:
-          this.host = in.readString();
-          break;
-
-        case 3:
           this.id = in.readString();
           break;
 
-        case 4:
+        case 3:
           long size0 = in.readArrayStart();
           java.util.List<java.lang.String> a0 = this.categories;
           if (a0 == null) {
@@ -992,7 +906,7 @@ public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
           }
           break;
 
-        case 5:
+        case 4:
           long size1 = in.readArrayStart();
           java.util.List<java.lang.String> a1 = this.tags;
           if (a1 == null) {
@@ -1009,11 +923,11 @@ public class BlogCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
           }
           break;
 
-        case 6:
+        case 5:
           this.value = in.readString();
           break;
 
-        case 7:
+        case 6:
           this.timestamp = in.readLong();
           break;
 

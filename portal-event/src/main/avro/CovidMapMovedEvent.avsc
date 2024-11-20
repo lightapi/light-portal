@@ -35,12 +35,6 @@
       "doc": "country, province and city combination"
     },
     {
-      "name": "keyId",
-      "type": "int",
-      "default": 0,
-      "doc": "1 map category 2 map subcategory"
-    },
-    {
       "name": "userId",
       "type": "string",
       "doc": "the unique user id"
