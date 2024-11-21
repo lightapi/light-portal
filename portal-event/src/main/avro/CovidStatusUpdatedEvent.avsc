@@ -30,6 +30,11 @@
       }
     },
     {
+      "name": "hostId",
+      "type": "string",
+      "doc": "host id"
+    },
+    {
       "name": "status",
       "type": "string",
       "doc": "status in string format"

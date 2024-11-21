@@ -50,7 +50,7 @@ public interface PortalDbProvider extends DbProvider {
 
     Result<String> createMarketCode(MarketCodeCreatedEvent event);
     Result<String> deleteMarketCode(MarketCodeDeletedEvent event);
-    Result<String> queryMarketCode(String authCode);
+    Result<String> queryMarketCode(String hostId, String authCode);
 
     Result<String> createHost(HostCreatedEvent event);
     Result<String> updateHost(HostUpdatedEvent event);

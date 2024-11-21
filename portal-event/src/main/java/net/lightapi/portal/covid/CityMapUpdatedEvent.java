@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 1671945247496794553L;
+  private static final long serialVersionUID = 5316695850316131415L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"CityMapUpdatedEvent\",\"namespace\":\"net.lightapi.portal.covid\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"country\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"country\"},{\"name\":\"province\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"province\"},{\"name\":\"city\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"city\"},{\"name\":\"latitude\",\"type\":\"double\",\"doc\":\"city latitude\"},{\"name\":\"longitude\",\"type\":\"double\",\"doc\":\"city longitude\"},{\"name\":\"zoom\",\"type\":\"int\",\"doc\":\"initial zoom\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"CityMapUpdatedEvent\",\"namespace\":\"net.lightapi.portal.covid\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"country\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"country\"},{\"name\":\"province\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"province\"},{\"name\":\"city\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"city\"},{\"name\":\"latitude\",\"type\":\"double\",\"doc\":\"city latitude\"},{\"name\":\"longitude\",\"type\":\"double\",\"doc\":\"city longitude\"},{\"name\":\"zoom\",\"type\":\"int\",\"doc\":\"initial zoom\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -74,6 +74,8 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
   }
 
   private com.networknt.kafka.common.EventId EventId;
+  /** host id */
+  private java.lang.String hostId;
   /** country */
   private java.lang.String country;
   /** province */
@@ -99,6 +101,7 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
   /**
    * All-args constructor.
    * @param EventId The new value for EventId
+   * @param hostId host id
    * @param country country
    * @param province province
    * @param city city
@@ -107,8 +110,9 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
    * @param zoom initial zoom
    * @param timestamp time the event is recorded
    */
-  public CityMapUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String country, java.lang.String province, java.lang.String city, java.lang.Double latitude, java.lang.Double longitude, java.lang.Integer zoom, java.lang.Long timestamp) {
+  public CityMapUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String country, java.lang.String province, java.lang.String city, java.lang.Double latitude, java.lang.Double longitude, java.lang.Integer zoom, java.lang.Long timestamp) {
     this.EventId = EventId;
+    this.hostId = hostId;
     this.country = country;
     this.province = province;
     this.city = city;
@@ -124,13 +128,14 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return EventId;
-    case 1: return country;
-    case 2: return province;
-    case 3: return city;
-    case 4: return latitude;
-    case 5: return longitude;
-    case 6: return zoom;
-    case 7: return timestamp;
+    case 1: return hostId;
+    case 2: return country;
+    case 3: return province;
+    case 4: return city;
+    case 5: return latitude;
+    case 6: return longitude;
+    case 7: return zoom;
+    case 8: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -140,13 +145,14 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
-    case 1: country = value$ != null ? value$.toString() : null; break;
-    case 2: province = value$ != null ? value$.toString() : null; break;
-    case 3: city = value$ != null ? value$.toString() : null; break;
-    case 4: latitude = (java.lang.Double)value$; break;
-    case 5: longitude = (java.lang.Double)value$; break;
-    case 6: zoom = (java.lang.Integer)value$; break;
-    case 7: timestamp = (java.lang.Long)value$; break;
+    case 1: hostId = value$ != null ? value$.toString() : null; break;
+    case 2: country = value$ != null ? value$.toString() : null; break;
+    case 3: province = value$ != null ? value$.toString() : null; break;
+    case 4: city = value$ != null ? value$.toString() : null; break;
+    case 5: latitude = (java.lang.Double)value$; break;
+    case 6: longitude = (java.lang.Double)value$; break;
+    case 7: zoom = (java.lang.Integer)value$; break;
+    case 8: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -166,6 +172,24 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
    */
   public void setEventId(com.networknt.kafka.common.EventId value) {
     this.EventId = value;
+  }
+
+  /**
+   * Gets the value of the 'hostId' field.
+   * @return host id
+   */
+  public java.lang.String getHostId() {
+    return hostId;
+  }
+
+
+  /**
+   * Sets the value of the 'hostId' field.
+   * host id
+   * @param value the value to set.
+   */
+  public void setHostId(java.lang.String value) {
+    this.hostId = value;
   }
 
   /**
@@ -337,6 +361,8 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
+    /** host id */
+    private java.lang.String hostId;
     /** country */
     private java.lang.String country;
     /** province */
@@ -370,33 +396,37 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
       if (other.hasEventIdBuilder()) {
         this.EventIdBuilder = com.networknt.kafka.common.EventId.newBuilder(other.getEventIdBuilder());
       }
-      if (isValidValue(fields()[1], other.country)) {
-        this.country = data().deepCopy(fields()[1].schema(), other.country);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
-      if (isValidValue(fields()[2], other.province)) {
-        this.province = data().deepCopy(fields()[2].schema(), other.province);
+      if (isValidValue(fields()[2], other.country)) {
+        this.country = data().deepCopy(fields()[2].schema(), other.country);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.city)) {
-        this.city = data().deepCopy(fields()[3].schema(), other.city);
+      if (isValidValue(fields()[3], other.province)) {
+        this.province = data().deepCopy(fields()[3].schema(), other.province);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
-      if (isValidValue(fields()[4], other.latitude)) {
-        this.latitude = data().deepCopy(fields()[4].schema(), other.latitude);
+      if (isValidValue(fields()[4], other.city)) {
+        this.city = data().deepCopy(fields()[4].schema(), other.city);
         fieldSetFlags()[4] = other.fieldSetFlags()[4];
       }
-      if (isValidValue(fields()[5], other.longitude)) {
-        this.longitude = data().deepCopy(fields()[5].schema(), other.longitude);
+      if (isValidValue(fields()[5], other.latitude)) {
+        this.latitude = data().deepCopy(fields()[5].schema(), other.latitude);
         fieldSetFlags()[5] = other.fieldSetFlags()[5];
       }
-      if (isValidValue(fields()[6], other.zoom)) {
-        this.zoom = data().deepCopy(fields()[6].schema(), other.zoom);
+      if (isValidValue(fields()[6], other.longitude)) {
+        this.longitude = data().deepCopy(fields()[6].schema(), other.longitude);
         fieldSetFlags()[6] = other.fieldSetFlags()[6];
       }
-      if (isValidValue(fields()[7], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[7].schema(), other.timestamp);
+      if (isValidValue(fields()[7], other.zoom)) {
+        this.zoom = data().deepCopy(fields()[7].schema(), other.zoom);
         fieldSetFlags()[7] = other.fieldSetFlags()[7];
+      }
+      if (isValidValue(fields()[8], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[8].schema(), other.timestamp);
+        fieldSetFlags()[8] = other.fieldSetFlags()[8];
       }
     }
 
@@ -411,33 +441,37 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
         fieldSetFlags()[0] = true;
       }
       this.EventIdBuilder = null;
-      if (isValidValue(fields()[1], other.country)) {
-        this.country = data().deepCopy(fields()[1].schema(), other.country);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.province)) {
-        this.province = data().deepCopy(fields()[2].schema(), other.province);
+      if (isValidValue(fields()[2], other.country)) {
+        this.country = data().deepCopy(fields()[2].schema(), other.country);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.city)) {
-        this.city = data().deepCopy(fields()[3].schema(), other.city);
+      if (isValidValue(fields()[3], other.province)) {
+        this.province = data().deepCopy(fields()[3].schema(), other.province);
         fieldSetFlags()[3] = true;
       }
-      if (isValidValue(fields()[4], other.latitude)) {
-        this.latitude = data().deepCopy(fields()[4].schema(), other.latitude);
+      if (isValidValue(fields()[4], other.city)) {
+        this.city = data().deepCopy(fields()[4].schema(), other.city);
         fieldSetFlags()[4] = true;
       }
-      if (isValidValue(fields()[5], other.longitude)) {
-        this.longitude = data().deepCopy(fields()[5].schema(), other.longitude);
+      if (isValidValue(fields()[5], other.latitude)) {
+        this.latitude = data().deepCopy(fields()[5].schema(), other.latitude);
         fieldSetFlags()[5] = true;
       }
-      if (isValidValue(fields()[6], other.zoom)) {
-        this.zoom = data().deepCopy(fields()[6].schema(), other.zoom);
+      if (isValidValue(fields()[6], other.longitude)) {
+        this.longitude = data().deepCopy(fields()[6].schema(), other.longitude);
         fieldSetFlags()[6] = true;
       }
-      if (isValidValue(fields()[7], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[7].schema(), other.timestamp);
+      if (isValidValue(fields()[7], other.zoom)) {
+        this.zoom = data().deepCopy(fields()[7].schema(), other.zoom);
         fieldSetFlags()[7] = true;
+      }
+      if (isValidValue(fields()[8], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[8].schema(), other.timestamp);
+        fieldSetFlags()[8] = true;
       }
     }
 
@@ -518,6 +552,50 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
     }
 
     /**
+      * Gets the value of the 'hostId' field.
+      * host id
+      * @return The value.
+      */
+    public java.lang.String getHostId() {
+      return hostId;
+    }
+
+
+    /**
+      * Sets the value of the 'hostId' field.
+      * host id
+      * @param value The value of 'hostId'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.covid.CityMapUpdatedEvent.Builder setHostId(java.lang.String value) {
+      validate(fields()[1], value);
+      this.hostId = value;
+      fieldSetFlags()[1] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'hostId' field has been set.
+      * host id
+      * @return True if the 'hostId' field has been set, false otherwise.
+      */
+    public boolean hasHostId() {
+      return fieldSetFlags()[1];
+    }
+
+
+    /**
+      * Clears the value of the 'hostId' field.
+      * host id
+      * @return This builder.
+      */
+    public net.lightapi.portal.covid.CityMapUpdatedEvent.Builder clearHostId() {
+      hostId = null;
+      fieldSetFlags()[1] = false;
+      return this;
+    }
+
+    /**
       * Gets the value of the 'country' field.
       * country
       * @return The value.
@@ -534,9 +612,9 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return This builder.
       */
     public net.lightapi.portal.covid.CityMapUpdatedEvent.Builder setCountry(java.lang.String value) {
-      validate(fields()[1], value);
+      validate(fields()[2], value);
       this.country = value;
-      fieldSetFlags()[1] = true;
+      fieldSetFlags()[2] = true;
       return this;
     }
 
@@ -546,7 +624,7 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return True if the 'country' field has been set, false otherwise.
       */
     public boolean hasCountry() {
-      return fieldSetFlags()[1];
+      return fieldSetFlags()[2];
     }
 
 
@@ -557,7 +635,7 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
       */
     public net.lightapi.portal.covid.CityMapUpdatedEvent.Builder clearCountry() {
       country = null;
-      fieldSetFlags()[1] = false;
+      fieldSetFlags()[2] = false;
       return this;
     }
 
@@ -578,9 +656,9 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return This builder.
       */
     public net.lightapi.portal.covid.CityMapUpdatedEvent.Builder setProvince(java.lang.String value) {
-      validate(fields()[2], value);
+      validate(fields()[3], value);
       this.province = value;
-      fieldSetFlags()[2] = true;
+      fieldSetFlags()[3] = true;
       return this;
     }
 
@@ -590,7 +668,7 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return True if the 'province' field has been set, false otherwise.
       */
     public boolean hasProvince() {
-      return fieldSetFlags()[2];
+      return fieldSetFlags()[3];
     }
 
 
@@ -601,7 +679,7 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
       */
     public net.lightapi.portal.covid.CityMapUpdatedEvent.Builder clearProvince() {
       province = null;
-      fieldSetFlags()[2] = false;
+      fieldSetFlags()[3] = false;
       return this;
     }
 
@@ -622,9 +700,9 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return This builder.
       */
     public net.lightapi.portal.covid.CityMapUpdatedEvent.Builder setCity(java.lang.String value) {
-      validate(fields()[3], value);
+      validate(fields()[4], value);
       this.city = value;
-      fieldSetFlags()[3] = true;
+      fieldSetFlags()[4] = true;
       return this;
     }
 
@@ -634,7 +712,7 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return True if the 'city' field has been set, false otherwise.
       */
     public boolean hasCity() {
-      return fieldSetFlags()[3];
+      return fieldSetFlags()[4];
     }
 
 
@@ -645,7 +723,7 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
       */
     public net.lightapi.portal.covid.CityMapUpdatedEvent.Builder clearCity() {
       city = null;
-      fieldSetFlags()[3] = false;
+      fieldSetFlags()[4] = false;
       return this;
     }
 
@@ -666,9 +744,9 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return This builder.
       */
     public net.lightapi.portal.covid.CityMapUpdatedEvent.Builder setLatitude(double value) {
-      validate(fields()[4], value);
+      validate(fields()[5], value);
       this.latitude = value;
-      fieldSetFlags()[4] = true;
+      fieldSetFlags()[5] = true;
       return this;
     }
 
@@ -678,7 +756,7 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return True if the 'latitude' field has been set, false otherwise.
       */
     public boolean hasLatitude() {
-      return fieldSetFlags()[4];
+      return fieldSetFlags()[5];
     }
 
 
@@ -688,7 +766,7 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return This builder.
       */
     public net.lightapi.portal.covid.CityMapUpdatedEvent.Builder clearLatitude() {
-      fieldSetFlags()[4] = false;
+      fieldSetFlags()[5] = false;
       return this;
     }
 
@@ -709,9 +787,9 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return This builder.
       */
     public net.lightapi.portal.covid.CityMapUpdatedEvent.Builder setLongitude(double value) {
-      validate(fields()[5], value);
+      validate(fields()[6], value);
       this.longitude = value;
-      fieldSetFlags()[5] = true;
+      fieldSetFlags()[6] = true;
       return this;
     }
 
@@ -721,7 +799,7 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return True if the 'longitude' field has been set, false otherwise.
       */
     public boolean hasLongitude() {
-      return fieldSetFlags()[5];
+      return fieldSetFlags()[6];
     }
 
 
@@ -731,7 +809,7 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return This builder.
       */
     public net.lightapi.portal.covid.CityMapUpdatedEvent.Builder clearLongitude() {
-      fieldSetFlags()[5] = false;
+      fieldSetFlags()[6] = false;
       return this;
     }
 
@@ -752,9 +830,9 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return This builder.
       */
     public net.lightapi.portal.covid.CityMapUpdatedEvent.Builder setZoom(int value) {
-      validate(fields()[6], value);
+      validate(fields()[7], value);
       this.zoom = value;
-      fieldSetFlags()[6] = true;
+      fieldSetFlags()[7] = true;
       return this;
     }
 
@@ -764,7 +842,7 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return True if the 'zoom' field has been set, false otherwise.
       */
     public boolean hasZoom() {
-      return fieldSetFlags()[6];
+      return fieldSetFlags()[7];
     }
 
 
@@ -774,7 +852,7 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return This builder.
       */
     public net.lightapi.portal.covid.CityMapUpdatedEvent.Builder clearZoom() {
-      fieldSetFlags()[6] = false;
+      fieldSetFlags()[7] = false;
       return this;
     }
 
@@ -795,9 +873,9 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return This builder.
       */
     public net.lightapi.portal.covid.CityMapUpdatedEvent.Builder setTimestamp(long value) {
-      validate(fields()[7], value);
+      validate(fields()[8], value);
       this.timestamp = value;
-      fieldSetFlags()[7] = true;
+      fieldSetFlags()[8] = true;
       return this;
     }
 
@@ -807,7 +885,7 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return True if the 'timestamp' field has been set, false otherwise.
       */
     public boolean hasTimestamp() {
-      return fieldSetFlags()[7];
+      return fieldSetFlags()[8];
     }
 
 
@@ -817,7 +895,7 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return This builder.
       */
     public net.lightapi.portal.covid.CityMapUpdatedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[7] = false;
+      fieldSetFlags()[8] = false;
       return this;
     }
 
@@ -836,13 +914,14 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
         } else {
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
-        record.country = fieldSetFlags()[1] ? this.country : (java.lang.String) defaultValue(fields()[1]);
-        record.province = fieldSetFlags()[2] ? this.province : (java.lang.String) defaultValue(fields()[2]);
-        record.city = fieldSetFlags()[3] ? this.city : (java.lang.String) defaultValue(fields()[3]);
-        record.latitude = fieldSetFlags()[4] ? this.latitude : (java.lang.Double) defaultValue(fields()[4]);
-        record.longitude = fieldSetFlags()[5] ? this.longitude : (java.lang.Double) defaultValue(fields()[5]);
-        record.zoom = fieldSetFlags()[6] ? this.zoom : (java.lang.Integer) defaultValue(fields()[6]);
-        record.timestamp = fieldSetFlags()[7] ? this.timestamp : (java.lang.Long) defaultValue(fields()[7]);
+        record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
+        record.country = fieldSetFlags()[2] ? this.country : (java.lang.String) defaultValue(fields()[2]);
+        record.province = fieldSetFlags()[3] ? this.province : (java.lang.String) defaultValue(fields()[3]);
+        record.city = fieldSetFlags()[4] ? this.city : (java.lang.String) defaultValue(fields()[4]);
+        record.latitude = fieldSetFlags()[5] ? this.latitude : (java.lang.Double) defaultValue(fields()[5]);
+        record.longitude = fieldSetFlags()[6] ? this.longitude : (java.lang.Double) defaultValue(fields()[6]);
+        record.zoom = fieldSetFlags()[7] ? this.zoom : (java.lang.Integer) defaultValue(fields()[7]);
+        record.timestamp = fieldSetFlags()[8] ? this.timestamp : (java.lang.Long) defaultValue(fields()[8]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -877,6 +956,8 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
   {
     this.EventId.customEncode(out);
 
+    out.writeString(this.hostId);
+
     out.writeString(this.country);
 
     out.writeString(this.province);
@@ -903,6 +984,8 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
       }
       this.EventId.customDecode(in);
 
+      this.hostId = in.readString();
+
       this.country = in.readString();
 
       this.province = in.readString();
@@ -918,7 +1001,7 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
       this.timestamp = in.readLong();
 
     } else {
-      for (int i = 0; i < 8; i++) {
+      for (int i = 0; i < 9; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -928,30 +1011,34 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
           break;
 
         case 1:
-          this.country = in.readString();
+          this.hostId = in.readString();
           break;
 
         case 2:
-          this.province = in.readString();
+          this.country = in.readString();
           break;
 
         case 3:
-          this.city = in.readString();
+          this.province = in.readString();
           break;
 
         case 4:
-          this.latitude = in.readDouble();
+          this.city = in.readString();
           break;
 
         case 5:
-          this.longitude = in.readDouble();
+          this.latitude = in.readDouble();
           break;
 
         case 6:
-          this.zoom = in.readInt();
+          this.longitude = in.readDouble();
           break;
 
         case 7:
+          this.zoom = in.readInt();
+          break;
+
+        case 8:
           this.timestamp = in.readLong();
           break;
 

@@ -718,8 +718,8 @@ public class HybridQueryClient {
      * @param derived boolean flag to derive the auth code
      * @return Result of authCode object in JSON
      */
-    public static Result<String> getAuthCodeDetail(HttpServerExchange exchange, String url, String authCode, boolean derived) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getAuthCodeDetail\",\"version\":\"0.1.0\",\"data\":{\"authCode\":\"%s\",\"derived\":%b}}", authCode, derived);
+    public static Result<String> getAuthCodeDetail(HttpServerExchange exchange, String url, String hostId, String authCode, boolean derived) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getAuthCodeDetail\",\"version\":\"0.1.0\",\"data\":{\"hostId\":\"%s\",\"authCode\":\"%s\",\"derived\":%b}}", hostId, authCode, derived);
         return callQueryExchangeUrl(s, exchange, url);
     }
 

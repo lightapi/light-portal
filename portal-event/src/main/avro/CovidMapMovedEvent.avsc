@@ -30,6 +30,11 @@
       }
     },
     {
+      "name": "hostId",
+      "type": "string",
+      "doc": "host id"
+    },
+    {
       "name": "location",
       "type": "string",
       "doc": "country, province and city combination"

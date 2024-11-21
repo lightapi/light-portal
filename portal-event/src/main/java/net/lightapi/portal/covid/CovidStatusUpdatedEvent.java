@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 6704583113127813566L;
+  private static final long serialVersionUID = -4227794912779134748L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"CovidStatusUpdatedEvent\",\"namespace\":\"net.lightapi.portal.covid\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the id\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"status\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"status in string format\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the unique user id to update map store\"},{\"name\":\"country\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"country of the user to update map store\",\"default\":null},{\"name\":\"province\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"province of the user to update map store\",\"default\":null},{\"name\":\"city\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"city of the user to update map store\",\"default\":null},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"CovidStatusUpdatedEvent\",\"namespace\":\"net.lightapi.portal.covid\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the id\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"status\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"status in string format\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the unique user id to update map store\"},{\"name\":\"country\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"country of the user to update map store\",\"default\":null},{\"name\":\"province\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"province of the user to update map store\",\"default\":null},{\"name\":\"city\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"city of the user to update map store\",\"default\":null},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -74,6 +74,8 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
   }
 
   private com.networknt.kafka.common.EventId EventId;
+  /** host id */
+  private java.lang.String hostId;
   /** status in string format */
   private java.lang.String status;
   /** the unique user id to update map store */
@@ -97,6 +99,7 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
   /**
    * All-args constructor.
    * @param EventId The new value for EventId
+   * @param hostId host id
    * @param status status in string format
    * @param userId the unique user id to update map store
    * @param country country of the user to update map store
@@ -104,8 +107,9 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
    * @param city city of the user to update map store
    * @param timestamp time the event is recorded
    */
-  public CovidStatusUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String status, java.lang.String userId, java.lang.String country, java.lang.String province, java.lang.String city, java.lang.Long timestamp) {
+  public CovidStatusUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String status, java.lang.String userId, java.lang.String country, java.lang.String province, java.lang.String city, java.lang.Long timestamp) {
     this.EventId = EventId;
+    this.hostId = hostId;
     this.status = status;
     this.userId = userId;
     this.country = country;
@@ -120,12 +124,13 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return EventId;
-    case 1: return status;
-    case 2: return userId;
-    case 3: return country;
-    case 4: return province;
-    case 5: return city;
-    case 6: return timestamp;
+    case 1: return hostId;
+    case 2: return status;
+    case 3: return userId;
+    case 4: return country;
+    case 5: return province;
+    case 6: return city;
+    case 7: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -135,12 +140,13 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
-    case 1: status = value$ != null ? value$.toString() : null; break;
-    case 2: userId = value$ != null ? value$.toString() : null; break;
-    case 3: country = value$ != null ? value$.toString() : null; break;
-    case 4: province = value$ != null ? value$.toString() : null; break;
-    case 5: city = value$ != null ? value$.toString() : null; break;
-    case 6: timestamp = (java.lang.Long)value$; break;
+    case 1: hostId = value$ != null ? value$.toString() : null; break;
+    case 2: status = value$ != null ? value$.toString() : null; break;
+    case 3: userId = value$ != null ? value$.toString() : null; break;
+    case 4: country = value$ != null ? value$.toString() : null; break;
+    case 5: province = value$ != null ? value$.toString() : null; break;
+    case 6: city = value$ != null ? value$.toString() : null; break;
+    case 7: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -160,6 +166,24 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
    */
   public void setEventId(com.networknt.kafka.common.EventId value) {
     this.EventId = value;
+  }
+
+  /**
+   * Gets the value of the 'hostId' field.
+   * @return host id
+   */
+  public java.lang.String getHostId() {
+    return hostId;
+  }
+
+
+  /**
+   * Sets the value of the 'hostId' field.
+   * host id
+   * @param value the value to set.
+   */
+  public void setHostId(java.lang.String value) {
+    this.hostId = value;
   }
 
   /**
@@ -313,6 +337,8 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
+    /** host id */
+    private java.lang.String hostId;
     /** status in string format */
     private java.lang.String status;
     /** the unique user id to update map store */
@@ -344,29 +370,33 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
       if (other.hasEventIdBuilder()) {
         this.EventIdBuilder = com.networknt.kafka.common.EventId.newBuilder(other.getEventIdBuilder());
       }
-      if (isValidValue(fields()[1], other.status)) {
-        this.status = data().deepCopy(fields()[1].schema(), other.status);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
-      if (isValidValue(fields()[2], other.userId)) {
-        this.userId = data().deepCopy(fields()[2].schema(), other.userId);
+      if (isValidValue(fields()[2], other.status)) {
+        this.status = data().deepCopy(fields()[2].schema(), other.status);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.country)) {
-        this.country = data().deepCopy(fields()[3].schema(), other.country);
+      if (isValidValue(fields()[3], other.userId)) {
+        this.userId = data().deepCopy(fields()[3].schema(), other.userId);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
-      if (isValidValue(fields()[4], other.province)) {
-        this.province = data().deepCopy(fields()[4].schema(), other.province);
+      if (isValidValue(fields()[4], other.country)) {
+        this.country = data().deepCopy(fields()[4].schema(), other.country);
         fieldSetFlags()[4] = other.fieldSetFlags()[4];
       }
-      if (isValidValue(fields()[5], other.city)) {
-        this.city = data().deepCopy(fields()[5].schema(), other.city);
+      if (isValidValue(fields()[5], other.province)) {
+        this.province = data().deepCopy(fields()[5].schema(), other.province);
         fieldSetFlags()[5] = other.fieldSetFlags()[5];
       }
-      if (isValidValue(fields()[6], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[6].schema(), other.timestamp);
+      if (isValidValue(fields()[6], other.city)) {
+        this.city = data().deepCopy(fields()[6].schema(), other.city);
         fieldSetFlags()[6] = other.fieldSetFlags()[6];
+      }
+      if (isValidValue(fields()[7], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[7].schema(), other.timestamp);
+        fieldSetFlags()[7] = other.fieldSetFlags()[7];
       }
     }
 
@@ -381,29 +411,33 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
         fieldSetFlags()[0] = true;
       }
       this.EventIdBuilder = null;
-      if (isValidValue(fields()[1], other.status)) {
-        this.status = data().deepCopy(fields()[1].schema(), other.status);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.userId)) {
-        this.userId = data().deepCopy(fields()[2].schema(), other.userId);
+      if (isValidValue(fields()[2], other.status)) {
+        this.status = data().deepCopy(fields()[2].schema(), other.status);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.country)) {
-        this.country = data().deepCopy(fields()[3].schema(), other.country);
+      if (isValidValue(fields()[3], other.userId)) {
+        this.userId = data().deepCopy(fields()[3].schema(), other.userId);
         fieldSetFlags()[3] = true;
       }
-      if (isValidValue(fields()[4], other.province)) {
-        this.province = data().deepCopy(fields()[4].schema(), other.province);
+      if (isValidValue(fields()[4], other.country)) {
+        this.country = data().deepCopy(fields()[4].schema(), other.country);
         fieldSetFlags()[4] = true;
       }
-      if (isValidValue(fields()[5], other.city)) {
-        this.city = data().deepCopy(fields()[5].schema(), other.city);
+      if (isValidValue(fields()[5], other.province)) {
+        this.province = data().deepCopy(fields()[5].schema(), other.province);
         fieldSetFlags()[5] = true;
       }
-      if (isValidValue(fields()[6], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[6].schema(), other.timestamp);
+      if (isValidValue(fields()[6], other.city)) {
+        this.city = data().deepCopy(fields()[6].schema(), other.city);
         fieldSetFlags()[6] = true;
+      }
+      if (isValidValue(fields()[7], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[7].schema(), other.timestamp);
+        fieldSetFlags()[7] = true;
       }
     }
 
@@ -484,6 +518,50 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
     }
 
     /**
+      * Gets the value of the 'hostId' field.
+      * host id
+      * @return The value.
+      */
+    public java.lang.String getHostId() {
+      return hostId;
+    }
+
+
+    /**
+      * Sets the value of the 'hostId' field.
+      * host id
+      * @param value The value of 'hostId'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.covid.CovidStatusUpdatedEvent.Builder setHostId(java.lang.String value) {
+      validate(fields()[1], value);
+      this.hostId = value;
+      fieldSetFlags()[1] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'hostId' field has been set.
+      * host id
+      * @return True if the 'hostId' field has been set, false otherwise.
+      */
+    public boolean hasHostId() {
+      return fieldSetFlags()[1];
+    }
+
+
+    /**
+      * Clears the value of the 'hostId' field.
+      * host id
+      * @return This builder.
+      */
+    public net.lightapi.portal.covid.CovidStatusUpdatedEvent.Builder clearHostId() {
+      hostId = null;
+      fieldSetFlags()[1] = false;
+      return this;
+    }
+
+    /**
       * Gets the value of the 'status' field.
       * status in string format
       * @return The value.
@@ -500,9 +578,9 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.covid.CovidStatusUpdatedEvent.Builder setStatus(java.lang.String value) {
-      validate(fields()[1], value);
+      validate(fields()[2], value);
       this.status = value;
-      fieldSetFlags()[1] = true;
+      fieldSetFlags()[2] = true;
       return this;
     }
 
@@ -512,7 +590,7 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return True if the 'status' field has been set, false otherwise.
       */
     public boolean hasStatus() {
-      return fieldSetFlags()[1];
+      return fieldSetFlags()[2];
     }
 
 
@@ -523,7 +601,7 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
       */
     public net.lightapi.portal.covid.CovidStatusUpdatedEvent.Builder clearStatus() {
       status = null;
-      fieldSetFlags()[1] = false;
+      fieldSetFlags()[2] = false;
       return this;
     }
 
@@ -544,9 +622,9 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.covid.CovidStatusUpdatedEvent.Builder setUserId(java.lang.String value) {
-      validate(fields()[2], value);
+      validate(fields()[3], value);
       this.userId = value;
-      fieldSetFlags()[2] = true;
+      fieldSetFlags()[3] = true;
       return this;
     }
 
@@ -556,7 +634,7 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return True if the 'userId' field has been set, false otherwise.
       */
     public boolean hasUserId() {
-      return fieldSetFlags()[2];
+      return fieldSetFlags()[3];
     }
 
 
@@ -567,7 +645,7 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
       */
     public net.lightapi.portal.covid.CovidStatusUpdatedEvent.Builder clearUserId() {
       userId = null;
-      fieldSetFlags()[2] = false;
+      fieldSetFlags()[3] = false;
       return this;
     }
 
@@ -588,9 +666,9 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.covid.CovidStatusUpdatedEvent.Builder setCountry(java.lang.String value) {
-      validate(fields()[3], value);
+      validate(fields()[4], value);
       this.country = value;
-      fieldSetFlags()[3] = true;
+      fieldSetFlags()[4] = true;
       return this;
     }
 
@@ -600,7 +678,7 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return True if the 'country' field has been set, false otherwise.
       */
     public boolean hasCountry() {
-      return fieldSetFlags()[3];
+      return fieldSetFlags()[4];
     }
 
 
@@ -611,7 +689,7 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
       */
     public net.lightapi.portal.covid.CovidStatusUpdatedEvent.Builder clearCountry() {
       country = null;
-      fieldSetFlags()[3] = false;
+      fieldSetFlags()[4] = false;
       return this;
     }
 
@@ -632,9 +710,9 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.covid.CovidStatusUpdatedEvent.Builder setProvince(java.lang.String value) {
-      validate(fields()[4], value);
+      validate(fields()[5], value);
       this.province = value;
-      fieldSetFlags()[4] = true;
+      fieldSetFlags()[5] = true;
       return this;
     }
 
@@ -644,7 +722,7 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return True if the 'province' field has been set, false otherwise.
       */
     public boolean hasProvince() {
-      return fieldSetFlags()[4];
+      return fieldSetFlags()[5];
     }
 
 
@@ -655,7 +733,7 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
       */
     public net.lightapi.portal.covid.CovidStatusUpdatedEvent.Builder clearProvince() {
       province = null;
-      fieldSetFlags()[4] = false;
+      fieldSetFlags()[5] = false;
       return this;
     }
 
@@ -676,9 +754,9 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.covid.CovidStatusUpdatedEvent.Builder setCity(java.lang.String value) {
-      validate(fields()[5], value);
+      validate(fields()[6], value);
       this.city = value;
-      fieldSetFlags()[5] = true;
+      fieldSetFlags()[6] = true;
       return this;
     }
 
@@ -688,7 +766,7 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return True if the 'city' field has been set, false otherwise.
       */
     public boolean hasCity() {
-      return fieldSetFlags()[5];
+      return fieldSetFlags()[6];
     }
 
 
@@ -699,7 +777,7 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
       */
     public net.lightapi.portal.covid.CovidStatusUpdatedEvent.Builder clearCity() {
       city = null;
-      fieldSetFlags()[5] = false;
+      fieldSetFlags()[6] = false;
       return this;
     }
 
@@ -720,9 +798,9 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.covid.CovidStatusUpdatedEvent.Builder setTimestamp(long value) {
-      validate(fields()[6], value);
+      validate(fields()[7], value);
       this.timestamp = value;
-      fieldSetFlags()[6] = true;
+      fieldSetFlags()[7] = true;
       return this;
     }
 
@@ -732,7 +810,7 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return True if the 'timestamp' field has been set, false otherwise.
       */
     public boolean hasTimestamp() {
-      return fieldSetFlags()[6];
+      return fieldSetFlags()[7];
     }
 
 
@@ -742,7 +820,7 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.covid.CovidStatusUpdatedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[6] = false;
+      fieldSetFlags()[7] = false;
       return this;
     }
 
@@ -761,12 +839,13 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
         } else {
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
-        record.status = fieldSetFlags()[1] ? this.status : (java.lang.String) defaultValue(fields()[1]);
-        record.userId = fieldSetFlags()[2] ? this.userId : (java.lang.String) defaultValue(fields()[2]);
-        record.country = fieldSetFlags()[3] ? this.country : (java.lang.String) defaultValue(fields()[3]);
-        record.province = fieldSetFlags()[4] ? this.province : (java.lang.String) defaultValue(fields()[4]);
-        record.city = fieldSetFlags()[5] ? this.city : (java.lang.String) defaultValue(fields()[5]);
-        record.timestamp = fieldSetFlags()[6] ? this.timestamp : (java.lang.Long) defaultValue(fields()[6]);
+        record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
+        record.status = fieldSetFlags()[2] ? this.status : (java.lang.String) defaultValue(fields()[2]);
+        record.userId = fieldSetFlags()[3] ? this.userId : (java.lang.String) defaultValue(fields()[3]);
+        record.country = fieldSetFlags()[4] ? this.country : (java.lang.String) defaultValue(fields()[4]);
+        record.province = fieldSetFlags()[5] ? this.province : (java.lang.String) defaultValue(fields()[5]);
+        record.city = fieldSetFlags()[6] ? this.city : (java.lang.String) defaultValue(fields()[6]);
+        record.timestamp = fieldSetFlags()[7] ? this.timestamp : (java.lang.Long) defaultValue(fields()[7]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -800,6 +879,8 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
     throws java.io.IOException
   {
     this.EventId.customEncode(out);
+
+    out.writeString(this.hostId);
 
     out.writeString(this.status);
 
@@ -843,6 +924,8 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
       }
       this.EventId.customDecode(in);
 
+      this.hostId = in.readString();
+
       this.status = in.readString();
 
       this.userId = in.readString();
@@ -871,7 +954,7 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
       this.timestamp = in.readLong();
 
     } else {
-      for (int i = 0; i < 7; i++) {
+      for (int i = 0; i < 8; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -881,14 +964,18 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
           break;
 
         case 1:
-          this.status = in.readString();
+          this.hostId = in.readString();
           break;
 
         case 2:
-          this.userId = in.readString();
+          this.status = in.readString();
           break;
 
         case 3:
+          this.userId = in.readString();
+          break;
+
+        case 4:
           if (in.readIndex() != 1) {
             in.readNull();
             this.country = null;
@@ -897,7 +984,7 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
           }
           break;
 
-        case 4:
+        case 5:
           if (in.readIndex() != 1) {
             in.readNull();
             this.province = null;
@@ -906,7 +993,7 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
           }
           break;
 
-        case 5:
+        case 6:
           if (in.readIndex() != 1) {
             in.readNull();
             this.city = null;
@@ -915,7 +1002,7 @@ public class CovidStatusUpdatedEvent extends org.apache.avro.specific.SpecificRe
           }
           break;
 
-        case 6:
+        case 7:
           this.timestamp = in.readLong();
           break;
 

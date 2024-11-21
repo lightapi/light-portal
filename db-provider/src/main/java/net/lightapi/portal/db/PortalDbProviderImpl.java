@@ -266,7 +266,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> createUser(UserCreatedEvent event) {
         final String queryIdEmailWallet = "SELECT nonce FROM user_t WHERE user_id = ? OR email = ? OR taiji_wallet = ?";
         final String queryIdEmail = "SELECT nonce FROM user_t WHERE user_id = ? OR email = ?";
-        final String insertUser = "INSERT INTO user_t (host, user_id, first_name, last_name, email, roles, language, " +
+        final String insertUser = "INSERT INTO user_t (host_id, user_id, first_name, last_name, email, roles, language, " +
                 "verified, token, gender, password, birthday, country, province, city, post_code, address) " +
                 "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?)";
         Result<String> result = null;
@@ -303,7 +303,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             }
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
-                statement.setString(1, event.getHost());
+                statement.setString(1, event.getHostId());
                 statement.setString(2, event.getUserId());
                 if(map.get("first_name") != null)
                     statement.setString(3, (String)map.get("first_name"));
@@ -521,7 +521,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             }
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
-                statement.setString(1, event.getHost());
+                statement.setString(1, event.getHostId());
                 statement.setString(2, event.getUserId());
                 if(map.get("first_name") != null)
                     statement.setString(3, (String)map.get("first_name"));
@@ -646,7 +646,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(updateUser)) {
-                statement.setString(1, event.getHost());
+                statement.setString(1, event.getHostId());
                 statement.setString(2, event.getLanguage());
                 if(event.getTaijiWallet() != null) {
                     statement.setString(3, event.getTaijiWallet());
@@ -1118,7 +1118,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createClient(MarketClientCreatedEvent event) {
-        final String insertUser = "INSERT INTO application_t (host, application_id, application_name, application_description, " +
+        final String insertUser = "INSERT INTO application_t (host_id, application_id, application_name, application_description, " +
                 "is_kafka_application, client_id, client_type, client_profile, client_secret, client_scope, custom_claim, " +
                 "redirect_uri, authenticate_class, deref_client_id, operation_owner, delivery_owner, update_user, update_timestamp) " +
                 "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?)";
@@ -1130,7 +1130,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
-                statement.setString(1, event.getHost());
+                statement.setString(1, event.getHostId());
                 statement.setString(2, event.getApplicationId());
                 statement.setString(3, (String)map.get("applicationName"));
                 if(map.get("applicationDescription") != null)
@@ -1225,7 +1225,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         final String updateApplication = "UPDATE application_t SET application_name = ?, application_description = ?, is_kafka_application = ?, " +
                 "client_type = ?, client_profile = ?, client_scope = ?, custom_claim = ?, redirect_uri = ?, authenticate_class = ?, " +
                 "deref_client_id = ?, operation_owner = ?, delivery_owner = ?, update_user = ?, update_timestamp = ? " +
-                "WHERE host = ? AND application_id = ?";
+                "WHERE host_id = ? AND application_id = ?";
 
         Result<String> result = null;
         Map<String, Object> map = JsonMapper.string2Map(event.getValue());
@@ -1295,7 +1295,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 statement.setString(13, event.getEventId().getId());
                 statement.setTimestamp(14, new Timestamp(System.currentTimeMillis()));
-                statement.setString(15, event.getHost());
+                statement.setString(15, event.getHostId());
                 statement.setString(16, event.getApplicationId());
 
                 int count = statement.executeUpdate();
@@ -1341,7 +1341,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
     @Override
     public Result<String> deleteClient(MarketClientDeletedEvent event) {
-        final String deleteApplication = "DELETE from application_t WHERE host = ? AND application_id = ?";
+        final String deleteApplication = "DELETE from application_t WHERE host_id = ? AND application_id = ?";
         // TODO delete all other tables related to this user.
         Result<String> result;
         Connection conn = null;
@@ -1349,7 +1349,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn = ds.getConnection();
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteApplication)) {
-                statement.setString(1, event.getHost());
+                statement.setString(1, event.getHostId());
                 statement.setString(2, event.getApplicationId());
                 int count = statement.executeUpdate();
                 if(count == 0) {
@@ -1504,7 +1504,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
-                statement.setString(1, event.getHost());
+                statement.setString(1, event.getHostId());
                 statement.setString(2, event.getApiId());
                 statement.setString(3, (String)map.get("apiName"));
                 statement.setString(4, (String)map.get("serviceId"));
@@ -1670,7 +1670,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 statement.setString(14, event.getEventId().getId());
                 statement.setTimestamp(15, new Timestamp(event.getTimestamp()));
-                statement.setString(16, event.getHost());
+                statement.setString(16, event.getHostId());
                 statement.setString(17, event.getApiId());
 
                 int count = statement.executeUpdate();
@@ -1716,14 +1716,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
     @Override
     public Result<String> deleteService(MarketServiceDeletedEvent event) {
-        final String deleteApplication = "DELETE from api_t WHERE host = ? AND api_id = ?";
+        final String deleteApplication = "DELETE from api_t WHERE host_id = ? AND api_id = ?";
         Result<String> result;
         Connection conn = null;
         try {
             conn = ds.getConnection();
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteApplication)) {
-                statement.setString(1, event.getHost());
+                statement.setString(1, event.getHostId());
                 statement.setString(2, event.getApiId());
                 int count = statement.executeUpdate();
                 if(count == 0) {
@@ -1767,25 +1767,34 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     public Result<String> createMarketCode(MarketCodeCreatedEvent event) {
-        if(logger.isTraceEnabled()) logger.trace("insert into the cache auth_code with key " + event.getAuthCode() + " value " + event.getValue());
+        // cache key is based on the hostId and authCode.
+        String hostId = event.getHostId();
+        String authCode = event.getAuthCode();
+        String key = hostId + "|" + authCode;
+        if(logger.isTraceEnabled()) logger.trace("insert into the cache auth_code with key {} value {}", key, event.getValue());
         if(logger.isTraceEnabled()) logger.trace("estimate the size of the cache auth_code before is " + cacheManager.getSize(AUTH_CODE_CACHE));
-        cacheManager.put(AUTH_CODE_CACHE, event.getAuthCode(), event.getValue());
+        cacheManager.put(AUTH_CODE_CACHE, key, event.getValue());
         if(logger.isTraceEnabled()) logger.trace("estimate the size of the cache auth_code after is " + cacheManager.getSize(AUTH_CODE_CACHE));
         return Success.of(event.getAuthCode());
     }
 
     public Result<String> deleteMarketCode(MarketCodeDeletedEvent event) {
-        if(logger.isTraceEnabled()) logger.trace("insert into the cache auth_code with key " + event.getAuthCode() + " value ");
+        String hostId = event.getHostId();
+        String authCode = event.getAuthCode();
+        String key = hostId + "|" + authCode;
+        if(logger.isTraceEnabled()) logger.trace("insert into the cache auth_code with key {}", key);
         if(logger.isTraceEnabled()) logger.trace("estimate the size of the cache auth_code before is " + cacheManager.getSize(AUTH_CODE_CACHE));
-        cacheManager.delete(AUTH_CODE_CACHE, event.getAuthCode());
+        cacheManager.delete(AUTH_CODE_CACHE, key);
         if(logger.isTraceEnabled()) logger.trace("estimate the size of the cache auth_code after is " + cacheManager.getSize(AUTH_CODE_CACHE));
         return Success.of(event.getAuthCode());
     }
 
-    public Result<String> queryMarketCode(String authCode) {
-        if(logger.isTraceEnabled()) logger.trace("estimate the size of the cache auth_code is " + cacheManager.getSize(AUTH_CODE_CACHE));
-        String value = (String)cacheManager.get(AUTH_CODE_CACHE, authCode);
-        if(logger.isTraceEnabled()) logger.trace("retrieve cache auth_code with key " + authCode + " value " + value);
+    public Result<String> queryMarketCode(String hostId, String authCode) {
+        // cache key is based on the hostId and authCode.
+        String key = hostId + "|" + authCode;
+        if(logger.isTraceEnabled()) logger.trace("key = {} and estimate the size of the cache auth_code is {}", key, cacheManager.getSize(AUTH_CODE_CACHE));
+        String value = (String)cacheManager.get(AUTH_CODE_CACHE, key);
+        if(logger.isTraceEnabled()) logger.trace("retrieve cache auth_code with key {} value {}", key, value);
         if(value != null) {
             return Success.of(value);
         } else {
@@ -1818,7 +1827,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertHost)) {
-                statement.setString(1, event.getId());
+                statement.setString(1, event.getHostId());
                 statement.setString(2, event.getHost());
                 statement.setString(3, event.getName());
                 statement.setString(4, event.getDesc());
@@ -1835,7 +1844,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             }
             // insert the long key pair
             try (PreparedStatement statement = conn.prepareStatement(insertHostKey)) {
-                statement.setString(1, event.getId());
+                statement.setString(1, event.getHostId());
                 statement.setString(2, longKeyId);
                 statement.setString(3, KeyUtil.serializePublicKey(longKeyPair.getPublic()));
                 statement.setString(4, KeyUtil.serializePrivateKey(longKeyPair.getPrivate()));
@@ -1851,7 +1860,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             }
             // insert the current key pair
             try (PreparedStatement statement = conn.prepareStatement(insertHostKey)) {
-                statement.setString(1, event.getId());
+                statement.setString(1, event.getHostId());
                 statement.setString(2, currKeyId);
                 statement.setString(3, KeyUtil.serializePublicKey(currKeyPair.getPublic()));
                 statement.setString(4, KeyUtil.serializePrivateKey(currKeyPair.getPrivate()));
@@ -1868,7 +1877,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
             // as this is a brand-new user, there is no nonce to be updated. By default, the nonce is 0.
             conn.commit();
-            result = Success.of(event.getId());
+            result = Success.of(event.getHostId());
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
@@ -1927,7 +1936,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 statement.setString(4, event.getEventId().getId());
                 statement.setTimestamp(5, new Timestamp(event.getTimestamp()));
-                statement.setString(6, event.getId());
+                statement.setString(6, event.getHostId());
 
                 int count = statement.executeUpdate();
                 if(count == 0) {
@@ -1941,7 +1950,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             }
             // as this is a brand-new user, there is no nonce to be updated. By default, the nonce is 0.
             conn.commit();
-            result = Success.of(event.getId());
+            result = Success.of(event.getHostId());
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
@@ -1981,7 +1990,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn = ds.getConnection();
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteHostKey)) {
-                statement.setString(1, event.getId());
+                statement.setString(1, event.getHostId());
                 int count = statement.executeUpdate();
                 if(count == 0) {
                     // no record is deleted, write an error notification.
@@ -1992,7 +2001,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
             }
             try (PreparedStatement statement = conn.prepareStatement(deleteHost)) {
-                statement.setString(1, event.getId());
+                statement.setString(1, event.getHostId());
                 int count = statement.executeUpdate();
                 if(count == 0) {
                     // no record is deleted, write an error notification.
@@ -2470,7 +2479,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertRule)) {
                 statement.setString(1, event.getRuleId());
-                statement.setString(2, event.getHost());
+                statement.setString(2, event.getHostId());
                 statement.setString(3, event.getRuleType());
                 if(event.getGroupId() != null)
                     statement.setString(4, event.getGroupId());
@@ -2538,8 +2547,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
 
             try (PreparedStatement statement = conn.prepareStatement(updateRule)) {
-                if(event.getHost() != null) {
-                    statement.setString(1, event.getHost());
+                if(event.getHostId() != null) {
+                    statement.setString(1, event.getHostId());
                 } else {
                     statement.setNull(1, NULL);
                 }

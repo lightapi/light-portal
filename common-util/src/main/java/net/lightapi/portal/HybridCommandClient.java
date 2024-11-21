@@ -168,13 +168,12 @@ public class HybridCommandClient {
 
     /**
      * Delete Auth code from oauth-kafka
-     * @param host host name
      * @param authCode auth code
      * @param token access token
      * @return Result of authCode
      */
-    public static Result<String> deleteAuthCode(String host, String authCode, String token) {
-        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"deleteAuthCode\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"authCode\":\"%s\"}}", host, authCode);
+    public static Result<String> deleteAuthCode(String hostId, String authCode, String token) {
+        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"deleteAuthCode\",\"version\":\"0.1.0\",\"data\":{\"hostId\":\"%s\",\"authCode\":\"%s\"}}", hostId, authCode);
         if (config.isPortalByServiceUrl()) {
             return callCommandWithToken(command, token, config.getPortalCommandServiceUrl());
         } else {

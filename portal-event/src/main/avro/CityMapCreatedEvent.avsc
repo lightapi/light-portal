@@ -30,6 +30,11 @@
       }
     },
     {
+      "name": "hostId",
+      "type": "string",
+      "doc": "host id"
+    },
+    {
       "name": "country",
       "type": "string",
       "doc": "country"
