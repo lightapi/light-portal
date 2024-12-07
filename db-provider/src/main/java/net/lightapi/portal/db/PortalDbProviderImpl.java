@@ -2149,6 +2149,75 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
+    public Result<List<Map<String, Object>>> listHost() {
+        final String listHost = "SELECT host_id, host from host_t";
+        Result<List<Map<String, Object>>> result;
+        try (final Connection conn = ds.getConnection()) {
+            List<Map<String, Object>> list = new ArrayList<>();
+            try (PreparedStatement statement = conn.prepareStatement(listHost)) {
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    while (resultSet.next()) {
+                        Map<String, Object> map = new HashMap<>();
+                        map.put("id", resultSet.getString("host_id"));
+                        map.put("label", resultSet.getString("host"));
+                        list.add(map);
+                    }
+                }
+            }
+            if(list.isEmpty())
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "host", "any key"));
+            else
+                result = Success.of(list);
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
+    public Result<List<Map<String, Object>>> getHost(int limit, int offset) {
+        final String getHost = "SELECT * from host_t LIMIT ? OFFSET ?";
+        Result<List<Map<String, Object>>> result;
+        try (final Connection conn = ds.getConnection()) {
+            List<Map<String, Object>> list = new ArrayList<>();
+            try (PreparedStatement statement = conn.prepareStatement(getHost)) {
+                statement.setInt(1, limit);
+                statement.setInt(2, offset);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    while (resultSet.next()) {
+                        Map<String, Object> map = new HashMap<>();
+                        map.put("host_id", resultSet.getString("host_id"));
+                        map.put("host", resultSet.getString("host"));
+                        map.put("orgName", resultSet.getString("org_name"));
+                        map.put("orgDesc", resultSet.getString("org_desc"));
+                        map.put("orgOwner", resultSet.getString("org_owner"));
+                        map.put("jwk", resultSet.getString("jwk"));
+                        map.put("updateUser", resultSet.getString("update_user"));
+                        map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
+                        list.add(map);
+                    }
+                }
+            }
+            if(list.isEmpty())
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "host", "limit and offset"));
+            else
+                result = Success.of(list);
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
     public Result<String> createConfig(ConfigCreatedEvent event) {
         final String insertHost = "INSERT INTO configuration_t (configuration_id, configuration_type, infrastructure_type_id, class_path, configuration_description, update_user, update_timestamp) " +
                 "VALUES (?, ?, ?, ?, ?,   ?, ?)";
