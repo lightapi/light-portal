@@ -17,6 +17,7 @@ import java.util.Map;
  */
 public interface PortalDbProvider extends DbProvider {
 
+    Result<String> loginUserByEmail(String email);
     Result<String> queryUserByEmail(String email);
     Result<String> queryUserById(String id);
     Result<String> queryUserByWallet(String wallet);

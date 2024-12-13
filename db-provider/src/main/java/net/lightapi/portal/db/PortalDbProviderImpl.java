@@ -37,6 +37,90 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public static final String UPDATE_NONCE = "UPDATE user_t SET nonce = ? WHERE email = ?";
 
     @Override
+    public Result<String> loginUserByEmail(String email) {
+        Result<String> result = null;
+        String sql = "SELECT\n" +
+                "    uh.host_id,\n" +
+                "    u.user_id,\n" +
+                "    u.user_type,\n" +
+                "    u.password,\n" +
+                "    u.verified,\n" +
+                "    CASE\n" +
+                "        WHEN u.user_type = 'E' THEN e.employee_id\n" +
+                "        WHEN u.user_type = 'C' THEN c.customer_id\n" +
+                "        ELSE NULL\n" +
+                "    END AS entity_id,\n" +
+                "    CASE WHEN u.user_type = 'E' THEN string_agg(DISTINCT p.position_name, ' ' ORDER BY p.position_name) ELSE NULL END AS positions,\n" +
+                "    string_agg(DISTINCT r.role_name, ' ' ORDER BY r.role_name) AS roles,\n" +
+                "    string_agg(DISTINCT g.group_name, ' ' ORDER BY g.group_name) AS groups,\n" +
+                "     CASE\n" +
+                "        WHEN COUNT(DISTINCT at.attribute_name || '^=^' || aut.attribute_value) > 0 THEN string_agg(DISTINCT at.attribute_name || '^=^' || aut.attribute_value, '~' ORDER BY at.attribute_name || '^=^' || aut.attribute_value)\n" +
+                "        ELSE NULL\n" +
+                "    END AS attributes\n" +
+                "FROM\n" +
+                "    user_t AS u\n" +
+                "LEFT JOIN\n" +
+                "    user_host_t AS uh ON u.user_id = uh.user_id\n" +
+                "LEFT JOIN\n" +
+                "    role_user_t AS ru ON u.user_id = ru.user_id\n" +
+                "LEFT JOIN\n" +
+                "    role_t AS r ON ru.host_id = r.host_id AND ru.role_id = r.role_id\n" +
+                "LEFT JOIN\n" +
+                "    attribute_user_t AS aut ON u.user_id = aut.user_id\n" +
+                "LEFT JOIN\n" +
+                "    attribute_t AS at ON aut.host_id = at.host_id AND aut.attribute_id = at.attribute_id\n" +
+                "LEFT JOIN\n" +
+                "    group_user_t AS gu ON u.user_id = gu.user_id\n" +
+                "LEFT JOIN\n" +
+                "    group_t AS g ON gu.host_id = g.host_id AND gu.group_id = g.group_id\n" +
+                "LEFT JOIN\n" +
+                "    employee_t AS e ON uh.host_id = e.host_id AND u.user_id = e.user_id\n" +
+                "LEFT JOIN\n" +
+                "    customer_t AS c ON uh.host_id = c.host_id AND u.user_id = c.user_id\n" +
+                "LEFT JOIN\n" +
+                "    employee_position_t AS ep ON e.host_id = ep.host_id AND e.employee_id = ep.employee_id\n" +
+                "LEFT JOIN\n" +
+                "    position_t AS p ON ep.host_id = p.host_id AND ep.position_id = p.position_id\n" +
+                "WHERE\n" +
+                "    u.email = ?\n" +
+                "    AND u.locked = FALSE\n" +
+                "    AND u.verified = TRUE\n" +
+                "GROUP BY\n" +
+                "    uh.host_id, u.user_id, u.user_type, e.employee_id, c.customer_id;\n";
+        try (final Connection conn = ds.getConnection()) {
+            Map<String, Object> map = new HashMap<>();
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, email);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        map.put("hostId", resultSet.getString("host_id"));
+                        map.put("userId", resultSet.getString("user_id"));
+                        map.put("userType", resultSet.getString("user_type"));
+                        map.put("entityId", resultSet.getString("entity_id"));
+                        map.put("password", resultSet.getString("password"));
+                        map.put("verified", resultSet.getBoolean("verified"));
+                        map.put("positions", resultSet.getString("positions"));
+                        map.put("roles", resultSet.getString("roles"));
+                        map.put("groups", resultSet.getString("groups"));
+                        map.put("attributes", resultSet.getString("attributes"));
+                    }
+                }
+            }
+            if(map.size() == 0)
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "user", email));
+            else
+                result = Success.of(JsonMapper.toJson(map));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
     public Result<String> queryUserByEmail(String email) {
         Result<String> result = null;
         String sql =
@@ -2087,8 +2171,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, id);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
-                        map.put("host_id", resultSet.getString("host_id"));
-                        map.put("host", resultSet.getString("host"));
+                        map.put("hostId", resultSet.getString("host_id"));
+                        map.put("hostDomain", resultSet.getString("host_domain"));
                         map.put("orgName", resultSet.getString("org_name"));
                         map.put("orgDesc", resultSet.getString("org_desc"));
                         map.put("orgOwner", resultSet.getString("org_owner"));
@@ -2150,7 +2234,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<List<Map<String, Object>>> listHost() {
-        final String listHost = "SELECT host_id, host from host_t";
+        final String listHost = "SELECT host_id, host_domain from host_t";
         Result<List<Map<String, Object>>> result;
         try (final Connection conn = ds.getConnection()) {
             List<Map<String, Object>> list = new ArrayList<>();
@@ -2159,7 +2243,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     while (resultSet.next()) {
                         Map<String, Object> map = new HashMap<>();
                         map.put("id", resultSet.getString("host_id"));
-                        map.put("label", resultSet.getString("host"));
+                        map.put("label", resultSet.getString("host_domain"));
                         list.add(map);
                     }
                 }
