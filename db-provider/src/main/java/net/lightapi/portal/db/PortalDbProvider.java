@@ -17,6 +17,9 @@ import java.util.Map;
  */
 public interface PortalDbProvider extends DbProvider {
 
+    // ref table
+    Result<String> queryRefTable(int offset, int limit, String hostId, String tableName, String tableDesc, String active, String editable, String common);
+
     Result<String> loginUserByEmail(String email);
     Result<String> queryUserByEmail(String email);
     Result<String> queryUserById(String id);

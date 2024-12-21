@@ -37,6 +37,89 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public static final String UPDATE_NONCE = "UPDATE user_t SET nonce = ? WHERE email = ?";
 
     @Override
+    public Result<String> queryRefTable(int offset, int limit, String hostId, String tableName, String tableDesc, String active, String editable, String common) {
+        Result<String> result = null;
+        String sql = "SELECT COUNT(*) OVER () AS total,\n" +
+                "               rt.table_id,\n" +
+                "               rt.table_name,\n" +
+                "               rt.table_desc,\n" +
+                "               rt.active,\n" +
+                "               rt.editable,\n" +
+                "               rt.common,\n" +
+                "               rht.host_id\n" +
+                "        FROM ref_table_t rt\n" +
+                "        JOIN ref_host_t rht ON rt.table_id = rht.table_id\n" +
+                "        WHERE rht.host_id = ?\n" +
+                "        AND rt.active = ?\n" +
+                "        AND rt.editable = ?\n" +
+                "        AND (\n" +
+                "            rt.common = ?\n" +
+                "                OR  rht.host_id = ?\n" +
+                "        )\n" +
+                "        AND (\n" +
+                "            ? IS NULL OR ? = '*' OR rt.table_name LIKE '%' || ? || '%'\n" +
+                "        )\n" +
+                "        AND (\n" +
+                "            ? IS NULL OR ? = '*' OR rt.table_desc LIKE '%' || ? || '%'\n" +
+                "        )\n" +
+                "        ORDER BY rt.table_name\n" +
+                "        LIMIT ? OFFSET ?;";
+
+        int total = 0;
+        List<Map<String, Object>> tables = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+            PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, hostId);
+            preparedStatement.setString(2, active);
+            preparedStatement.setString(3, editable);
+            preparedStatement.setString(4, common);
+            preparedStatement.setString(5, hostId);
+            preparedStatement.setString(6, tableName);
+            preparedStatement.setString(7, tableName);
+            preparedStatement.setString(8, tableName);
+            preparedStatement.setString(9, tableDesc);
+            preparedStatement.setString(10, tableDesc);
+            preparedStatement.setString(11, tableDesc);
+            preparedStatement.setInt(12, limit);
+            preparedStatement.setInt(13, offset);
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    // only get the total once as it is the same for all rows.
+                    if (isFirstRow) {
+                        total =  resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+
+                    map.put("tableId", resultSet.getString("table_id"));
+                    map.put("tableName", resultSet.getString("table_name"));
+                    map.put("tableDesc", resultSet.getString("table_desc"));
+                    map.put("active", resultSet.getString("active"));
+                    map.put("editable", resultSet.getString("editable"));
+                    map.put("common", resultSet.getString("common"));
+                    map.put("hostId", resultSet.getString("host_id"));
+                    tables.add(map);
+                }
+            }
+            // now, we have the total and the list of tables, we need to put them into a map.
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("tables", tables);
+            result = Success.of(JsonMapper.toJson(resultMap));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
     public Result<String> loginUserByEmail(String email) {
         Result<String> result = null;
         String sql = "SELECT\n" +
