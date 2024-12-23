@@ -1285,8 +1285,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createClient(MarketClientCreatedEvent event) {
-        final String insertUser = "INSERT INTO application_t (host_id, application_id, application_name, application_description, " +
-                "is_kafka_application, client_id, client_type, client_profile, client_secret, client_scope, custom_claim, " +
+        final String insertUser = "INSERT INTO app_t (host_id, app_id, app_name, app_desc, " +
+                "is_kafka_app, client_id, client_type, client_profile, client_secret, client_scope, custom_claim, " +
                 "redirect_uri, authenticate_class, deref_client_id, operation_owner, delivery_owner, update_user, update_timestamp) " +
                 "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?)";
         Result<String> result = null;
@@ -1298,14 +1298,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
                 statement.setString(1, event.getHostId());
-                statement.setString(2, event.getApplicationId());
-                statement.setString(3, (String)map.get("applicationName"));
-                if(map.get("applicationDescription") != null)
-                    statement.setString(4, (String)map.get("applicationDescription"));
+                statement.setString(2, event.getAppId());
+                statement.setString(3, (String)map.get("appName"));
+                if(map.get("appDesc") != null)
+                    statement.setString(4, (String)map.get("appDesc"));
                 else
                     statement.setNull(4, NULL);
-                if(map.get("isKafkaApplication") != null)
-                    statement.setBoolean(5, (Boolean)map.get("isKafkaApplication"));
+                if(map.get("isKafkaApp") != null)
+                    statement.setBoolean(5, (Boolean)map.get("isKafkaApp"));
                 else
                     statement.setNull(5, NULL);
                 statement.setString(6, (String)map.get("clientId"));
@@ -1351,7 +1351,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setTimestamp(18, new Timestamp(System.currentTimeMillis()));
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "failed to insert the application " + event.getApplicationId());
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "failed to insert the app " + event.getAppId());
                 } else {
                     insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
                 }
@@ -1359,7 +1359,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
             // as this is a brand-new user, there is no nonce to be updated. By default, the nonce is 0.
             conn.commit();
-            result = Success.of(event.getApplicationId());
+            result = Success.of(event.getAppId());
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
@@ -1389,10 +1389,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
     @Override
     public Result<String> updateClient(MarketClientUpdatedEvent event) {
-        final String updateApplication = "UPDATE application_t SET application_name = ?, application_description = ?, is_kafka_application = ?, " +
+        final String updateApplication = "UPDATE app_t SET app_name = ?, app_desc = ?, is_kafka_app = ?, " +
                 "client_type = ?, client_profile = ?, client_scope = ?, custom_claim = ?, redirect_uri = ?, authenticate_class = ?, " +
                 "deref_client_id = ?, operation_owner = ?, delivery_owner = ?, update_user = ?, update_timestamp = ? " +
-                "WHERE host_id = ? AND application_id = ?";
+                "WHERE host_id = ? AND app_id = ?";
 
         Result<String> result = null;
         Map<String, Object> map = JsonMapper.string2Map(event.getValue());
@@ -1402,18 +1402,18 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
 
             try (PreparedStatement statement = conn.prepareStatement(updateApplication)) {
-                if(map.get("applicationName") != null) {
-                    statement.setString(1, (String)map.get("applicationName"));
+                if(map.get("appName") != null) {
+                    statement.setString(1, (String)map.get("appName"));
                 } else {
                     statement.setNull(1, NULL);
                 }
-                if(map.get("applicationDescription") != null) {
-                    statement.setString(2, (String)map.get("applicationDescription"));
+                if(map.get("appDesc") != null) {
+                    statement.setString(2, (String)map.get("appDesc"));
                 } else {
                     statement.setNull(2, NULL);
                 }
-                if(map.get("isKafkaApplication") != null) {
-                    statement.setBoolean(3, (Boolean)map.get("isKafkaApplication"));
+                if(map.get("isKafkaApp") != null) {
+                    statement.setBoolean(3, (Boolean)map.get("isKafkaApp"));
                 } else {
                     statement.setNull(3, NULL);
                 }
@@ -1463,12 +1463,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(13, event.getEventId().getId());
                 statement.setTimestamp(14, new Timestamp(System.currentTimeMillis()));
                 statement.setString(15, event.getHostId());
-                statement.setString(16, event.getApplicationId());
+                statement.setString(16, event.getAppId());
 
                 int count = statement.executeUpdate();
                 if(count == 0) {
                     // no record is updated, write an error notification.
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no record is updated by application" + event.getApplicationId());
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no record is updated by app " + event.getAppId());
                     return result;
                 } else {
                     insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
@@ -1477,7 +1477,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             }
             // as this is a brand-new user, there is no nonce to be updated. By default, the nonce is 0.
             conn.commit();
-            result = Success.of(event.getApplicationId());
+            result = Success.of(event.getAppId());
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
@@ -1508,20 +1508,20 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
     @Override
     public Result<String> deleteClient(MarketClientDeletedEvent event) {
-        final String deleteApplication = "DELETE from application_t WHERE host_id = ? AND application_id = ?";
+        final String deleteApp = "DELETE from app_t WHERE host_id = ? AND app_id = ?";
         // TODO delete all other tables related to this user.
         Result<String> result;
         Connection conn = null;
         try {
             conn = ds.getConnection();
             conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(deleteApplication)) {
+            try (PreparedStatement statement = conn.prepareStatement(deleteApp)) {
                 statement.setString(1, event.getHostId());
-                statement.setString(2, event.getApplicationId());
+                statement.setString(2, event.getAppId());
                 int count = statement.executeUpdate();
                 if(count == 0) {
                     // no record is deleted, write an error notification.
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no record is deleted for application " + event.getApplicationId());
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no record is deleted for app " + event.getAppId());
                 } else {
                     // record is deleted, write a success notification.
                     insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
@@ -1562,10 +1562,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<Map<String, Object>> queryClientByClientId(String clientId) {
         Result<Map<String, Object>> result;
         String sql =
-                "SELECT host_id, application_id, application_name, application_description, is_kafka_application, client_id, " +
+                "SELECT host_id, app_id, app_name, app_desc, is_kafka_app, client_id, " +
                         "client_type, client_profile, client_secret, client_scope, custom_claim, redirect_uri, authenticate_class, " +
                         "deref_client_id, operation_owner, delivery_owner, update_user, update_timestamp " +
-                        "FROM application_t WHERE client_id = ?";
+                        "FROM app_t WHERE client_id = ?";
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
@@ -1573,9 +1573,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
                         map.put("hostId", resultSet.getString("host_id"));
-                        map.put("applicationId", resultSet.getString("application_id"));
-                        map.put("applicationDescription", resultSet.getString("application_description"));
-                        map.put("isKafkaApplication", resultSet.getBoolean("is_kafka_application"));
+                        map.put("appId", resultSet.getString("app_id"));
+                        map.put("appDesc", resultSet.getString("app_desc"));
+                        map.put("isKafkaApp", resultSet.getBoolean("is_kafka_app"));
                         map.put("clientId", resultSet.getString("client_id"));
                         map.put("clientType", resultSet.getString("client_type"));
                         map.put("clientProfile", resultSet.getString("client_profile"));
@@ -1611,10 +1611,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<Map<String, Object>> queryClientByHostAppId(String host_id, String applicationId) {
         Result<Map<String, Object>> result;
         String sql =
-                "SELECT host_id, application_id, application_name, application_description, is_kafka_application, client_id, " +
+                "SELECT host_id, app_id, app_name, app_desc, is_kafka_app, client_id, " +
                         "client_type, client_profile, client_secret, client_scope, custom_claim, redirect_uri, authenticate_class, " +
                         "deref_client_id, operation_owner, delivery_owner, update_user, update_timestamp " +
-                        "FROM application_t WHERE host = ? AND application_id = ?";
+                        "FROM app_t WHERE host = ? AND app_id = ?";
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
@@ -1623,9 +1623,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
                         map.put("hostId", resultSet.getString("host_id"));
-                        map.put("applicationIdd", resultSet.getString("application_id"));
-                        map.put("applicationDescription", resultSet.getString("application_description"));
-                        map.put("isKafkaApplication", resultSet.getBoolean("is_kafka_application"));
+                        map.put("appId", resultSet.getString("app_id"));
+                        map.put("appDesc", resultSet.getString("app_desc"));
+                        map.put("isKafkaApp", resultSet.getBoolean("is_kafka_app"));
                         map.put("clientId", resultSet.getString("client_id"));
                         map.put("clientType", resultSet.getString("client_type"));
                         map.put("clientProfile", resultSet.getString("client_profile"));
