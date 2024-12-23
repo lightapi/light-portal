@@ -35,9 +35,9 @@
       "doc": "host id"
     },
     {
-      "name": "applicationId",
+      "name": "appId",
       "type": "string",
-      "doc": "application id"
+      "doc": "app id"
     },
     {
       "name": "timestamp",

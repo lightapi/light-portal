@@ -35,14 +35,14 @@
       "doc": "host id"
     },
     {
-      "name": "applicationId",
+      "name": "appId",
       "type": "string",
-      "doc": "application id"
+      "doc": "app id"
     },
     {
       "name": "value",
       "type": "string",
-      "doc": "application detail in JSON"
+      "doc": "app detail in JSON"
     },
     {
       "name": "timestamp",

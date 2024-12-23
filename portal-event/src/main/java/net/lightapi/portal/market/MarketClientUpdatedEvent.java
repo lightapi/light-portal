@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class MarketClientUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 487561145350637589L;
+  private static final long serialVersionUID = 2973011144445808706L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"MarketClientUpdatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"applicationId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"application id\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"application detail in JSON\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"MarketClientUpdatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"appId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"app id\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"app detail in JSON\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -76,9 +76,9 @@ public class MarketClientUpdatedEvent extends org.apache.avro.specific.SpecificR
   private com.networknt.kafka.common.EventId EventId;
   /** host id */
   private java.lang.String hostId;
-  /** application id */
-  private java.lang.String applicationId;
-  /** application detail in JSON */
+  /** app id */
+  private java.lang.String appId;
+  /** app detail in JSON */
   private java.lang.String value;
   /** time the event is recorded */
   private long timestamp;
@@ -94,14 +94,14 @@ public class MarketClientUpdatedEvent extends org.apache.avro.specific.SpecificR
    * All-args constructor.
    * @param EventId The new value for EventId
    * @param hostId host id
-   * @param applicationId application id
-   * @param value application detail in JSON
+   * @param appId app id
+   * @param value app detail in JSON
    * @param timestamp time the event is recorded
    */
-  public MarketClientUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String applicationId, java.lang.String value, java.lang.Long timestamp) {
+  public MarketClientUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String appId, java.lang.String value, java.lang.Long timestamp) {
     this.EventId = EventId;
     this.hostId = hostId;
-    this.applicationId = applicationId;
+    this.appId = appId;
     this.value = value;
     this.timestamp = timestamp;
   }
@@ -113,7 +113,7 @@ public class MarketClientUpdatedEvent extends org.apache.avro.specific.SpecificR
     switch (field$) {
     case 0: return EventId;
     case 1: return hostId;
-    case 2: return applicationId;
+    case 2: return appId;
     case 3: return value;
     case 4: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
@@ -126,7 +126,7 @@ public class MarketClientUpdatedEvent extends org.apache.avro.specific.SpecificR
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
     case 1: hostId = value$ != null ? value$.toString() : null; break;
-    case 2: applicationId = value$ != null ? value$.toString() : null; break;
+    case 2: appId = value$ != null ? value$.toString() : null; break;
     case 3: value = value$ != null ? value$.toString() : null; break;
     case 4: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
@@ -169,26 +169,26 @@ public class MarketClientUpdatedEvent extends org.apache.avro.specific.SpecificR
   }
 
   /**
-   * Gets the value of the 'applicationId' field.
-   * @return application id
+   * Gets the value of the 'appId' field.
+   * @return app id
    */
-  public java.lang.String getApplicationId() {
-    return applicationId;
+  public java.lang.String getAppId() {
+    return appId;
   }
 
 
   /**
-   * Sets the value of the 'applicationId' field.
-   * application id
+   * Sets the value of the 'appId' field.
+   * app id
    * @param value the value to set.
    */
-  public void setApplicationId(java.lang.String value) {
-    this.applicationId = value;
+  public void setAppId(java.lang.String value) {
+    this.appId = value;
   }
 
   /**
    * Gets the value of the 'value' field.
-   * @return application detail in JSON
+   * @return app detail in JSON
    */
   public java.lang.String getValue() {
     return value;
@@ -197,7 +197,7 @@ public class MarketClientUpdatedEvent extends org.apache.avro.specific.SpecificR
 
   /**
    * Sets the value of the 'value' field.
-   * application detail in JSON
+   * app detail in JSON
    * @param value the value to set.
    */
   public void setValue(java.lang.String value) {
@@ -267,9 +267,9 @@ public class MarketClientUpdatedEvent extends org.apache.avro.specific.SpecificR
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
     /** host id */
     private java.lang.String hostId;
-    /** application id */
-    private java.lang.String applicationId;
-    /** application detail in JSON */
+    /** app id */
+    private java.lang.String appId;
+    /** app detail in JSON */
     private java.lang.String value;
     /** time the event is recorded */
     private long timestamp;
@@ -296,8 +296,8 @@ public class MarketClientUpdatedEvent extends org.apache.avro.specific.SpecificR
         this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
-      if (isValidValue(fields()[2], other.applicationId)) {
-        this.applicationId = data().deepCopy(fields()[2].schema(), other.applicationId);
+      if (isValidValue(fields()[2], other.appId)) {
+        this.appId = data().deepCopy(fields()[2].schema(), other.appId);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
       if (isValidValue(fields()[3], other.value)) {
@@ -325,8 +325,8 @@ public class MarketClientUpdatedEvent extends org.apache.avro.specific.SpecificR
         this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.applicationId)) {
-        this.applicationId = data().deepCopy(fields()[2].schema(), other.applicationId);
+      if (isValidValue(fields()[2], other.appId)) {
+        this.appId = data().deepCopy(fields()[2].schema(), other.appId);
         fieldSetFlags()[2] = true;
       }
       if (isValidValue(fields()[3], other.value)) {
@@ -460,52 +460,52 @@ public class MarketClientUpdatedEvent extends org.apache.avro.specific.SpecificR
     }
 
     /**
-      * Gets the value of the 'applicationId' field.
-      * application id
+      * Gets the value of the 'appId' field.
+      * app id
       * @return The value.
       */
-    public java.lang.String getApplicationId() {
-      return applicationId;
+    public java.lang.String getAppId() {
+      return appId;
     }
 
 
     /**
-      * Sets the value of the 'applicationId' field.
-      * application id
-      * @param value The value of 'applicationId'.
+      * Sets the value of the 'appId' field.
+      * app id
+      * @param value The value of 'appId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketClientUpdatedEvent.Builder setApplicationId(java.lang.String value) {
+    public net.lightapi.portal.market.MarketClientUpdatedEvent.Builder setAppId(java.lang.String value) {
       validate(fields()[2], value);
-      this.applicationId = value;
+      this.appId = value;
       fieldSetFlags()[2] = true;
       return this;
     }
 
     /**
-      * Checks whether the 'applicationId' field has been set.
-      * application id
-      * @return True if the 'applicationId' field has been set, false otherwise.
+      * Checks whether the 'appId' field has been set.
+      * app id
+      * @return True if the 'appId' field has been set, false otherwise.
       */
-    public boolean hasApplicationId() {
+    public boolean hasAppId() {
       return fieldSetFlags()[2];
     }
 
 
     /**
-      * Clears the value of the 'applicationId' field.
-      * application id
+      * Clears the value of the 'appId' field.
+      * app id
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketClientUpdatedEvent.Builder clearApplicationId() {
-      applicationId = null;
+    public net.lightapi.portal.market.MarketClientUpdatedEvent.Builder clearAppId() {
+      appId = null;
       fieldSetFlags()[2] = false;
       return this;
     }
 
     /**
       * Gets the value of the 'value' field.
-      * application detail in JSON
+      * app detail in JSON
       * @return The value.
       */
     public java.lang.String getValue() {
@@ -515,7 +515,7 @@ public class MarketClientUpdatedEvent extends org.apache.avro.specific.SpecificR
 
     /**
       * Sets the value of the 'value' field.
-      * application detail in JSON
+      * app detail in JSON
       * @param value The value of 'value'.
       * @return This builder.
       */
@@ -528,7 +528,7 @@ public class MarketClientUpdatedEvent extends org.apache.avro.specific.SpecificR
 
     /**
       * Checks whether the 'value' field has been set.
-      * application detail in JSON
+      * app detail in JSON
       * @return True if the 'value' field has been set, false otherwise.
       */
     public boolean hasValue() {
@@ -538,7 +538,7 @@ public class MarketClientUpdatedEvent extends org.apache.avro.specific.SpecificR
 
     /**
       * Clears the value of the 'value' field.
-      * application detail in JSON
+      * app detail in JSON
       * @return This builder.
       */
     public net.lightapi.portal.market.MarketClientUpdatedEvent.Builder clearValue() {
@@ -606,7 +606,7 @@ public class MarketClientUpdatedEvent extends org.apache.avro.specific.SpecificR
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
         record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
-        record.applicationId = fieldSetFlags()[2] ? this.applicationId : (java.lang.String) defaultValue(fields()[2]);
+        record.appId = fieldSetFlags()[2] ? this.appId : (java.lang.String) defaultValue(fields()[2]);
         record.value = fieldSetFlags()[3] ? this.value : (java.lang.String) defaultValue(fields()[3]);
         record.timestamp = fieldSetFlags()[4] ? this.timestamp : (java.lang.Long) defaultValue(fields()[4]);
         return record;
@@ -645,7 +645,7 @@ public class MarketClientUpdatedEvent extends org.apache.avro.specific.SpecificR
 
     out.writeString(this.hostId);
 
-    out.writeString(this.applicationId);
+    out.writeString(this.appId);
 
     out.writeString(this.value);
 
@@ -665,7 +665,7 @@ public class MarketClientUpdatedEvent extends org.apache.avro.specific.SpecificR
 
       this.hostId = in.readString();
 
-      this.applicationId = in.readString();
+      this.appId = in.readString();
 
       this.value = in.readString();
 
@@ -686,7 +686,7 @@ public class MarketClientUpdatedEvent extends org.apache.avro.specific.SpecificR
           break;
 
         case 2:
-          this.applicationId = in.readString();
+          this.appId = in.readString();
           break;
 
         case 3:

@@ -35,14 +35,14 @@
       "doc": "host id"
     },
     {
-      "name": "applicationId",
+      "name": "appId",
       "type": "string",
-      "doc": "application id is an internal id for the application per host"
+      "doc": "app id is an internal id for the app per host"
     },
     {
       "name": "value",
       "type": "string",
-      "doc": "application detail in JSON"
+      "doc": "app detail in JSON"
     },
     {
       "name": "timestamp",
