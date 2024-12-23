@@ -125,6 +125,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         String sql = "SELECT\n" +
                 "    uh.host_id,\n" +
                 "    u.user_id,\n" +
+                "    u.email, \n" +
                 "    u.user_type,\n" +
                 "    u.password,\n" +
                 "    u.verified,\n" +
@@ -178,6 +179,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     if (resultSet.next()) {
                         map.put("hostId", resultSet.getString("host_id"));
                         map.put("userId", resultSet.getString("user_id"));
+                        map.put("email", resultSet.getString("email"));
                         map.put("userType", resultSet.getString("user_type"));
                         map.put("entityId", resultSet.getString("entity_id"));
                         map.put("password", resultSet.getString("password"));
