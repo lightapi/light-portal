@@ -35,19 +35,14 @@
       "doc": "host id"
     },
     {
-      "name": "email",
-      "type": "string",
-      "doc": "the email of the user"
-    },
-    {
       "name": "userId",
       "type": "string",
       "doc": "the unique user id"
     },
     {
-      "name": "language",
+      "name": "email",
       "type": "string",
-      "doc": "the preferred language of the user"
+      "doc": "the email of the user"
     },
     {
       "name": "password",
@@ -55,16 +50,15 @@
       "doc": "the password of the user"
     },
     {
+      "name": "language",
+      "type": "string",
+      "doc": "the preferred language of the user"
+    },
+    {
       "name": "value",
       "type": ["null", "string"],
       "default": null,
-      "doc": "user detail in JSON, include firstName, lastName, gender, birthday, postCode, address"
-    },
-    {
-      "name": "taijiWallet",
-      "type": ["null", "string"],
-      "default": null,
-      "doc": "taiji blockchain address of the user"
+      "doc": "user detail in JSON, include firstName, lastName, userType, phoneNumber, gender, birthday, postCode, address"
     },
     {
       "name": "country",
@@ -94,12 +88,6 @@
       "name": "token",
       "type": "string",
       "doc": "A UUID that is used for email verification"
-    },
-    {
-      "name": "roles",
-      "type": "string",
-      "default": "user",
-      "doc": "a list of roles for the user"
     },
     {
       "name": "locked",

@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 1811816121706658981L;
+  private static final long serialVersionUID = 4268193851541757985L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"UserCreatedEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"email\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the email of the user\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the unique user id\"},{\"name\":\"language\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the preferred language of the user\"},{\"name\":\"password\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the password of the user\"},{\"name\":\"value\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"user detail in JSON, include firstName, lastName, gender, birthday, postCode, address\",\"default\":null},{\"name\":\"taijiWallet\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"taiji blockchain address of the user\",\"default\":null},{\"name\":\"country\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"country of the user\",\"default\":null},{\"name\":\"province\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"province of the user\",\"default\":null},{\"name\":\"city\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"city of the user\",\"default\":null},{\"name\":\"verified\",\"type\":\"boolean\",\"doc\":\"If the email is verified\",\"default\":false},{\"name\":\"token\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"A UUID that is used for email verification\"},{\"name\":\"roles\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a list of roles for the user\",\"default\":\"user\"},{\"name\":\"locked\",\"type\":\"boolean\",\"doc\":\"If the account is locked\",\"default\":false},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"UserCreatedEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the unique user id\"},{\"name\":\"email\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the email of the user\"},{\"name\":\"password\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the password of the user\"},{\"name\":\"language\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the preferred language of the user\"},{\"name\":\"value\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"user detail in JSON, include firstName, lastName, userType, phoneNumber, gender, birthday, postCode, address\",\"default\":null},{\"name\":\"country\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"country of the user\",\"default\":null},{\"name\":\"province\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"province of the user\",\"default\":null},{\"name\":\"city\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"city of the user\",\"default\":null},{\"name\":\"verified\",\"type\":\"boolean\",\"doc\":\"If the email is verified\",\"default\":false},{\"name\":\"token\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"A UUID that is used for email verification\"},{\"name\":\"locked\",\"type\":\"boolean\",\"doc\":\"If the account is locked\",\"default\":false},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -76,18 +76,16 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
   private com.networknt.kafka.common.EventId EventId;
   /** host id */
   private java.lang.String hostId;
-  /** the email of the user */
-  private java.lang.String email;
   /** the unique user id */
   private java.lang.String userId;
-  /** the preferred language of the user */
-  private java.lang.String language;
+  /** the email of the user */
+  private java.lang.String email;
   /** the password of the user */
   private java.lang.String password;
-  /** user detail in JSON, include firstName, lastName, gender, birthday, postCode, address */
+  /** the preferred language of the user */
+  private java.lang.String language;
+  /** user detail in JSON, include firstName, lastName, userType, phoneNumber, gender, birthday, postCode, address */
   private java.lang.String value;
-  /** taiji blockchain address of the user */
-  private java.lang.String taijiWallet;
   /** country of the user */
   private java.lang.String country;
   /** province of the user */
@@ -98,8 +96,6 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
   private boolean verified;
   /** A UUID that is used for email verification */
   private java.lang.String token;
-  /** a list of roles for the user */
-  private java.lang.String roles;
   /** If the account is locked */
   private boolean locked;
   /** time the event is recorded */
@@ -116,36 +112,32 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
    * All-args constructor.
    * @param EventId The new value for EventId
    * @param hostId host id
-   * @param email the email of the user
    * @param userId the unique user id
-   * @param language the preferred language of the user
+   * @param email the email of the user
    * @param password the password of the user
-   * @param value user detail in JSON, include firstName, lastName, gender, birthday, postCode, address
-   * @param taijiWallet taiji blockchain address of the user
+   * @param language the preferred language of the user
+   * @param value user detail in JSON, include firstName, lastName, userType, phoneNumber, gender, birthday, postCode, address
    * @param country country of the user
    * @param province province of the user
    * @param city city of the user
    * @param verified If the email is verified
    * @param token A UUID that is used for email verification
-   * @param roles a list of roles for the user
    * @param locked If the account is locked
    * @param timestamp time the event is recorded
    */
-  public UserCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String email, java.lang.String userId, java.lang.String language, java.lang.String password, java.lang.String value, java.lang.String taijiWallet, java.lang.String country, java.lang.String province, java.lang.String city, java.lang.Boolean verified, java.lang.String token, java.lang.String roles, java.lang.Boolean locked, java.lang.Long timestamp) {
+  public UserCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String userId, java.lang.String email, java.lang.String password, java.lang.String language, java.lang.String value, java.lang.String country, java.lang.String province, java.lang.String city, java.lang.Boolean verified, java.lang.String token, java.lang.Boolean locked, java.lang.Long timestamp) {
     this.EventId = EventId;
     this.hostId = hostId;
-    this.email = email;
     this.userId = userId;
-    this.language = language;
+    this.email = email;
     this.password = password;
+    this.language = language;
     this.value = value;
-    this.taijiWallet = taijiWallet;
     this.country = country;
     this.province = province;
     this.city = city;
     this.verified = verified;
     this.token = token;
-    this.roles = roles;
     this.locked = locked;
     this.timestamp = timestamp;
   }
@@ -157,20 +149,18 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
     switch (field$) {
     case 0: return EventId;
     case 1: return hostId;
-    case 2: return email;
-    case 3: return userId;
-    case 4: return language;
-    case 5: return password;
+    case 2: return userId;
+    case 3: return email;
+    case 4: return password;
+    case 5: return language;
     case 6: return value;
-    case 7: return taijiWallet;
-    case 8: return country;
-    case 9: return province;
-    case 10: return city;
-    case 11: return verified;
-    case 12: return token;
-    case 13: return roles;
-    case 14: return locked;
-    case 15: return timestamp;
+    case 7: return country;
+    case 8: return province;
+    case 9: return city;
+    case 10: return verified;
+    case 11: return token;
+    case 12: return locked;
+    case 13: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -181,20 +171,18 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
     case 1: hostId = value$ != null ? value$.toString() : null; break;
-    case 2: email = value$ != null ? value$.toString() : null; break;
-    case 3: userId = value$ != null ? value$.toString() : null; break;
-    case 4: language = value$ != null ? value$.toString() : null; break;
-    case 5: password = value$ != null ? value$.toString() : null; break;
+    case 2: userId = value$ != null ? value$.toString() : null; break;
+    case 3: email = value$ != null ? value$.toString() : null; break;
+    case 4: password = value$ != null ? value$.toString() : null; break;
+    case 5: language = value$ != null ? value$.toString() : null; break;
     case 6: value = value$ != null ? value$.toString() : null; break;
-    case 7: taijiWallet = value$ != null ? value$.toString() : null; break;
-    case 8: country = value$ != null ? value$.toString() : null; break;
-    case 9: province = value$ != null ? value$.toString() : null; break;
-    case 10: city = value$ != null ? value$.toString() : null; break;
-    case 11: verified = (java.lang.Boolean)value$; break;
-    case 12: token = value$ != null ? value$.toString() : null; break;
-    case 13: roles = value$ != null ? value$.toString() : null; break;
-    case 14: locked = (java.lang.Boolean)value$; break;
-    case 15: timestamp = (java.lang.Long)value$; break;
+    case 7: country = value$ != null ? value$.toString() : null; break;
+    case 8: province = value$ != null ? value$.toString() : null; break;
+    case 9: city = value$ != null ? value$.toString() : null; break;
+    case 10: verified = (java.lang.Boolean)value$; break;
+    case 11: token = value$ != null ? value$.toString() : null; break;
+    case 12: locked = (java.lang.Boolean)value$; break;
+    case 13: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -235,24 +223,6 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
   }
 
   /**
-   * Gets the value of the 'email' field.
-   * @return the email of the user
-   */
-  public java.lang.String getEmail() {
-    return email;
-  }
-
-
-  /**
-   * Sets the value of the 'email' field.
-   * the email of the user
-   * @param value the value to set.
-   */
-  public void setEmail(java.lang.String value) {
-    this.email = value;
-  }
-
-  /**
    * Gets the value of the 'userId' field.
    * @return the unique user id
    */
@@ -271,21 +241,21 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
   }
 
   /**
-   * Gets the value of the 'language' field.
-   * @return the preferred language of the user
+   * Gets the value of the 'email' field.
+   * @return the email of the user
    */
-  public java.lang.String getLanguage() {
-    return language;
+  public java.lang.String getEmail() {
+    return email;
   }
 
 
   /**
-   * Sets the value of the 'language' field.
-   * the preferred language of the user
+   * Sets the value of the 'email' field.
+   * the email of the user
    * @param value the value to set.
    */
-  public void setLanguage(java.lang.String value) {
-    this.language = value;
+  public void setEmail(java.lang.String value) {
+    this.email = value;
   }
 
   /**
@@ -307,8 +277,26 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
   }
 
   /**
+   * Gets the value of the 'language' field.
+   * @return the preferred language of the user
+   */
+  public java.lang.String getLanguage() {
+    return language;
+  }
+
+
+  /**
+   * Sets the value of the 'language' field.
+   * the preferred language of the user
+   * @param value the value to set.
+   */
+  public void setLanguage(java.lang.String value) {
+    this.language = value;
+  }
+
+  /**
    * Gets the value of the 'value' field.
-   * @return user detail in JSON, include firstName, lastName, gender, birthday, postCode, address
+   * @return user detail in JSON, include firstName, lastName, userType, phoneNumber, gender, birthday, postCode, address
    */
   public java.lang.String getValue() {
     return value;
@@ -317,29 +305,11 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
 
   /**
    * Sets the value of the 'value' field.
-   * user detail in JSON, include firstName, lastName, gender, birthday, postCode, address
+   * user detail in JSON, include firstName, lastName, userType, phoneNumber, gender, birthday, postCode, address
    * @param value the value to set.
    */
   public void setValue(java.lang.String value) {
     this.value = value;
-  }
-
-  /**
-   * Gets the value of the 'taijiWallet' field.
-   * @return taiji blockchain address of the user
-   */
-  public java.lang.String getTaijiWallet() {
-    return taijiWallet;
-  }
-
-
-  /**
-   * Sets the value of the 'taijiWallet' field.
-   * taiji blockchain address of the user
-   * @param value the value to set.
-   */
-  public void setTaijiWallet(java.lang.String value) {
-    this.taijiWallet = value;
   }
 
   /**
@@ -433,24 +403,6 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
   }
 
   /**
-   * Gets the value of the 'roles' field.
-   * @return a list of roles for the user
-   */
-  public java.lang.String getRoles() {
-    return roles;
-  }
-
-
-  /**
-   * Sets the value of the 'roles' field.
-   * a list of roles for the user
-   * @param value the value to set.
-   */
-  public void setRoles(java.lang.String value) {
-    this.roles = value;
-  }
-
-  /**
    * Gets the value of the 'locked' field.
    * @return If the account is locked
    */
@@ -531,18 +483,16 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
     /** host id */
     private java.lang.String hostId;
-    /** the email of the user */
-    private java.lang.String email;
     /** the unique user id */
     private java.lang.String userId;
-    /** the preferred language of the user */
-    private java.lang.String language;
+    /** the email of the user */
+    private java.lang.String email;
     /** the password of the user */
     private java.lang.String password;
-    /** user detail in JSON, include firstName, lastName, gender, birthday, postCode, address */
+    /** the preferred language of the user */
+    private java.lang.String language;
+    /** user detail in JSON, include firstName, lastName, userType, phoneNumber, gender, birthday, postCode, address */
     private java.lang.String value;
-    /** taiji blockchain address of the user */
-    private java.lang.String taijiWallet;
     /** country of the user */
     private java.lang.String country;
     /** province of the user */
@@ -553,8 +503,6 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
     private boolean verified;
     /** A UUID that is used for email verification */
     private java.lang.String token;
-    /** a list of roles for the user */
-    private java.lang.String roles;
     /** If the account is locked */
     private boolean locked;
     /** time the event is recorded */
@@ -582,61 +530,53 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
         this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
-      if (isValidValue(fields()[2], other.email)) {
-        this.email = data().deepCopy(fields()[2].schema(), other.email);
+      if (isValidValue(fields()[2], other.userId)) {
+        this.userId = data().deepCopy(fields()[2].schema(), other.userId);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.userId)) {
-        this.userId = data().deepCopy(fields()[3].schema(), other.userId);
+      if (isValidValue(fields()[3], other.email)) {
+        this.email = data().deepCopy(fields()[3].schema(), other.email);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
-      if (isValidValue(fields()[4], other.language)) {
-        this.language = data().deepCopy(fields()[4].schema(), other.language);
+      if (isValidValue(fields()[4], other.password)) {
+        this.password = data().deepCopy(fields()[4].schema(), other.password);
         fieldSetFlags()[4] = other.fieldSetFlags()[4];
       }
-      if (isValidValue(fields()[5], other.password)) {
-        this.password = data().deepCopy(fields()[5].schema(), other.password);
+      if (isValidValue(fields()[5], other.language)) {
+        this.language = data().deepCopy(fields()[5].schema(), other.language);
         fieldSetFlags()[5] = other.fieldSetFlags()[5];
       }
       if (isValidValue(fields()[6], other.value)) {
         this.value = data().deepCopy(fields()[6].schema(), other.value);
         fieldSetFlags()[6] = other.fieldSetFlags()[6];
       }
-      if (isValidValue(fields()[7], other.taijiWallet)) {
-        this.taijiWallet = data().deepCopy(fields()[7].schema(), other.taijiWallet);
+      if (isValidValue(fields()[7], other.country)) {
+        this.country = data().deepCopy(fields()[7].schema(), other.country);
         fieldSetFlags()[7] = other.fieldSetFlags()[7];
       }
-      if (isValidValue(fields()[8], other.country)) {
-        this.country = data().deepCopy(fields()[8].schema(), other.country);
+      if (isValidValue(fields()[8], other.province)) {
+        this.province = data().deepCopy(fields()[8].schema(), other.province);
         fieldSetFlags()[8] = other.fieldSetFlags()[8];
       }
-      if (isValidValue(fields()[9], other.province)) {
-        this.province = data().deepCopy(fields()[9].schema(), other.province);
+      if (isValidValue(fields()[9], other.city)) {
+        this.city = data().deepCopy(fields()[9].schema(), other.city);
         fieldSetFlags()[9] = other.fieldSetFlags()[9];
       }
-      if (isValidValue(fields()[10], other.city)) {
-        this.city = data().deepCopy(fields()[10].schema(), other.city);
+      if (isValidValue(fields()[10], other.verified)) {
+        this.verified = data().deepCopy(fields()[10].schema(), other.verified);
         fieldSetFlags()[10] = other.fieldSetFlags()[10];
       }
-      if (isValidValue(fields()[11], other.verified)) {
-        this.verified = data().deepCopy(fields()[11].schema(), other.verified);
+      if (isValidValue(fields()[11], other.token)) {
+        this.token = data().deepCopy(fields()[11].schema(), other.token);
         fieldSetFlags()[11] = other.fieldSetFlags()[11];
       }
-      if (isValidValue(fields()[12], other.token)) {
-        this.token = data().deepCopy(fields()[12].schema(), other.token);
+      if (isValidValue(fields()[12], other.locked)) {
+        this.locked = data().deepCopy(fields()[12].schema(), other.locked);
         fieldSetFlags()[12] = other.fieldSetFlags()[12];
       }
-      if (isValidValue(fields()[13], other.roles)) {
-        this.roles = data().deepCopy(fields()[13].schema(), other.roles);
+      if (isValidValue(fields()[13], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[13].schema(), other.timestamp);
         fieldSetFlags()[13] = other.fieldSetFlags()[13];
-      }
-      if (isValidValue(fields()[14], other.locked)) {
-        this.locked = data().deepCopy(fields()[14].schema(), other.locked);
-        fieldSetFlags()[14] = other.fieldSetFlags()[14];
-      }
-      if (isValidValue(fields()[15], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[15].schema(), other.timestamp);
-        fieldSetFlags()[15] = other.fieldSetFlags()[15];
       }
     }
 
@@ -655,61 +595,53 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
         this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.email)) {
-        this.email = data().deepCopy(fields()[2].schema(), other.email);
+      if (isValidValue(fields()[2], other.userId)) {
+        this.userId = data().deepCopy(fields()[2].schema(), other.userId);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.userId)) {
-        this.userId = data().deepCopy(fields()[3].schema(), other.userId);
+      if (isValidValue(fields()[3], other.email)) {
+        this.email = data().deepCopy(fields()[3].schema(), other.email);
         fieldSetFlags()[3] = true;
       }
-      if (isValidValue(fields()[4], other.language)) {
-        this.language = data().deepCopy(fields()[4].schema(), other.language);
+      if (isValidValue(fields()[4], other.password)) {
+        this.password = data().deepCopy(fields()[4].schema(), other.password);
         fieldSetFlags()[4] = true;
       }
-      if (isValidValue(fields()[5], other.password)) {
-        this.password = data().deepCopy(fields()[5].schema(), other.password);
+      if (isValidValue(fields()[5], other.language)) {
+        this.language = data().deepCopy(fields()[5].schema(), other.language);
         fieldSetFlags()[5] = true;
       }
       if (isValidValue(fields()[6], other.value)) {
         this.value = data().deepCopy(fields()[6].schema(), other.value);
         fieldSetFlags()[6] = true;
       }
-      if (isValidValue(fields()[7], other.taijiWallet)) {
-        this.taijiWallet = data().deepCopy(fields()[7].schema(), other.taijiWallet);
+      if (isValidValue(fields()[7], other.country)) {
+        this.country = data().deepCopy(fields()[7].schema(), other.country);
         fieldSetFlags()[7] = true;
       }
-      if (isValidValue(fields()[8], other.country)) {
-        this.country = data().deepCopy(fields()[8].schema(), other.country);
+      if (isValidValue(fields()[8], other.province)) {
+        this.province = data().deepCopy(fields()[8].schema(), other.province);
         fieldSetFlags()[8] = true;
       }
-      if (isValidValue(fields()[9], other.province)) {
-        this.province = data().deepCopy(fields()[9].schema(), other.province);
+      if (isValidValue(fields()[9], other.city)) {
+        this.city = data().deepCopy(fields()[9].schema(), other.city);
         fieldSetFlags()[9] = true;
       }
-      if (isValidValue(fields()[10], other.city)) {
-        this.city = data().deepCopy(fields()[10].schema(), other.city);
+      if (isValidValue(fields()[10], other.verified)) {
+        this.verified = data().deepCopy(fields()[10].schema(), other.verified);
         fieldSetFlags()[10] = true;
       }
-      if (isValidValue(fields()[11], other.verified)) {
-        this.verified = data().deepCopy(fields()[11].schema(), other.verified);
+      if (isValidValue(fields()[11], other.token)) {
+        this.token = data().deepCopy(fields()[11].schema(), other.token);
         fieldSetFlags()[11] = true;
       }
-      if (isValidValue(fields()[12], other.token)) {
-        this.token = data().deepCopy(fields()[12].schema(), other.token);
+      if (isValidValue(fields()[12], other.locked)) {
+        this.locked = data().deepCopy(fields()[12].schema(), other.locked);
         fieldSetFlags()[12] = true;
       }
-      if (isValidValue(fields()[13], other.roles)) {
-        this.roles = data().deepCopy(fields()[13].schema(), other.roles);
+      if (isValidValue(fields()[13], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[13].schema(), other.timestamp);
         fieldSetFlags()[13] = true;
-      }
-      if (isValidValue(fields()[14], other.locked)) {
-        this.locked = data().deepCopy(fields()[14].schema(), other.locked);
-        fieldSetFlags()[14] = true;
-      }
-      if (isValidValue(fields()[15], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[15].schema(), other.timestamp);
-        fieldSetFlags()[15] = true;
       }
     }
 
@@ -834,50 +766,6 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
     }
 
     /**
-      * Gets the value of the 'email' field.
-      * the email of the user
-      * @return The value.
-      */
-    public java.lang.String getEmail() {
-      return email;
-    }
-
-
-    /**
-      * Sets the value of the 'email' field.
-      * the email of the user
-      * @param value The value of 'email'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.user.UserCreatedEvent.Builder setEmail(java.lang.String value) {
-      validate(fields()[2], value);
-      this.email = value;
-      fieldSetFlags()[2] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'email' field has been set.
-      * the email of the user
-      * @return True if the 'email' field has been set, false otherwise.
-      */
-    public boolean hasEmail() {
-      return fieldSetFlags()[2];
-    }
-
-
-    /**
-      * Clears the value of the 'email' field.
-      * the email of the user
-      * @return This builder.
-      */
-    public net.lightapi.portal.user.UserCreatedEvent.Builder clearEmail() {
-      email = null;
-      fieldSetFlags()[2] = false;
-      return this;
-    }
-
-    /**
       * Gets the value of the 'userId' field.
       * the unique user id
       * @return The value.
@@ -894,9 +782,9 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.user.UserCreatedEvent.Builder setUserId(java.lang.String value) {
-      validate(fields()[3], value);
+      validate(fields()[2], value);
       this.userId = value;
-      fieldSetFlags()[3] = true;
+      fieldSetFlags()[2] = true;
       return this;
     }
 
@@ -906,7 +794,7 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return True if the 'userId' field has been set, false otherwise.
       */
     public boolean hasUserId() {
-      return fieldSetFlags()[3];
+      return fieldSetFlags()[2];
     }
 
 
@@ -917,51 +805,51 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       */
     public net.lightapi.portal.user.UserCreatedEvent.Builder clearUserId() {
       userId = null;
-      fieldSetFlags()[3] = false;
+      fieldSetFlags()[2] = false;
       return this;
     }
 
     /**
-      * Gets the value of the 'language' field.
-      * the preferred language of the user
+      * Gets the value of the 'email' field.
+      * the email of the user
       * @return The value.
       */
-    public java.lang.String getLanguage() {
-      return language;
+    public java.lang.String getEmail() {
+      return email;
     }
 
 
     /**
-      * Sets the value of the 'language' field.
-      * the preferred language of the user
-      * @param value The value of 'language'.
+      * Sets the value of the 'email' field.
+      * the email of the user
+      * @param value The value of 'email'.
       * @return This builder.
       */
-    public net.lightapi.portal.user.UserCreatedEvent.Builder setLanguage(java.lang.String value) {
-      validate(fields()[4], value);
-      this.language = value;
-      fieldSetFlags()[4] = true;
+    public net.lightapi.portal.user.UserCreatedEvent.Builder setEmail(java.lang.String value) {
+      validate(fields()[3], value);
+      this.email = value;
+      fieldSetFlags()[3] = true;
       return this;
     }
 
     /**
-      * Checks whether the 'language' field has been set.
-      * the preferred language of the user
-      * @return True if the 'language' field has been set, false otherwise.
+      * Checks whether the 'email' field has been set.
+      * the email of the user
+      * @return True if the 'email' field has been set, false otherwise.
       */
-    public boolean hasLanguage() {
-      return fieldSetFlags()[4];
+    public boolean hasEmail() {
+      return fieldSetFlags()[3];
     }
 
 
     /**
-      * Clears the value of the 'language' field.
-      * the preferred language of the user
+      * Clears the value of the 'email' field.
+      * the email of the user
       * @return This builder.
       */
-    public net.lightapi.portal.user.UserCreatedEvent.Builder clearLanguage() {
-      language = null;
-      fieldSetFlags()[4] = false;
+    public net.lightapi.portal.user.UserCreatedEvent.Builder clearEmail() {
+      email = null;
+      fieldSetFlags()[3] = false;
       return this;
     }
 
@@ -982,9 +870,9 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.user.UserCreatedEvent.Builder setPassword(java.lang.String value) {
-      validate(fields()[5], value);
+      validate(fields()[4], value);
       this.password = value;
-      fieldSetFlags()[5] = true;
+      fieldSetFlags()[4] = true;
       return this;
     }
 
@@ -994,7 +882,7 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return True if the 'password' field has been set, false otherwise.
       */
     public boolean hasPassword() {
-      return fieldSetFlags()[5];
+      return fieldSetFlags()[4];
     }
 
 
@@ -1005,13 +893,57 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       */
     public net.lightapi.portal.user.UserCreatedEvent.Builder clearPassword() {
       password = null;
+      fieldSetFlags()[4] = false;
+      return this;
+    }
+
+    /**
+      * Gets the value of the 'language' field.
+      * the preferred language of the user
+      * @return The value.
+      */
+    public java.lang.String getLanguage() {
+      return language;
+    }
+
+
+    /**
+      * Sets the value of the 'language' field.
+      * the preferred language of the user
+      * @param value The value of 'language'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.user.UserCreatedEvent.Builder setLanguage(java.lang.String value) {
+      validate(fields()[5], value);
+      this.language = value;
+      fieldSetFlags()[5] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'language' field has been set.
+      * the preferred language of the user
+      * @return True if the 'language' field has been set, false otherwise.
+      */
+    public boolean hasLanguage() {
+      return fieldSetFlags()[5];
+    }
+
+
+    /**
+      * Clears the value of the 'language' field.
+      * the preferred language of the user
+      * @return This builder.
+      */
+    public net.lightapi.portal.user.UserCreatedEvent.Builder clearLanguage() {
+      language = null;
       fieldSetFlags()[5] = false;
       return this;
     }
 
     /**
       * Gets the value of the 'value' field.
-      * user detail in JSON, include firstName, lastName, gender, birthday, postCode, address
+      * user detail in JSON, include firstName, lastName, userType, phoneNumber, gender, birthday, postCode, address
       * @return The value.
       */
     public java.lang.String getValue() {
@@ -1021,7 +953,7 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
 
     /**
       * Sets the value of the 'value' field.
-      * user detail in JSON, include firstName, lastName, gender, birthday, postCode, address
+      * user detail in JSON, include firstName, lastName, userType, phoneNumber, gender, birthday, postCode, address
       * @param value The value of 'value'.
       * @return This builder.
       */
@@ -1034,7 +966,7 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
 
     /**
       * Checks whether the 'value' field has been set.
-      * user detail in JSON, include firstName, lastName, gender, birthday, postCode, address
+      * user detail in JSON, include firstName, lastName, userType, phoneNumber, gender, birthday, postCode, address
       * @return True if the 'value' field has been set, false otherwise.
       */
     public boolean hasValue() {
@@ -1044,56 +976,12 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
 
     /**
       * Clears the value of the 'value' field.
-      * user detail in JSON, include firstName, lastName, gender, birthday, postCode, address
+      * user detail in JSON, include firstName, lastName, userType, phoneNumber, gender, birthday, postCode, address
       * @return This builder.
       */
     public net.lightapi.portal.user.UserCreatedEvent.Builder clearValue() {
       value = null;
       fieldSetFlags()[6] = false;
-      return this;
-    }
-
-    /**
-      * Gets the value of the 'taijiWallet' field.
-      * taiji blockchain address of the user
-      * @return The value.
-      */
-    public java.lang.String getTaijiWallet() {
-      return taijiWallet;
-    }
-
-
-    /**
-      * Sets the value of the 'taijiWallet' field.
-      * taiji blockchain address of the user
-      * @param value The value of 'taijiWallet'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.user.UserCreatedEvent.Builder setTaijiWallet(java.lang.String value) {
-      validate(fields()[7], value);
-      this.taijiWallet = value;
-      fieldSetFlags()[7] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'taijiWallet' field has been set.
-      * taiji blockchain address of the user
-      * @return True if the 'taijiWallet' field has been set, false otherwise.
-      */
-    public boolean hasTaijiWallet() {
-      return fieldSetFlags()[7];
-    }
-
-
-    /**
-      * Clears the value of the 'taijiWallet' field.
-      * taiji blockchain address of the user
-      * @return This builder.
-      */
-    public net.lightapi.portal.user.UserCreatedEvent.Builder clearTaijiWallet() {
-      taijiWallet = null;
-      fieldSetFlags()[7] = false;
       return this;
     }
 
@@ -1114,9 +1002,9 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.user.UserCreatedEvent.Builder setCountry(java.lang.String value) {
-      validate(fields()[8], value);
+      validate(fields()[7], value);
       this.country = value;
-      fieldSetFlags()[8] = true;
+      fieldSetFlags()[7] = true;
       return this;
     }
 
@@ -1126,7 +1014,7 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return True if the 'country' field has been set, false otherwise.
       */
     public boolean hasCountry() {
-      return fieldSetFlags()[8];
+      return fieldSetFlags()[7];
     }
 
 
@@ -1137,7 +1025,7 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       */
     public net.lightapi.portal.user.UserCreatedEvent.Builder clearCountry() {
       country = null;
-      fieldSetFlags()[8] = false;
+      fieldSetFlags()[7] = false;
       return this;
     }
 
@@ -1158,9 +1046,9 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.user.UserCreatedEvent.Builder setProvince(java.lang.String value) {
-      validate(fields()[9], value);
+      validate(fields()[8], value);
       this.province = value;
-      fieldSetFlags()[9] = true;
+      fieldSetFlags()[8] = true;
       return this;
     }
 
@@ -1170,7 +1058,7 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return True if the 'province' field has been set, false otherwise.
       */
     public boolean hasProvince() {
-      return fieldSetFlags()[9];
+      return fieldSetFlags()[8];
     }
 
 
@@ -1181,7 +1069,7 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       */
     public net.lightapi.portal.user.UserCreatedEvent.Builder clearProvince() {
       province = null;
-      fieldSetFlags()[9] = false;
+      fieldSetFlags()[8] = false;
       return this;
     }
 
@@ -1202,9 +1090,9 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.user.UserCreatedEvent.Builder setCity(java.lang.String value) {
-      validate(fields()[10], value);
+      validate(fields()[9], value);
       this.city = value;
-      fieldSetFlags()[10] = true;
+      fieldSetFlags()[9] = true;
       return this;
     }
 
@@ -1214,7 +1102,7 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return True if the 'city' field has been set, false otherwise.
       */
     public boolean hasCity() {
-      return fieldSetFlags()[10];
+      return fieldSetFlags()[9];
     }
 
 
@@ -1225,7 +1113,7 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       */
     public net.lightapi.portal.user.UserCreatedEvent.Builder clearCity() {
       city = null;
-      fieldSetFlags()[10] = false;
+      fieldSetFlags()[9] = false;
       return this;
     }
 
@@ -1246,9 +1134,9 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.user.UserCreatedEvent.Builder setVerified(boolean value) {
-      validate(fields()[11], value);
+      validate(fields()[10], value);
       this.verified = value;
-      fieldSetFlags()[11] = true;
+      fieldSetFlags()[10] = true;
       return this;
     }
 
@@ -1258,7 +1146,7 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return True if the 'verified' field has been set, false otherwise.
       */
     public boolean hasVerified() {
-      return fieldSetFlags()[11];
+      return fieldSetFlags()[10];
     }
 
 
@@ -1268,7 +1156,7 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.user.UserCreatedEvent.Builder clearVerified() {
-      fieldSetFlags()[11] = false;
+      fieldSetFlags()[10] = false;
       return this;
     }
 
@@ -1289,9 +1177,9 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.user.UserCreatedEvent.Builder setToken(java.lang.String value) {
-      validate(fields()[12], value);
+      validate(fields()[11], value);
       this.token = value;
-      fieldSetFlags()[12] = true;
+      fieldSetFlags()[11] = true;
       return this;
     }
 
@@ -1301,7 +1189,7 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return True if the 'token' field has been set, false otherwise.
       */
     public boolean hasToken() {
-      return fieldSetFlags()[12];
+      return fieldSetFlags()[11];
     }
 
 
@@ -1312,51 +1200,7 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       */
     public net.lightapi.portal.user.UserCreatedEvent.Builder clearToken() {
       token = null;
-      fieldSetFlags()[12] = false;
-      return this;
-    }
-
-    /**
-      * Gets the value of the 'roles' field.
-      * a list of roles for the user
-      * @return The value.
-      */
-    public java.lang.String getRoles() {
-      return roles;
-    }
-
-
-    /**
-      * Sets the value of the 'roles' field.
-      * a list of roles for the user
-      * @param value The value of 'roles'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.user.UserCreatedEvent.Builder setRoles(java.lang.String value) {
-      validate(fields()[13], value);
-      this.roles = value;
-      fieldSetFlags()[13] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'roles' field has been set.
-      * a list of roles for the user
-      * @return True if the 'roles' field has been set, false otherwise.
-      */
-    public boolean hasRoles() {
-      return fieldSetFlags()[13];
-    }
-
-
-    /**
-      * Clears the value of the 'roles' field.
-      * a list of roles for the user
-      * @return This builder.
-      */
-    public net.lightapi.portal.user.UserCreatedEvent.Builder clearRoles() {
-      roles = null;
-      fieldSetFlags()[13] = false;
+      fieldSetFlags()[11] = false;
       return this;
     }
 
@@ -1377,9 +1221,9 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.user.UserCreatedEvent.Builder setLocked(boolean value) {
-      validate(fields()[14], value);
+      validate(fields()[12], value);
       this.locked = value;
-      fieldSetFlags()[14] = true;
+      fieldSetFlags()[12] = true;
       return this;
     }
 
@@ -1389,7 +1233,7 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return True if the 'locked' field has been set, false otherwise.
       */
     public boolean hasLocked() {
-      return fieldSetFlags()[14];
+      return fieldSetFlags()[12];
     }
 
 
@@ -1399,7 +1243,7 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.user.UserCreatedEvent.Builder clearLocked() {
-      fieldSetFlags()[14] = false;
+      fieldSetFlags()[12] = false;
       return this;
     }
 
@@ -1420,9 +1264,9 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.user.UserCreatedEvent.Builder setTimestamp(long value) {
-      validate(fields()[15], value);
+      validate(fields()[13], value);
       this.timestamp = value;
-      fieldSetFlags()[15] = true;
+      fieldSetFlags()[13] = true;
       return this;
     }
 
@@ -1432,7 +1276,7 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return True if the 'timestamp' field has been set, false otherwise.
       */
     public boolean hasTimestamp() {
-      return fieldSetFlags()[15];
+      return fieldSetFlags()[13];
     }
 
 
@@ -1442,7 +1286,7 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.user.UserCreatedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[15] = false;
+      fieldSetFlags()[13] = false;
       return this;
     }
 
@@ -1462,20 +1306,18 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
         record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
-        record.email = fieldSetFlags()[2] ? this.email : (java.lang.String) defaultValue(fields()[2]);
-        record.userId = fieldSetFlags()[3] ? this.userId : (java.lang.String) defaultValue(fields()[3]);
-        record.language = fieldSetFlags()[4] ? this.language : (java.lang.String) defaultValue(fields()[4]);
-        record.password = fieldSetFlags()[5] ? this.password : (java.lang.String) defaultValue(fields()[5]);
+        record.userId = fieldSetFlags()[2] ? this.userId : (java.lang.String) defaultValue(fields()[2]);
+        record.email = fieldSetFlags()[3] ? this.email : (java.lang.String) defaultValue(fields()[3]);
+        record.password = fieldSetFlags()[4] ? this.password : (java.lang.String) defaultValue(fields()[4]);
+        record.language = fieldSetFlags()[5] ? this.language : (java.lang.String) defaultValue(fields()[5]);
         record.value = fieldSetFlags()[6] ? this.value : (java.lang.String) defaultValue(fields()[6]);
-        record.taijiWallet = fieldSetFlags()[7] ? this.taijiWallet : (java.lang.String) defaultValue(fields()[7]);
-        record.country = fieldSetFlags()[8] ? this.country : (java.lang.String) defaultValue(fields()[8]);
-        record.province = fieldSetFlags()[9] ? this.province : (java.lang.String) defaultValue(fields()[9]);
-        record.city = fieldSetFlags()[10] ? this.city : (java.lang.String) defaultValue(fields()[10]);
-        record.verified = fieldSetFlags()[11] ? this.verified : (java.lang.Boolean) defaultValue(fields()[11]);
-        record.token = fieldSetFlags()[12] ? this.token : (java.lang.String) defaultValue(fields()[12]);
-        record.roles = fieldSetFlags()[13] ? this.roles : (java.lang.String) defaultValue(fields()[13]);
-        record.locked = fieldSetFlags()[14] ? this.locked : (java.lang.Boolean) defaultValue(fields()[14]);
-        record.timestamp = fieldSetFlags()[15] ? this.timestamp : (java.lang.Long) defaultValue(fields()[15]);
+        record.country = fieldSetFlags()[7] ? this.country : (java.lang.String) defaultValue(fields()[7]);
+        record.province = fieldSetFlags()[8] ? this.province : (java.lang.String) defaultValue(fields()[8]);
+        record.city = fieldSetFlags()[9] ? this.city : (java.lang.String) defaultValue(fields()[9]);
+        record.verified = fieldSetFlags()[10] ? this.verified : (java.lang.Boolean) defaultValue(fields()[10]);
+        record.token = fieldSetFlags()[11] ? this.token : (java.lang.String) defaultValue(fields()[11]);
+        record.locked = fieldSetFlags()[12] ? this.locked : (java.lang.Boolean) defaultValue(fields()[12]);
+        record.timestamp = fieldSetFlags()[13] ? this.timestamp : (java.lang.Long) defaultValue(fields()[13]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -1512,13 +1354,13 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
 
     out.writeString(this.hostId);
 
-    out.writeString(this.email);
-
     out.writeString(this.userId);
 
-    out.writeString(this.language);
+    out.writeString(this.email);
 
     out.writeString(this.password);
+
+    out.writeString(this.language);
 
     if (this.value == null) {
       out.writeIndex(0);
@@ -1526,14 +1368,6 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
     } else {
       out.writeIndex(1);
       out.writeString(this.value);
-    }
-
-    if (this.taijiWallet == null) {
-      out.writeIndex(0);
-      out.writeNull();
-    } else {
-      out.writeIndex(1);
-      out.writeString(this.taijiWallet);
     }
 
     if (this.country == null) {
@@ -1564,8 +1398,6 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
 
     out.writeString(this.token);
 
-    out.writeString(this.roles);
-
     out.writeBoolean(this.locked);
 
     out.writeLong(this.timestamp);
@@ -1584,26 +1416,19 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
 
       this.hostId = in.readString();
 
-      this.email = in.readString();
-
       this.userId = in.readString();
 
-      this.language = in.readString();
+      this.email = in.readString();
 
       this.password = in.readString();
+
+      this.language = in.readString();
 
       if (in.readIndex() != 1) {
         in.readNull();
         this.value = null;
       } else {
         this.value = in.readString();
-      }
-
-      if (in.readIndex() != 1) {
-        in.readNull();
-        this.taijiWallet = null;
-      } else {
-        this.taijiWallet = in.readString();
       }
 
       if (in.readIndex() != 1) {
@@ -1631,14 +1456,12 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
 
       this.token = in.readString();
 
-      this.roles = in.readString();
-
       this.locked = in.readBoolean();
 
       this.timestamp = in.readLong();
 
     } else {
-      for (int i = 0; i < 16; i++) {
+      for (int i = 0; i < 14; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -1652,19 +1475,19 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
           break;
 
         case 2:
-          this.email = in.readString();
-          break;
-
-        case 3:
           this.userId = in.readString();
           break;
 
+        case 3:
+          this.email = in.readString();
+          break;
+
         case 4:
-          this.language = in.readString();
+          this.password = in.readString();
           break;
 
         case 5:
-          this.password = in.readString();
+          this.language = in.readString();
           break;
 
         case 6:
@@ -1679,22 +1502,13 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
         case 7:
           if (in.readIndex() != 1) {
             in.readNull();
-            this.taijiWallet = null;
-          } else {
-            this.taijiWallet = in.readString();
-          }
-          break;
-
-        case 8:
-          if (in.readIndex() != 1) {
-            in.readNull();
             this.country = null;
           } else {
             this.country = in.readString();
           }
           break;
 
-        case 9:
+        case 8:
           if (in.readIndex() != 1) {
             in.readNull();
             this.province = null;
@@ -1703,7 +1517,7 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
           }
           break;
 
-        case 10:
+        case 9:
           if (in.readIndex() != 1) {
             in.readNull();
             this.city = null;
@@ -1712,23 +1526,19 @@ public class UserCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
           }
           break;
 
-        case 11:
+        case 10:
           this.verified = in.readBoolean();
           break;
 
-        case 12:
+        case 11:
           this.token = in.readString();
           break;
 
-        case 13:
-          this.roles = in.readString();
-          break;
-
-        case 14:
+        case 12:
           this.locked = in.readBoolean();
           break;
 
-        case 15:
+        case 13:
           this.timestamp = in.readLong();
           break;
 

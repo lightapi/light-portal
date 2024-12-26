@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class PasswordForgotEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 8429206152231454279L;
+  private static final long serialVersionUID = -2939461274134755369L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"PasswordForgotEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the id\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"email\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"email of the user to be deleted\"},{\"name\":\"token\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a generated token to reset password\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"PasswordForgotEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the id\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"email\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"email of the user to be deleted\"},{\"name\":\"token\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a generated token to reset password\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -74,8 +74,6 @@ public class PasswordForgotEvent extends org.apache.avro.specific.SpecificRecord
   }
 
   private com.networknt.kafka.common.EventId EventId;
-  /** host id */
-  private java.lang.String hostId;
   /** email of the user to be deleted */
   private java.lang.String email;
   /** a generated token to reset password */
@@ -93,14 +91,12 @@ public class PasswordForgotEvent extends org.apache.avro.specific.SpecificRecord
   /**
    * All-args constructor.
    * @param EventId The new value for EventId
-   * @param hostId host id
    * @param email email of the user to be deleted
    * @param token a generated token to reset password
    * @param timestamp time the event is recorded
    */
-  public PasswordForgotEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String email, java.lang.String token, java.lang.Long timestamp) {
+  public PasswordForgotEvent(com.networknt.kafka.common.EventId EventId, java.lang.String email, java.lang.String token, java.lang.Long timestamp) {
     this.EventId = EventId;
-    this.hostId = hostId;
     this.email = email;
     this.token = token;
     this.timestamp = timestamp;
@@ -112,10 +108,9 @@ public class PasswordForgotEvent extends org.apache.avro.specific.SpecificRecord
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return EventId;
-    case 1: return hostId;
-    case 2: return email;
-    case 3: return token;
-    case 4: return timestamp;
+    case 1: return email;
+    case 2: return token;
+    case 3: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -125,10 +120,9 @@ public class PasswordForgotEvent extends org.apache.avro.specific.SpecificRecord
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
-    case 1: hostId = value$ != null ? value$.toString() : null; break;
-    case 2: email = value$ != null ? value$.toString() : null; break;
-    case 3: token = value$ != null ? value$.toString() : null; break;
-    case 4: timestamp = (java.lang.Long)value$; break;
+    case 1: email = value$ != null ? value$.toString() : null; break;
+    case 2: token = value$ != null ? value$.toString() : null; break;
+    case 3: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -148,24 +142,6 @@ public class PasswordForgotEvent extends org.apache.avro.specific.SpecificRecord
    */
   public void setEventId(com.networknt.kafka.common.EventId value) {
     this.EventId = value;
-  }
-
-  /**
-   * Gets the value of the 'hostId' field.
-   * @return host id
-   */
-  public java.lang.String getHostId() {
-    return hostId;
-  }
-
-
-  /**
-   * Sets the value of the 'hostId' field.
-   * host id
-   * @param value the value to set.
-   */
-  public void setHostId(java.lang.String value) {
-    this.hostId = value;
   }
 
   /**
@@ -265,8 +241,6 @@ public class PasswordForgotEvent extends org.apache.avro.specific.SpecificRecord
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
-    /** host id */
-    private java.lang.String hostId;
     /** email of the user to be deleted */
     private java.lang.String email;
     /** a generated token to reset password */
@@ -292,21 +266,17 @@ public class PasswordForgotEvent extends org.apache.avro.specific.SpecificRecord
       if (other.hasEventIdBuilder()) {
         this.EventIdBuilder = com.networknt.kafka.common.EventId.newBuilder(other.getEventIdBuilder());
       }
-      if (isValidValue(fields()[1], other.hostId)) {
-        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
+      if (isValidValue(fields()[1], other.email)) {
+        this.email = data().deepCopy(fields()[1].schema(), other.email);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
-      if (isValidValue(fields()[2], other.email)) {
-        this.email = data().deepCopy(fields()[2].schema(), other.email);
+      if (isValidValue(fields()[2], other.token)) {
+        this.token = data().deepCopy(fields()[2].schema(), other.token);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.token)) {
-        this.token = data().deepCopy(fields()[3].schema(), other.token);
+      if (isValidValue(fields()[3], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[3].schema(), other.timestamp);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
-      }
-      if (isValidValue(fields()[4], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[4].schema(), other.timestamp);
-        fieldSetFlags()[4] = other.fieldSetFlags()[4];
       }
     }
 
@@ -321,21 +291,17 @@ public class PasswordForgotEvent extends org.apache.avro.specific.SpecificRecord
         fieldSetFlags()[0] = true;
       }
       this.EventIdBuilder = null;
-      if (isValidValue(fields()[1], other.hostId)) {
-        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
+      if (isValidValue(fields()[1], other.email)) {
+        this.email = data().deepCopy(fields()[1].schema(), other.email);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.email)) {
-        this.email = data().deepCopy(fields()[2].schema(), other.email);
+      if (isValidValue(fields()[2], other.token)) {
+        this.token = data().deepCopy(fields()[2].schema(), other.token);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.token)) {
-        this.token = data().deepCopy(fields()[3].schema(), other.token);
+      if (isValidValue(fields()[3], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[3].schema(), other.timestamp);
         fieldSetFlags()[3] = true;
-      }
-      if (isValidValue(fields()[4], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[4].schema(), other.timestamp);
-        fieldSetFlags()[4] = true;
       }
     }
 
@@ -416,50 +382,6 @@ public class PasswordForgotEvent extends org.apache.avro.specific.SpecificRecord
     }
 
     /**
-      * Gets the value of the 'hostId' field.
-      * host id
-      * @return The value.
-      */
-    public java.lang.String getHostId() {
-      return hostId;
-    }
-
-
-    /**
-      * Sets the value of the 'hostId' field.
-      * host id
-      * @param value The value of 'hostId'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.user.PasswordForgotEvent.Builder setHostId(java.lang.String value) {
-      validate(fields()[1], value);
-      this.hostId = value;
-      fieldSetFlags()[1] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'hostId' field has been set.
-      * host id
-      * @return True if the 'hostId' field has been set, false otherwise.
-      */
-    public boolean hasHostId() {
-      return fieldSetFlags()[1];
-    }
-
-
-    /**
-      * Clears the value of the 'hostId' field.
-      * host id
-      * @return This builder.
-      */
-    public net.lightapi.portal.user.PasswordForgotEvent.Builder clearHostId() {
-      hostId = null;
-      fieldSetFlags()[1] = false;
-      return this;
-    }
-
-    /**
       * Gets the value of the 'email' field.
       * email of the user to be deleted
       * @return The value.
@@ -476,9 +398,9 @@ public class PasswordForgotEvent extends org.apache.avro.specific.SpecificRecord
       * @return This builder.
       */
     public net.lightapi.portal.user.PasswordForgotEvent.Builder setEmail(java.lang.String value) {
-      validate(fields()[2], value);
+      validate(fields()[1], value);
       this.email = value;
-      fieldSetFlags()[2] = true;
+      fieldSetFlags()[1] = true;
       return this;
     }
 
@@ -488,7 +410,7 @@ public class PasswordForgotEvent extends org.apache.avro.specific.SpecificRecord
       * @return True if the 'email' field has been set, false otherwise.
       */
     public boolean hasEmail() {
-      return fieldSetFlags()[2];
+      return fieldSetFlags()[1];
     }
 
 
@@ -499,7 +421,7 @@ public class PasswordForgotEvent extends org.apache.avro.specific.SpecificRecord
       */
     public net.lightapi.portal.user.PasswordForgotEvent.Builder clearEmail() {
       email = null;
-      fieldSetFlags()[2] = false;
+      fieldSetFlags()[1] = false;
       return this;
     }
 
@@ -520,9 +442,9 @@ public class PasswordForgotEvent extends org.apache.avro.specific.SpecificRecord
       * @return This builder.
       */
     public net.lightapi.portal.user.PasswordForgotEvent.Builder setToken(java.lang.String value) {
-      validate(fields()[3], value);
+      validate(fields()[2], value);
       this.token = value;
-      fieldSetFlags()[3] = true;
+      fieldSetFlags()[2] = true;
       return this;
     }
 
@@ -532,7 +454,7 @@ public class PasswordForgotEvent extends org.apache.avro.specific.SpecificRecord
       * @return True if the 'token' field has been set, false otherwise.
       */
     public boolean hasToken() {
-      return fieldSetFlags()[3];
+      return fieldSetFlags()[2];
     }
 
 
@@ -543,7 +465,7 @@ public class PasswordForgotEvent extends org.apache.avro.specific.SpecificRecord
       */
     public net.lightapi.portal.user.PasswordForgotEvent.Builder clearToken() {
       token = null;
-      fieldSetFlags()[3] = false;
+      fieldSetFlags()[2] = false;
       return this;
     }
 
@@ -564,9 +486,9 @@ public class PasswordForgotEvent extends org.apache.avro.specific.SpecificRecord
       * @return This builder.
       */
     public net.lightapi.portal.user.PasswordForgotEvent.Builder setTimestamp(long value) {
-      validate(fields()[4], value);
+      validate(fields()[3], value);
       this.timestamp = value;
-      fieldSetFlags()[4] = true;
+      fieldSetFlags()[3] = true;
       return this;
     }
 
@@ -576,7 +498,7 @@ public class PasswordForgotEvent extends org.apache.avro.specific.SpecificRecord
       * @return True if the 'timestamp' field has been set, false otherwise.
       */
     public boolean hasTimestamp() {
-      return fieldSetFlags()[4];
+      return fieldSetFlags()[3];
     }
 
 
@@ -586,7 +508,7 @@ public class PasswordForgotEvent extends org.apache.avro.specific.SpecificRecord
       * @return This builder.
       */
     public net.lightapi.portal.user.PasswordForgotEvent.Builder clearTimestamp() {
-      fieldSetFlags()[4] = false;
+      fieldSetFlags()[3] = false;
       return this;
     }
 
@@ -605,10 +527,9 @@ public class PasswordForgotEvent extends org.apache.avro.specific.SpecificRecord
         } else {
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
-        record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
-        record.email = fieldSetFlags()[2] ? this.email : (java.lang.String) defaultValue(fields()[2]);
-        record.token = fieldSetFlags()[3] ? this.token : (java.lang.String) defaultValue(fields()[3]);
-        record.timestamp = fieldSetFlags()[4] ? this.timestamp : (java.lang.Long) defaultValue(fields()[4]);
+        record.email = fieldSetFlags()[1] ? this.email : (java.lang.String) defaultValue(fields()[1]);
+        record.token = fieldSetFlags()[2] ? this.token : (java.lang.String) defaultValue(fields()[2]);
+        record.timestamp = fieldSetFlags()[3] ? this.timestamp : (java.lang.Long) defaultValue(fields()[3]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -643,8 +564,6 @@ public class PasswordForgotEvent extends org.apache.avro.specific.SpecificRecord
   {
     this.EventId.customEncode(out);
 
-    out.writeString(this.hostId);
-
     out.writeString(this.email);
 
     out.writeString(this.token);
@@ -663,8 +582,6 @@ public class PasswordForgotEvent extends org.apache.avro.specific.SpecificRecord
       }
       this.EventId.customDecode(in);
 
-      this.hostId = in.readString();
-
       this.email = in.readString();
 
       this.token = in.readString();
@@ -672,7 +589,7 @@ public class PasswordForgotEvent extends org.apache.avro.specific.SpecificRecord
       this.timestamp = in.readLong();
 
     } else {
-      for (int i = 0; i < 5; i++) {
+      for (int i = 0; i < 4; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -682,18 +599,14 @@ public class PasswordForgotEvent extends org.apache.avro.specific.SpecificRecord
           break;
 
         case 1:
-          this.hostId = in.readString();
-          break;
-
-        case 2:
           this.email = in.readString();
           break;
 
-        case 3:
+        case 2:
           this.token = in.readString();
           break;
 
-        case 4:
+        case 3:
           this.timestamp = in.readLong();
           break;
 

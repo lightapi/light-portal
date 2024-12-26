@@ -370,11 +370,11 @@ public class HybridQueryClient {
      * Get Nonce for the user by email. The result also indicates the user exists in the system.
      *
      * @param exchange HttpServerExchange
-     * @param email user email
+     * @param userId user id
      * @return Result of user object in JSON
      */
-    public static Result<String> getNonceByEmail(HttpServerExchange exchange, String email) {
-        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"user\",\"action\":\"getNonceByEmail\",\"version\":\"0.1.0\",\"data\":{\"email\":\"%s\"}}", email);
+    public static Result<String> getNonceByUserId(HttpServerExchange exchange, String userId) {
+        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"user\",\"action\":\"getNonceByUserId\",\"version\":\"0.1.0\",\"data\":{\"userId\":\"%s\"}}", userId);
         if (config.isPortalByServiceUrl()) {
             return callQueryExchangeUrl(command, exchange, config.getPortalQueryServiceUrl());
         } else {
@@ -387,11 +387,11 @@ public class HybridQueryClient {
      *
      * @param exchange HttpServerExchange
      * @param url url to a specific host
-     * @param email user email
+     * @param userId user id
      * @return Result of user object in JSON
      */
-    public static Result<String> getNonceByEmail(HttpServerExchange exchange, String url, String email) {
-        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"user\",\"action\":\"getNonceByEmail\",\"version\":\"0.1.0\",\"data\":{\"email\":\"%s\"}}", email);
+    public static Result<String> getNonceByUserId(HttpServerExchange exchange, String url, String userId) {
+        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"user\",\"action\":\"getNonceByUserId\",\"version\":\"0.1.0\",\"data\":{\"userId\":\"%s\"}}", userId);
         return callQueryExchangeUrl(command, exchange, url);
     }
 

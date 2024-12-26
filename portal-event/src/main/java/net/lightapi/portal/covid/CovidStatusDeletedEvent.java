@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class CovidStatusDeletedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 1313613943037756135L;
+  private static final long serialVersionUID = -3449176015076018753L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"CovidStatusDeletedEvent\",\"namespace\":\"net.lightapi.portal.covid\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the id\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"email\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the email of the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"CovidStatusDeletedEvent\",\"namespace\":\"net.lightapi.portal.covid\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the id\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the userId of the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -76,8 +76,8 @@ public class CovidStatusDeletedEvent extends org.apache.avro.specific.SpecificRe
   private com.networknt.kafka.common.EventId EventId;
   /** host id */
   private java.lang.String hostId;
-  /** the email of the user */
-  private java.lang.String email;
+  /** the userId of the user */
+  private java.lang.String userId;
   /** time the event is recorded */
   private long timestamp;
 
@@ -92,13 +92,13 @@ public class CovidStatusDeletedEvent extends org.apache.avro.specific.SpecificRe
    * All-args constructor.
    * @param EventId The new value for EventId
    * @param hostId host id
-   * @param email the email of the user
+   * @param userId the userId of the user
    * @param timestamp time the event is recorded
    */
-  public CovidStatusDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String email, java.lang.Long timestamp) {
+  public CovidStatusDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String userId, java.lang.Long timestamp) {
     this.EventId = EventId;
     this.hostId = hostId;
-    this.email = email;
+    this.userId = userId;
     this.timestamp = timestamp;
   }
 
@@ -109,7 +109,7 @@ public class CovidStatusDeletedEvent extends org.apache.avro.specific.SpecificRe
     switch (field$) {
     case 0: return EventId;
     case 1: return hostId;
-    case 2: return email;
+    case 2: return userId;
     case 3: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
@@ -121,7 +121,7 @@ public class CovidStatusDeletedEvent extends org.apache.avro.specific.SpecificRe
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
     case 1: hostId = value$ != null ? value$.toString() : null; break;
-    case 2: email = value$ != null ? value$.toString() : null; break;
+    case 2: userId = value$ != null ? value$.toString() : null; break;
     case 3: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
@@ -163,21 +163,21 @@ public class CovidStatusDeletedEvent extends org.apache.avro.specific.SpecificRe
   }
 
   /**
-   * Gets the value of the 'email' field.
-   * @return the email of the user
+   * Gets the value of the 'userId' field.
+   * @return the userId of the user
    */
-  public java.lang.String getEmail() {
-    return email;
+  public java.lang.String getUserId() {
+    return userId;
   }
 
 
   /**
-   * Sets the value of the 'email' field.
-   * the email of the user
+   * Sets the value of the 'userId' field.
+   * the userId of the user
    * @param value the value to set.
    */
-  public void setEmail(java.lang.String value) {
-    this.email = value;
+  public void setUserId(java.lang.String value) {
+    this.userId = value;
   }
 
   /**
@@ -243,8 +243,8 @@ public class CovidStatusDeletedEvent extends org.apache.avro.specific.SpecificRe
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
     /** host id */
     private java.lang.String hostId;
-    /** the email of the user */
-    private java.lang.String email;
+    /** the userId of the user */
+    private java.lang.String userId;
     /** time the event is recorded */
     private long timestamp;
 
@@ -270,8 +270,8 @@ public class CovidStatusDeletedEvent extends org.apache.avro.specific.SpecificRe
         this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
-      if (isValidValue(fields()[2], other.email)) {
-        this.email = data().deepCopy(fields()[2].schema(), other.email);
+      if (isValidValue(fields()[2], other.userId)) {
+        this.userId = data().deepCopy(fields()[2].schema(), other.userId);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
       if (isValidValue(fields()[3], other.timestamp)) {
@@ -295,8 +295,8 @@ public class CovidStatusDeletedEvent extends org.apache.avro.specific.SpecificRe
         this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.email)) {
-        this.email = data().deepCopy(fields()[2].schema(), other.email);
+      if (isValidValue(fields()[2], other.userId)) {
+        this.userId = data().deepCopy(fields()[2].schema(), other.userId);
         fieldSetFlags()[2] = true;
       }
       if (isValidValue(fields()[3], other.timestamp)) {
@@ -426,45 +426,45 @@ public class CovidStatusDeletedEvent extends org.apache.avro.specific.SpecificRe
     }
 
     /**
-      * Gets the value of the 'email' field.
-      * the email of the user
+      * Gets the value of the 'userId' field.
+      * the userId of the user
       * @return The value.
       */
-    public java.lang.String getEmail() {
-      return email;
+    public java.lang.String getUserId() {
+      return userId;
     }
 
 
     /**
-      * Sets the value of the 'email' field.
-      * the email of the user
-      * @param value The value of 'email'.
+      * Sets the value of the 'userId' field.
+      * the userId of the user
+      * @param value The value of 'userId'.
       * @return This builder.
       */
-    public net.lightapi.portal.covid.CovidStatusDeletedEvent.Builder setEmail(java.lang.String value) {
+    public net.lightapi.portal.covid.CovidStatusDeletedEvent.Builder setUserId(java.lang.String value) {
       validate(fields()[2], value);
-      this.email = value;
+      this.userId = value;
       fieldSetFlags()[2] = true;
       return this;
     }
 
     /**
-      * Checks whether the 'email' field has been set.
-      * the email of the user
-      * @return True if the 'email' field has been set, false otherwise.
+      * Checks whether the 'userId' field has been set.
+      * the userId of the user
+      * @return True if the 'userId' field has been set, false otherwise.
       */
-    public boolean hasEmail() {
+    public boolean hasUserId() {
       return fieldSetFlags()[2];
     }
 
 
     /**
-      * Clears the value of the 'email' field.
-      * the email of the user
+      * Clears the value of the 'userId' field.
+      * the userId of the user
       * @return This builder.
       */
-    public net.lightapi.portal.covid.CovidStatusDeletedEvent.Builder clearEmail() {
-      email = null;
+    public net.lightapi.portal.covid.CovidStatusDeletedEvent.Builder clearUserId() {
+      userId = null;
       fieldSetFlags()[2] = false;
       return this;
     }
@@ -528,7 +528,7 @@ public class CovidStatusDeletedEvent extends org.apache.avro.specific.SpecificRe
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
         record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
-        record.email = fieldSetFlags()[2] ? this.email : (java.lang.String) defaultValue(fields()[2]);
+        record.userId = fieldSetFlags()[2] ? this.userId : (java.lang.String) defaultValue(fields()[2]);
         record.timestamp = fieldSetFlags()[3] ? this.timestamp : (java.lang.Long) defaultValue(fields()[3]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
@@ -566,7 +566,7 @@ public class CovidStatusDeletedEvent extends org.apache.avro.specific.SpecificRe
 
     out.writeString(this.hostId);
 
-    out.writeString(this.email);
+    out.writeString(this.userId);
 
     out.writeLong(this.timestamp);
 
@@ -584,7 +584,7 @@ public class CovidStatusDeletedEvent extends org.apache.avro.specific.SpecificRe
 
       this.hostId = in.readString();
 
-      this.email = in.readString();
+      this.userId = in.readString();
 
       this.timestamp = in.readLong();
 
@@ -603,7 +603,7 @@ public class CovidStatusDeletedEvent extends org.apache.avro.specific.SpecificRe
           break;
 
         case 2:
-          this.email = in.readString();
+          this.userId = in.readString();
           break;
 
         case 3:

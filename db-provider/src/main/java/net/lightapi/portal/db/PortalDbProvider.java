@@ -23,11 +23,11 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> loginUserByEmail(String email);
     Result<String> queryUserByEmail(String email);
     Result<String> queryUserById(String id);
-    Result<String> queryUserByWallet(String wallet);
-    Result<String> queryEmailByWallet(String wallet);
+    Result<String> queryUserByWallet(String cryptoType, String cryptoAddress);
+    Result<String> queryEmailByWallet(String cryptoType, String cryptoAddress);
     Result<String> createUser(UserCreatedEvent event);
     Result<String> confirmUser(UserConfirmedEvent event);
-    Result<Integer> queryNonceByEmail(String email);
+    Result<Integer> queryNonceByUserId(String userId);
     Result<String> createSocialUser(SocialUserCreatedEvent event);
     Result<String> updateUser(UserUpdatedEvent event);
     Result<String> deleteUser(UserDeletedEvent event);

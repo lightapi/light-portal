@@ -35,9 +35,9 @@
       "doc": "host id"
     },
     {
-      "name": "email",
+      "name": "userId",
       "type": "string",
-      "doc": "the email of the user"
+      "doc": "the userId of the user"
     },
     {
       "name": "timestamp",

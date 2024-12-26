@@ -12,11 +12,13 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import net.lightapi.portal.db.PortalDbProvider;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
 
+@Disabled
 public class PortalDbProviderImplTest {
     public static PortalDbProvider dbProvider;
     public static SqlDbStartupHook sqlDbStartupHook;

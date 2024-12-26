@@ -32,9 +32,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public static final String GENERIC_EXCEPTION = "ERR10014";
     public static final String OBJECT_NOT_FOUND = "ERR11637";
 
-    public static final String INSERT_NOTIFICATION = "INSERT INTO notification_t (email, nonce, event_json, process_time, " +
+    public static final String INSERT_NOTIFICATION = "INSERT INTO notification_t (user_id, nonce, event_json, process_time, " +
             "process_flag, error) VALUES (?, ?, ?, ?, ?, ?)";
-    public static final String UPDATE_NONCE = "UPDATE user_t SET nonce = ? WHERE email = ?";
+    public static final String UPDATE_NONCE = "UPDATE user_t SET nonce = ? WHERE user_id = ?";
 
     @Override
     public Result<String> queryRefTable(int offset, int limit, String hostId, String tableName, String tableDesc, String active, String editable, String common) {
@@ -209,9 +209,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> queryUserByEmail(String email) {
         Result<String> result = null;
         String sql =
-                "SELECT host_id, user_id, first_name, last_name, email, roles, language, gender, birthday, taiji_wallet, " +
-                        "country, province, city, post_code, address, verified, token, locked, password, nonce FROM user_t " +
-                        "WHERE email = ?";
+                "SELECT h.host_id, u.user_id, u.email, u.password, u.language, \n" +
+                        "u.first_name, u.last_name, u.user_type, u.phone_number, u.gender,\n" +
+                        "u.birthday, u.country, u.province, u.city, u.address,\n" +
+                        "u.post_code, u.verified, u.token, u.locked, u.nonce \n" +
+                        "FROM user_t u, user_host_t h\n" +
+                        "WHERE u.user_id = h.user_id\n" +
+                        "AND email = ?";
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
@@ -220,24 +224,27 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     if (resultSet.next()) {
                         map.put("hostId", resultSet.getString("host_id"));
                         map.put("userId", resultSet.getString("user_id"));
-                        map.put("firstName", resultSet.getString("first_name"));
-                        map.put("lastName", resultSet.getString("last_name"));
                         map.put("email", resultSet.getString("email"));
                         map.put("password", resultSet.getString("password"));
                         map.put("language", resultSet.getString("language"));
+
+                        map.put("firstName", resultSet.getString("first_name"));
+                        map.put("lastName", resultSet.getString("last_name"));
+                        map.put("userType", resultSet.getString("user_type"));
+                        map.put("phoneNumber", resultSet.getString("phone_number"));
                         map.put("gender", resultSet.getString("gender"));
+
                         map.put("birthday", resultSet.getDate("birthday"));
-                        map.put("taijiWallet", resultSet.getString("taiji_wallet"));
                         map.put("country", resultSet.getString("country"));
                         map.put("province", resultSet.getString("province"));
                         map.put("city", resultSet.getString("city"));
-                        map.put("postCode", resultSet.getString("post_code"));
                         map.put("address", resultSet.getString("address"));
+
+                        map.put("postCode", resultSet.getString("post_code"));
                         map.put("verified", resultSet.getBoolean("verified"));
                         map.put("token", resultSet.getString("token"));
                         map.put("locked", resultSet.getBoolean("locked"));
                         map.put("nonce", resultSet.getLong("nonce"));
-                        map.put("roles", resultSet.getString("roles"));
                     }
                 }
             }
@@ -259,33 +266,42 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> queryUserById(String userId) {
         Result<String> result = null;
         String sql =
-                "SELECT host_id, user_id, first_name, last_name, email, roles, language, gender, birthday, " +
-                        "taiji_wallet, country, province, city, post_code, address, verified, token, locked FROM user_t " +
-                        "WHERE user_id = ?";
+                "SELECT h.host_id, u.user_id, u.email, u.password, u.language, \n" +
+                        "u.first_name, u.last_name, u.user_type, u.phone_number, u.gender,\n" +
+                        "u.birthday, u.country, u.province, u.city, u.address,\n" +
+                        "u.post_code, u.verified, u.token, u.locked, u.nonce \n" +
+                        "FROM user_t u, user_host_t h\n" +
+                        "WHERE u.user_id = h.user_id\n" +
+                        "AND u.user_id = ?";
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, userId);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
-                        map.put("hostId", resultSet.getInt("host_id"));
+                        map.put("hostId", resultSet.getString("host_id"));
                         map.put("userId", resultSet.getString("user_id"));
-                        map.put("firstName", resultSet.getInt("first_name"));
-                        map.put("lastName", resultSet.getString("last_name"));
                         map.put("email", resultSet.getString("email"));
-                        map.put("roles", resultSet.getString("roles"));
+                        map.put("password", resultSet.getString("password"));
                         map.put("language", resultSet.getString("language"));
+
+                        map.put("firstName", resultSet.getString("first_name"));
+                        map.put("lastName", resultSet.getString("last_name"));
+                        map.put("userType", resultSet.getString("user_type"));
+                        map.put("phoneNumber", resultSet.getString("phone_number"));
                         map.put("gender", resultSet.getString("gender"));
-                        map.put("birthday", resultSet.getString("birthday"));
-                        map.put("taijiWallet", resultSet.getString("taiji_wallet"));
+
+                        map.put("birthday", resultSet.getDate("birthday"));
                         map.put("country", resultSet.getString("country"));
                         map.put("province", resultSet.getString("province"));
                         map.put("city", resultSet.getString("city"));
-                        map.put("postCode", resultSet.getString("post_code"));
                         map.put("address", resultSet.getString("address"));
+
+                        map.put("postCode", resultSet.getString("post_code"));
                         map.put("verified", resultSet.getBoolean("verified"));
                         map.put("token", resultSet.getString("token"));
                         map.put("locked", resultSet.getBoolean("locked"));
+                        map.put("nonce", resultSet.getLong("nonce"));
                     }
                 }
             }
@@ -304,16 +320,23 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> queryUserByWallet(String wallet) {
+    public Result<String> queryUserByWallet(String cryptoType, String cryptoAddress) {
         Result<String> result = null;
         String sql =
-                "SELECT host_id, user_id, first_name, last_name, email, roles, language, gender, birthday, " +
-                        "taiji_wallet, country, province, city, post_code, address, verified, token, locked FROM user_t " +
-                        "WHERE taiji_wallet = ?";
+                "SELECT h.host_id, u.user_id, u.email, u.password, u.language, \n" +
+                        "u.first_name, u.last_name, u.user_type, u.phone_number, u.gender,\n" +
+                        "u.birthday, u.country, u.province, u.city, u.address,\n" +
+                        "u.post_code, u.verified, u.token, u.locked, u.nonce \n" +
+                        "FROM user_t u, user_host_t h, user_crypto_wallet_t w\n" +
+                        "WHERE u.user_id = h.user_id\n" +
+                        "AND u.user_id = w.user_id\n" +
+                        "AND w.crypto_type = ?\n" +
+                        "AND w.crypto_address = ?";
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, wallet);
+                statement.setString(1, cryptoType);
+                statement.setString(2, cryptoAddress);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
                         map.put("hostId", resultSet.getInt("host_id"));
@@ -338,7 +361,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
             }
             if(map.size() == 0)
-                result = Failure.of(new Status(OBJECT_NOT_FOUND, "user", wallet));
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "user", cryptoType + cryptoAddress));
             else
                 result = Success.of(JsonMapper.toJson(map));
         } catch (SQLException e) {
@@ -352,13 +375,18 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> queryEmailByWallet(String wallet) {
+    public Result<String> queryEmailByWallet(String cryptoType, String cryptoAddress) {
         Result<String> result = null;
-        String sql = "SELECT email FROM user_t WHERE taiji_wallet = ?";
+        String sql = "SELECT email \n" +
+                "FROM user_t u, user_crypto_wallet_t w \n" +
+                "WHERE u.user_id = w.user_id\n" +
+                "AND w.crypto_type = ?\n" +
+                "AND w.crypto_address = ?\n";
         try (final Connection conn = ds.getConnection()) {
             String email = null;
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, wallet);
+                statement.setString(1, cryptoType);
+                statement.setString(2, cryptoAddress);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
                         email = resultSet.getString("email");
@@ -366,7 +394,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
             }
             if(email == null)
-                result = Failure.of(new Status(OBJECT_NOT_FOUND, "user email", wallet));
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "user email", cryptoType + cryptoAddress));
             else
                 result = Success.of(email);
         } catch (SQLException e) {
@@ -382,16 +410,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     /**
      * insert notification into database within the same transaction as conn is passed in.
      * @param conn The connection to the database
-     * @param email The email address of the user
+     * @param userId The userId of the user
      * @param nonce The nonce of the notification
      * @param json The json string of the event
      * @param flag The flag of the notification
      * @param error The error message of the notification
      * @throws SQLException when there is an error in the database access
      */
-    public void insertNotification(Connection conn, String email, long nonce, String json, boolean flag, String error) throws SQLException {
+    public void insertNotification(Connection conn, String userId, long nonce, String json, boolean flag, String error) throws SQLException {
         try (PreparedStatement statement = conn.prepareStatement(INSERT_NOTIFICATION)) {
-            statement.setString(1, email);
+            statement.setString(1, userId);
             statement.setLong(2, nonce);
             statement.setString(3, json);
             statement.setTimestamp(4, new Timestamp(System.currentTimeMillis()));
@@ -408,23 +436,23 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     /**
      * update nonce in user_t to reflect the latest event nonce.
      * @param conn The connection to the database
-     * @param email The email address of the user
+     * @param userId The userId of the user
      * @param nonce The nonce of the notification
      * @throws SQLException when there is an error in the database access
      * @return the number of rows updated
      */
-    public int updateNonce(Connection conn, long nonce, String email) throws SQLException {
+    public int updateNonce(Connection conn, long nonce, String userId) throws SQLException {
         int count = 0;
         try (PreparedStatement statement = conn.prepareStatement(UPDATE_NONCE)) {
             statement.setLong(1, nonce);
-            statement.setString(2, email);
+            statement.setString(2, userId);
             count = statement.executeUpdate();
         }
         return count;
     }
 
     /**
-     * check the email, user_id, taiji_wallet is unique. if not, write an error notification. If yes, insert
+     * check the email, user_id, is unique. if not, write an error notification. If yes, insert
      * the user into database and write a success notification.
      *
      * @param event event that is created by user service
@@ -433,102 +461,107 @@ public class PortalDbProviderImpl implements PortalDbProvider {
      */
     @Override
     public Result<String> createUser(UserCreatedEvent event) {
-        final String queryIdEmailWallet = "SELECT nonce FROM user_t WHERE user_id = ? OR email = ? OR taiji_wallet = ?";
         final String queryIdEmail = "SELECT nonce FROM user_t WHERE user_id = ? OR email = ?";
-        final String insertUser = "INSERT INTO user_t (host_id, user_id, first_name, last_name, email, roles, language, " +
-                "verified, token, gender, password, birthday, country, province, city, post_code, address) " +
-                "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?)";
+        final String insertUser = "INSERT INTO user_t (user_id, email, password, language, first_name, " +
+                "last_name, user_type, phone_number, gender, birthday, " +
+                "country, province, city, address, post_code, " +
+                "verified), token, locked " +
+                "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,  ?, ?, ?)";
+        final String insertUserHost = "INSERT INTO user_host_t (user_id, host_id) VALUES (?, ?)";
+
         Result<String> result = null;
         Map<String, Object> map = JsonMapper.string2Map(event.getValue());
         Connection conn = null;
         try {
             conn = ds.getConnection();
             conn.setAutoCommit(false);
-            if(event.getTaijiWallet() != null) {
-                try (PreparedStatement statement = conn.prepareStatement(queryIdEmailWallet)) {
-                    statement.setString(1, event.getUserId());
-                    statement.setString(2, event.getEmail());
-                    statement.setString(3, event.getTaijiWallet());
-                    try (ResultSet resultSet = statement.executeQuery()) {
-                        if (resultSet.next()) {
-                            // found duplicate record, write an error notification.
-                            insertNotification(conn, event.getEmail(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "userId or email or wallet already exists in database.");
-                            return result;
-                        }
-                    }
-                }
-            } else {
-                try (PreparedStatement statement = conn.prepareStatement(queryIdEmail)) {
-                    statement.setString(1, event.getUserId());
-                    statement.setString(2, event.getEmail());
-                    try (ResultSet resultSet = statement.executeQuery()) {
-                        if (resultSet.next()) {
-                            // found duplicate record, write an error notification.
-                            insertNotification(conn, event.getEmail(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "userId or email already exists in database.");
-                            return result;
-                        }
+            try (PreparedStatement statement = conn.prepareStatement(queryIdEmail)) {
+                statement.setString(1, event.getUserId());
+                statement.setString(2, event.getEmail());
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        // found duplicate record, write an error notification.
+                        insertNotification(conn, event.getUserId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "userId or email already exists in database.");
+                        return result;
                     }
                 }
             }
+
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
-                statement.setString(1, event.getHostId());
-                statement.setString(2, event.getUserId());
+                statement.setString(1, event.getUserId());
+                statement.setString(2, event.getEmail());
+                statement.setString(3, event.getPassword());
+                statement.setString(4, event.getLanguage());
                 if(map.get("first_name") != null)
-                    statement.setString(3, (String)map.get("first_name"));
+                    statement.setString(5, (String)map.get("first_name"));
                 else
-                    statement.setNull(3, NULL);
+                    statement.setNull(5, NULL);
+
                 if(map.get("last_name") != null)
-                    statement.setString(4, (String)map.get("last_name"));
+                    statement.setString(6, (String)map.get("last_name"));
                 else
-                    statement.setNull(4, NULL);
-                statement.setString(5, event.getEmail());
-                statement.setString(6, event.getRoles());
-                statement.setString(7, event.getLanguage());
-                statement.setBoolean(8, event.getVerified());
-                statement.setString(9, event.getToken());
+                    statement.setNull(6, NULL);
+
+                if(map.get("user_type") != null)
+                    statement.setString(7, (String)map.get("user_type"));
+                else
+                    statement.setNull(7, NULL);
+
+                if(map.get("phone_number") != null)
+                    statement.setString(8, (String)map.get("phone_number"));
+                else
+                    statement.setNull(8, NULL);
+
                 if(map.get("gender") != null) {
-                    statement.setString(10, (String)map.get("gender"));
+                    statement.setString(9, (String)map.get("gender"));
+                } else {
+                    statement.setNull(9, NULL);
+                }
+                java.util.Date birthday = (java.util.Date)map.get("birthday");
+                if(birthday != null) {
+                    statement.setDate(10, new java.sql.Date(birthday.getTime()));
                 } else {
                     statement.setNull(10, NULL);
                 }
-                statement.setString(11, event.getPassword());
-                java.util.Date birthday = (java.util.Date)map.get("birthday");
-                if(birthday != null) {
-                    statement.setDate(12, new java.sql.Date(birthday.getTime()));
-                } else {
-                    statement.setNull(12, NULL);
-                }
                 Object countryObject = event.get("country");
                 if(countryObject != null) {
-                    statement.setString(13, (String)countryObject);
+                    statement.setString(11, (String)countryObject);
                 } else {
-                    statement.setNull(13, NULL);
+                    statement.setNull(11, NULL);
                 }
                 Object provinceObject = event.get("province");
                 if(provinceObject != null) {
-                    statement.setString(14, (String)provinceObject);
+                    statement.setString(12, (String)provinceObject);
                 } else {
-                    statement.setNull(14, NULL);
+                    statement.setNull(12, NULL);
                 }
                 Object cityObject = event.get("city");
                 if(cityObject != null) {
-                    statement.setString(15, (String)cityObject);
+                    statement.setString(13, (String)cityObject);
                 } else {
-                    statement.setNull(15, NULL);
-                }
-                Object postCodeObject = map.get("post_code");
-                if(postCodeObject != null) {
-                    statement.setString(16, (String)postCodeObject);
-                } else {
-                    statement.setNull(16, NULL);
+                    statement.setNull(13, NULL);
                 }
                 Object addressObject = map.get("address");
                 if(addressObject != null) {
-                    statement.setString(17, (String)addressObject);
+                    statement.setString(14, (String)addressObject);
                 } else {
-                    statement.setNull(17, NULL);
+                    statement.setNull(14, NULL);
                 }
+                Object postCodeObject = map.get("post_code");
+                if(postCodeObject != null) {
+                    statement.setString(15, (String)postCodeObject);
+                } else {
+                    statement.setNull(15, NULL);
+                }
+                statement.setBoolean(16, event.getVerified());
+                statement.setString(17, event.getToken());
+                statement.setBoolean(18, event.getLocked());
+                statement.execute();
+            }
+            try (PreparedStatement statement = conn.prepareStatement(insertUserHost)) {
+                statement.setString(1, event.getUserId());
+                statement.setString(2, event.getHostId());
                 statement.execute();
             }
             insertNotification(conn, event.getEmail(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
@@ -564,13 +597,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<Integer> queryNonceByEmail(String email) {
+    public Result<Integer> queryNonceByUserId(String userId) {
         Result<Integer> result = null;
-        String sql = "SELECT nonce FROM user_t WHERE email = ?";
+        String sql = "SELECT nonce FROM user_t WHERE user_id = ?";
         try (final Connection conn = ds.getConnection()) {
             Integer nonce = null;
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, email);
+                statement.setString(1, userId);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
                         nonce = resultSet.getInt("nonce");
@@ -578,7 +611,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
             }
             if(nonce == null)
-                result = Failure.of(new Status(OBJECT_NOT_FOUND, "user nonce", email));
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "user nonce", userId));
             else
                 result = Success.of(nonce);
         } catch (SQLException e) {
