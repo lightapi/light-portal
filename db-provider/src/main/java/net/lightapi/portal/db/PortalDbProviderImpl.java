@@ -1661,10 +1661,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createService(MarketServiceCreatedEvent event) {
-        final String insertUser = "INSERT INTO api_t (host_id, api_id, api_name, service_id, api_description, operation_owner, " +
-                "delivery_owner, api_type_id, region_id, lob_id, platform_id, capability_id, api_marketplace_team_id, " +
-                "git_repository, update_user, update_timestamp) " +
-                "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?)";
+        final String insertUser = "INSERT INTO api_t (host_id, api_id, service_id, api_name, api_type, " +
+                "api_desc, operation_owner, delivery_owner, region, business_group, " +
+                "lob, platform, capability, git_repo, api_tags, " +
+                "api_status, update_user, update_timestamp) " +
+                "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?)";
         Result<String> result = null;
         Map<String, Object> map = JsonMapper.string2Map(event.getValue());
         Connection conn = null;
@@ -1675,51 +1676,71 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
                 statement.setString(1, event.getHostId());
                 statement.setString(2, event.getApiId());
-                statement.setString(3, (String)map.get("apiName"));
-                statement.setString(4, (String)map.get("serviceId"));
-                if(map.get("apiDescription") != null)
-                    statement.setString(5, (String)map.get("applicationDescription"));
-                else
-                    statement.setNull(5, NULL);
-
-                if(map.get("operationOwner") != null)
-                    statement.setString(6, (String)map.get("operationOwner"));
+                statement.setString(3, (String)map.get("serviceId"));
+                statement.setString(4, (String)map.get("apiName"));
+                statement.setString(5, (String)map.get("apiType"));
+                if(map.get("apiDesc") != null)
+                    statement.setString(6, (String)map.get("applicationDesc"));
                 else
                     statement.setNull(6, NULL);
-                if (map.get("deliveryOwner") != null)
-                    statement.setString(7, (String)map.get("deliveryOwner"));
+
+                if(map.get("operationOwner") != null)
+                    statement.setString(7, (String)map.get("operationOwner"));
                 else
                     statement.setNull(7, NULL);
-                if (map.get("apiTypeId") != null)
-                    statement.setInt(8, (Integer)map.get("apiTypeId"));
+
+                if (map.get("deliveryOwner") != null)
+                    statement.setString(8, (String)map.get("deliveryOwner"));
                 else
                     statement.setNull(8, NULL);
-                if (map.get("regionId") != null)
-                    statement.setInt(9, (Integer)map.get("regionId"));
+
+                if (map.get("region") != null)
+                    statement.setInt(9, (Integer)map.get("region"));
                 else
                     statement.setNull(9, NULL);
-                if (map.get("lobId") != null)
-                    statement.setInt(10, (Integer)map.get("lobId"));
+
+                if (map.get("businessGroup") != null)
+                    statement.setInt(10, (Integer)map.get("businessGroup"));
                 else
                     statement.setNull(10, NULL);
-                if (map.get("platformId") != null)
-                    statement.setInt(11, (Integer)map.get("platformId"));
+
+                if (map.get("lob") != null)
+                    statement.setInt(11, (Integer)map.get("lob"));
                 else
                     statement.setNull(11, NULL);
-                if (map.get("capabilityId") != null)
-                    statement.setInt(12, (Integer)map.get("capabilityId"));
+
+                if (map.get("platform") != null)
+                    statement.setInt(12, (Integer)map.get("platform"));
                 else
                     statement.setNull(12, NULL);
-                if (map.get("apiMarketplaceTeamId") != null)
-                    statement.setInt(13, (Integer)map.get("apiMarketplaceTeamId"));
+
+                if (map.get("capability") != null)
+                    statement.setInt(13, (Integer)map.get("capability"));
                 else
                     statement.setNull(13, NULL);
-                if (map.get("gitRepository") != null)
-                    statement.setString(14, (String)map.get("gitRepository"));
+
+                if (map.get("gitRepo") != null)
+                    statement.setString(14, (String)map.get("gitRepo"));
                 else
                     statement.setNull(14, NULL);
-                statement.setString(15, event.getEventId().getId());
-                statement.setTimestamp(16, new Timestamp(System.currentTimeMillis()));
+
+                if (map.get("gitRepo") != null)
+                    statement.setString(14, (String)map.get("gitRepo"));
+                else
+                    statement.setNull(14, NULL);
+
+                if (map.get("apiTags") != null)
+                    statement.setString(15, (String)map.get("apiTags"));
+                else
+                    statement.setNull(15, NULL);
+
+                if (map.get("apiStatus") != null)
+                    statement.setString(16, (String)map.get("apiStatus"));
+                else
+                    statement.setNull(16, NULL);
+
+                statement.setString(17, event.getEventId().getId());
+                statement.setTimestamp(18, new Timestamp(System.currentTimeMillis()));
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "failed to insert the api " + event.getApiId());
@@ -1757,13 +1778,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             }
         }
         return result;
-
     }
+
     @Override
     public Result<String> updateService(MarketServiceUpdatedEvent event) {
-        final String updateApi = "UPDATE api_t SET api_name = ?, service_id = ?, service_type = ?, api_description = ? " +
-                "operation_owner = ?, delivery_owner = ?, api_type_id = ?, region_id = ?, lob_id = ?, platform_id = ?, " +
-                "capability_id = ?, api_marketplace_team_id = ?, git_repository = ?, update_user = ?, update_timestamp = ? " +
+        final String updateApi = "UPDATE api_t SET service_id = ?, api_name = ?, api_type = ?, api_desc = ? " +
+                "operation_owner = ?, delivery_owner = ?, region = ?, business_group = ?, lob = ?, platform = ?, " +
+                "capability = ?, git_repo = ?, api_tags = ?, api_status = ?,  update_user = ?, update_timestamp = ? " +
                 "WHERE host_id = ? AND api_id = ?";
 
         Result<String> result = null;
@@ -1774,73 +1795,86 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
 
             try (PreparedStatement statement = conn.prepareStatement(updateApi)) {
-                if(map.get("apiName") != null) {
-                    statement.setString(1, (String)map.get("apiName"));
+                if(map.get("serviceId") != null) {
+                    statement.setString(1, (String)map.get("serviceId"));
                 } else {
                     statement.setNull(1, NULL);
                 }
-                if(map.get("serviceId") != null) {
-                    statement.setString(2, (String)map.get("serviceId"));
+
+                if(map.get("apiName") != null) {
+                    statement.setString(2, (String)map.get("apiName"));
                 } else {
                     statement.setNull(2, NULL);
                 }
-                if(map.get("serviceType") != null) {
-                    statement.setString(3, (String)map.get("serviceType"));
+
+                if(map.get("apiType") != null) {
+                    statement.setString(3, (String)map.get("apiType"));
                 } else {
                     statement.setNull(3, NULL);
                 }
-                if(map.get("apiDescription") != null) {
-                    statement.setString(4, (String)map.get("apiDescription"));
+
+                if(map.get("apiDesc") != null) {
+                    statement.setString(4, (String)map.get("apiDesc"));
                 } else {
                     statement.setNull(4, NULL);
                 }
+
                 if(map.get("operationOwner") != null) {
                     statement.setString(5, (String)map.get("operationOwner"));
                 } else {
                     statement.setNull(5, NULL);
                 }
+
                 if(map.get("deliveryOwner") != null) {
                     statement.setString(6, (String)map.get("deliveryOwner"));
                 } else {
                     statement.setNull(6, NULL);
                 }
-                if(map.get("apiTypeId") != null)
-                    statement.setInt(7, (Integer)map.get("apiTypeId"));
+
+                if(map.get("region") != null)
+                    statement.setInt(7, (Integer)map.get("region"));
                 else
                     statement.setNull(7, NULL);
-                if(map.get("regionId") != null)
-                    statement.setInt(8, (Integer)map.get("regionId"));
+
+                if(map.get("businessGroup") != null)
+                    statement.setInt(8, (Integer)map.get("businessGroup"));
                 else
                     statement.setNull(8, NULL);
-                if(map.get("lobId") != null) {
-                    statement.setInt(9, (Integer)map.get("lobId"));
+
+                if(map.get("lob") != null) {
+                    statement.setInt(9, (Integer)map.get("lob"));
                 } else {
                     statement.setNull(9, NULL);
                 }
-                if(map.get("platformId") != null) {
-                    statement.setInt(10, (Integer)map.get("platformId"));
+                if(map.get("platform") != null) {
+                    statement.setInt(10, (Integer)map.get("platform"));
                 } else {
                     statement.setNull(10, NULL);
                 }
-                if(map.get("capabilityId") != null) {
-                    statement.setInt(11, (Integer)map.get("capabilityId"));
+                if(map.get("capability") != null) {
+                    statement.setInt(11, (Integer)map.get("capability"));
                 } else {
                     statement.setNull(11, NULL);
                 }
-                if(map.get("apiMarketplaceTeamId") != null) {
-                    statement.setInt(12, (Integer)map.get("apiMarketplaceTeamId"));
+                if(map.get("gitRepo") != null) {
+                    statement.setString(12, (String)map.get("gitRepo"));
                 } else {
                     statement.setNull(12, NULL);
                 }
-                if(map.get("gitRepository") != null) {
-                    statement.setString(13, (String)map.get("gitRepository"));
+                if(map.get("apiTags") != null) {
+                    statement.setString(13, (String)map.get("apiTags"));
                 } else {
                     statement.setNull(13, NULL);
                 }
-                statement.setString(14, event.getEventId().getId());
-                statement.setTimestamp(15, new Timestamp(event.getTimestamp()));
-                statement.setString(16, event.getHostId());
-                statement.setString(17, event.getApiId());
+                if(map.get("apiStatus") != null) {
+                    statement.setString(14, (String)map.get("apiStatus"));
+                } else {
+                    statement.setNull(14, NULL);
+                }
+                statement.setString(15, event.getEventId().getId());
+                statement.setTimestamp(16, new Timestamp(event.getTimestamp()));
+                statement.setString(17, event.getHostId());
+                statement.setString(18, event.getApiId());
 
                 int count = statement.executeUpdate();
                 if(count == 0) {
@@ -1934,6 +1968,126 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         return result;
 
     }
+
+    @Override
+    public Result<String> queryService(int offset, int limit, String hostId, String apiId, String serviceId, String apiName, String apiType,
+                                       String apiDesc, String operationOwner, String deliveryOwner, String region, String businessGroup,
+                                       String lob, String platform, String capability, String gitRepo, String apiTags, String apiStatus) {
+        Result<String> result = null;
+        String sql = "SELECT COUNT(*) OVER () AS total,\n" +
+                "host_id, api_id, service_id, api_name, api_type\n" +
+                "api_desc, operation_owner, delivery_owner, region, business_group\n" +
+                "lob, platform, capability, git_repo, api_tags, api_status\n" +
+                "FROM api_t\n" +
+                "WHERE 1=1\n" +
+                "AND ? IS NULL OR ? = '*' OR api_id LIKE '%' || ? || '%'\n" +
+                "AND ? IS NULL OR ? = '*' OR service_id LIKE '%' || ? || '%'\n" +
+                "AND ? IS NULL OR ? = '*' OR api_name LIKE '%' || ? || '%'\n" +
+                "AND ? IS NULL OR api_type = ?\n" +
+                "AND ? IS NULL OR ? = '*' OR api_desc LIKE '%' || ? || '%'\n" +
+                "AND ? IS NULL OR ? = '*' OR operation_owner LIKE '%' || ? || '%'\n" +
+                "AND ? IS NULL OR ? = '*' OR delivery_owner LIKE '%' || ? || '%'\n" +
+                "AND ? IS NULL OR region = ?\n" +
+                "AND ? IS NULL OR business_group = ?\n" +
+                "AND ? IS NULL OR lob = ?\n" +
+                "AND ? IS NULL OR platform = ?\n" +
+                "AND ? IS NULL OR capability = ?\n" +
+                "AND ? IS NULL OR ? = '*' OR git_repo LIKE '%' || ? || '%'\n" +
+                "AND ? IS NULL OR ? = '*' OR api_tags LIKE '%' || ? || '%'\n" +
+                "AND ? IS NULL OR api_status = ?\n" +
+                "ORDER BY api_id\n" +
+                "LIMIT 2 OFFSET 0";
+
+        int total = 0;
+        List<Map<String, Object>> services = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, apiId);
+            preparedStatement.setString(2, apiId);
+            preparedStatement.setString(3, apiId);
+            preparedStatement.setString(4, serviceId);
+            preparedStatement.setString(5, serviceId);
+            preparedStatement.setString(6, serviceId);
+            preparedStatement.setString(7, apiName);
+            preparedStatement.setString(8, apiName);
+            preparedStatement.setString(9, apiName);
+            preparedStatement.setString(10, apiType);
+            preparedStatement.setString(11, apiType);
+            preparedStatement.setString(12, apiDesc);
+            preparedStatement.setString(13, apiDesc);
+            preparedStatement.setString(14, apiDesc);
+            preparedStatement.setString(15, operationOwner);
+            preparedStatement.setString(16, operationOwner);
+            preparedStatement.setString(17, operationOwner);
+            preparedStatement.setString(18, deliveryOwner);
+            preparedStatement.setString(19, deliveryOwner);
+            preparedStatement.setString(20, deliveryOwner);
+            preparedStatement.setString(21, region);
+            preparedStatement.setString(22, region);
+            preparedStatement.setString(23, businessGroup);
+            preparedStatement.setString(24, businessGroup);
+            preparedStatement.setString(25, lob);
+            preparedStatement.setString(26, lob);
+            preparedStatement.setString(27, platform);
+            preparedStatement.setString(28, platform);
+            preparedStatement.setString(29, capability);
+            preparedStatement.setString(30, capability);
+            preparedStatement.setString(31, gitRepo);
+            preparedStatement.setString(32, gitRepo);
+            preparedStatement.setString(33, gitRepo);
+            preparedStatement.setString(34, apiTags);
+            preparedStatement.setString(35, apiTags);
+            preparedStatement.setString(36, apiTags);
+            preparedStatement.setString(37, apiStatus);
+            preparedStatement.setString(38, apiStatus);
+            preparedStatement.setInt(39, limit);
+            preparedStatement.setInt(40, offset);
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    // only get the total once as it is the same for all rows.
+                    if (isFirstRow) {
+                        total =  resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("apiId", resultSet.getString("api_id"));
+                    map.put("serviceId", resultSet.getString("service_id"));
+                    map.put("apiName", resultSet.getString("api_name"));
+                    map.put("apiType", resultSet.getString("api_type"));
+                    map.put("apiDesc", resultSet.getString("api_desc"));
+                    map.put("operationOwner", resultSet.getString("operation_owner"));
+                    map.put("deliveryOwner", resultSet.getString("delivery_owner"));
+                    map.put("region", resultSet.getInt("region"));
+                    map.put("businessGroup", resultSet.getInt("business_group"));
+                    map.put("lob", resultSet.getInt("lob"));
+                    map.put("platform", resultSet.getInt("platform"));
+                    map.put("capability", resultSet.getInt("capability"));
+                    map.put("gitRepo", resultSet.getString("git_repo"));
+                    map.put("apiTags", resultSet.getString("api_tags"));
+                    map.put("apiStatus", resultSet.getString("api_status"));
+                    services.add(map);
+                }
+            }
+            // now, we have the total and the list of tables, we need to put them into a map.
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("services", services);
+            result = Success.of(JsonMapper.toJson(resultMap));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
 
     public Result<String> createMarketCode(MarketCodeCreatedEvent event) {
         // cache key is based on the hostId and authCode.
