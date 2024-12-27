@@ -2008,11 +2008,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                                        String lob, String platform, String capability, String gitRepo, String apiTags, String apiStatus) {
         Result<String> result = null;
         String sql = "SELECT COUNT(*) OVER () AS total,\n" +
-                "host_id, api_id, service_id, api_name, api_type\n" +
-                "api_desc, operation_owner, delivery_owner, region, business_group\n" +
+                "host_id, api_id, service_id, api_name, api_type,\n" +
+                "api_desc, operation_owner, delivery_owner, region, business_group,\n" +
                 "lob, platform, capability, git_repo, api_tags, api_status\n" +
                 "FROM api_t\n" +
-                "WHERE 1=1\n" +
+                "WHERE host_id = ?\n" +
                 "AND ? IS NULL OR ? = '*' OR api_id LIKE '%' || ? || '%'\n" +
                 "AND ? IS NULL OR ? = '*' OR service_id LIKE '%' || ? || '%'\n" +
                 "AND ? IS NULL OR ? = '*' OR api_name LIKE '%' || ? || '%'\n" +
@@ -2029,53 +2029,54 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "AND ? IS NULL OR ? = '*' OR api_tags LIKE '%' || ? || '%'\n" +
                 "AND ? IS NULL OR api_status = ?\n" +
                 "ORDER BY api_id\n" +
-                "LIMIT 2 OFFSET 0";
+                "LIMIT ? OFFSET ?";
 
         int total = 0;
         List<Map<String, Object>> services = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, apiId);
+            preparedStatement.setString(1, hostId);
             preparedStatement.setString(2, apiId);
             preparedStatement.setString(3, apiId);
-            preparedStatement.setString(4, serviceId);
+            preparedStatement.setString(4, apiId);
             preparedStatement.setString(5, serviceId);
             preparedStatement.setString(6, serviceId);
-            preparedStatement.setString(7, apiName);
+            preparedStatement.setString(7, serviceId);
             preparedStatement.setString(8, apiName);
             preparedStatement.setString(9, apiName);
-            preparedStatement.setString(10, apiType);
+            preparedStatement.setString(10, apiName);
             preparedStatement.setString(11, apiType);
-            preparedStatement.setString(12, apiDesc);
+            preparedStatement.setString(12, apiType);
             preparedStatement.setString(13, apiDesc);
             preparedStatement.setString(14, apiDesc);
-            preparedStatement.setString(15, operationOwner);
+            preparedStatement.setString(15, apiDesc);
             preparedStatement.setString(16, operationOwner);
             preparedStatement.setString(17, operationOwner);
-            preparedStatement.setString(18, deliveryOwner);
+            preparedStatement.setString(18, operationOwner);
             preparedStatement.setString(19, deliveryOwner);
             preparedStatement.setString(20, deliveryOwner);
-            preparedStatement.setString(21, region);
+            preparedStatement.setString(21, deliveryOwner);
             preparedStatement.setString(22, region);
-            preparedStatement.setString(23, businessGroup);
+            preparedStatement.setString(23, region);
             preparedStatement.setString(24, businessGroup);
-            preparedStatement.setString(25, lob);
+            preparedStatement.setString(25, businessGroup);
             preparedStatement.setString(26, lob);
-            preparedStatement.setString(27, platform);
+            preparedStatement.setString(27, lob);
             preparedStatement.setString(28, platform);
-            preparedStatement.setString(29, capability);
+            preparedStatement.setString(29, platform);
             preparedStatement.setString(30, capability);
-            preparedStatement.setString(31, gitRepo);
+            preparedStatement.setString(31, capability);
             preparedStatement.setString(32, gitRepo);
             preparedStatement.setString(33, gitRepo);
-            preparedStatement.setString(34, apiTags);
+            preparedStatement.setString(34, gitRepo);
             preparedStatement.setString(35, apiTags);
             preparedStatement.setString(36, apiTags);
-            preparedStatement.setString(37, apiStatus);
+            preparedStatement.setString(37, apiTags);
             preparedStatement.setString(38, apiStatus);
-            preparedStatement.setInt(39, limit);
-            preparedStatement.setInt(40, offset);
+            preparedStatement.setString(39, apiStatus);
+            preparedStatement.setInt(40, limit);
+            preparedStatement.setInt(41, offset);
 
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -2095,11 +2096,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("apiDesc", resultSet.getString("api_desc"));
                     map.put("operationOwner", resultSet.getString("operation_owner"));
                     map.put("deliveryOwner", resultSet.getString("delivery_owner"));
-                    map.put("region", resultSet.getInt("region"));
-                    map.put("businessGroup", resultSet.getInt("business_group"));
-                    map.put("lob", resultSet.getInt("lob"));
-                    map.put("platform", resultSet.getInt("platform"));
-                    map.put("capability", resultSet.getInt("capability"));
+                    map.put("region", resultSet.getString("region"));
+                    map.put("businessGroup", resultSet.getString("business_group"));
+                    map.put("lob", resultSet.getString("lob"));
+                    map.put("platform", resultSet.getString("platform"));
+                    map.put("capability", resultSet.getString("capability"));
                     map.put("gitRepo", resultSet.getString("git_repo"));
                     map.put("apiTags", resultSet.getString("api_tags"));
                     map.put("apiStatus", resultSet.getString("api_status"));
