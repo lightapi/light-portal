@@ -2007,76 +2007,57 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                                        String apiDesc, String operationOwner, String deliveryOwner, String region, String businessGroup,
                                        String lob, String platform, String capability, String gitRepo, String apiTags, String apiStatus) {
         Result<String> result = null;
-        String sql = "SELECT COUNT(*) OVER () AS total,\n" +
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
                 "host_id, api_id, service_id, api_name, api_type,\n" +
                 "api_desc, operation_owner, delivery_owner, region, business_group,\n" +
                 "lob, platform, capability, git_repo, api_tags, api_status\n" +
                 "FROM api_t\n" +
-                "WHERE host_id = ?\n" +
-                "AND ? IS NULL OR ? = '*' OR api_id LIKE '%' || ? || '%'\n" +
-                "AND ? IS NULL OR ? = '*' OR service_id LIKE '%' || ? || '%'\n" +
-                "AND ? IS NULL OR ? = '*' OR api_name LIKE '%' || ? || '%'\n" +
-                "AND ? IS NULL OR api_type = ?\n" +
-                "AND ? IS NULL OR ? = '*' OR api_desc LIKE '%' || ? || '%'\n" +
-                "AND ? IS NULL OR ? = '*' OR operation_owner LIKE '%' || ? || '%'\n" +
-                "AND ? IS NULL OR ? = '*' OR delivery_owner LIKE '%' || ? || '%'\n" +
-                "AND ? IS NULL OR region = ?\n" +
-                "AND ? IS NULL OR business_group = ?\n" +
-                "AND ? IS NULL OR lob = ?\n" +
-                "AND ? IS NULL OR platform = ?\n" +
-                "AND ? IS NULL OR capability = ?\n" +
-                "AND ? IS NULL OR ? = '*' OR git_repo LIKE '%' || ? || '%'\n" +
-                "AND ? IS NULL OR ? = '*' OR api_tags LIKE '%' || ? || '%'\n" +
-                "AND ? IS NULL OR api_status = ?\n" +
-                "ORDER BY api_id\n" +
-                "LIMIT ? OFFSET ?";
+                "WHERE host_id = ?\n");
 
+
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(hostId);
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "api_id", apiId);
+        addCondition(whereClause, parameters, "service_id", serviceId);
+        addCondition(whereClause, parameters, "api_name", apiName);
+        addCondition(whereClause, parameters, "api_type", apiType);
+        addCondition(whereClause, parameters, "api_desc", apiDesc);
+        addCondition(whereClause, parameters, "operation_owner", operationOwner);
+        addCondition(whereClause, parameters, "delivery_owner", deliveryOwner);
+        addCondition(whereClause, parameters, "region", region);
+        addCondition(whereClause, parameters, "business_group", businessGroup);
+        addCondition(whereClause, parameters, "lob", lob);
+        addCondition(whereClause, parameters, "platform", platform);
+        addCondition(whereClause, parameters, "capability", capability);
+        addCondition(whereClause, parameters, "git_repo", gitRepo);
+        addCondition(whereClause, parameters, "api_tags", apiTags);
+        addCondition(whereClause, parameters, "api_status", apiStatus);
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+
+        sqlBuilder.append("ORDER BY api_id\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> services = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, hostId);
-            preparedStatement.setString(2, apiId);
-            preparedStatement.setString(3, apiId);
-            preparedStatement.setString(4, apiId);
-            preparedStatement.setString(5, serviceId);
-            preparedStatement.setString(6, serviceId);
-            preparedStatement.setString(7, serviceId);
-            preparedStatement.setString(8, apiName);
-            preparedStatement.setString(9, apiName);
-            preparedStatement.setString(10, apiName);
-            preparedStatement.setString(11, apiType);
-            preparedStatement.setString(12, apiType);
-            preparedStatement.setString(13, apiDesc);
-            preparedStatement.setString(14, apiDesc);
-            preparedStatement.setString(15, apiDesc);
-            preparedStatement.setString(16, operationOwner);
-            preparedStatement.setString(17, operationOwner);
-            preparedStatement.setString(18, operationOwner);
-            preparedStatement.setString(19, deliveryOwner);
-            preparedStatement.setString(20, deliveryOwner);
-            preparedStatement.setString(21, deliveryOwner);
-            preparedStatement.setString(22, region);
-            preparedStatement.setString(23, region);
-            preparedStatement.setString(24, businessGroup);
-            preparedStatement.setString(25, businessGroup);
-            preparedStatement.setString(26, lob);
-            preparedStatement.setString(27, lob);
-            preparedStatement.setString(28, platform);
-            preparedStatement.setString(29, platform);
-            preparedStatement.setString(30, capability);
-            preparedStatement.setString(31, capability);
-            preparedStatement.setString(32, gitRepo);
-            preparedStatement.setString(33, gitRepo);
-            preparedStatement.setString(34, gitRepo);
-            preparedStatement.setString(35, apiTags);
-            preparedStatement.setString(36, apiTags);
-            preparedStatement.setString(37, apiTags);
-            preparedStatement.setString(38, apiStatus);
-            preparedStatement.setString(39, apiStatus);
-            preparedStatement.setInt(40, limit);
-            preparedStatement.setInt(41, offset);
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
 
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -2122,6 +2103,17 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         return result;
     }
 
+    private void addCondition(StringBuilder whereClause, List<Object> parameters, String columnName, String value) {
+        if (value != null && !value.equals("*")) {
+            if (whereClause.length() > 0) {
+                whereClause.append(" AND ");
+            }
+            whereClause.append(columnName);
+            whereClause.append(" LIKE '%' || ? || '%'");
+            parameters.add(value);
+
+        }
+    }
 
     public Result<String> createMarketCode(MarketCodeCreatedEvent event) {
         // cache key is based on the hostId and authCode.
