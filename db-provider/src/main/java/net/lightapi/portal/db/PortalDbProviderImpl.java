@@ -1319,6 +1319,181 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
+    public Result<String> createRefreshToken(MarketTokenCreatedEvent event) {
+        final String insertUser = "INSERT INTO refresh_token_t (refresh_token, host_id, user_id, client_id, scope, " +
+                "user_type, roles, csrf, custom_claim) " +
+                "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?)";
+        Result<String> result = null;
+        Map<String, Object> map = JsonMapper.string2Map(event.getValue());
+        Connection conn = null;
+        try {
+            conn = ds.getConnection();
+            conn.setAutoCommit(false);
+            // no duplicate record, insert the user into database and write a success notification.
+            try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
+                statement.setString(1, event.getRefreshToken());
+                statement.setString(2, event.getHostId());
+                statement.setString(3, event.getUserId());
+                if(map.get("clientId") != null)
+                    statement.setString(4, (String)map.get("clientId"));
+                else
+                    statement.setNull(4, NULL);
+
+                if(map.get("scope") != null)
+                    statement.setString(5, (String)map.get("scope"));
+                else
+                    statement.setNull(5, NULL);
+
+                if(map.get("userType") != null)
+                    statement.setString(6, (String)map.get("userType"));
+                else
+                    statement.setNull(6, NULL);
+
+                if(map.get("roles") != null)
+                    statement.setString(7, (String)map.get("roles"));
+                else
+                    statement.setNull(7, NULL);
+
+                if(map.get("csrf") != null)
+                    statement.setString(8, (String)map.get("csrf"));
+                else
+                    statement.setNull(8, NULL);
+
+                if(map.get("customClaim") != null)
+                    statement.setString(9, (String)map.get("customClaim"));
+                else
+                    statement.setNull(9, NULL);
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "failed to insert the app " + event.getRefreshToken());
+                } else {
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                }
+            }
+            updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
+            // as this is a brand-new user, there is no nonce to be updated. By default, the nonce is 0.
+            conn.commit();
+            result = Success.of(event.getRefreshToken());
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            try {
+                if(conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            try {
+                if(conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        } finally {
+            try {
+                if (conn != null) {
+                    conn.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deleteRefreshToken(MarketTokenDeletedEvent event) {
+        final String deleteApp = "DELETE from refresh_token_t WHERE refresh_token = ? AND host_id = ? AND user_id = ?";
+        Result<String> result;
+        Connection conn = null;
+        try {
+            conn = ds.getConnection();
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(deleteApp)) {
+                statement.setString(1, event.getRefreshToken());
+                statement.setString(2, event.getHostId());
+                statement.setString(3, event.getUserId());
+                int count = statement.executeUpdate();
+                if(count == 0) {
+                    // no record is deleted, write an error notification.
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no record is deleted for refresh token " + event.getRefreshToken());
+                } else {
+                    // record is deleted, write a success notification.
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                }
+            }
+            updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
+            conn.commit();
+            result = Success.of(event.getEventId().getId());
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            try {
+                if(conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            try {
+                if(conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        } finally {
+            try {
+                if (conn != null) {
+                    conn.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> queryRefreshToken(String refreshToken) {
+        Result<String> result = null;
+        String sql =
+                "SELECT refresh_token, host_id, user_id, client_id, scope, user_type, roles, csrf, custom_claim\n" +
+                        "FROM refresh_token_t\n" +
+                        "WHERE refresh_token = ?\n";
+        try (final Connection conn = ds.getConnection()) {
+            Map<String, Object> map = new HashMap<>();
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, refreshToken);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        map.put("refreshToken", resultSet.getString("refresh_token"));
+                        map.put("hostId", resultSet.getString("host_id"));
+                        map.put("userId", resultSet.getString("user_id"));
+                        map.put("clientId", resultSet.getString("client_id"));
+                        map.put("scope", resultSet.getString("scope"));
+                        map.put("userType", resultSet.getString("user_type"));
+                        map.put("roles", resultSet.getString("roles"));
+                        map.put("csrf", resultSet.getString("csrf"));
+                        map.put("customClaim", resultSet.getString("custom_claim"));
+                    }
+                }
+            }
+            if(map.isEmpty())
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "refresh token", refreshToken));
+            else
+                result = Success.of(JsonMapper.toJson(map));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
     public Result<String> createClient(MarketClientCreatedEvent event) {
         final String insertUser = "INSERT INTO app_t (host_id, app_id, app_name, app_desc, " +
                 "is_kafka_app, client_id, client_type, client_profile, client_secret, client_scope, custom_claim, " +
@@ -1541,6 +1716,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         return result;
 
     }
+
     @Override
     public Result<String> deleteClient(MarketClientDeletedEvent event) {
         final String deleteApp = "DELETE from app_t WHERE host_id = ? AND app_id = ?";
@@ -1593,6 +1769,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         return result;
 
     }
+
     @Override
     public Result<Map<String, Object>> queryClientByClientId(String clientId) {
         Result<Map<String, Object>> result;
