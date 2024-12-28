@@ -63,7 +63,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testQueryService() {
-        Result<String> result = dbProvider.queryService(0, 2, "N2CMw0HGQXeLvC1wBfln2A", "1234", null,
+        Result<String> result = dbProvider.queryService(0, 2, "N2CMw0HGQXeLvC1wBfln2A", "1234",
                 null, null, null, null, null, null, null, null,
                 null, null, null, null, null);
         if(result.isFailure()) {

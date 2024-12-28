@@ -1871,11 +1871,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createService(MarketServiceCreatedEvent event) {
-        final String insertUser = "INSERT INTO api_t (host_id, api_id, service_id, api_name, api_type, " +
+        final String insertUser = "INSERT INTO api_t (host_id, api_id, api_name, api_type, " +
                 "api_desc, operation_owner, delivery_owner, region, business_group, " +
                 "lob, platform, capability, git_repo, api_tags, " +
                 "api_status, update_user, update_timestamp) " +
-                "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?)";
+                "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?)";
         Result<String> result = null;
         Map<String, Object> map = JsonMapper.string2Map(event.getValue());
         Connection conn = null;
@@ -1886,71 +1886,65 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
                 statement.setString(1, event.getHostId());
                 statement.setString(2, event.getApiId());
-                statement.setString(3, (String)map.get("serviceId"));
-                statement.setString(4, (String)map.get("apiName"));
-                statement.setString(5, (String)map.get("apiType"));
+                statement.setString(3, (String)map.get("apiName"));
+                statement.setString(4, (String)map.get("apiType"));
                 if(map.get("apiDesc") != null)
-                    statement.setString(6, (String)map.get("applicationDesc"));
+                    statement.setString(5, (String)map.get("apiDesc"));
+                else
+                    statement.setNull(5, NULL);
+
+                if(map.get("operationOwner") != null)
+                    statement.setString(6, (String)map.get("operationOwner"));
                 else
                     statement.setNull(6, NULL);
 
-                if(map.get("operationOwner") != null)
-                    statement.setString(7, (String)map.get("operationOwner"));
+                if (map.get("deliveryOwner") != null)
+                    statement.setString(7, (String)map.get("deliveryOwner"));
                 else
                     statement.setNull(7, NULL);
 
-                if (map.get("deliveryOwner") != null)
-                    statement.setString(8, (String)map.get("deliveryOwner"));
+                if (map.get("region") != null)
+                    statement.setInt(8, (Integer)map.get("region"));
                 else
                     statement.setNull(8, NULL);
 
-                if (map.get("region") != null)
-                    statement.setInt(9, (Integer)map.get("region"));
+                if (map.get("businessGroup") != null)
+                    statement.setInt(9, (Integer)map.get("businessGroup"));
                 else
                     statement.setNull(9, NULL);
 
-                if (map.get("businessGroup") != null)
-                    statement.setInt(10, (Integer)map.get("businessGroup"));
+                if (map.get("lob") != null)
+                    statement.setInt(10, (Integer)map.get("lob"));
                 else
                     statement.setNull(10, NULL);
 
-                if (map.get("lob") != null)
-                    statement.setInt(11, (Integer)map.get("lob"));
+                if (map.get("platform") != null)
+                    statement.setInt(11, (Integer)map.get("platform"));
                 else
                     statement.setNull(11, NULL);
 
-                if (map.get("platform") != null)
-                    statement.setInt(12, (Integer)map.get("platform"));
+                if (map.get("capability") != null)
+                    statement.setInt(12, (Integer)map.get("capability"));
                 else
                     statement.setNull(12, NULL);
 
-                if (map.get("capability") != null)
-                    statement.setInt(13, (Integer)map.get("capability"));
+                if (map.get("gitRepo") != null)
+                    statement.setString(13, (String)map.get("gitRepo"));
                 else
                     statement.setNull(13, NULL);
 
-                if (map.get("gitRepo") != null)
-                    statement.setString(14, (String)map.get("gitRepo"));
-                else
-                    statement.setNull(14, NULL);
-
-                if (map.get("gitRepo") != null)
-                    statement.setString(14, (String)map.get("gitRepo"));
-                else
-                    statement.setNull(14, NULL);
-
                 if (map.get("apiTags") != null)
-                    statement.setString(15, (String)map.get("apiTags"));
+                    statement.setString(14, (String)map.get("apiTags"));
+                else
+                    statement.setNull(14, NULL);
+
+                if (map.get("apiStatus") != null)
+                    statement.setString(15, (String)map.get("apiStatus"));
                 else
                     statement.setNull(15, NULL);
 
-                if (map.get("apiStatus") != null)
-                    statement.setString(16, (String)map.get("apiStatus"));
-                else
-                    statement.setNull(16, NULL);
-
-                statement.setString(17, event.getEventId().getId());
-                statement.setTimestamp(18, new Timestamp(System.currentTimeMillis()));
+                statement.setString(16, event.getEventId().getId());
+                statement.setTimestamp(17, new Timestamp(System.currentTimeMillis()));
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "failed to insert the api " + event.getApiId());
@@ -1992,7 +1986,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateService(MarketServiceUpdatedEvent event) {
-        final String updateApi = "UPDATE api_t SET service_id = ?, api_name = ?, api_type = ?, api_desc = ? " +
+        final String updateApi = "UPDATE api_t SET api_name = ?, api_type = ?, api_desc = ? " +
                 "operation_owner = ?, delivery_owner = ?, region = ?, business_group = ?, lob = ?, platform = ?, " +
                 "capability = ?, git_repo = ?, api_tags = ?, api_status = ?,  update_user = ?, update_timestamp = ? " +
                 "WHERE host_id = ? AND api_id = ?";
@@ -2005,86 +1999,81 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
 
             try (PreparedStatement statement = conn.prepareStatement(updateApi)) {
-                if(map.get("serviceId") != null) {
-                    statement.setString(1, (String)map.get("serviceId"));
+
+                if(map.get("apiName") != null) {
+                    statement.setString(1, (String)map.get("apiName"));
                 } else {
                     statement.setNull(1, NULL);
                 }
 
-                if(map.get("apiName") != null) {
-                    statement.setString(2, (String)map.get("apiName"));
+                if(map.get("apiType") != null) {
+                    statement.setString(2, (String)map.get("apiType"));
                 } else {
                     statement.setNull(2, NULL);
                 }
 
-                if(map.get("apiType") != null) {
-                    statement.setString(3, (String)map.get("apiType"));
+                if(map.get("apiDesc") != null) {
+                    statement.setString(3, (String)map.get("apiDesc"));
                 } else {
                     statement.setNull(3, NULL);
                 }
 
-                if(map.get("apiDesc") != null) {
-                    statement.setString(4, (String)map.get("apiDesc"));
+                if(map.get("operationOwner") != null) {
+                    statement.setString(4, (String)map.get("operationOwner"));
                 } else {
                     statement.setNull(4, NULL);
                 }
 
-                if(map.get("operationOwner") != null) {
-                    statement.setString(5, (String)map.get("operationOwner"));
+                if(map.get("deliveryOwner") != null) {
+                    statement.setString(5, (String)map.get("deliveryOwner"));
                 } else {
                     statement.setNull(5, NULL);
                 }
 
-                if(map.get("deliveryOwner") != null) {
-                    statement.setString(6, (String)map.get("deliveryOwner"));
-                } else {
-                    statement.setNull(6, NULL);
-                }
-
                 if(map.get("region") != null)
-                    statement.setInt(7, (Integer)map.get("region"));
+                    statement.setInt(6, (Integer)map.get("region"));
+                else
+                    statement.setNull(6, NULL);
+
+                if(map.get("businessGroup") != null)
+                    statement.setInt(7, (Integer)map.get("businessGroup"));
                 else
                     statement.setNull(7, NULL);
 
-                if(map.get("businessGroup") != null)
-                    statement.setInt(8, (Integer)map.get("businessGroup"));
-                else
-                    statement.setNull(8, NULL);
-
                 if(map.get("lob") != null) {
-                    statement.setInt(9, (Integer)map.get("lob"));
+                    statement.setInt(8, (Integer)map.get("lob"));
+                } else {
+                    statement.setNull(8, NULL);
+                }
+                if(map.get("platform") != null) {
+                    statement.setInt(9, (Integer)map.get("platform"));
                 } else {
                     statement.setNull(9, NULL);
                 }
-                if(map.get("platform") != null) {
-                    statement.setInt(10, (Integer)map.get("platform"));
+                if(map.get("capability") != null) {
+                    statement.setInt(10, (Integer)map.get("capability"));
                 } else {
                     statement.setNull(10, NULL);
                 }
-                if(map.get("capability") != null) {
-                    statement.setInt(11, (Integer)map.get("capability"));
+                if(map.get("gitRepo") != null) {
+                    statement.setString(11, (String)map.get("gitRepo"));
                 } else {
                     statement.setNull(11, NULL);
                 }
-                if(map.get("gitRepo") != null) {
-                    statement.setString(12, (String)map.get("gitRepo"));
+                if(map.get("apiTags") != null) {
+                    statement.setString(12, (String)map.get("apiTags"));
                 } else {
                     statement.setNull(12, NULL);
                 }
-                if(map.get("apiTags") != null) {
-                    statement.setString(13, (String)map.get("apiTags"));
+                if(map.get("apiStatus") != null) {
+                    statement.setString(13, (String)map.get("apiStatus"));
                 } else {
                     statement.setNull(13, NULL);
                 }
-                if(map.get("apiStatus") != null) {
-                    statement.setString(14, (String)map.get("apiStatus"));
-                } else {
-                    statement.setNull(14, NULL);
-                }
-                statement.setString(15, event.getEventId().getId());
-                statement.setTimestamp(16, new Timestamp(event.getTimestamp()));
-                statement.setString(17, event.getHostId());
-                statement.setString(18, event.getApiId());
+                statement.setString(14, event.getEventId().getId());
+                statement.setTimestamp(15, new Timestamp(event.getTimestamp()));
+                statement.setString(16, event.getHostId());
+                statement.setString(17, event.getApiId());
 
                 int count = statement.executeUpdate();
                 if(count == 0) {
@@ -2180,13 +2169,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> queryService(int offset, int limit, String hostId, String apiId, String serviceId, String apiName, String apiType,
+    public Result<String> queryService(int offset, int limit, String hostId, String apiId, String apiName, String apiType,
                                        String apiDesc, String operationOwner, String deliveryOwner, String region, String businessGroup,
                                        String lob, String platform, String capability, String gitRepo, String apiTags, String apiStatus) {
         Result<String> result = null;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "host_id, api_id, service_id, api_name, api_type,\n" +
+                "host_id, api_id, api_name, api_type,\n" +
                 "api_desc, operation_owner, delivery_owner, region, business_group,\n" +
                 "lob, platform, capability, git_repo, api_tags, api_status\n" +
                 "FROM api_t\n" +
@@ -2199,7 +2188,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         StringBuilder whereClause = new StringBuilder();
 
         addCondition(whereClause, parameters, "api_id", apiId);
-        addCondition(whereClause, parameters, "service_id", serviceId);
         addCondition(whereClause, parameters, "api_name", apiName);
         addCondition(whereClause, parameters, "api_type", apiType);
         addCondition(whereClause, parameters, "api_desc", apiDesc);
@@ -2248,7 +2236,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
                     map.put("hostId", resultSet.getString("host_id"));
                     map.put("apiId", resultSet.getString("api_id"));
-                    map.put("serviceId", resultSet.getString("service_id"));
                     map.put("apiName", resultSet.getString("api_name"));
                     map.put("apiType", resultSet.getString("api_type"));
                     map.put("apiDesc", resultSet.getString("api_desc"));
