@@ -35,6 +35,11 @@
       "doc": "host id"
     },
     {
+      "name": "userId",
+      "type": "string",
+      "doc": "user id"
+    },
+    {
       "name": "refreshToken",
       "type": "string",
       "doc": "refresh token"

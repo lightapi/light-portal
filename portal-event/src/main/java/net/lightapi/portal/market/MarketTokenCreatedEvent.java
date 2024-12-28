@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class MarketTokenCreatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -5678568647056533745L;
+  private static final long serialVersionUID = 2793523495055561098L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"MarketTokenCreatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"refreshToken\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"refresh token\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"token detail in JSON\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"MarketTokenCreatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"user id\"},{\"name\":\"refreshToken\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"refresh token\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"token detail in JSON\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -76,6 +76,8 @@ public class MarketTokenCreatedEvent extends org.apache.avro.specific.SpecificRe
   private com.networknt.kafka.common.EventId EventId;
   /** host id */
   private java.lang.String hostId;
+  /** user id */
+  private java.lang.String userId;
   /** refresh token */
   private java.lang.String refreshToken;
   /** token detail in JSON */
@@ -94,13 +96,15 @@ public class MarketTokenCreatedEvent extends org.apache.avro.specific.SpecificRe
    * All-args constructor.
    * @param EventId The new value for EventId
    * @param hostId host id
+   * @param userId user id
    * @param refreshToken refresh token
    * @param value token detail in JSON
    * @param timestamp time the event is recorded
    */
-  public MarketTokenCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String refreshToken, java.lang.String value, java.lang.Long timestamp) {
+  public MarketTokenCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String userId, java.lang.String refreshToken, java.lang.String value, java.lang.Long timestamp) {
     this.EventId = EventId;
     this.hostId = hostId;
+    this.userId = userId;
     this.refreshToken = refreshToken;
     this.value = value;
     this.timestamp = timestamp;
@@ -113,9 +117,10 @@ public class MarketTokenCreatedEvent extends org.apache.avro.specific.SpecificRe
     switch (field$) {
     case 0: return EventId;
     case 1: return hostId;
-    case 2: return refreshToken;
-    case 3: return value;
-    case 4: return timestamp;
+    case 2: return userId;
+    case 3: return refreshToken;
+    case 4: return value;
+    case 5: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -126,9 +131,10 @@ public class MarketTokenCreatedEvent extends org.apache.avro.specific.SpecificRe
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
     case 1: hostId = value$ != null ? value$.toString() : null; break;
-    case 2: refreshToken = value$ != null ? value$.toString() : null; break;
-    case 3: value = value$ != null ? value$.toString() : null; break;
-    case 4: timestamp = (java.lang.Long)value$; break;
+    case 2: userId = value$ != null ? value$.toString() : null; break;
+    case 3: refreshToken = value$ != null ? value$.toString() : null; break;
+    case 4: value = value$ != null ? value$.toString() : null; break;
+    case 5: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -166,6 +172,24 @@ public class MarketTokenCreatedEvent extends org.apache.avro.specific.SpecificRe
    */
   public void setHostId(java.lang.String value) {
     this.hostId = value;
+  }
+
+  /**
+   * Gets the value of the 'userId' field.
+   * @return user id
+   */
+  public java.lang.String getUserId() {
+    return userId;
+  }
+
+
+  /**
+   * Sets the value of the 'userId' field.
+   * user id
+   * @param value the value to set.
+   */
+  public void setUserId(java.lang.String value) {
+    this.userId = value;
   }
 
   /**
@@ -267,6 +291,8 @@ public class MarketTokenCreatedEvent extends org.apache.avro.specific.SpecificRe
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
     /** host id */
     private java.lang.String hostId;
+    /** user id */
+    private java.lang.String userId;
     /** refresh token */
     private java.lang.String refreshToken;
     /** token detail in JSON */
@@ -296,17 +322,21 @@ public class MarketTokenCreatedEvent extends org.apache.avro.specific.SpecificRe
         this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
-      if (isValidValue(fields()[2], other.refreshToken)) {
-        this.refreshToken = data().deepCopy(fields()[2].schema(), other.refreshToken);
+      if (isValidValue(fields()[2], other.userId)) {
+        this.userId = data().deepCopy(fields()[2].schema(), other.userId);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.value)) {
-        this.value = data().deepCopy(fields()[3].schema(), other.value);
+      if (isValidValue(fields()[3], other.refreshToken)) {
+        this.refreshToken = data().deepCopy(fields()[3].schema(), other.refreshToken);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
-      if (isValidValue(fields()[4], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[4].schema(), other.timestamp);
+      if (isValidValue(fields()[4], other.value)) {
+        this.value = data().deepCopy(fields()[4].schema(), other.value);
         fieldSetFlags()[4] = other.fieldSetFlags()[4];
+      }
+      if (isValidValue(fields()[5], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[5].schema(), other.timestamp);
+        fieldSetFlags()[5] = other.fieldSetFlags()[5];
       }
     }
 
@@ -325,17 +355,21 @@ public class MarketTokenCreatedEvent extends org.apache.avro.specific.SpecificRe
         this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.refreshToken)) {
-        this.refreshToken = data().deepCopy(fields()[2].schema(), other.refreshToken);
+      if (isValidValue(fields()[2], other.userId)) {
+        this.userId = data().deepCopy(fields()[2].schema(), other.userId);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.value)) {
-        this.value = data().deepCopy(fields()[3].schema(), other.value);
+      if (isValidValue(fields()[3], other.refreshToken)) {
+        this.refreshToken = data().deepCopy(fields()[3].schema(), other.refreshToken);
         fieldSetFlags()[3] = true;
       }
-      if (isValidValue(fields()[4], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[4].schema(), other.timestamp);
+      if (isValidValue(fields()[4], other.value)) {
+        this.value = data().deepCopy(fields()[4].schema(), other.value);
         fieldSetFlags()[4] = true;
+      }
+      if (isValidValue(fields()[5], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[5].schema(), other.timestamp);
+        fieldSetFlags()[5] = true;
       }
     }
 
@@ -460,6 +494,50 @@ public class MarketTokenCreatedEvent extends org.apache.avro.specific.SpecificRe
     }
 
     /**
+      * Gets the value of the 'userId' field.
+      * user id
+      * @return The value.
+      */
+    public java.lang.String getUserId() {
+      return userId;
+    }
+
+
+    /**
+      * Sets the value of the 'userId' field.
+      * user id
+      * @param value The value of 'userId'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.market.MarketTokenCreatedEvent.Builder setUserId(java.lang.String value) {
+      validate(fields()[2], value);
+      this.userId = value;
+      fieldSetFlags()[2] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'userId' field has been set.
+      * user id
+      * @return True if the 'userId' field has been set, false otherwise.
+      */
+    public boolean hasUserId() {
+      return fieldSetFlags()[2];
+    }
+
+
+    /**
+      * Clears the value of the 'userId' field.
+      * user id
+      * @return This builder.
+      */
+    public net.lightapi.portal.market.MarketTokenCreatedEvent.Builder clearUserId() {
+      userId = null;
+      fieldSetFlags()[2] = false;
+      return this;
+    }
+
+    /**
       * Gets the value of the 'refreshToken' field.
       * refresh token
       * @return The value.
@@ -476,9 +554,9 @@ public class MarketTokenCreatedEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.market.MarketTokenCreatedEvent.Builder setRefreshToken(java.lang.String value) {
-      validate(fields()[2], value);
+      validate(fields()[3], value);
       this.refreshToken = value;
-      fieldSetFlags()[2] = true;
+      fieldSetFlags()[3] = true;
       return this;
     }
 
@@ -488,7 +566,7 @@ public class MarketTokenCreatedEvent extends org.apache.avro.specific.SpecificRe
       * @return True if the 'refreshToken' field has been set, false otherwise.
       */
     public boolean hasRefreshToken() {
-      return fieldSetFlags()[2];
+      return fieldSetFlags()[3];
     }
 
 
@@ -499,7 +577,7 @@ public class MarketTokenCreatedEvent extends org.apache.avro.specific.SpecificRe
       */
     public net.lightapi.portal.market.MarketTokenCreatedEvent.Builder clearRefreshToken() {
       refreshToken = null;
-      fieldSetFlags()[2] = false;
+      fieldSetFlags()[3] = false;
       return this;
     }
 
@@ -520,9 +598,9 @@ public class MarketTokenCreatedEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.market.MarketTokenCreatedEvent.Builder setValue(java.lang.String value) {
-      validate(fields()[3], value);
+      validate(fields()[4], value);
       this.value = value;
-      fieldSetFlags()[3] = true;
+      fieldSetFlags()[4] = true;
       return this;
     }
 
@@ -532,7 +610,7 @@ public class MarketTokenCreatedEvent extends org.apache.avro.specific.SpecificRe
       * @return True if the 'value' field has been set, false otherwise.
       */
     public boolean hasValue() {
-      return fieldSetFlags()[3];
+      return fieldSetFlags()[4];
     }
 
 
@@ -543,7 +621,7 @@ public class MarketTokenCreatedEvent extends org.apache.avro.specific.SpecificRe
       */
     public net.lightapi.portal.market.MarketTokenCreatedEvent.Builder clearValue() {
       value = null;
-      fieldSetFlags()[3] = false;
+      fieldSetFlags()[4] = false;
       return this;
     }
 
@@ -564,9 +642,9 @@ public class MarketTokenCreatedEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.market.MarketTokenCreatedEvent.Builder setTimestamp(long value) {
-      validate(fields()[4], value);
+      validate(fields()[5], value);
       this.timestamp = value;
-      fieldSetFlags()[4] = true;
+      fieldSetFlags()[5] = true;
       return this;
     }
 
@@ -576,7 +654,7 @@ public class MarketTokenCreatedEvent extends org.apache.avro.specific.SpecificRe
       * @return True if the 'timestamp' field has been set, false otherwise.
       */
     public boolean hasTimestamp() {
-      return fieldSetFlags()[4];
+      return fieldSetFlags()[5];
     }
 
 
@@ -586,7 +664,7 @@ public class MarketTokenCreatedEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.market.MarketTokenCreatedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[4] = false;
+      fieldSetFlags()[5] = false;
       return this;
     }
 
@@ -606,9 +684,10 @@ public class MarketTokenCreatedEvent extends org.apache.avro.specific.SpecificRe
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
         record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
-        record.refreshToken = fieldSetFlags()[2] ? this.refreshToken : (java.lang.String) defaultValue(fields()[2]);
-        record.value = fieldSetFlags()[3] ? this.value : (java.lang.String) defaultValue(fields()[3]);
-        record.timestamp = fieldSetFlags()[4] ? this.timestamp : (java.lang.Long) defaultValue(fields()[4]);
+        record.userId = fieldSetFlags()[2] ? this.userId : (java.lang.String) defaultValue(fields()[2]);
+        record.refreshToken = fieldSetFlags()[3] ? this.refreshToken : (java.lang.String) defaultValue(fields()[3]);
+        record.value = fieldSetFlags()[4] ? this.value : (java.lang.String) defaultValue(fields()[4]);
+        record.timestamp = fieldSetFlags()[5] ? this.timestamp : (java.lang.Long) defaultValue(fields()[5]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -645,6 +724,8 @@ public class MarketTokenCreatedEvent extends org.apache.avro.specific.SpecificRe
 
     out.writeString(this.hostId);
 
+    out.writeString(this.userId);
+
     out.writeString(this.refreshToken);
 
     out.writeString(this.value);
@@ -665,6 +746,8 @@ public class MarketTokenCreatedEvent extends org.apache.avro.specific.SpecificRe
 
       this.hostId = in.readString();
 
+      this.userId = in.readString();
+
       this.refreshToken = in.readString();
 
       this.value = in.readString();
@@ -672,7 +755,7 @@ public class MarketTokenCreatedEvent extends org.apache.avro.specific.SpecificRe
       this.timestamp = in.readLong();
 
     } else {
-      for (int i = 0; i < 5; i++) {
+      for (int i = 0; i < 6; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -686,14 +769,18 @@ public class MarketTokenCreatedEvent extends org.apache.avro.specific.SpecificRe
           break;
 
         case 2:
-          this.refreshToken = in.readString();
+          this.userId = in.readString();
           break;
 
         case 3:
-          this.value = in.readString();
+          this.refreshToken = in.readString();
           break;
 
         case 4:
+          this.value = in.readString();
+          break;
+
+        case 5:
           this.timestamp = in.readLong();
           break;
 
