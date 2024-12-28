@@ -2267,6 +2267,259 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         return result;
     }
 
+    @Override
+    public Result<String> createServiceVersion(ServiceVersionCreatedEvent event) {
+        final String insertUser = "INSERT INTO api_version_t (host_id, api_id, api_version, service_id, api_version_desc, " +
+                "spec_link, spec, update_user, update_timestamp) " +
+                "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?)";
+        Result<String> result = null;
+        Map<String, Object> map = JsonMapper.string2Map(event.getValue());
+        Connection conn = null;
+        try {
+            conn = ds.getConnection();
+            conn.setAutoCommit(false);
+            // no duplicate record, insert the user into database and write a success notification.
+            try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getApiId());
+                statement.setString(3, event.getApiVersion());
+                if(map.get("serviceId") != null)
+                    statement.setString(4, (String)map.get("serviceId"));
+                else
+                    statement.setNull(4, NULL);
+
+                if(map.get("apiVersionDesc") != null)
+                    statement.setString(5, (String)map.get("apiVersionDesc"));
+                else
+                    statement.setNull(5, NULL);
+
+                if (map.get("specLink") != null)
+                    statement.setString(6, (String)map.get("specLink"));
+                else
+                    statement.setNull(6, NULL);
+
+                if (map.get("spec") != null)
+                    statement.setInt(7, (Integer)map.get("spec"));
+                else
+                    statement.setNull(7, NULL);
+                statement.setString(8, event.getEventId().getId());
+                statement.setTimestamp(9, new Timestamp(System.currentTimeMillis()));
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "failed to insert the api version " + "hostId " + event.getHostId() + " apiId " + event.getApiId() + " apiVersion " + event.getApiVersion());
+                } else {
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                }
+            }
+            updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
+            // as this is a brand-new user, there is no nonce to be updated. By default, the nonce is 0.
+            conn.commit();
+            result = Success.of(event.getApiId());
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            try {
+                if(conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            try {
+                if(conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        } finally {
+            try {
+                if (conn != null) {
+                    conn.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> updateServiceVersion(ServiceVersionUpdatedEvent event) {
+        final String updateApi = "UPDATE api_version_t SET service_id = ?, api_version_desc = ?, spec_link = ?,  spec = ?," +
+                "update_user = ?, update_timestamp = ? " +
+                "WHERE host_id = ? AND api_id = ? AND api_version = ?";
+
+        Result<String> result = null;
+        Map<String, Object> map = JsonMapper.string2Map(event.getValue());
+        Connection conn = null;
+        try {
+            conn = ds.getConnection();
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement statement = conn.prepareStatement(updateApi)) {
+
+                if(map.get("serviceId") != null) {
+                    statement.setString(1, (String)map.get("serviceId"));
+                } else {
+                    statement.setNull(1, NULL);
+                }
+
+                if(map.get("apiVersionDesc") != null) {
+                    statement.setString(2, (String)map.get("apiVersionDesc"));
+                } else {
+                    statement.setNull(2, NULL);
+                }
+
+                if(map.get("specLink") != null) {
+                    statement.setString(3, (String)map.get("specLink"));
+                } else {
+                    statement.setNull(3, NULL);
+                }
+
+                if(map.get("spec") != null) {
+                    statement.setString(4, (String)map.get("spec"));
+                } else {
+                    statement.setNull(4, NULL);
+                }
+
+                statement.setString(5, event.getEventId().getId());
+                statement.setTimestamp(6, new Timestamp(event.getTimestamp()));
+                statement.setString(7, event.getHostId());
+                statement.setString(8, event.getApiId());
+                statement.setString(9, event.getApiVersion());
+
+                int count = statement.executeUpdate();
+                if(count == 0) {
+                    // no record is updated, write an error notification.
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no record is updated for api version " + " hostId " + event.getHostId() + " apiId " + event.getApiId() + " apiVersion " + event.getApiVersion());
+                    return result;
+                } else {
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
+                }
+                updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
+            }
+            // as this is a brand-new user, there is no nonce to be updated. By default, the nonce is 0.
+            conn.commit();
+            result = Success.of(event.getApiId());
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            try {
+                if(conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            try {
+                if(conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        } finally {
+            try {
+                if (conn != null) {
+                    conn.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+        return result;
+
+    }
+    @Override
+    public Result<String> deleteServiceVersion(ServiceVersionDeletedEvent event) {
+        final String deleteApplication = "DELETE from api_version_t WHERE host_id = ? AND api_id = ? AND api_version = ?";
+        Result<String> result;
+        Connection conn = null;
+        try {
+            conn = ds.getConnection();
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(deleteApplication)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getApiId());
+                statement.setString(3, event.getApiVersion());
+                int count = statement.executeUpdate();
+                if(count == 0) {
+                    // no record is deleted, write an error notification.
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no record is deleted for api version " + " hostId " + event.getHostId() + " apiId " + event.getApiId() + " apiVersion " + event.getApiVersion());
+                } else {
+                    // record is deleted, write a success notification.
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                }
+            }
+            updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
+            conn.commit();
+            result = Success.of(event.getEventId().getId());
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            try {
+                if(conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            try {
+                if(conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        } finally {
+            try {
+                if (conn != null) {
+                    conn.close();
+                }
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+            }
+        }
+        return result;
+
+    }
+
+    @Override
+    public Result<String> queryServiceVersion(String hostId, String apiId) {
+        Result<String> result = null;
+        String sql = "SELECT host_id, api_id, api_version, service_id,\n" +
+                "api_version_desc, spec_link, spec\n" +
+                "FROM api_version_t\n" +
+                "WHERE host_id = ? AND api_id = ?\n" +
+                "ORDER BY api_version";
+
+        List<Map<String, Object>> serviceVersions = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("apiId", resultSet.getString("api_id"));
+                    map.put("apiVersion", resultSet.getString("api_version"));
+                    map.put("serviceId", resultSet.getString("service_id"));
+                    map.put("apiVersionDesc", resultSet.getString("api_version_desc"));
+                    map.put("specLink", resultSet.getString("spec_link"));
+                    map.put("spec", resultSet.getString("spec"));
+                    serviceVersions.add(map);
+                }
+            }
+            result = Success.of(JsonMapper.toJson(serviceVersions));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
     private void addCondition(StringBuilder whereClause, List<Object> parameters, String columnName, String value) {
         if (value != null && !value.equals("*")) {
             if (whereClause.length() > 0) {

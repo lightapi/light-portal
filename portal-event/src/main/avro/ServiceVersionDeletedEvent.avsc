@@ -1,0 +1,54 @@
+{
+  "type": "record",
+  "name": "ServiceVersionDeletedEvent",
+  "namespace": "net.lightapi.portal.market",
+  "fields": [
+    {
+      "name": "EventId",
+      "type": {
+        "type": "record",
+        "name": "EventId",
+        "namespace": "com.networknt.kafka.common",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "doc": "a unique identifier"
+          },
+          {
+            "name": "nonce",
+            "type": "long",
+            "doc": "the number of the transactions for the id"
+          },
+          {
+            "name": "derived",
+            "type": "boolean",
+            "default": false,
+            "doc": "indicate if the event is derived from event processor"
+          }
+        ]
+      }
+    },
+    {
+      "name": "hostId",
+      "type": "string",
+      "doc": "host id"
+    },
+    {
+      "name": "apiId",
+      "type": "string",
+      "doc": "api id"
+    },
+    {
+      "name": "apiVersion",
+      "type": "string",
+      "doc": "api version"
+    },
+    {
+      "name": "timestamp",
+      "type": "long",
+      "default": 0,
+      "doc": "time the event is recorded"
+    }
+  ]
+}
