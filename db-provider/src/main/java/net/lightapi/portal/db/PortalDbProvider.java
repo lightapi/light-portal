@@ -62,6 +62,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> updateServiceVersion(ServiceVersionUpdatedEvent event);
     Result<String> deleteServiceVersion(ServiceVersionDeletedEvent event);
     Result<String> queryServiceVersion(String hostId, String apiId);
+    Result<String> updateServiceSpec(ServiceSpecUpdatedEvent event, List<Map<String, Object>> endpoints);
 
     Result<String> createMarketCode(MarketCodeCreatedEvent event);
     Result<String> deleteMarketCode(MarketCodeDeletedEvent event);

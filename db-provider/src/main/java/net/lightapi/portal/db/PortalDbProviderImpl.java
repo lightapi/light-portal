@@ -2537,6 +2537,120 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         }
     }
 
+    @Override
+    public Result<String> updateServiceSpec(ServiceSpecUpdatedEvent event, List<Map<String, Object>> endpoints) {
+        final String updateApiVersion = "UPDATE api_version_t SET spec = ?, " +
+                "update_user = ?, update_timestamp = ? " +
+                "WHERE host_id = ? AND api_id = ? AND api_version = ?";
+        final String deleteEndpoint = "DELETE FROM api_endpoint_t WHERE host_id = ? AND api_id = ? AND api_version = ?";
+        final String insertEndpoint = "INSERT INTO api_endpoint_t (host_id, api_id, api_version, endpoint, http_method, " +
+                "endpoint_path, endpoint_name, endpoint_desc, update_user, update_timestamp) " +
+                "VALUES (?,? ,?, ?, ?,  ?, ?, ?, ?, ?)";
+        final String insertScope = "INSERT INTO api_endpoint_scope_t (host_id, api_id, api_version, endpoint, scope, scope_desc, " +
+                "update_user, update_timestamp) " +
+                "VALUES (?, ?, ?, ?, ?,  ?, ?, ?)";
+
+
+        Result<String> result = null;
+        Connection conn = null;
+        try {
+            conn = ds.getConnection();
+            conn.setAutoCommit(false);
+
+            // update spec
+            try (PreparedStatement statement = conn.prepareStatement(updateApiVersion)) {
+                statement.setString(1, event.getSpec());
+                statement.setString(2, event.getEventId().getId());
+                statement.setTimestamp(3, new Timestamp(event.getTimestamp()));
+                statement.setString(4, event.getHostId());
+                statement.setString(5, event.getApiId());
+                statement.setString(6, event.getApiVersion());
+
+                int count = statement.executeUpdate();
+                if(count == 0) {
+                    // no record is updated, write an error notification.
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no record is updated for api version " + " hostId " + event.getHostId() + " apiId " + event.getApiId() + " apiVersion " + event.getApiVersion());
+                    return result;
+                } else {
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
+                }
+                updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
+            }
+            // delete endpoints for the api version. the api_endpoint_scope_t will be deleted by the cascade.
+            try (PreparedStatement statement = conn.prepareStatement(deleteEndpoint)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getApiId());
+                statement.setString(3, event.getApiVersion());
+                statement.executeUpdate();
+            }
+            // insert endpoints
+            for(Map<String, Object> endpoint : endpoints) {
+                try (PreparedStatement statement = conn.prepareStatement(insertEndpoint)) {
+                    statement.setString(1, event.getHostId());
+                    statement.setString(2, event.getApiId());
+                    statement.setString(3, event.getApiVersion());
+                    statement.setString(4, (String)endpoint.get("endpoint"));
+                    statement.setString(5, (String)endpoint.get("httpMethod"));
+                    statement.setString(6, (String)endpoint.get("endpointPath"));
+                    statement.setString(7, (String)endpoint.get("endpointName"));
+                    statement.setString(8, (String)endpoint.get("endpointDesc"));
+                    statement.setString(9, event.getEventId().getId());
+                    statement.setTimestamp(10, new Timestamp(event.getTimestamp()));
+                    statement.executeUpdate();
+                }
+                // insert scopes
+                List<String> scopes = (List<String>)endpoint.get("scopes");
+                for(String scope : scopes) {
+                    String[] scopeDesc = scope.split(":");
+                    try (PreparedStatement statement = conn.prepareStatement(insertScope)) {
+                        statement.setString(1, event.getHostId());
+                        statement.setString(2, event.getApiId());
+                        statement.setString(3, event.getApiVersion());
+                        statement.setString(4, (String)endpoint.get("endpoint"));
+                        statement.setString(5, scopeDesc[0]);
+                        if(scopeDesc.length == 1)
+                            statement.setNull(6, NULL);
+                        else
+                            statement.setString(6, scopeDesc[1]);
+                        statement.setString(7, event.getEventId().getId());
+                        statement.setTimestamp(8, new Timestamp(event.getTimestamp()));
+                        statement.executeUpdate();
+                    }
+                }
+            }
+
+            // as this is a brand-new user, there is no nonce to be updated. By default, the nonce is 0.
+            conn.commit();
+            result = Success.of(event.getApiId());
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            try {
+                if(conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            try {
+                if(conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        } finally {
+            try {
+                if (conn != null) {
+                    conn.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+        return result;
+
+    }
+
     public Result<String> createMarketCode(MarketCodeCreatedEvent event) {
         // cache key is based on the hostId and authCode.
         String hostId = event.getHostId();
