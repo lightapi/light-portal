@@ -35,14 +35,19 @@
       "doc": "host id"
     },
     {
-      "name": "style",
+      "name": "apiId",
       "type": "string",
-      "doc": "api style"
+      "doc": "api id"
     },
     {
-      "name": "serviceId",
+      "name": "apiVersion",
       "type": "string",
-      "doc": "service id"
+      "doc": "api version"
+    },
+    {
+      "name": "apiType",
+      "type": "string",
+      "doc": "api type"
     },
     {
       "name": "spec",
