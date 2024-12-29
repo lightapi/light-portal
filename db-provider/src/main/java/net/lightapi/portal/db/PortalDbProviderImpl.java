@@ -2168,7 +2168,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         Result<String> result = null;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "host_id, api_id, api_name\n" +
+                "host_id, api_id, api_name,\n" +
                 "api_desc, operation_owner, delivery_owner, region, business_group,\n" +
                 "lob, platform, capability, git_repo, api_tags, api_status\n" +
                 "FROM api_t\n" +
@@ -2590,10 +2590,19 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     statement.setString(2, event.getApiId());
                     statement.setString(3, event.getApiVersion());
                     statement.setString(4, (String)endpoint.get("endpoint"));
-                    statement.setString(5, (String)endpoint.get("httpMethod"));
+                    statement.setString(5, ((String)endpoint.get("httpMethod")).toLowerCase().trim());
                     statement.setString(6, (String)endpoint.get("endpointPath"));
-                    statement.setString(7, (String)endpoint.get("endpointName"));
-                    statement.setString(8, (String)endpoint.get("endpointDesc"));
+
+                    if(endpoint.get("endpointName") == null)
+                        statement.setNull(7, NULL);
+                    else
+                        statement.setString(7, (String)endpoint.get("endpointName"));
+
+                    if(endpoint.get("endpointDesc") == null)
+                        statement.setNull(8, NULL);
+                    else
+                        statement.setString(8, (String)endpoint.get("endpointDesc"));
+
                     statement.setString(9, event.getEventId().getId());
                     statement.setTimestamp(10, new Timestamp(event.getTimestamp()));
                     statement.executeUpdate();
