@@ -89,7 +89,9 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> updateRule(RuleUpdatedEvent event);
     Result<String> deleteRule(RuleDeletedEvent event);
     Result<List<Map<String, Object>>> queryRuleByHostGroup(String hostId, String groupId);
-    Result<List<Map<String, Object>>> queryRuleByHost(String hostId);
+    Result<String> queryRule(int offset, int limit, String hostId, String ruleId, String ruleName,
+                             String ruleVersion, String ruleType, String ruleGroup, String ruleDesc,
+                             String ruleBody, String ruleOwner, String common);
     Result<Map<String, Object>> queryRuleById(String ruleId);
     Result<List<Map<String, Object>>> queryRuleByHostType(String hostId, String ruleType);
     Result<String> createApiRule(ApiRuleCreatedEvent event);

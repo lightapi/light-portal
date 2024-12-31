@@ -40,35 +40,46 @@
       "doc": "rule id"
     },
     {
+      "name": "ruleName",
+      "type": "string",
+      "doc": "rule name"
+    },
+    {
+      "name": "ruleVersion",
+      "type": "string",
+      "doc": "rule version"
+    },
+    {
       "name": "ruleType",
       "type": "string",
       "doc": "rule type"
     },
     {
-      "name": "groupId",
+      "name": "ruleGroup",
       "type": ["null", "string"],
       "default": null,
-      "doc": "group id"
+      "doc": "rule group"
     },
     {
-      "name": "visibility",
-      "type": "string",
-      "doc": "rule visibility"
+      "name": "ruleDesc",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "rule desc"
     },
     {
-      "name": "desc",
+      "name": "ruleBody",
       "type": "string",
-      "doc": "rule description"
+      "doc": "rule body in YAML"
     },
     {
-      "name": "value",
+      "name": "ruleOwner",
       "type": "string",
-      "doc": "rule detail in YAML"
+      "doc": "rule owner"
     },
     {
-      "name": "owner",
+      "name": "common",
       "type": "string",
-      "doc": "rule owner id"
+      "doc": "common flag"
     },
     {
       "name": "timestamp",

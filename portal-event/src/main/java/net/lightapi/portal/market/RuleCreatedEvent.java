@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class RuleCreatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -2881191565175221439L;
+  private static final long serialVersionUID = -6561574943294315538L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"RuleCreatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"ruleId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule id\"},{\"name\":\"ruleType\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule type\"},{\"name\":\"groupId\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"group id\",\"default\":null},{\"name\":\"visibility\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule visibility\"},{\"name\":\"desc\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule description\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule detail in YAML\"},{\"name\":\"owner\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule owner id\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"RuleCreatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"ruleId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule id\"},{\"name\":\"ruleName\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule name\"},{\"name\":\"ruleVersion\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule version\"},{\"name\":\"ruleType\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule type\"},{\"name\":\"ruleGroup\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"rule group\",\"default\":null},{\"name\":\"ruleDesc\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"rule desc\",\"default\":null},{\"name\":\"ruleBody\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule body in YAML\"},{\"name\":\"ruleOwner\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule owner\"},{\"name\":\"common\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"common flag\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -78,18 +78,22 @@ public class RuleCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
   private java.lang.String hostId;
   /** rule id */
   private java.lang.String ruleId;
+  /** rule name */
+  private java.lang.String ruleName;
+  /** rule version */
+  private java.lang.String ruleVersion;
   /** rule type */
   private java.lang.String ruleType;
-  /** group id */
-  private java.lang.String groupId;
-  /** rule visibility */
-  private java.lang.String visibility;
-  /** rule description */
-  private java.lang.String desc;
-  /** rule detail in YAML */
-  private java.lang.String value;
-  /** rule owner id */
-  private java.lang.String owner;
+  /** rule group */
+  private java.lang.String ruleGroup;
+  /** rule desc */
+  private java.lang.String ruleDesc;
+  /** rule body in YAML */
+  private java.lang.String ruleBody;
+  /** rule owner */
+  private java.lang.String ruleOwner;
+  /** common flag */
+  private java.lang.String common;
   /** time the event is recorded */
   private long timestamp;
 
@@ -105,24 +109,28 @@ public class RuleCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
    * @param EventId The new value for EventId
    * @param hostId host id
    * @param ruleId rule id
+   * @param ruleName rule name
+   * @param ruleVersion rule version
    * @param ruleType rule type
-   * @param groupId group id
-   * @param visibility rule visibility
-   * @param desc rule description
-   * @param value rule detail in YAML
-   * @param owner rule owner id
+   * @param ruleGroup rule group
+   * @param ruleDesc rule desc
+   * @param ruleBody rule body in YAML
+   * @param ruleOwner rule owner
+   * @param common common flag
    * @param timestamp time the event is recorded
    */
-  public RuleCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String ruleId, java.lang.String ruleType, java.lang.String groupId, java.lang.String visibility, java.lang.String desc, java.lang.String value, java.lang.String owner, java.lang.Long timestamp) {
+  public RuleCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String ruleId, java.lang.String ruleName, java.lang.String ruleVersion, java.lang.String ruleType, java.lang.String ruleGroup, java.lang.String ruleDesc, java.lang.String ruleBody, java.lang.String ruleOwner, java.lang.String common, java.lang.Long timestamp) {
     this.EventId = EventId;
     this.hostId = hostId;
     this.ruleId = ruleId;
+    this.ruleName = ruleName;
+    this.ruleVersion = ruleVersion;
     this.ruleType = ruleType;
-    this.groupId = groupId;
-    this.visibility = visibility;
-    this.desc = desc;
-    this.value = value;
-    this.owner = owner;
+    this.ruleGroup = ruleGroup;
+    this.ruleDesc = ruleDesc;
+    this.ruleBody = ruleBody;
+    this.ruleOwner = ruleOwner;
+    this.common = common;
     this.timestamp = timestamp;
   }
 
@@ -134,13 +142,15 @@ public class RuleCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
     case 0: return EventId;
     case 1: return hostId;
     case 2: return ruleId;
-    case 3: return ruleType;
-    case 4: return groupId;
-    case 5: return visibility;
-    case 6: return desc;
-    case 7: return value;
-    case 8: return owner;
-    case 9: return timestamp;
+    case 3: return ruleName;
+    case 4: return ruleVersion;
+    case 5: return ruleType;
+    case 6: return ruleGroup;
+    case 7: return ruleDesc;
+    case 8: return ruleBody;
+    case 9: return ruleOwner;
+    case 10: return common;
+    case 11: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -152,13 +162,15 @@ public class RuleCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
     case 1: hostId = value$ != null ? value$.toString() : null; break;
     case 2: ruleId = value$ != null ? value$.toString() : null; break;
-    case 3: ruleType = value$ != null ? value$.toString() : null; break;
-    case 4: groupId = value$ != null ? value$.toString() : null; break;
-    case 5: visibility = value$ != null ? value$.toString() : null; break;
-    case 6: desc = value$ != null ? value$.toString() : null; break;
-    case 7: value = value$ != null ? value$.toString() : null; break;
-    case 8: owner = value$ != null ? value$.toString() : null; break;
-    case 9: timestamp = (java.lang.Long)value$; break;
+    case 3: ruleName = value$ != null ? value$.toString() : null; break;
+    case 4: ruleVersion = value$ != null ? value$.toString() : null; break;
+    case 5: ruleType = value$ != null ? value$.toString() : null; break;
+    case 6: ruleGroup = value$ != null ? value$.toString() : null; break;
+    case 7: ruleDesc = value$ != null ? value$.toString() : null; break;
+    case 8: ruleBody = value$ != null ? value$.toString() : null; break;
+    case 9: ruleOwner = value$ != null ? value$.toString() : null; break;
+    case 10: common = value$ != null ? value$.toString() : null; break;
+    case 11: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -217,6 +229,42 @@ public class RuleCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
   }
 
   /**
+   * Gets the value of the 'ruleName' field.
+   * @return rule name
+   */
+  public java.lang.String getRuleName() {
+    return ruleName;
+  }
+
+
+  /**
+   * Sets the value of the 'ruleName' field.
+   * rule name
+   * @param value the value to set.
+   */
+  public void setRuleName(java.lang.String value) {
+    this.ruleName = value;
+  }
+
+  /**
+   * Gets the value of the 'ruleVersion' field.
+   * @return rule version
+   */
+  public java.lang.String getRuleVersion() {
+    return ruleVersion;
+  }
+
+
+  /**
+   * Sets the value of the 'ruleVersion' field.
+   * rule version
+   * @param value the value to set.
+   */
+  public void setRuleVersion(java.lang.String value) {
+    this.ruleVersion = value;
+  }
+
+  /**
    * Gets the value of the 'ruleType' field.
    * @return rule type
    */
@@ -235,93 +283,93 @@ public class RuleCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
   }
 
   /**
-   * Gets the value of the 'groupId' field.
-   * @return group id
+   * Gets the value of the 'ruleGroup' field.
+   * @return rule group
    */
-  public java.lang.String getGroupId() {
-    return groupId;
+  public java.lang.String getRuleGroup() {
+    return ruleGroup;
   }
 
 
   /**
-   * Sets the value of the 'groupId' field.
-   * group id
+   * Sets the value of the 'ruleGroup' field.
+   * rule group
    * @param value the value to set.
    */
-  public void setGroupId(java.lang.String value) {
-    this.groupId = value;
+  public void setRuleGroup(java.lang.String value) {
+    this.ruleGroup = value;
   }
 
   /**
-   * Gets the value of the 'visibility' field.
-   * @return rule visibility
+   * Gets the value of the 'ruleDesc' field.
+   * @return rule desc
    */
-  public java.lang.String getVisibility() {
-    return visibility;
+  public java.lang.String getRuleDesc() {
+    return ruleDesc;
   }
 
 
   /**
-   * Sets the value of the 'visibility' field.
-   * rule visibility
+   * Sets the value of the 'ruleDesc' field.
+   * rule desc
    * @param value the value to set.
    */
-  public void setVisibility(java.lang.String value) {
-    this.visibility = value;
+  public void setRuleDesc(java.lang.String value) {
+    this.ruleDesc = value;
   }
 
   /**
-   * Gets the value of the 'desc' field.
-   * @return rule description
+   * Gets the value of the 'ruleBody' field.
+   * @return rule body in YAML
    */
-  public java.lang.String getDesc() {
-    return desc;
+  public java.lang.String getRuleBody() {
+    return ruleBody;
   }
 
 
   /**
-   * Sets the value of the 'desc' field.
-   * rule description
+   * Sets the value of the 'ruleBody' field.
+   * rule body in YAML
    * @param value the value to set.
    */
-  public void setDesc(java.lang.String value) {
-    this.desc = value;
+  public void setRuleBody(java.lang.String value) {
+    this.ruleBody = value;
   }
 
   /**
-   * Gets the value of the 'value' field.
-   * @return rule detail in YAML
+   * Gets the value of the 'ruleOwner' field.
+   * @return rule owner
    */
-  public java.lang.String getValue() {
-    return value;
+  public java.lang.String getRuleOwner() {
+    return ruleOwner;
   }
 
 
   /**
-   * Sets the value of the 'value' field.
-   * rule detail in YAML
+   * Sets the value of the 'ruleOwner' field.
+   * rule owner
    * @param value the value to set.
    */
-  public void setValue(java.lang.String value) {
-    this.value = value;
+  public void setRuleOwner(java.lang.String value) {
+    this.ruleOwner = value;
   }
 
   /**
-   * Gets the value of the 'owner' field.
-   * @return rule owner id
+   * Gets the value of the 'common' field.
+   * @return common flag
    */
-  public java.lang.String getOwner() {
-    return owner;
+  public java.lang.String getCommon() {
+    return common;
   }
 
 
   /**
-   * Sets the value of the 'owner' field.
-   * rule owner id
+   * Sets the value of the 'common' field.
+   * common flag
    * @param value the value to set.
    */
-  public void setOwner(java.lang.String value) {
-    this.owner = value;
+  public void setCommon(java.lang.String value) {
+    this.common = value;
   }
 
   /**
@@ -389,18 +437,22 @@ public class RuleCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
     private java.lang.String hostId;
     /** rule id */
     private java.lang.String ruleId;
+    /** rule name */
+    private java.lang.String ruleName;
+    /** rule version */
+    private java.lang.String ruleVersion;
     /** rule type */
     private java.lang.String ruleType;
-    /** group id */
-    private java.lang.String groupId;
-    /** rule visibility */
-    private java.lang.String visibility;
-    /** rule description */
-    private java.lang.String desc;
-    /** rule detail in YAML */
-    private java.lang.String value;
-    /** rule owner id */
-    private java.lang.String owner;
+    /** rule group */
+    private java.lang.String ruleGroup;
+    /** rule desc */
+    private java.lang.String ruleDesc;
+    /** rule body in YAML */
+    private java.lang.String ruleBody;
+    /** rule owner */
+    private java.lang.String ruleOwner;
+    /** common flag */
+    private java.lang.String common;
     /** time the event is recorded */
     private long timestamp;
 
@@ -430,33 +482,41 @@ public class RuleCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
         this.ruleId = data().deepCopy(fields()[2].schema(), other.ruleId);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.ruleType)) {
-        this.ruleType = data().deepCopy(fields()[3].schema(), other.ruleType);
+      if (isValidValue(fields()[3], other.ruleName)) {
+        this.ruleName = data().deepCopy(fields()[3].schema(), other.ruleName);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
-      if (isValidValue(fields()[4], other.groupId)) {
-        this.groupId = data().deepCopy(fields()[4].schema(), other.groupId);
+      if (isValidValue(fields()[4], other.ruleVersion)) {
+        this.ruleVersion = data().deepCopy(fields()[4].schema(), other.ruleVersion);
         fieldSetFlags()[4] = other.fieldSetFlags()[4];
       }
-      if (isValidValue(fields()[5], other.visibility)) {
-        this.visibility = data().deepCopy(fields()[5].schema(), other.visibility);
+      if (isValidValue(fields()[5], other.ruleType)) {
+        this.ruleType = data().deepCopy(fields()[5].schema(), other.ruleType);
         fieldSetFlags()[5] = other.fieldSetFlags()[5];
       }
-      if (isValidValue(fields()[6], other.desc)) {
-        this.desc = data().deepCopy(fields()[6].schema(), other.desc);
+      if (isValidValue(fields()[6], other.ruleGroup)) {
+        this.ruleGroup = data().deepCopy(fields()[6].schema(), other.ruleGroup);
         fieldSetFlags()[6] = other.fieldSetFlags()[6];
       }
-      if (isValidValue(fields()[7], other.value)) {
-        this.value = data().deepCopy(fields()[7].schema(), other.value);
+      if (isValidValue(fields()[7], other.ruleDesc)) {
+        this.ruleDesc = data().deepCopy(fields()[7].schema(), other.ruleDesc);
         fieldSetFlags()[7] = other.fieldSetFlags()[7];
       }
-      if (isValidValue(fields()[8], other.owner)) {
-        this.owner = data().deepCopy(fields()[8].schema(), other.owner);
+      if (isValidValue(fields()[8], other.ruleBody)) {
+        this.ruleBody = data().deepCopy(fields()[8].schema(), other.ruleBody);
         fieldSetFlags()[8] = other.fieldSetFlags()[8];
       }
-      if (isValidValue(fields()[9], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[9].schema(), other.timestamp);
+      if (isValidValue(fields()[9], other.ruleOwner)) {
+        this.ruleOwner = data().deepCopy(fields()[9].schema(), other.ruleOwner);
         fieldSetFlags()[9] = other.fieldSetFlags()[9];
+      }
+      if (isValidValue(fields()[10], other.common)) {
+        this.common = data().deepCopy(fields()[10].schema(), other.common);
+        fieldSetFlags()[10] = other.fieldSetFlags()[10];
+      }
+      if (isValidValue(fields()[11], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[11].schema(), other.timestamp);
+        fieldSetFlags()[11] = other.fieldSetFlags()[11];
       }
     }
 
@@ -479,33 +539,41 @@ public class RuleCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
         this.ruleId = data().deepCopy(fields()[2].schema(), other.ruleId);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.ruleType)) {
-        this.ruleType = data().deepCopy(fields()[3].schema(), other.ruleType);
+      if (isValidValue(fields()[3], other.ruleName)) {
+        this.ruleName = data().deepCopy(fields()[3].schema(), other.ruleName);
         fieldSetFlags()[3] = true;
       }
-      if (isValidValue(fields()[4], other.groupId)) {
-        this.groupId = data().deepCopy(fields()[4].schema(), other.groupId);
+      if (isValidValue(fields()[4], other.ruleVersion)) {
+        this.ruleVersion = data().deepCopy(fields()[4].schema(), other.ruleVersion);
         fieldSetFlags()[4] = true;
       }
-      if (isValidValue(fields()[5], other.visibility)) {
-        this.visibility = data().deepCopy(fields()[5].schema(), other.visibility);
+      if (isValidValue(fields()[5], other.ruleType)) {
+        this.ruleType = data().deepCopy(fields()[5].schema(), other.ruleType);
         fieldSetFlags()[5] = true;
       }
-      if (isValidValue(fields()[6], other.desc)) {
-        this.desc = data().deepCopy(fields()[6].schema(), other.desc);
+      if (isValidValue(fields()[6], other.ruleGroup)) {
+        this.ruleGroup = data().deepCopy(fields()[6].schema(), other.ruleGroup);
         fieldSetFlags()[6] = true;
       }
-      if (isValidValue(fields()[7], other.value)) {
-        this.value = data().deepCopy(fields()[7].schema(), other.value);
+      if (isValidValue(fields()[7], other.ruleDesc)) {
+        this.ruleDesc = data().deepCopy(fields()[7].schema(), other.ruleDesc);
         fieldSetFlags()[7] = true;
       }
-      if (isValidValue(fields()[8], other.owner)) {
-        this.owner = data().deepCopy(fields()[8].schema(), other.owner);
+      if (isValidValue(fields()[8], other.ruleBody)) {
+        this.ruleBody = data().deepCopy(fields()[8].schema(), other.ruleBody);
         fieldSetFlags()[8] = true;
       }
-      if (isValidValue(fields()[9], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[9].schema(), other.timestamp);
+      if (isValidValue(fields()[9], other.ruleOwner)) {
+        this.ruleOwner = data().deepCopy(fields()[9].schema(), other.ruleOwner);
         fieldSetFlags()[9] = true;
+      }
+      if (isValidValue(fields()[10], other.common)) {
+        this.common = data().deepCopy(fields()[10].schema(), other.common);
+        fieldSetFlags()[10] = true;
+      }
+      if (isValidValue(fields()[11], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[11].schema(), other.timestamp);
+        fieldSetFlags()[11] = true;
       }
     }
 
@@ -674,6 +742,94 @@ public class RuleCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
     }
 
     /**
+      * Gets the value of the 'ruleName' field.
+      * rule name
+      * @return The value.
+      */
+    public java.lang.String getRuleName() {
+      return ruleName;
+    }
+
+
+    /**
+      * Sets the value of the 'ruleName' field.
+      * rule name
+      * @param value The value of 'ruleName'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.market.RuleCreatedEvent.Builder setRuleName(java.lang.String value) {
+      validate(fields()[3], value);
+      this.ruleName = value;
+      fieldSetFlags()[3] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'ruleName' field has been set.
+      * rule name
+      * @return True if the 'ruleName' field has been set, false otherwise.
+      */
+    public boolean hasRuleName() {
+      return fieldSetFlags()[3];
+    }
+
+
+    /**
+      * Clears the value of the 'ruleName' field.
+      * rule name
+      * @return This builder.
+      */
+    public net.lightapi.portal.market.RuleCreatedEvent.Builder clearRuleName() {
+      ruleName = null;
+      fieldSetFlags()[3] = false;
+      return this;
+    }
+
+    /**
+      * Gets the value of the 'ruleVersion' field.
+      * rule version
+      * @return The value.
+      */
+    public java.lang.String getRuleVersion() {
+      return ruleVersion;
+    }
+
+
+    /**
+      * Sets the value of the 'ruleVersion' field.
+      * rule version
+      * @param value The value of 'ruleVersion'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.market.RuleCreatedEvent.Builder setRuleVersion(java.lang.String value) {
+      validate(fields()[4], value);
+      this.ruleVersion = value;
+      fieldSetFlags()[4] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'ruleVersion' field has been set.
+      * rule version
+      * @return True if the 'ruleVersion' field has been set, false otherwise.
+      */
+    public boolean hasRuleVersion() {
+      return fieldSetFlags()[4];
+    }
+
+
+    /**
+      * Clears the value of the 'ruleVersion' field.
+      * rule version
+      * @return This builder.
+      */
+    public net.lightapi.portal.market.RuleCreatedEvent.Builder clearRuleVersion() {
+      ruleVersion = null;
+      fieldSetFlags()[4] = false;
+      return this;
+    }
+
+    /**
       * Gets the value of the 'ruleType' field.
       * rule type
       * @return The value.
@@ -690,9 +846,9 @@ public class RuleCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.market.RuleCreatedEvent.Builder setRuleType(java.lang.String value) {
-      validate(fields()[3], value);
+      validate(fields()[5], value);
       this.ruleType = value;
-      fieldSetFlags()[3] = true;
+      fieldSetFlags()[5] = true;
       return this;
     }
 
@@ -702,7 +858,7 @@ public class RuleCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return True if the 'ruleType' field has been set, false otherwise.
       */
     public boolean hasRuleType() {
-      return fieldSetFlags()[3];
+      return fieldSetFlags()[5];
     }
 
 
@@ -713,227 +869,227 @@ public class RuleCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       */
     public net.lightapi.portal.market.RuleCreatedEvent.Builder clearRuleType() {
       ruleType = null;
-      fieldSetFlags()[3] = false;
-      return this;
-    }
-
-    /**
-      * Gets the value of the 'groupId' field.
-      * group id
-      * @return The value.
-      */
-    public java.lang.String getGroupId() {
-      return groupId;
-    }
-
-
-    /**
-      * Sets the value of the 'groupId' field.
-      * group id
-      * @param value The value of 'groupId'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.RuleCreatedEvent.Builder setGroupId(java.lang.String value) {
-      validate(fields()[4], value);
-      this.groupId = value;
-      fieldSetFlags()[4] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'groupId' field has been set.
-      * group id
-      * @return True if the 'groupId' field has been set, false otherwise.
-      */
-    public boolean hasGroupId() {
-      return fieldSetFlags()[4];
-    }
-
-
-    /**
-      * Clears the value of the 'groupId' field.
-      * group id
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.RuleCreatedEvent.Builder clearGroupId() {
-      groupId = null;
-      fieldSetFlags()[4] = false;
-      return this;
-    }
-
-    /**
-      * Gets the value of the 'visibility' field.
-      * rule visibility
-      * @return The value.
-      */
-    public java.lang.String getVisibility() {
-      return visibility;
-    }
-
-
-    /**
-      * Sets the value of the 'visibility' field.
-      * rule visibility
-      * @param value The value of 'visibility'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.RuleCreatedEvent.Builder setVisibility(java.lang.String value) {
-      validate(fields()[5], value);
-      this.visibility = value;
-      fieldSetFlags()[5] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'visibility' field has been set.
-      * rule visibility
-      * @return True if the 'visibility' field has been set, false otherwise.
-      */
-    public boolean hasVisibility() {
-      return fieldSetFlags()[5];
-    }
-
-
-    /**
-      * Clears the value of the 'visibility' field.
-      * rule visibility
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.RuleCreatedEvent.Builder clearVisibility() {
-      visibility = null;
       fieldSetFlags()[5] = false;
       return this;
     }
 
     /**
-      * Gets the value of the 'desc' field.
-      * rule description
+      * Gets the value of the 'ruleGroup' field.
+      * rule group
       * @return The value.
       */
-    public java.lang.String getDesc() {
-      return desc;
+    public java.lang.String getRuleGroup() {
+      return ruleGroup;
     }
 
 
     /**
-      * Sets the value of the 'desc' field.
-      * rule description
-      * @param value The value of 'desc'.
+      * Sets the value of the 'ruleGroup' field.
+      * rule group
+      * @param value The value of 'ruleGroup'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.RuleCreatedEvent.Builder setDesc(java.lang.String value) {
+    public net.lightapi.portal.market.RuleCreatedEvent.Builder setRuleGroup(java.lang.String value) {
       validate(fields()[6], value);
-      this.desc = value;
+      this.ruleGroup = value;
       fieldSetFlags()[6] = true;
       return this;
     }
 
     /**
-      * Checks whether the 'desc' field has been set.
-      * rule description
-      * @return True if the 'desc' field has been set, false otherwise.
+      * Checks whether the 'ruleGroup' field has been set.
+      * rule group
+      * @return True if the 'ruleGroup' field has been set, false otherwise.
       */
-    public boolean hasDesc() {
+    public boolean hasRuleGroup() {
       return fieldSetFlags()[6];
     }
 
 
     /**
-      * Clears the value of the 'desc' field.
-      * rule description
+      * Clears the value of the 'ruleGroup' field.
+      * rule group
       * @return This builder.
       */
-    public net.lightapi.portal.market.RuleCreatedEvent.Builder clearDesc() {
-      desc = null;
+    public net.lightapi.portal.market.RuleCreatedEvent.Builder clearRuleGroup() {
+      ruleGroup = null;
       fieldSetFlags()[6] = false;
       return this;
     }
 
     /**
-      * Gets the value of the 'value' field.
-      * rule detail in YAML
+      * Gets the value of the 'ruleDesc' field.
+      * rule desc
       * @return The value.
       */
-    public java.lang.String getValue() {
-      return value;
+    public java.lang.String getRuleDesc() {
+      return ruleDesc;
     }
 
 
     /**
-      * Sets the value of the 'value' field.
-      * rule detail in YAML
-      * @param value The value of 'value'.
+      * Sets the value of the 'ruleDesc' field.
+      * rule desc
+      * @param value The value of 'ruleDesc'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.RuleCreatedEvent.Builder setValue(java.lang.String value) {
+    public net.lightapi.portal.market.RuleCreatedEvent.Builder setRuleDesc(java.lang.String value) {
       validate(fields()[7], value);
-      this.value = value;
+      this.ruleDesc = value;
       fieldSetFlags()[7] = true;
       return this;
     }
 
     /**
-      * Checks whether the 'value' field has been set.
-      * rule detail in YAML
-      * @return True if the 'value' field has been set, false otherwise.
+      * Checks whether the 'ruleDesc' field has been set.
+      * rule desc
+      * @return True if the 'ruleDesc' field has been set, false otherwise.
       */
-    public boolean hasValue() {
+    public boolean hasRuleDesc() {
       return fieldSetFlags()[7];
     }
 
 
     /**
-      * Clears the value of the 'value' field.
-      * rule detail in YAML
+      * Clears the value of the 'ruleDesc' field.
+      * rule desc
       * @return This builder.
       */
-    public net.lightapi.portal.market.RuleCreatedEvent.Builder clearValue() {
-      value = null;
+    public net.lightapi.portal.market.RuleCreatedEvent.Builder clearRuleDesc() {
+      ruleDesc = null;
       fieldSetFlags()[7] = false;
       return this;
     }
 
     /**
-      * Gets the value of the 'owner' field.
-      * rule owner id
+      * Gets the value of the 'ruleBody' field.
+      * rule body in YAML
       * @return The value.
       */
-    public java.lang.String getOwner() {
-      return owner;
+    public java.lang.String getRuleBody() {
+      return ruleBody;
     }
 
 
     /**
-      * Sets the value of the 'owner' field.
-      * rule owner id
-      * @param value The value of 'owner'.
+      * Sets the value of the 'ruleBody' field.
+      * rule body in YAML
+      * @param value The value of 'ruleBody'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.RuleCreatedEvent.Builder setOwner(java.lang.String value) {
+    public net.lightapi.portal.market.RuleCreatedEvent.Builder setRuleBody(java.lang.String value) {
       validate(fields()[8], value);
-      this.owner = value;
+      this.ruleBody = value;
       fieldSetFlags()[8] = true;
       return this;
     }
 
     /**
-      * Checks whether the 'owner' field has been set.
-      * rule owner id
-      * @return True if the 'owner' field has been set, false otherwise.
+      * Checks whether the 'ruleBody' field has been set.
+      * rule body in YAML
+      * @return True if the 'ruleBody' field has been set, false otherwise.
       */
-    public boolean hasOwner() {
+    public boolean hasRuleBody() {
       return fieldSetFlags()[8];
     }
 
 
     /**
-      * Clears the value of the 'owner' field.
-      * rule owner id
+      * Clears the value of the 'ruleBody' field.
+      * rule body in YAML
       * @return This builder.
       */
-    public net.lightapi.portal.market.RuleCreatedEvent.Builder clearOwner() {
-      owner = null;
+    public net.lightapi.portal.market.RuleCreatedEvent.Builder clearRuleBody() {
+      ruleBody = null;
       fieldSetFlags()[8] = false;
+      return this;
+    }
+
+    /**
+      * Gets the value of the 'ruleOwner' field.
+      * rule owner
+      * @return The value.
+      */
+    public java.lang.String getRuleOwner() {
+      return ruleOwner;
+    }
+
+
+    /**
+      * Sets the value of the 'ruleOwner' field.
+      * rule owner
+      * @param value The value of 'ruleOwner'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.market.RuleCreatedEvent.Builder setRuleOwner(java.lang.String value) {
+      validate(fields()[9], value);
+      this.ruleOwner = value;
+      fieldSetFlags()[9] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'ruleOwner' field has been set.
+      * rule owner
+      * @return True if the 'ruleOwner' field has been set, false otherwise.
+      */
+    public boolean hasRuleOwner() {
+      return fieldSetFlags()[9];
+    }
+
+
+    /**
+      * Clears the value of the 'ruleOwner' field.
+      * rule owner
+      * @return This builder.
+      */
+    public net.lightapi.portal.market.RuleCreatedEvent.Builder clearRuleOwner() {
+      ruleOwner = null;
+      fieldSetFlags()[9] = false;
+      return this;
+    }
+
+    /**
+      * Gets the value of the 'common' field.
+      * common flag
+      * @return The value.
+      */
+    public java.lang.String getCommon() {
+      return common;
+    }
+
+
+    /**
+      * Sets the value of the 'common' field.
+      * common flag
+      * @param value The value of 'common'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.market.RuleCreatedEvent.Builder setCommon(java.lang.String value) {
+      validate(fields()[10], value);
+      this.common = value;
+      fieldSetFlags()[10] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'common' field has been set.
+      * common flag
+      * @return True if the 'common' field has been set, false otherwise.
+      */
+    public boolean hasCommon() {
+      return fieldSetFlags()[10];
+    }
+
+
+    /**
+      * Clears the value of the 'common' field.
+      * common flag
+      * @return This builder.
+      */
+    public net.lightapi.portal.market.RuleCreatedEvent.Builder clearCommon() {
+      common = null;
+      fieldSetFlags()[10] = false;
       return this;
     }
 
@@ -954,9 +1110,9 @@ public class RuleCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.market.RuleCreatedEvent.Builder setTimestamp(long value) {
-      validate(fields()[9], value);
+      validate(fields()[11], value);
       this.timestamp = value;
-      fieldSetFlags()[9] = true;
+      fieldSetFlags()[11] = true;
       return this;
     }
 
@@ -966,7 +1122,7 @@ public class RuleCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return True if the 'timestamp' field has been set, false otherwise.
       */
     public boolean hasTimestamp() {
-      return fieldSetFlags()[9];
+      return fieldSetFlags()[11];
     }
 
 
@@ -976,7 +1132,7 @@ public class RuleCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.market.RuleCreatedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[9] = false;
+      fieldSetFlags()[11] = false;
       return this;
     }
 
@@ -997,13 +1153,15 @@ public class RuleCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
         }
         record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
         record.ruleId = fieldSetFlags()[2] ? this.ruleId : (java.lang.String) defaultValue(fields()[2]);
-        record.ruleType = fieldSetFlags()[3] ? this.ruleType : (java.lang.String) defaultValue(fields()[3]);
-        record.groupId = fieldSetFlags()[4] ? this.groupId : (java.lang.String) defaultValue(fields()[4]);
-        record.visibility = fieldSetFlags()[5] ? this.visibility : (java.lang.String) defaultValue(fields()[5]);
-        record.desc = fieldSetFlags()[6] ? this.desc : (java.lang.String) defaultValue(fields()[6]);
-        record.value = fieldSetFlags()[7] ? this.value : (java.lang.String) defaultValue(fields()[7]);
-        record.owner = fieldSetFlags()[8] ? this.owner : (java.lang.String) defaultValue(fields()[8]);
-        record.timestamp = fieldSetFlags()[9] ? this.timestamp : (java.lang.Long) defaultValue(fields()[9]);
+        record.ruleName = fieldSetFlags()[3] ? this.ruleName : (java.lang.String) defaultValue(fields()[3]);
+        record.ruleVersion = fieldSetFlags()[4] ? this.ruleVersion : (java.lang.String) defaultValue(fields()[4]);
+        record.ruleType = fieldSetFlags()[5] ? this.ruleType : (java.lang.String) defaultValue(fields()[5]);
+        record.ruleGroup = fieldSetFlags()[6] ? this.ruleGroup : (java.lang.String) defaultValue(fields()[6]);
+        record.ruleDesc = fieldSetFlags()[7] ? this.ruleDesc : (java.lang.String) defaultValue(fields()[7]);
+        record.ruleBody = fieldSetFlags()[8] ? this.ruleBody : (java.lang.String) defaultValue(fields()[8]);
+        record.ruleOwner = fieldSetFlags()[9] ? this.ruleOwner : (java.lang.String) defaultValue(fields()[9]);
+        record.common = fieldSetFlags()[10] ? this.common : (java.lang.String) defaultValue(fields()[10]);
+        record.timestamp = fieldSetFlags()[11] ? this.timestamp : (java.lang.Long) defaultValue(fields()[11]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -1042,23 +1200,33 @@ public class RuleCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
 
     out.writeString(this.ruleId);
 
+    out.writeString(this.ruleName);
+
+    out.writeString(this.ruleVersion);
+
     out.writeString(this.ruleType);
 
-    if (this.groupId == null) {
+    if (this.ruleGroup == null) {
       out.writeIndex(0);
       out.writeNull();
     } else {
       out.writeIndex(1);
-      out.writeString(this.groupId);
+      out.writeString(this.ruleGroup);
     }
 
-    out.writeString(this.visibility);
+    if (this.ruleDesc == null) {
+      out.writeIndex(0);
+      out.writeNull();
+    } else {
+      out.writeIndex(1);
+      out.writeString(this.ruleDesc);
+    }
 
-    out.writeString(this.desc);
+    out.writeString(this.ruleBody);
 
-    out.writeString(this.value);
+    out.writeString(this.ruleOwner);
 
-    out.writeString(this.owner);
+    out.writeString(this.common);
 
     out.writeLong(this.timestamp);
 
@@ -1078,27 +1246,36 @@ public class RuleCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
 
       this.ruleId = in.readString();
 
+      this.ruleName = in.readString();
+
+      this.ruleVersion = in.readString();
+
       this.ruleType = in.readString();
 
       if (in.readIndex() != 1) {
         in.readNull();
-        this.groupId = null;
+        this.ruleGroup = null;
       } else {
-        this.groupId = in.readString();
+        this.ruleGroup = in.readString();
       }
 
-      this.visibility = in.readString();
+      if (in.readIndex() != 1) {
+        in.readNull();
+        this.ruleDesc = null;
+      } else {
+        this.ruleDesc = in.readString();
+      }
 
-      this.desc = in.readString();
+      this.ruleBody = in.readString();
 
-      this.value = in.readString();
+      this.ruleOwner = in.readString();
 
-      this.owner = in.readString();
+      this.common = in.readString();
 
       this.timestamp = in.readLong();
 
     } else {
-      for (int i = 0; i < 10; i++) {
+      for (int i = 0; i < 12; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -1116,35 +1293,48 @@ public class RuleCreatedEvent extends org.apache.avro.specific.SpecificRecordBas
           break;
 
         case 3:
-          this.ruleType = in.readString();
+          this.ruleName = in.readString();
           break;
 
         case 4:
-          if (in.readIndex() != 1) {
-            in.readNull();
-            this.groupId = null;
-          } else {
-            this.groupId = in.readString();
-          }
+          this.ruleVersion = in.readString();
           break;
 
         case 5:
-          this.visibility = in.readString();
+          this.ruleType = in.readString();
           break;
 
         case 6:
-          this.desc = in.readString();
+          if (in.readIndex() != 1) {
+            in.readNull();
+            this.ruleGroup = null;
+          } else {
+            this.ruleGroup = in.readString();
+          }
           break;
 
         case 7:
-          this.value = in.readString();
+          if (in.readIndex() != 1) {
+            in.readNull();
+            this.ruleDesc = null;
+          } else {
+            this.ruleDesc = in.readString();
+          }
           break;
 
         case 8:
-          this.owner = in.readString();
+          this.ruleBody = in.readString();
           break;
 
         case 9:
+          this.ruleOwner = in.readString();
+          break;
+
+        case 10:
+          this.common = in.readString();
+          break;
+
+        case 11:
           this.timestamp = in.readLong();
           break;
 

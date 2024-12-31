@@ -1,6 +1,5 @@
 package net.lightapi.portal.db;
 
-import com.github.benmanes.caffeine.cache.Cache;
 import com.networknt.config.JsonMapper;
 import com.networknt.kafka.common.AvroConverter;
 import com.networknt.monad.Failure;
@@ -21,9 +20,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static java.sql.Types.NULL;
 import static com.networknt.db.provider.SqlDbStartupHook.cacheManager;
 import static com.networknt.db.provider.SqlDbStartupHook.ds;
+import static java.sql.Types.NULL;
 
 public class PortalDbProviderImpl implements PortalDbProvider {
     public static final Logger logger = LoggerFactory.getLogger(PortalDbProviderImpl.class);
@@ -69,7 +68,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         List<Map<String, Object>> tables = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-            PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
             preparedStatement.setString(1, hostId);
             preparedStatement.setString(2, active);
             preparedStatement.setString(3, editable);
@@ -90,7 +89,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     Map<String, Object> map = new HashMap<>();
                     // only get the total once as it is the same for all rows.
                     if (isFirstRow) {
-                        total =  resultSet.getInt("total");
+                        total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
 
@@ -191,7 +190,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                 }
             }
-            if(map.size() == 0)
+            if (map.size() == 0)
                 result = Failure.of(new Status(OBJECT_NOT_FOUND, "user", email));
             else
                 result = Success.of(JsonMapper.toJson(map));
@@ -248,7 +247,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                 }
             }
-            if(map.size() == 0)
+            if (map.size() == 0)
                 result = Failure.of(new Status(OBJECT_NOT_FOUND, "user", email));
             else
                 result = Success.of(JsonMapper.toJson(map));
@@ -305,7 +304,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                 }
             }
-            if(map.size() == 0)
+            if (map.size() == 0)
                 result = Failure.of(new Status(OBJECT_NOT_FOUND, "user", userId));
             else
                 result = Success.of(JsonMapper.toJson(map));
@@ -360,7 +359,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                 }
             }
-            if(map.size() == 0)
+            if (map.size() == 0)
                 result = Failure.of(new Status(OBJECT_NOT_FOUND, "user", cryptoType + cryptoAddress));
             else
                 result = Success.of(JsonMapper.toJson(map));
@@ -393,7 +392,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                 }
             }
-            if(email == null)
+            if (email == null)
                 result = Failure.of(new Status(OBJECT_NOT_FOUND, "user email", cryptoType + cryptoAddress));
             else
                 result = Success.of(email);
@@ -409,12 +408,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     /**
      * insert notification into database within the same transaction as conn is passed in.
-     * @param conn The connection to the database
+     *
+     * @param conn   The connection to the database
      * @param userId The userId of the user
-     * @param nonce The nonce of the notification
-     * @param json The json string of the event
-     * @param flag The flag of the notification
-     * @param error The error message of the notification
+     * @param nonce  The nonce of the notification
+     * @param json   The json string of the event
+     * @param flag   The flag of the notification
+     * @param error  The error message of the notification
      * @throws SQLException when there is an error in the database access
      */
     public void insertNotification(Connection conn, String userId, long nonce, String json, boolean flag, String error) throws SQLException {
@@ -424,7 +424,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             statement.setString(3, json);
             statement.setTimestamp(4, new Timestamp(System.currentTimeMillis()));
             statement.setBoolean(5, flag);
-            if(error != null) {
+            if (error != null) {
                 statement.setString(6, error);
             } else {
                 statement.setNull(6, NULL);
@@ -435,11 +435,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     /**
      * update nonce in user_t to reflect the latest event nonce.
-     * @param conn The connection to the database
+     *
+     * @param conn   The connection to the database
      * @param userId The userId of the user
-     * @param nonce The nonce of the notification
-     * @throws SQLException when there is an error in the database access
+     * @param nonce  The nonce of the notification
      * @return the number of rows updated
+     * @throws SQLException when there is an error in the database access
      */
     public int updateNonce(Connection conn, long nonce, String userId) throws SQLException {
         int count = 0;
@@ -457,7 +458,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
      *
      * @param event event that is created by user service
      * @return result of email
-     *
      */
     @Override
     public Result<String> createUser(UserCreatedEvent event) {
@@ -481,7 +481,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
                         // found duplicate record, write an error notification.
-                        insertNotification(conn, event.getUserId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "userId or email already exists in database.");
+                        insertNotification(conn, event.getUserId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "userId or email already exists in database.");
                         return result;
                     }
                 }
@@ -493,64 +493,64 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(2, event.getEmail());
                 statement.setString(3, event.getPassword());
                 statement.setString(4, event.getLanguage());
-                if(map.get("first_name") != null)
-                    statement.setString(5, (String)map.get("first_name"));
+                if (map.get("first_name") != null)
+                    statement.setString(5, (String) map.get("first_name"));
                 else
                     statement.setNull(5, NULL);
 
-                if(map.get("last_name") != null)
-                    statement.setString(6, (String)map.get("last_name"));
+                if (map.get("last_name") != null)
+                    statement.setString(6, (String) map.get("last_name"));
                 else
                     statement.setNull(6, NULL);
 
-                if(map.get("user_type") != null)
-                    statement.setString(7, (String)map.get("user_type"));
+                if (map.get("user_type") != null)
+                    statement.setString(7, (String) map.get("user_type"));
                 else
                     statement.setNull(7, NULL);
 
-                if(map.get("phone_number") != null)
-                    statement.setString(8, (String)map.get("phone_number"));
+                if (map.get("phone_number") != null)
+                    statement.setString(8, (String) map.get("phone_number"));
                 else
                     statement.setNull(8, NULL);
 
-                if(map.get("gender") != null) {
-                    statement.setString(9, (String)map.get("gender"));
+                if (map.get("gender") != null) {
+                    statement.setString(9, (String) map.get("gender"));
                 } else {
                     statement.setNull(9, NULL);
                 }
-                java.util.Date birthday = (java.util.Date)map.get("birthday");
-                if(birthday != null) {
+                java.util.Date birthday = (java.util.Date) map.get("birthday");
+                if (birthday != null) {
                     statement.setDate(10, new java.sql.Date(birthday.getTime()));
                 } else {
                     statement.setNull(10, NULL);
                 }
                 Object countryObject = event.get("country");
-                if(countryObject != null) {
-                    statement.setString(11, (String)countryObject);
+                if (countryObject != null) {
+                    statement.setString(11, (String) countryObject);
                 } else {
                     statement.setNull(11, NULL);
                 }
                 Object provinceObject = event.get("province");
-                if(provinceObject != null) {
-                    statement.setString(12, (String)provinceObject);
+                if (provinceObject != null) {
+                    statement.setString(12, (String) provinceObject);
                 } else {
                     statement.setNull(12, NULL);
                 }
                 Object cityObject = event.get("city");
-                if(cityObject != null) {
-                    statement.setString(13, (String)cityObject);
+                if (cityObject != null) {
+                    statement.setString(13, (String) cityObject);
                 } else {
                     statement.setNull(13, NULL);
                 }
                 Object addressObject = map.get("address");
-                if(addressObject != null) {
-                    statement.setString(14, (String)addressObject);
+                if (addressObject != null) {
+                    statement.setString(14, (String) addressObject);
                 } else {
                     statement.setNull(14, NULL);
                 }
                 Object postCodeObject = map.get("post_code");
-                if(postCodeObject != null) {
-                    statement.setString(15, (String)postCodeObject);
+                if (postCodeObject != null) {
+                    statement.setString(15, (String) postCodeObject);
                 } else {
                     statement.setNull(15, NULL);
                 }
@@ -564,14 +564,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(2, event.getHostId());
                 statement.execute();
             }
-            insertNotification(conn, event.getEmail(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+            insertNotification(conn, event.getEmail(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
             // as this is a brand-new user, there is no nonce to be updated. By default, the nonce is 0.
             conn.commit();
             result = Success.of(event.getUserId());
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -579,7 +579,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -610,7 +610,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                 }
             }
-            if(nonce == null)
+            if (nonce == null)
                 result = Failure.of(new Status(OBJECT_NOT_FOUND, "user nonce", userId));
             else
                 result = Success.of(nonce);
@@ -631,7 +631,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
      *
      * @param event event that is created by user service
      * @return result of email
-     *
      */
     @Override
     public Result<String> confirmUser(UserConfirmedEvent event) {
@@ -653,10 +652,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                             updateStatement.setString(2, event.getEventId().getId());
                             updateStatement.execute();
                         }
-                        insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,null);
+                        insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
                     } else {
                         // record is not found with the email and token. write an error notification.
-                        insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "token " + event.getToken() + " is not matched for email " + event.getEventId().getId());
+                        insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "token " + event.getToken() + " is not matched for email " + event.getEventId().getId());
                     }
                 }
             }
@@ -665,7 +664,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -673,7 +672,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -696,7 +695,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
      *
      * @param event event that is created by user service
      * @return result of email
-     *
      */
     @Override
     public Result<String> createSocialUser(SocialUserCreatedEvent event) {
@@ -716,7 +714,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
                         // found duplicate record, write an error notification.
-                        insertNotification(conn, event.getEmail(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "userId or email already exists in database.");
+                        insertNotification(conn, event.getEmail(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "userId or email already exists in database.");
                         return result;
                     }
                 }
@@ -725,69 +723,69 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
                 statement.setString(1, event.getHostId());
                 statement.setString(2, event.getUserId());
-                if(map.get("first_name") != null)
-                    statement.setString(3, (String)map.get("first_name"));
+                if (map.get("first_name") != null)
+                    statement.setString(3, (String) map.get("first_name"));
                 else
                     statement.setNull(3, NULL);
-                if(map.get("last_name") != null)
-                    statement.setString(4, (String)map.get("last_name"));
+                if (map.get("last_name") != null)
+                    statement.setString(4, (String) map.get("last_name"));
                 else
                     statement.setNull(4, NULL);
                 statement.setString(5, event.getEmail());
                 statement.setString(6, event.getRoles());
                 statement.setString(7, event.getLanguage());
                 statement.setBoolean(8, event.getVerified());
-                if(map.get("gender") != null) {
-                    statement.setString(9, (String)map.get("gender"));
+                if (map.get("gender") != null) {
+                    statement.setString(9, (String) map.get("gender"));
                 } else {
                     statement.setNull(9, NULL);
                 }
-                java.util.Date birthday = (java.util.Date)map.get("birthday");
-                if(birthday != null) {
+                java.util.Date birthday = (java.util.Date) map.get("birthday");
+                if (birthday != null) {
                     statement.setDate(10, new java.sql.Date(birthday.getTime()));
                 } else {
                     statement.setNull(10, NULL);
                 }
                 Object countryObject = map.get("country");
-                if(countryObject != null) {
-                    statement.setString(11, (String)countryObject);
+                if (countryObject != null) {
+                    statement.setString(11, (String) countryObject);
                 } else {
                     statement.setNull(11, NULL);
                 }
                 Object provinceObject = map.get("province");
-                if(provinceObject != null) {
-                    statement.setString(12, (String)provinceObject);
+                if (provinceObject != null) {
+                    statement.setString(12, (String) provinceObject);
                 } else {
                     statement.setNull(12, NULL);
                 }
                 Object cityObject = map.get("city");
-                if(cityObject != null) {
-                    statement.setString(13, (String)cityObject);
+                if (cityObject != null) {
+                    statement.setString(13, (String) cityObject);
                 } else {
                     statement.setNull(13, NULL);
                 }
                 Object postCodeObject = map.get("post_code");
-                if(postCodeObject != null) {
-                    statement.setString(14, (String)postCodeObject);
+                if (postCodeObject != null) {
+                    statement.setString(14, (String) postCodeObject);
                 } else {
                     statement.setNull(14, NULL);
                 }
                 Object addressObject = map.get("address");
-                if(addressObject != null) {
-                    statement.setString(15, (String)addressObject);
+                if (addressObject != null) {
+                    statement.setString(15, (String) addressObject);
                 } else {
                     statement.setNull(15, NULL);
                 }
                 statement.execute();
             }
-            insertNotification(conn, event.getEmail(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+            insertNotification(conn, event.getEmail(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
             // as this is a brand-new user, there is no nonce to be updated. By default, the nonce is 0.
             conn.commit();
             result = Success.of(event.getUserId());
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -795,7 +793,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -817,7 +815,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
      *
      * @param event event that is created by user service
      * @return result of email
-     *
      */
     @Override
     public Result<String> updateUser(UserUpdatedEvent event) {
@@ -831,14 +828,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try {
             conn = ds.getConnection();
             conn.setAutoCommit(false);
-            if(event.getTaijiWallet() != null) {
+            if (event.getTaijiWallet() != null) {
                 try (PreparedStatement statement = conn.prepareStatement(queryUserIdByWallet)) {
                     statement.setString(1, event.getTaijiWallet());
                     try (ResultSet resultSet = statement.executeQuery()) {
                         if (resultSet.next()) {
                             String userId = resultSet.getString(1);
                             // found duplicate record, write an error notification.
-                            insertNotification(conn, event.getEmail(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "wallet already exists in database for userId ." + userId);
+                            insertNotification(conn, event.getEmail(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "wallet already exists in database for userId ." + userId);
                             return result;
                         }
                     }
@@ -850,51 +847,51 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(updateUser)) {
                 statement.setString(1, event.getHostId());
                 statement.setString(2, event.getLanguage());
-                if(event.getTaijiWallet() != null) {
+                if (event.getTaijiWallet() != null) {
                     statement.setString(3, event.getTaijiWallet());
                 } else {
                     statement.setNull(3, NULL);
                 }
-                if(event.get("country") != null) {
-                    statement.setString(4, (String)event.get("country"));
+                if (event.get("country") != null) {
+                    statement.setString(4, (String) event.get("country"));
                 } else {
                     statement.setNull(4, NULL);
                 }
-                if(event.get("province") != null) {
-                    statement.setString(5, (String)event.get("province"));
+                if (event.get("province") != null) {
+                    statement.setString(5, (String) event.get("province"));
                 } else {
                     statement.setNull(5, NULL);
                 }
-                if(event.get("city") != null) {
-                    statement.setString(6, (String)event.get("city"));
+                if (event.get("city") != null) {
+                    statement.setString(6, (String) event.get("city"));
                 } else {
                     statement.setNull(6, NULL);
                 }
-                if(map.get("post_code") != null) {
-                    statement.setString(7, (String)map.get("post_code"));
+                if (map.get("post_code") != null) {
+                    statement.setString(7, (String) map.get("post_code"));
                 } else {
                     statement.setNull(7, NULL);
                 }
-                if(map.get("address") != null) {
-                    statement.setString(8, (String)map.get("address"));
+                if (map.get("address") != null) {
+                    statement.setString(8, (String) map.get("address"));
                 } else {
                     statement.setNull(8, NULL);
                 }
-                if(map.get("first_name") != null)
-                    statement.setString(9, (String)map.get("first_name"));
+                if (map.get("first_name") != null)
+                    statement.setString(9, (String) map.get("first_name"));
                 else
                     statement.setNull(9, NULL);
-                if(map.get("last_name") != null)
-                    statement.setString(10, (String)map.get("last_name"));
+                if (map.get("last_name") != null)
+                    statement.setString(10, (String) map.get("last_name"));
                 else
                     statement.setNull(10, NULL);
-                if(map.get("gender") != null) {
-                    statement.setString(11, (String)map.get("gender"));
+                if (map.get("gender") != null) {
+                    statement.setString(11, (String) map.get("gender"));
                 } else {
                     statement.setNull(11, NULL);
                 }
-                java.util.Date birthday = (java.util.Date)map.get("birthday");
-                if(birthday != null) {
+                java.util.Date birthday = (java.util.Date) map.get("birthday");
+                if (birthday != null) {
                     statement.setDate(12, new java.sql.Date(birthday.getTime()));
                 } else {
                     statement.setNull(12, NULL);
@@ -902,9 +899,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(13, event.getEmail());
                 statement.setLong(14, event.getEventId().getNonce() + 1);
                 int count = statement.executeUpdate();
-                if(count == 0) {
+                if (count == 0) {
                     // no record is updated, write an error notification.
-                    insertNotification(conn, event.getEmail(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no record is updated by email" + event.getEmail());
+                    insertNotification(conn, event.getEmail(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "no record is updated by email" + event.getEmail());
                     return result;
                 } else {
                     insertNotification(conn, event.getEmail(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
@@ -916,7 +913,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -924,7 +921,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -946,7 +943,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
      *
      * @param event event that is created by user service
      * @return result of email
-     *
      */
     @Override
     public Result<String> deleteUser(UserDeletedEvent event) {
@@ -960,12 +956,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(deleteUserByEmail)) {
                 statement.setString(1, event.getEmail());
                 int count = statement.executeUpdate();
-                if(count == 0) {
+                if (count == 0) {
                     // no record is deleted, write an error notification.
-                    insertNotification(conn, event.getEmail(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no record is deleted by email " + event.getEmail());
+                    insertNotification(conn, event.getEmail(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "no record is deleted by email " + event.getEmail());
                 } else {
                     // record is deleted, write a success notification.
-                    insertNotification(conn, event.getEmail(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                    insertNotification(conn, event.getEmail(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
                 }
             }
             conn.commit();
@@ -973,7 +969,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -981,7 +977,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -1003,7 +999,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
      *
      * @param event event that is created by user service
      * @return result of email
-     *
      */
     @Override
     public Result<String> updateUserRoles(UserRolesUpdatedEvent event) {
@@ -1018,12 +1013,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setLong(2, event.getEventId().getNonce() + 1);
                 statement.setString(3, event.getEmail());
                 int count = statement.executeUpdate();
-                if(count == 0) {
+                if (count == 0) {
                     // no record is deleted, write an error notification.
-                    insertNotification(conn, event.getEmail(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no roles is updated by email " + event.getEmail());
+                    insertNotification(conn, event.getEmail(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "no roles is updated by email " + event.getEmail());
                 } else {
                     // record is deleted, write a success notification.
-                    insertNotification(conn, event.getEmail(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                    insertNotification(conn, event.getEmail(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
                 }
             }
             conn.commit();
@@ -1031,7 +1026,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -1039,7 +1034,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -1061,7 +1056,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
      *
      * @param event event that is created by user service
      * @return result of email
-     *
      */
     @Override
     public Result<String> forgetPassword(PasswordForgotEvent event) {
@@ -1076,12 +1070,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setLong(2, event.getEventId().getNonce() + 1);
                 statement.setString(3, event.getEmail());
                 int count = statement.executeUpdate();
-                if(count == 0) {
+                if (count == 0) {
                     // no record is deleted, write an error notification.
-                    insertNotification(conn, event.getEmail(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no token is updated by email " + event.getEmail());
+                    insertNotification(conn, event.getEmail(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "no token is updated by email " + event.getEmail());
                 } else {
                     // record is deleted, write a success notification.
-                    insertNotification(conn, event.getEmail(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                    insertNotification(conn, event.getEmail(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
                 }
             }
             conn.commit();
@@ -1089,7 +1083,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -1097,7 +1091,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -1119,7 +1113,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
      *
      * @param event event that is created by user service
      * @return result of email
-     *
      */
     @Override
     public Result<String> resetPassword(PasswordResetEvent event) {
@@ -1134,12 +1127,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setLong(2, event.getEventId().getNonce() + 1);
                 statement.setString(3, event.getEmail());
                 int count = statement.executeUpdate();
-                if(count == 0) {
+                if (count == 0) {
                     // no record is deleted, write an error notification.
-                    insertNotification(conn, event.getEmail(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no token is updated by email " + event.getEmail());
+                    insertNotification(conn, event.getEmail(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "no token is updated by email " + event.getEmail());
                 } else {
                     // record is deleted, write a success notification.
-                    insertNotification(conn, event.getEmail(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                    insertNotification(conn, event.getEmail(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
                 }
             }
             conn.commit();
@@ -1147,7 +1140,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -1155,7 +1148,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -1177,7 +1170,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
      *
      * @param event event that is created by user service
      * @return result of email
-     *
      */
     @Override
     public Result<String> changePassword(PasswordChangedEvent event) {
@@ -1193,12 +1185,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(3, event.getEventId().getId());
                 statement.setString(4, event.getOldPassword());
                 int count = statement.executeUpdate();
-                if(count == 0) {
+                if (count == 0) {
                     // no record is updated, write an error notification.
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no password is updated by email " + event.getEventId().getId());
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "no password is updated by email " + event.getEventId().getId());
                 } else {
                     // record is deleted, write a success notification.
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
                 }
             }
             conn.commit();
@@ -1206,7 +1198,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -1214,7 +1206,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -1259,6 +1251,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     /**
      * send private message to user. Update the nonce of the from user and insert a message
      * to message_t table. Send a notification to the from user about the event processing result.
+     *
      * @param event event that is created by user service
      * @return result of email
      */
@@ -1271,9 +1264,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn = ds.getConnection();
             conn.setAutoCommit(false);
             int count = updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
-            if(count == 0) {
+            if (count == 0) {
                 // no record is updated, write an error notification.
-                insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no nonce is updated by email " + event.getEventId().getId());
+                insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "no nonce is updated by email " + event.getEventId().getId());
             } else {
                 try (PreparedStatement statement = conn.prepareStatement(insertMessage)) {
                     statement.setString(1, event.getFromId());
@@ -1285,14 +1278,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     statement.executeUpdate();
                 }
                 // record is deleted, write a success notification.
-                insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
             }
             conn.commit();
             result = Success.of(event.getEventId().getId());
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -1300,7 +1293,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -1334,40 +1327,40 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, event.getRefreshToken());
                 statement.setString(2, event.getHostId());
                 statement.setString(3, event.getUserId());
-                if(map.get("clientId") != null)
-                    statement.setString(4, (String)map.get("clientId"));
+                if (map.get("clientId") != null)
+                    statement.setString(4, (String) map.get("clientId"));
                 else
                     statement.setNull(4, NULL);
 
-                if(map.get("scope") != null)
-                    statement.setString(5, (String)map.get("scope"));
+                if (map.get("scope") != null)
+                    statement.setString(5, (String) map.get("scope"));
                 else
                     statement.setNull(5, NULL);
 
-                if(map.get("userType") != null)
-                    statement.setString(6, (String)map.get("userType"));
+                if (map.get("userType") != null)
+                    statement.setString(6, (String) map.get("userType"));
                 else
                     statement.setNull(6, NULL);
 
-                if(map.get("roles") != null)
-                    statement.setString(7, (String)map.get("roles"));
+                if (map.get("roles") != null)
+                    statement.setString(7, (String) map.get("roles"));
                 else
                     statement.setNull(7, NULL);
 
-                if(map.get("csrf") != null)
-                    statement.setString(8, (String)map.get("csrf"));
+                if (map.get("csrf") != null)
+                    statement.setString(8, (String) map.get("csrf"));
                 else
                     statement.setNull(8, NULL);
 
-                if(map.get("customClaim") != null)
-                    statement.setString(9, (String)map.get("customClaim"));
+                if (map.get("customClaim") != null)
+                    statement.setString(9, (String) map.get("customClaim"));
                 else
                     statement.setNull(9, NULL);
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "failed to insert the app " + event.getRefreshToken());
                 } else {
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
                 }
             }
             updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
@@ -1377,7 +1370,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -1385,7 +1378,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -1415,12 +1408,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(2, event.getHostId());
                 statement.setString(3, event.getUserId());
                 int count = statement.executeUpdate();
-                if(count == 0) {
+                if (count == 0) {
                     // no record is deleted, write an error notification.
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no record is deleted for refresh token " + event.getRefreshToken());
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "no record is deleted for refresh token " + event.getRefreshToken());
                 } else {
                     // record is deleted, write a success notification.
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
                 }
             }
             updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
@@ -1429,7 +1422,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -1437,7 +1430,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -1479,7 +1472,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                 }
             }
-            if(map.isEmpty())
+            if (map.isEmpty())
                 result = Failure.of(new Status(OBJECT_NOT_FOUND, "refresh token", refreshToken));
             else
                 result = Success.of(JsonMapper.toJson(map));
@@ -1509,51 +1502,51 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
                 statement.setString(1, event.getHostId());
                 statement.setString(2, event.getAppId());
-                statement.setString(3, (String)map.get("appName"));
-                if(map.get("appDesc") != null)
-                    statement.setString(4, (String)map.get("appDesc"));
+                statement.setString(3, (String) map.get("appName"));
+                if (map.get("appDesc") != null)
+                    statement.setString(4, (String) map.get("appDesc"));
                 else
                     statement.setNull(4, NULL);
-                if(map.get("isKafkaApp") != null)
-                    statement.setBoolean(5, (Boolean)map.get("isKafkaApp"));
+                if (map.get("isKafkaApp") != null)
+                    statement.setBoolean(5, (Boolean) map.get("isKafkaApp"));
                 else
                     statement.setNull(5, NULL);
-                statement.setString(6, (String)map.get("clientId"));
-                statement.setString(7, (String)map.get("clientType"));
-                statement.setString(8, (String)map.get("clientProfile"));
-                statement.setString(9, (String)map.get("clientSecret"));
-                if(map.get("clientScope") != null) {
-                    statement.setString(10, (String)map.get("clientScope"));
+                statement.setString(6, (String) map.get("clientId"));
+                statement.setString(7, (String) map.get("clientType"));
+                statement.setString(8, (String) map.get("clientProfile"));
+                statement.setString(9, (String) map.get("clientSecret"));
+                if (map.get("clientScope") != null) {
+                    statement.setString(10, (String) map.get("clientScope"));
                 } else {
                     statement.setNull(10, NULL);
                 }
-                if(map.get("customClaim") != null) {
-                    statement.setString(11, (String)map.get("customClaim"));
+                if (map.get("customClaim") != null) {
+                    statement.setString(11, (String) map.get("customClaim"));
                 } else {
                     statement.setNull(11, NULL);
                 }
-                if(map.get("redirectUri") != null) {
-                    statement.setString(12, (String)map.get("redirectUri"));
+                if (map.get("redirectUri") != null) {
+                    statement.setString(12, (String) map.get("redirectUri"));
                 } else {
                     statement.setNull(12, NULL);
                 }
-                if(map.get("authenticateClass") != null) {
-                    statement.setString(13, (String)map.get("authenticateClass"));
+                if (map.get("authenticateClass") != null) {
+                    statement.setString(13, (String) map.get("authenticateClass"));
                 } else {
                     statement.setNull(13, NULL);
                 }
-                if(map.get("derefClientId") != null) {
-                    statement.setString(14, (String)map.get("derefClientId"));
+                if (map.get("derefClientId") != null) {
+                    statement.setString(14, (String) map.get("derefClientId"));
                 } else {
                     statement.setNull(14, NULL);
                 }
-                if(map.get("operationOwner") != null) {
-                    statement.setString(15, (String)map.get("operationOwner"));
+                if (map.get("operationOwner") != null) {
+                    statement.setString(15, (String) map.get("operationOwner"));
                 } else {
                     statement.setNull(15, NULL);
                 }
-                if(map.get("deliveryOwner") != null) {
-                    statement.setString(16, (String)map.get("deliveryOwner"));
+                if (map.get("deliveryOwner") != null) {
+                    statement.setString(16, (String) map.get("deliveryOwner"));
                 } else {
                     statement.setNull(16, NULL);
                 }
@@ -1563,7 +1556,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 if (count == 0) {
                     insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "failed to insert the app " + event.getAppId());
                 } else {
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
                 }
             }
             updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
@@ -1573,7 +1566,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -1581,7 +1574,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -1597,6 +1590,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         }
         return result;
     }
+
     @Override
     public Result<String> updateClient(MarketClientUpdatedEvent event) {
         final String updateApplication = "UPDATE app_t SET app_name = ?, app_desc = ?, is_kafka_app = ?, " +
@@ -1612,61 +1606,61 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
 
             try (PreparedStatement statement = conn.prepareStatement(updateApplication)) {
-                if(map.get("appName") != null) {
-                    statement.setString(1, (String)map.get("appName"));
+                if (map.get("appName") != null) {
+                    statement.setString(1, (String) map.get("appName"));
                 } else {
                     statement.setNull(1, NULL);
                 }
-                if(map.get("appDesc") != null) {
-                    statement.setString(2, (String)map.get("appDesc"));
+                if (map.get("appDesc") != null) {
+                    statement.setString(2, (String) map.get("appDesc"));
                 } else {
                     statement.setNull(2, NULL);
                 }
-                if(map.get("isKafkaApp") != null) {
-                    statement.setBoolean(3, (Boolean)map.get("isKafkaApp"));
+                if (map.get("isKafkaApp") != null) {
+                    statement.setBoolean(3, (Boolean) map.get("isKafkaApp"));
                 } else {
                     statement.setNull(3, NULL);
                 }
-                if(map.get("clientType") != null) {
-                    statement.setString(4, (String)map.get("clientType"));
+                if (map.get("clientType") != null) {
+                    statement.setString(4, (String) map.get("clientType"));
                 } else {
                     statement.setNull(4, NULL);
                 }
-                if(map.get("clientProfile") != null) {
-                    statement.setString(5, (String)map.get("clientProfile"));
+                if (map.get("clientProfile") != null) {
+                    statement.setString(5, (String) map.get("clientProfile"));
                 } else {
                     statement.setNull(5, NULL);
                 }
-                if(map.get("clientScope") != null) {
-                    statement.setString(6, (String)map.get("clientScope"));
+                if (map.get("clientScope") != null) {
+                    statement.setString(6, (String) map.get("clientScope"));
                 } else {
                     statement.setNull(6, NULL);
                 }
-                if(map.get("customClaim") != null)
-                    statement.setString(7, (String)map.get("customClaim"));
+                if (map.get("customClaim") != null)
+                    statement.setString(7, (String) map.get("customClaim"));
                 else
                     statement.setNull(7, NULL);
-                if(map.get("redirectUri") != null)
-                    statement.setString(8, (String)map.get("redirectUri"));
+                if (map.get("redirectUri") != null)
+                    statement.setString(8, (String) map.get("redirectUri"));
                 else
                     statement.setNull(8, NULL);
-                if(map.get("authenticateClass") != null) {
-                    statement.setString(9, (String)map.get("authenticateClass"));
+                if (map.get("authenticateClass") != null) {
+                    statement.setString(9, (String) map.get("authenticateClass"));
                 } else {
                     statement.setNull(9, NULL);
                 }
-                if(map.get("derefClientId") != null) {
-                    statement.setString(10, (String)map.get("derefClientId"));
+                if (map.get("derefClientId") != null) {
+                    statement.setString(10, (String) map.get("derefClientId"));
                 } else {
                     statement.setNull(10, NULL);
                 }
-                if(map.get("operationOwner") != null) {
-                    statement.setString(11, (String)map.get("operationOwner"));
+                if (map.get("operationOwner") != null) {
+                    statement.setString(11, (String) map.get("operationOwner"));
                 } else {
                     statement.setNull(11, NULL);
                 }
-                if(map.get("deliveryOwner") != null) {
-                    statement.setString(12, (String)map.get("deliveryOwner"));
+                if (map.get("deliveryOwner") != null) {
+                    statement.setString(12, (String) map.get("deliveryOwner"));
                 } else {
                     statement.setNull(12, NULL);
                 }
@@ -1676,9 +1670,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(16, event.getAppId());
 
                 int count = statement.executeUpdate();
-                if(count == 0) {
+                if (count == 0) {
                     // no record is updated, write an error notification.
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no record is updated by app " + event.getAppId());
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "no record is updated by app " + event.getAppId());
                     return result;
                 } else {
                     insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
@@ -1691,7 +1685,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -1699,7 +1693,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -1730,12 +1724,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, event.getHostId());
                 statement.setString(2, event.getAppId());
                 int count = statement.executeUpdate();
-                if(count == 0) {
+                if (count == 0) {
                     // no record is deleted, write an error notification.
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no record is deleted for app " + event.getAppId());
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "no record is deleted for app " + event.getAppId());
                 } else {
                     // record is deleted, write a success notification.
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
                 }
             }
             updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
@@ -1744,7 +1738,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -1752,7 +1746,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -1804,7 +1798,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                 }
             }
-            if(map.size() == 0)
+            if (map.size() == 0)
                 result = Failure.of(new Status(OBJECT_NOT_FOUND, "application with clientId ", clientId));
             else
                 result = Success.of(map);
@@ -1854,7 +1848,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                 }
             }
-            if(map.size() == 0)
+            if (map.size() == 0)
                 result = Failure.of(new Status(OBJECT_NOT_FOUND, "application with applicationId ", applicationId));
             else
                 result = Success.of(map);
@@ -1886,59 +1880,59 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
                 statement.setString(1, event.getHostId());
                 statement.setString(2, event.getApiId());
-                statement.setString(3, (String)map.get("apiName"));
-                if(map.get("apiDesc") != null)
-                    statement.setString(4, (String)map.get("apiDesc"));
+                statement.setString(3, (String) map.get("apiName"));
+                if (map.get("apiDesc") != null)
+                    statement.setString(4, (String) map.get("apiDesc"));
                 else
                     statement.setNull(4, NULL);
 
-                if(map.get("operationOwner") != null)
-                    statement.setString(5, (String)map.get("operationOwner"));
+                if (map.get("operationOwner") != null)
+                    statement.setString(5, (String) map.get("operationOwner"));
                 else
                     statement.setNull(5, NULL);
 
                 if (map.get("deliveryOwner") != null)
-                    statement.setString(6, (String)map.get("deliveryOwner"));
+                    statement.setString(6, (String) map.get("deliveryOwner"));
                 else
                     statement.setNull(6, NULL);
 
                 if (map.get("region") != null)
-                    statement.setInt(7, (Integer)map.get("region"));
+                    statement.setInt(7, (Integer) map.get("region"));
                 else
                     statement.setNull(7, NULL);
 
                 if (map.get("businessGroup") != null)
-                    statement.setInt(8, (Integer)map.get("businessGroup"));
+                    statement.setInt(8, (Integer) map.get("businessGroup"));
                 else
                     statement.setNull(8, NULL);
 
                 if (map.get("lob") != null)
-                    statement.setInt(9, (Integer)map.get("lob"));
+                    statement.setInt(9, (Integer) map.get("lob"));
                 else
                     statement.setNull(9, NULL);
 
                 if (map.get("platform") != null)
-                    statement.setInt(10, (Integer)map.get("platform"));
+                    statement.setInt(10, (Integer) map.get("platform"));
                 else
                     statement.setNull(10, NULL);
 
                 if (map.get("capability") != null)
-                    statement.setInt(11, (Integer)map.get("capability"));
+                    statement.setInt(11, (Integer) map.get("capability"));
                 else
                     statement.setNull(11, NULL);
 
                 if (map.get("gitRepo") != null)
-                    statement.setString(12, (String)map.get("gitRepo"));
+                    statement.setString(12, (String) map.get("gitRepo"));
                 else
                     statement.setNull(12, NULL);
 
                 if (map.get("apiTags") != null)
-                    statement.setString(13, (String)map.get("apiTags"));
+                    statement.setString(13, (String) map.get("apiTags"));
                 else
                     statement.setNull(13, NULL);
 
                 if (map.get("apiStatus") != null)
-                    statement.setString(14, (String)map.get("apiStatus"));
+                    statement.setString(14, (String) map.get("apiStatus"));
                 else
                     statement.setNull(14, NULL);
 
@@ -1948,7 +1942,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 if (count == 0) {
                     insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "failed to insert the api " + event.getApiId());
                 } else {
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
                 }
             }
             updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
@@ -1958,7 +1952,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -1966,7 +1960,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -1999,67 +1993,67 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
             try (PreparedStatement statement = conn.prepareStatement(updateApi)) {
 
-                if(map.get("apiName") != null) {
-                    statement.setString(1, (String)map.get("apiName"));
+                if (map.get("apiName") != null) {
+                    statement.setString(1, (String) map.get("apiName"));
                 } else {
                     statement.setNull(1, NULL);
                 }
 
-                if(map.get("apiDesc") != null) {
-                    statement.setString(2, (String)map.get("apiDesc"));
+                if (map.get("apiDesc") != null) {
+                    statement.setString(2, (String) map.get("apiDesc"));
                 } else {
                     statement.setNull(2, NULL);
                 }
 
-                if(map.get("operationOwner") != null) {
-                    statement.setString(3, (String)map.get("operationOwner"));
+                if (map.get("operationOwner") != null) {
+                    statement.setString(3, (String) map.get("operationOwner"));
                 } else {
                     statement.setNull(3, NULL);
                 }
 
-                if(map.get("deliveryOwner") != null) {
-                    statement.setString(4, (String)map.get("deliveryOwner"));
+                if (map.get("deliveryOwner") != null) {
+                    statement.setString(4, (String) map.get("deliveryOwner"));
                 } else {
                     statement.setNull(4, NULL);
                 }
 
-                if(map.get("region") != null)
-                    statement.setInt(5, (Integer)map.get("region"));
+                if (map.get("region") != null)
+                    statement.setInt(5, (Integer) map.get("region"));
                 else
                     statement.setNull(5, NULL);
 
-                if(map.get("businessGroup") != null)
-                    statement.setInt(6, (Integer)map.get("businessGroup"));
+                if (map.get("businessGroup") != null)
+                    statement.setInt(6, (Integer) map.get("businessGroup"));
                 else
                     statement.setNull(6, NULL);
 
-                if(map.get("lob") != null) {
-                    statement.setInt(7, (Integer)map.get("lob"));
+                if (map.get("lob") != null) {
+                    statement.setInt(7, (Integer) map.get("lob"));
                 } else {
                     statement.setNull(7, NULL);
                 }
-                if(map.get("platform") != null) {
-                    statement.setInt(8, (Integer)map.get("platform"));
+                if (map.get("platform") != null) {
+                    statement.setInt(8, (Integer) map.get("platform"));
                 } else {
                     statement.setNull(8, NULL);
                 }
-                if(map.get("capability") != null) {
-                    statement.setInt(9, (Integer)map.get("capability"));
+                if (map.get("capability") != null) {
+                    statement.setInt(9, (Integer) map.get("capability"));
                 } else {
                     statement.setNull(9, NULL);
                 }
-                if(map.get("gitRepo") != null) {
-                    statement.setString(10, (String)map.get("gitRepo"));
+                if (map.get("gitRepo") != null) {
+                    statement.setString(10, (String) map.get("gitRepo"));
                 } else {
                     statement.setNull(10, NULL);
                 }
-                if(map.get("apiTags") != null) {
-                    statement.setString(11, (String)map.get("apiTags"));
+                if (map.get("apiTags") != null) {
+                    statement.setString(11, (String) map.get("apiTags"));
                 } else {
                     statement.setNull(11, NULL);
                 }
-                if(map.get("apiStatus") != null) {
-                    statement.setString(12, (String)map.get("apiStatus"));
+                if (map.get("apiStatus") != null) {
+                    statement.setString(12, (String) map.get("apiStatus"));
                 } else {
                     statement.setNull(12, NULL);
                 }
@@ -2069,9 +2063,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(16, event.getApiId());
 
                 int count = statement.executeUpdate();
-                if(count == 0) {
+                if (count == 0) {
                     // no record is updated, write an error notification.
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no record is updated by api " + event.getApiId());
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "no record is updated by api " + event.getApiId());
                     return result;
                 } else {
                     insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
@@ -2084,7 +2078,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -2092,7 +2086,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -2109,6 +2103,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         return result;
 
     }
+
     @Override
     public Result<String> deleteService(MarketServiceDeletedEvent event) {
         final String deleteApplication = "DELETE from api_t WHERE host_id = ? AND api_id = ?";
@@ -2121,12 +2116,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, event.getHostId());
                 statement.setString(2, event.getApiId());
                 int count = statement.executeUpdate();
-                if(count == 0) {
+                if (count == 0) {
                     // no record is deleted, write an error notification.
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no record is deleted for api " + event.getApiId());
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "no record is deleted for api " + event.getApiId());
                 } else {
                     // record is deleted, write a success notification.
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
                 }
             }
             updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
@@ -2135,7 +2130,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -2143,7 +2138,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -2222,7 +2217,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     Map<String, Object> map = new HashMap<>();
                     // only get the total once as it is the same for all rows.
                     if (isFirstRow) {
-                        total =  resultSet.getInt("total");
+                        total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
 
@@ -2275,28 +2270,28 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(2, event.getApiId());
                 statement.setString(3, event.getApiVersion());
 
-                if(map.get("apiType") != null)
-                    statement.setString(4, (String)map.get("apiType"));
+                if (map.get("apiType") != null)
+                    statement.setString(4, (String) map.get("apiType"));
                 else
                     statement.setNull(4, NULL);
 
-                if(map.get("serviceId") != null)
-                    statement.setString(5, (String)map.get("serviceId"));
+                if (map.get("serviceId") != null)
+                    statement.setString(5, (String) map.get("serviceId"));
                 else
                     statement.setNull(5, NULL);
 
-                if(map.get("apiVersionDesc") != null)
-                    statement.setString(6, (String)map.get("apiVersionDesc"));
+                if (map.get("apiVersionDesc") != null)
+                    statement.setString(6, (String) map.get("apiVersionDesc"));
                 else
                     statement.setNull(6, NULL);
 
                 if (map.get("specLink") != null)
-                    statement.setString(7, (String)map.get("specLink"));
+                    statement.setString(7, (String) map.get("specLink"));
                 else
                     statement.setNull(7, NULL);
 
                 if (map.get("spec") != null)
-                    statement.setInt(8, (Integer)map.get("spec"));
+                    statement.setInt(8, (Integer) map.get("spec"));
                 else
                     statement.setNull(8, NULL);
                 statement.setString(9, event.getEventId().getId());
@@ -2305,7 +2300,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 if (count == 0) {
                     insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "failed to insert the api version " + "hostId " + event.getHostId() + " apiId " + event.getApiId() + " apiVersion " + event.getApiVersion());
                 } else {
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
                 }
             }
             updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
@@ -2315,7 +2310,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -2323,7 +2318,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -2355,32 +2350,32 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
             try (PreparedStatement statement = conn.prepareStatement(updateApi)) {
 
-                if(map.get("apiType") != null) {
-                    statement.setString(1, (String)map.get("apiType"));
+                if (map.get("apiType") != null) {
+                    statement.setString(1, (String) map.get("apiType"));
                 } else {
                     statement.setNull(1, NULL);
                 }
 
-                if(map.get("serviceId") != null) {
-                    statement.setString(2, (String)map.get("serviceId"));
+                if (map.get("serviceId") != null) {
+                    statement.setString(2, (String) map.get("serviceId"));
                 } else {
                     statement.setNull(2, NULL);
                 }
 
-                if(map.get("apiVersionDesc") != null) {
-                    statement.setString(3, (String)map.get("apiVersionDesc"));
+                if (map.get("apiVersionDesc") != null) {
+                    statement.setString(3, (String) map.get("apiVersionDesc"));
                 } else {
                     statement.setNull(3, NULL);
                 }
 
-                if(map.get("specLink") != null) {
-                    statement.setString(4, (String)map.get("specLink"));
+                if (map.get("specLink") != null) {
+                    statement.setString(4, (String) map.get("specLink"));
                 } else {
                     statement.setNull(4, NULL);
                 }
 
-                if(map.get("spec") != null) {
-                    statement.setString(5, (String)map.get("spec"));
+                if (map.get("spec") != null) {
+                    statement.setString(5, (String) map.get("spec"));
                 } else {
                     statement.setNull(5, NULL);
                 }
@@ -2392,9 +2387,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(10, event.getApiVersion());
 
                 int count = statement.executeUpdate();
-                if(count == 0) {
+                if (count == 0) {
                     // no record is updated, write an error notification.
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no record is updated for api version " + " hostId " + event.getHostId() + " apiId " + event.getApiId() + " apiVersion " + event.getApiVersion());
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "no record is updated for api version " + " hostId " + event.getHostId() + " apiId " + event.getApiId() + " apiVersion " + event.getApiVersion());
                     return result;
                 } else {
                     insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
@@ -2407,7 +2402,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -2415,7 +2410,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -2432,6 +2427,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         return result;
 
     }
+
     @Override
     public Result<String> deleteServiceVersion(ServiceVersionDeletedEvent event) {
         final String deleteApplication = "DELETE from api_version_t WHERE host_id = ? AND api_id = ? AND api_version = ?";
@@ -2445,12 +2441,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(2, event.getApiId());
                 statement.setString(3, event.getApiVersion());
                 int count = statement.executeUpdate();
-                if(count == 0) {
+                if (count == 0) {
                     // no record is deleted, write an error notification.
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no record is deleted for api version " + " hostId " + event.getHostId() + " apiId " + event.getApiId() + " apiVersion " + event.getApiVersion());
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "no record is deleted for api version " + " hostId " + event.getHostId() + " apiId " + event.getApiId() + " apiVersion " + event.getApiVersion());
                 } else {
                     // record is deleted, write a success notification.
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
                 }
             }
             updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
@@ -2459,7 +2455,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -2467,7 +2463,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -2567,9 +2563,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(6, event.getApiVersion());
 
                 int count = statement.executeUpdate();
-                if(count == 0) {
+                if (count == 0) {
                     // no record is updated, write an error notification.
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no record is updated for api version " + " hostId " + event.getHostId() + " apiId " + event.getApiId() + " apiVersion " + event.getApiVersion());
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "no record is updated for api version " + " hostId " + event.getHostId() + " apiId " + event.getApiId() + " apiVersion " + event.getApiVersion());
                     return result;
                 } else {
                     insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
@@ -2584,40 +2580,40 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.executeUpdate();
             }
             // insert endpoints
-            for(Map<String, Object> endpoint : endpoints) {
+            for (Map<String, Object> endpoint : endpoints) {
                 try (PreparedStatement statement = conn.prepareStatement(insertEndpoint)) {
                     statement.setString(1, event.getHostId());
                     statement.setString(2, event.getApiId());
                     statement.setString(3, event.getApiVersion());
-                    statement.setString(4, (String)endpoint.get("endpoint"));
-                    statement.setString(5, ((String)endpoint.get("httpMethod")).toLowerCase().trim());
-                    statement.setString(6, (String)endpoint.get("endpointPath"));
+                    statement.setString(4, (String) endpoint.get("endpoint"));
+                    statement.setString(5, ((String) endpoint.get("httpMethod")).toLowerCase().trim());
+                    statement.setString(6, (String) endpoint.get("endpointPath"));
 
-                    if(endpoint.get("endpointName") == null)
+                    if (endpoint.get("endpointName") == null)
                         statement.setNull(7, NULL);
                     else
-                        statement.setString(7, (String)endpoint.get("endpointName"));
+                        statement.setString(7, (String) endpoint.get("endpointName"));
 
-                    if(endpoint.get("endpointDesc") == null)
+                    if (endpoint.get("endpointDesc") == null)
                         statement.setNull(8, NULL);
                     else
-                        statement.setString(8, (String)endpoint.get("endpointDesc"));
+                        statement.setString(8, (String) endpoint.get("endpointDesc"));
 
                     statement.setString(9, event.getEventId().getId());
                     statement.setTimestamp(10, new Timestamp(event.getTimestamp()));
                     statement.executeUpdate();
                 }
                 // insert scopes
-                List<String> scopes = (List<String>)endpoint.get("scopes");
-                for(String scope : scopes) {
+                List<String> scopes = (List<String>) endpoint.get("scopes");
+                for (String scope : scopes) {
                     String[] scopeDesc = scope.split(":");
                     try (PreparedStatement statement = conn.prepareStatement(insertScope)) {
                         statement.setString(1, event.getHostId());
                         statement.setString(2, event.getApiId());
                         statement.setString(3, event.getApiVersion());
-                        statement.setString(4, (String)endpoint.get("endpoint"));
+                        statement.setString(4, (String) endpoint.get("endpoint"));
                         statement.setString(5, scopeDesc[0]);
-                        if(scopeDesc.length == 1)
+                        if (scopeDesc.length == 1)
                             statement.setNull(6, NULL);
                         else
                             statement.setString(6, scopeDesc[1]);
@@ -2634,7 +2630,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -2642,7 +2638,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -2665,10 +2661,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         String hostId = event.getHostId();
         String authCode = event.getAuthCode();
         String key = hostId + "|" + authCode;
-        if(logger.isTraceEnabled()) logger.trace("insert into the cache auth_code with key {} value {}", key, event.getValue());
-        if(logger.isTraceEnabled()) logger.trace("estimate the size of the cache auth_code before is " + cacheManager.getSize(AUTH_CODE_CACHE));
+        if (logger.isTraceEnabled())
+            logger.trace("insert into the cache auth_code with key {} value {}", key, event.getValue());
+        if (logger.isTraceEnabled())
+            logger.trace("estimate the size of the cache auth_code before is " + cacheManager.getSize(AUTH_CODE_CACHE));
         cacheManager.put(AUTH_CODE_CACHE, key, event.getValue());
-        if(logger.isTraceEnabled()) logger.trace("estimate the size of the cache auth_code after is " + cacheManager.getSize(AUTH_CODE_CACHE));
+        if (logger.isTraceEnabled())
+            logger.trace("estimate the size of the cache auth_code after is " + cacheManager.getSize(AUTH_CODE_CACHE));
         return Success.of(event.getAuthCode());
     }
 
@@ -2676,20 +2675,23 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         String hostId = event.getHostId();
         String authCode = event.getAuthCode();
         String key = hostId + "|" + authCode;
-        if(logger.isTraceEnabled()) logger.trace("insert into the cache auth_code with key {}", key);
-        if(logger.isTraceEnabled()) logger.trace("estimate the size of the cache auth_code before is " + cacheManager.getSize(AUTH_CODE_CACHE));
+        if (logger.isTraceEnabled()) logger.trace("insert into the cache auth_code with key {}", key);
+        if (logger.isTraceEnabled())
+            logger.trace("estimate the size of the cache auth_code before is " + cacheManager.getSize(AUTH_CODE_CACHE));
         cacheManager.delete(AUTH_CODE_CACHE, key);
-        if(logger.isTraceEnabled()) logger.trace("estimate the size of the cache auth_code after is " + cacheManager.getSize(AUTH_CODE_CACHE));
+        if (logger.isTraceEnabled())
+            logger.trace("estimate the size of the cache auth_code after is " + cacheManager.getSize(AUTH_CODE_CACHE));
         return Success.of(event.getAuthCode());
     }
 
     public Result<String> queryMarketCode(String hostId, String authCode) {
         // cache key is based on the hostId and authCode.
         String key = hostId + "|" + authCode;
-        if(logger.isTraceEnabled()) logger.trace("key = {} and estimate the size of the cache auth_code is {}", key, cacheManager.getSize(AUTH_CODE_CACHE));
-        String value = (String)cacheManager.get(AUTH_CODE_CACHE, key);
-        if(logger.isTraceEnabled()) logger.trace("retrieve cache auth_code with key {} value {}", key, value);
-        if(value != null) {
+        if (logger.isTraceEnabled())
+            logger.trace("key = {} and estimate the size of the cache auth_code is {}", key, cacheManager.getSize(AUTH_CODE_CACHE));
+        String value = (String) cacheManager.get(AUTH_CODE_CACHE, key);
+        if (logger.isTraceEnabled()) logger.trace("retrieve cache auth_code with key {} value {}", key, value);
+        if (value != null) {
             return Success.of(value);
         } else {
             return Failure.of(new Status(OBJECT_NOT_FOUND, "auth code not found"));
@@ -2713,10 +2715,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             String longKeyId = HashUtil.generateUUID();
             KeyPair currKeyPair = KeyUtil.generateKeyPair("RSA", 2048);
             String currKeyId = HashUtil.generateUUID();
-            if(logger.isTraceEnabled()) logger.trace("longKeyId is " + longKeyId + " currKeyId is " + currKeyId);
+            if (logger.isTraceEnabled()) logger.trace("longKeyId is " + longKeyId + " currKeyId is " + currKeyId);
             // prevKey and prevKeyId are null for the first time create the host. They are available during the key rotation.
             String jwk = KeyUtil.generateJwk(longKeyPair.getPublic(), longKeyId, currKeyPair.getPublic(), currKeyId, null, null);
-            if(logger.isTraceEnabled()) logger.trace("jwk is " + jwk);
+            if (logger.isTraceEnabled()) logger.trace("jwk is " + jwk);
             conn = ds.getConnection();
             conn.setAutoCommit(false);
             // no duplicate record, insert the user into database and write a success notification.
@@ -2733,7 +2735,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 if (count == 0) {
                     insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "failed to insert the host " + event.getHost());
                 } else {
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
                 }
             }
             // insert the long key pair
@@ -2749,7 +2751,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 if (count == 0) {
                     insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "failed to insert the host_key for host " + event.getHost() + " kid " + longKeyId);
                 } else {
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
                 }
             }
             // insert the current key pair
@@ -2765,7 +2767,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 if (count == 0) {
                     insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "failed to insert the host_key for host " + event.getHost() + " kid " + longKeyId);
                 } else {
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
                 }
             }
             updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
@@ -2775,7 +2777,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -2783,7 +2785,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -2813,17 +2815,17 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
 
             try (PreparedStatement statement = conn.prepareStatement(updateHost)) {
-                if(event.getName() != null) {
+                if (event.getName() != null) {
                     statement.setString(1, event.getName());
                 } else {
                     statement.setNull(1, NULL);
                 }
-                if(event.getDesc() != null) {
+                if (event.getDesc() != null) {
                     statement.setString(2, event.getDesc());
                 } else {
                     statement.setNull(2, NULL);
                 }
-                if(event.getOwner() != null) {
+                if (event.getOwner() != null) {
                     statement.setString(3, event.getOwner());
                 } else {
                     statement.setNull(3, NULL);
@@ -2833,9 +2835,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(6, event.getHostId());
 
                 int count = statement.executeUpdate();
-                if(count == 0) {
+                if (count == 0) {
                     // no record is updated, write an error notification.
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no record is updated by host " + event.getHost());
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "no record is updated by host " + event.getHost());
                     return result;
                 } else {
                     insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
@@ -2848,7 +2850,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -2856,7 +2858,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -2886,23 +2888,23 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(deleteHostKey)) {
                 statement.setString(1, event.getHostId());
                 int count = statement.executeUpdate();
-                if(count == 0) {
+                if (count == 0) {
                     // no record is deleted, write an error notification.
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no host_key record is deleted for host " + event.getHost());
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "no host_key record is deleted for host " + event.getHost());
                 } else {
                     // record is deleted, write a success notification.
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
                 }
             }
             try (PreparedStatement statement = conn.prepareStatement(deleteHost)) {
                 statement.setString(1, event.getHostId());
                 int count = statement.executeUpdate();
-                if(count == 0) {
+                if (count == 0) {
                     // no record is deleted, write an error notification.
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no host record is deleted for host " + event.getHost());
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "no host record is deleted for host " + event.getHost());
                 } else {
                     // record is deleted, write a success notification.
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
                 }
             }
             updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
@@ -2911,7 +2913,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -2919,7 +2921,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -2957,7 +2959,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                 }
             }
-            if(map.size() == 0)
+            if (map.size() == 0)
                 result = Failure.of(new Status(OBJECT_NOT_FOUND, "host with host ", host));
             else
                 result = Success.of(map);
@@ -2992,7 +2994,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                 }
             }
-            if(map.size() == 0)
+            if (map.size() == 0)
                 result = Failure.of(new Status(OBJECT_NOT_FOUND, "host with id", id));
             else
                 result = Success.of(map);
@@ -3028,7 +3030,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                 }
             }
-            if(map.size() == 0)
+            if (map.size() == 0)
                 result = Failure.of(new Status(OBJECT_NOT_FOUND, "host with owner ", owner));
             else
                 result = Success.of(map);
@@ -3058,7 +3060,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                 }
             }
-            if(list.isEmpty())
+            if (list.isEmpty())
                 result = Failure.of(new Status(OBJECT_NOT_FOUND, "host", "any key"));
             else
                 result = Success.of(list);
@@ -3097,7 +3099,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                 }
             }
-            if(list.isEmpty())
+            if (list.isEmpty())
                 result = Failure.of(new Status(OBJECT_NOT_FOUND, "host", "limit and offset"));
             else
                 result = Success.of(list);
@@ -3133,7 +3135,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 if (count == 0) {
                     insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "failed to insert the configuration with id " + event.getConfigId());
                 } else {
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
                 }
             }
             updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
@@ -3143,7 +3145,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -3151,7 +3153,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -3167,6 +3169,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         }
         return result;
     }
+
     @Override
     public Result<String> updateConfig(ConfigUpdatedEvent event) {
         final String updateHost = "UPDATE configuration_t SET configuration_type = ?, infrastructure_type_id = ?, class_path = ?, configuration_description = ?, update_user = ? " +
@@ -3180,22 +3183,22 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
 
             try (PreparedStatement statement = conn.prepareStatement(updateHost)) {
-                if(event.getConfigType() != null) {
+                if (event.getConfigType() != null) {
                     statement.setString(1, event.getConfigType());
                 } else {
                     statement.setNull(1, NULL);
                 }
-                if(event.getInfraType() != null) {
+                if (event.getInfraType() != null) {
                     statement.setString(2, event.getInfraType());
                 } else {
                     statement.setNull(2, NULL);
                 }
-                if(event.getClassPath() != null) {
+                if (event.getClassPath() != null) {
                     statement.setString(3, event.getClassPath());
                 } else {
                     statement.setNull(3, NULL);
                 }
-                if(event.getConfigDesc() != null) {
+                if (event.getConfigDesc() != null) {
                     statement.setString(4, event.getConfigDesc());
                 } else {
                     statement.setNull(4, NULL);
@@ -3205,9 +3208,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(7, event.getConfigId());
 
                 int count = statement.executeUpdate();
-                if(count == 0) {
+                if (count == 0) {
                     // no record is updated, write an error notification.
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no record is updated by configuration id " + event.getConfigId());
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "no record is updated by configuration id " + event.getConfigId());
                     return result;
                 } else {
                     insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
@@ -3220,7 +3223,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -3228,7 +3231,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -3244,6 +3247,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         }
         return result;
     }
+
     @Override
     public Result<String> deleteConfig(ConfigDeletedEvent event) {
         final String deleteHost = "DELETE from configuration_t WHERE configuration_id = ?";
@@ -3255,12 +3259,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(deleteHost)) {
                 statement.setString(1, event.getConfigId());
                 int count = statement.executeUpdate();
-                if(count == 0) {
+                if (count == 0) {
                     // no record is deleted, write an error notification.
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no configuration record is deleted for id " + event.getConfigId());
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "no configuration record is deleted for id " + event.getConfigId());
                 } else {
                     // record is deleted, write a success notification.
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
                 }
             }
             updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
@@ -3269,7 +3273,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -3277,7 +3281,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -3293,6 +3297,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         }
         return result;
     }
+
     @Override
     public Result<Map<String, Object>> queryConfig() {
         final String queryConfig = "SELECT * from configuration_t";
@@ -3312,7 +3317,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                 }
             }
-            if(map.size() == 0)
+            if (map.size() == 0)
                 result = Failure.of(new Status(OBJECT_NOT_FOUND, "configuration entry is registered"));
             else
                 result = Success.of(map);
@@ -3325,6 +3330,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         }
         return result;
     }
+
     @Override
     public Result<Map<String, Object>> queryConfigById(String configId) {
         final String queryConfigById = "SELECT * from configuration_t WHERE configuration_id = ?";
@@ -3345,7 +3351,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                 }
             }
-            if(map.size() == 0)
+            if (map.size() == 0)
                 result = Failure.of(new Status(OBJECT_NOT_FOUND, "configuration with id ", configId));
             else
                 result = Success.of(map);
@@ -3380,7 +3386,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                 }
             }
-            if(map.isEmpty())
+            if (map.isEmpty())
                 result = Failure.of(new Status(OBJECT_NOT_FOUND, "host key with id", hostId));
             else
                 result = Success.of(map);
@@ -3414,7 +3420,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                 }
             }
-            if(map.isEmpty())
+            if (map.isEmpty())
                 result = Failure.of(new Status(OBJECT_NOT_FOUND, "host key with id", hostId));
             else
                 result = Success.of(map);
@@ -3430,11 +3436,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createRule(RuleCreatedEvent event) {
-        final String insertRule = "INSERT INTO rule_t (rule_id, host_id, rule_type, rule_group, rule_visibility, " +
-                "rule_description, rule_body, rule_owner, update_user, update_timestamp) " +
-                "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?)";
+        final String insertRule = "INSERT INTO rule_t (rule_id, rule_name, rule_version, rule_type, rule_group, " +
+                "rule_desc, rule_body, rule_owner, common, update_user, update_timestamp) " +
+                "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,  ?)";
+        final String insertHostRule = "INSERT INTO rule_host_t (host_id, rule_id, update_user, update_timestamp) " +
+                "VALUES (?, ?, ?, ?)";
+
         Result<String> result = null;
-        Map<String, Object> map = JsonMapper.string2Map(event.getValue());
         Connection conn = null;
         try {
             conn = ds.getConnection();
@@ -3442,36 +3450,50 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertRule)) {
                 statement.setString(1, event.getRuleId());
-                statement.setString(2, event.getHostId());
-                statement.setString(3, event.getRuleType());
-                if(event.getGroupId() != null)
-                    statement.setString(4, event.getGroupId());
+                statement.setString(2, event.getRuleName());
+                statement.setString(3, event.getRuleVersion());
+                statement.setString(4, event.getRuleType());
+                if (event.getRuleGroup() != null)
+                    statement.setString(5, event.getRuleGroup());
                 else
-                    statement.setNull(4, NULL);
-                statement.setString(5, event.getVisibility());
-                if(event.getDesc() != null)
-                    statement.setString(6, event.getDesc());
+                    statement.setNull(5, NULL);
+
+                if (event.getRuleDesc() != null)
+                    statement.setString(6, event.getRuleDesc());
                 else
                     statement.setNull(6, NULL);
-                statement.setString(7, event.getValue());
-                statement.setString(8, event.getOwner());
-                statement.setString(15, event.getEventId().getId());
-                statement.setTimestamp(16, new Timestamp(System.currentTimeMillis()));
+                statement.setString(7, event.getRuleBody());
+                statement.setString(8, event.getRuleOwner());
+                statement.setString(9, event.getCommon());
+                statement.setString(10, event.getEventId().getId());
+                statement.setTimestamp(11, new Timestamp(System.currentTimeMillis()));
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "failed to insert the rule " + event.getRuleId());
                 } else {
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
                 }
             }
-            updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
+            try (PreparedStatement statement = conn.prepareStatement(insertHostRule)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getRuleId());
+                statement.setString(3, event.getEventId().getId());
+                statement.setTimestamp(4, new Timestamp(System.currentTimeMillis()));
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "failed to insert the host_rule for host " + event.getHostId() + " rule " + event.getRuleId());
+                } else {
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
+                }
+            }
+            updateNonce(conn, event.getEventId().getNonce() + 2, event.getEventId().getId());
             // as this is a brand-new user, there is no nonce to be updated. By default, the nonce is 0.
             conn.commit();
             result = Success.of(event.getRuleId());
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -3479,7 +3501,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -3498,60 +3520,65 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateRule(RuleUpdatedEvent event) {
-        final String updateRule = "UPDATE rule_t SET host_id = ?, rule_type = ?, rule_group = ?, rule_visibility = ? " +
-                "rule_description = ?, rule_body = ?, rule_owner = ?, update_user = ?, update_timestamp = ? " +
+        final String updateRule = "UPDATE rule_t SET rule_name = ?, rule_version = ?, rule_type = ?, rule_group = ?, rule_desc = ?, " +
+                "rule_body = ?, rule_owner = ?, common = ?, update_user = ?, update_timestamp = ? " +
                 "WHERE rule_id = ?";
 
         Result<String> result = null;
-        Map<String, Object> map = JsonMapper.string2Map(event.getValue());
         Connection conn = null;
         try {
             conn = ds.getConnection();
             conn.setAutoCommit(false);
 
             try (PreparedStatement statement = conn.prepareStatement(updateRule)) {
-                if(event.getHostId() != null) {
-                    statement.setString(1, event.getHostId());
+                if(event.getRuleName() != null) {
+                    statement.setString(1, event.getRuleName());
                 } else {
                     statement.setNull(1, NULL);
                 }
-                if(event.getRuleType() != null) {
-                    statement.setString(2, event.getRuleType());
+                if (event.getRuleVersion() != null) {
+                    statement.setString(2, event.getRuleVersion());
                 } else {
                     statement.setNull(2, NULL);
                 }
-                if(event.getGroupId() != null) {
-                    statement.setString(3, event.getGroupId());
+                if (event.getRuleType() != null) {
+                    statement.setString(3, event.getRuleType());
                 } else {
                     statement.setNull(3, NULL);
                 }
-                if(event.getVisibility() != null) {
-                    statement.setString(4, event.getVisibility());
+                if (event.getRuleGroup() != null) {
+                    statement.setString(4, event.getRuleGroup());
                 } else {
                     statement.setNull(4, NULL);
                 }
-                if(event.getDesc() != null) {
-                    statement.setString(5, event.getDesc());
+                if (event.getRuleDesc() != null) {
+                    statement.setString(5, event.getRuleDesc());
                 } else {
                     statement.setNull(5, NULL);
                 }
-                if(event.getValue() != null) {
-                    statement.setString(6, event.getValue());
+                if(event.getRuleBody() != null) {
+                    statement.setString(6, event.getRuleBody());
                 } else {
                     statement.setNull(6, NULL);
                 }
-                if(event.getOwner() != null)
-                    statement.setString(7, event.getOwner());
-                else
+                if(event.getRuleOwner() != null) {
+                    statement.setString(7, event.getRuleOwner());
+                } else {
                     statement.setNull(7, NULL);
-                statement.setString(8, event.getEventId().getId());
-                statement.setTimestamp(9, new Timestamp(event.getTimestamp()));
-                statement.setString(10, event.getRuleId());
+                }
+                if(event.getCommon() != null) {
+                    statement.setString(8, event.getCommon());
+                } else {
+                    statement.setNull(8, NULL);
+                }
+                statement.setString(9, event.getEventId().getId());
+                statement.setTimestamp(10, new Timestamp(event.getTimestamp()));
+                statement.setString(11, event.getRuleId());
 
                 int count = statement.executeUpdate();
-                if(count == 0) {
+                if (count == 0) {
                     // no record is updated, write an error notification.
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no record is updated by rule " + event.getRuleId());
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "no record is updated by rule " + event.getRuleId());
                     return result;
                 } else {
                     insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
@@ -3564,7 +3591,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -3572,7 +3599,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -3589,9 +3616,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         return result;
 
     }
+
     @Override
     public Result<String> deleteRule(RuleDeletedEvent event) {
         final String deleteRule = "DELETE from rule_t WHERE rule_id = ?";
+        final String deleteHostRule = "DELETE from rule_host_t WHERE host_id = ? AND rule_id = ?";
         Result<String> result;
         Connection conn = null;
         try {
@@ -3600,21 +3629,33 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(deleteRule)) {
                 statement.setString(1, event.getRuleId());
                 int count = statement.executeUpdate();
-                if(count == 0) {
+                if (count == 0) {
                     // no record is deleted, write an error notification.
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false,  "no record is deleted for rule " + event.getRuleId());
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "no record is deleted for rule " + event.getRuleId());
                 } else {
                     // record is deleted, write a success notification.
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
                 }
             }
-            updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
+            try (PreparedStatement statement = conn.prepareStatement(deleteHostRule)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getRuleId());
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    // no record is deleted, write an error notification.
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "no record is deleted for host " + event.getHostId() + " rule " + event.getRuleId());
+                } else {
+                    // record is deleted, write a success notification.
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
+                }
+            }
+            updateNonce(conn, event.getEventId().getNonce() + 2, event.getEventId().getId());
             conn.commit();
             result = Success.of(event.getEventId().getId());
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -3622,7 +3663,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -3644,8 +3685,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<List<Map<String, Object>>> queryRuleByHostGroup(String hostId, String groupId) {
         Result<List<Map<String, Object>>> result;
         String sql = "SELECT rule_id, host_id, rule_type, rule_group, rule_visibility, rule_description, rule_body, rule_owner " +
-                        "update_user, update_timestamp " +
-                        "FROM rule_t WHERE host_id = ? AND rule_group = ?";
+                "update_user, update_timestamp " +
+                "FROM rule_t WHERE host_id = ? AND rule_group = ?";
         try (final Connection conn = ds.getConnection()) {
             List<Map<String, Object>> list = new ArrayList<>();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
@@ -3668,7 +3709,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                 }
             }
-            if(list.isEmpty())
+            if (list.isEmpty())
                 result = Failure.of(new Status(OBJECT_NOT_FOUND, "rule with rule group ", groupId));
             else
                 result = Success.of(list);
@@ -3683,36 +3724,79 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<List<Map<String, Object>>> queryRuleByHost(String hostId) {
-        Result<List<Map<String, Object>>> result;
-        String sql = "SELECT rule_id, host_id, rule_type, rule_group, rule_visibility, rule_description, rule_body, rule_owner " +
-                "update_user, update_timestamp " +
-                "FROM rule_t WHERE host_id = ?";
-        try (final Connection conn = ds.getConnection()) {
-            List<Map<String, Object>> list = new ArrayList<>();
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, hostId);
-                try (ResultSet resultSet = statement.executeQuery()) {
-                    while (resultSet.next()) {
-                        Map<String, Object> map = new HashMap<>();
-                        map.put("ruleId", resultSet.getString("rule_id"));
-                        map.put("hostId", resultSet.getString("host_id"));
-                        map.put("ruleType", resultSet.getString("rule_type"));
-                        map.put("ruleGroup", resultSet.getBoolean("rule_group"));
-                        map.put("ruleVisibility", resultSet.getString("rule_visibility"));
-                        map.put("ruleDescription", resultSet.getString("rule_description"));
-                        map.put("ruleBody", resultSet.getString("rule_body"));
-                        map.put("ruleOwner", resultSet.getString("rule_owner"));
-                        map.put("updateUser", resultSet.getString("update_user"));
-                        map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
-                        list.add(map);
+    public Result<String> queryRule(int offset, int limit, String hostId, String ruleId, String ruleName,
+                                    String ruleVersion, String ruleType, String ruleGroup, String ruleDesc,
+                                    String ruleBody, String ruleOwner, String common) {
+        Result<String> result;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, h.host_id, r.rule_id, r.rule_name, r.rule_version, " +
+                "r.rule_type, r.rule_group, r.common, r.rule_desc, r.rule_body, r.rule_owner, " +
+                "r.update_user, r.update_timestamp " +
+                "FROM rule_t r, rule_host_t h " +
+                "WHERE r.rule_id = h.rule_id " +
+                "AND h.host_id = ?\n" +
+                "AND r.common = ? OR h.host_id = ?\n");
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(hostId);
+        parameters.add(common);
+        parameters.add(hostId);
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "rule_id", ruleId);
+        addCondition(whereClause, parameters, "rule_name", ruleName);
+        addCondition(whereClause, parameters, "rule_version", ruleVersion);
+        addCondition(whereClause, parameters, "rule_type", ruleType);
+        addCondition(whereClause, parameters, "rule_group", ruleGroup);
+        addCondition(whereClause, parameters, "rule_desc", ruleDesc);
+        addCondition(whereClause, parameters, "rule_body", ruleBody);
+        addCondition(whereClause, parameters, "rule_owner", ruleOwner);
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+        sqlBuilder.append("ORDER BY rule_id\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> rules = new ArrayList<>();
+
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+            boolean isFirstRow = true;
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    // only get the total once as it is the same for all rows.
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
                     }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("ruleId", resultSet.getString("rule_id"));
+                    map.put("ruleName", resultSet.getString("rule_name"));
+                    map.put("ruleVersion", resultSet.getString("rule_version"));
+                    map.put("ruleType", resultSet.getString("rule_type"));
+                    map.put("ruleGroup", resultSet.getBoolean("rule_group"));
+                    map.put("common", resultSet.getString("common"));
+                    map.put("ruleDesc", resultSet.getString("rule_desc"));
+                    map.put("ruleBody", resultSet.getString("rule_body"));
+                    map.put("ruleOwner", resultSet.getString("rule_owner"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
+                    rules.add(map);
                 }
             }
-            if(list.isEmpty())
-                result = Failure.of(new Status(OBJECT_NOT_FOUND, "rule with host ", hostId));
-            else
-                result = Success.of(list);
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("rules", rules);
+            result = Success.of(JsonMapper.toJson(resultMap));
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
@@ -3748,7 +3832,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                 }
             }
-            if(map.isEmpty())
+            if (map.isEmpty())
                 result = Failure.of(new Status(OBJECT_NOT_FOUND, "rule with ruleId ", ruleId));
             else
                 result = Success.of(map);
@@ -3790,7 +3874,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                 }
             }
-            if(list.isEmpty())
+            if (list.isEmpty())
                 result = Failure.of(new Status(OBJECT_NOT_FOUND, "rule with rule type ", ruleType));
             else
                 result = Success.of(list);
@@ -3827,14 +3911,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     statement.setTimestamp(4, ts);
                     statement.addBatch();
                     i++;
-                    if(i % 1000 == 0 || i == ruleIds.size()) {
+                    if (i % 1000 == 0 || i == ruleIds.size()) {
                         statement.executeBatch();
                     }
                 }
                 if (ruleIds.isEmpty()) {
                     insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "failed to insert the Api rule " + event.getApiId());
                 } else {
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
                 }
             }
             updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
@@ -3844,7 +3928,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -3852,7 +3936,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -3888,14 +3972,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     statement.setString(2, ruleId);
                     statement.addBatch();
                     i++;
-                    if(i % 1000 == 0 || i == ruleIds.size()) {
+                    if (i % 1000 == 0 || i == ruleIds.size()) {
                         statement.executeBatch();
                     }
                 }
                 if (ruleIds.isEmpty()) {
                     insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "failed to delete the Api rule " + event.getApiId());
                 } else {
-                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true,  null);
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
                 }
             }
             updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
@@ -3905,7 +3989,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -3913,7 +3997,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             try {
-                if(conn != null) conn.rollback();
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 throw new RuntimeException(ex);
             }
@@ -3958,7 +4042,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                 }
             }
-            if(list.isEmpty())
+            if (list.isEmpty())
                 result = Failure.of(new Status(OBJECT_NOT_FOUND, "rule with rule apiId ", apiId));
             else
                 result = Success.of(list);

@@ -73,4 +73,16 @@ public class PortalDbProviderImplTest {
         }
     }
 
+    @Test
+    void testQueryRule() {
+        Result<String> result = dbProvider.queryRule(0, 2, "N2CMw0HGQXeLvC1wBfln2A", null,
+                null, null, null, null, null, null, null,
+                null);
+        if(result.isFailure()) {
+            System.out.println(result.getError());
+        } else {
+            System.out.println(result.getResult());
+        }
+    }
+
 }
