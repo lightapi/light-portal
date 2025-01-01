@@ -2784,6 +2784,120 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     }
 
+    @Override
+    public Result<String> createEndpointRule(EndpointRuleCreatedEvent event) {
+        final String insertUser = "INSERT INTO api_endpoint_rule_t (host_id, api_id, api_version, endpoint, rule_id, " +
+                "update_user, update_timestamp) " +
+                "VALUES (?, ?, ?, ?, ?,   ?, ?)";
+        Result<String> result = null;
+        Connection conn = null;
+        try {
+            conn = ds.getConnection();
+            conn.setAutoCommit(false);
+            // no duplicate record, insert the user into database and write a success notification.
+            try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getApiId());
+                statement.setString(3, event.getApiVersion());
+                statement.setString(4, event.getEndpoint());
+                statement.setString(5, event.getRuleId());
+                statement.setString(6, event.getEventId().getId());
+                statement.setTimestamp(7, new Timestamp(System.currentTimeMillis()));
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "failed to insert the api version " + "hostId " + event.getHostId() + " apiId " + event.getApiId() + " apiVersion " + event.getApiVersion());
+                } else {
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
+                }
+            }
+            updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
+            // as this is a brand-new user, there is no nonce to be updated. By default, the nonce is 0.
+            conn.commit();
+            result = Success.of(event.getApiId());
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            try {
+                if (conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            try {
+                if (conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        } finally {
+            try {
+                if (conn != null) {
+                    conn.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deleteEndpointRule(EndpointRuleDeletedEvent event) {
+        final String deleteApplication = "DELETE from api_endpoint_rule_t WHERE host_id = ? AND api_id = ? AND api_version = ? AND endpoint = ? AND rule_id = ?";
+        Result<String> result;
+        Connection conn = null;
+        try {
+            conn = ds.getConnection();
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(deleteApplication)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getApiId());
+                statement.setString(3, event.getApiVersion());
+                statement.setString(4, event.getEndpoint());
+                statement.setString(5, event.getRuleId());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    // no record is deleted, write an error notification.
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), false, "no record is deleted for api version " + " hostId " + event.getHostId() + " apiId " + event.getApiId() + " apiVersion " + event.getApiVersion());
+                } else {
+                    // record is deleted, write a success notification.
+                    insertNotification(conn, event.getEventId().getId(), event.getEventId().getNonce(), AvroConverter.toJson(event, false), true, null);
+                }
+            }
+            updateNonce(conn, event.getEventId().getNonce() + 1, event.getEventId().getId());
+            conn.commit();
+            result = Success.of(event.getEventId().getId());
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            try {
+                if (conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            try {
+                if (conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                throw new RuntimeException(ex);
+            }
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        } finally {
+            try {
+                if (conn != null) {
+                    conn.close();
+                }
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+            }
+        }
+        return result;
+    }
+
+
     public Result<String> createMarketCode(MarketCodeCreatedEvent event) {
         // cache key is based on the hostId and authCode.
         String hostId = event.getHostId();
