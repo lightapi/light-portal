@@ -63,6 +63,9 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> deleteServiceVersion(ServiceVersionDeletedEvent event);
     Result<String> queryServiceVersion(String hostId, String apiId);
     Result<String> updateServiceSpec(ServiceSpecUpdatedEvent event, List<Map<String, Object>> endpoints);
+    Result<String> queryServiceEndpoint(String hostId, String apiId, String apiVersion);
+    Result<String> queryEndpointRule(String hostId, String apiId, String apiVersion, String endpoint);
+    Result<String> queryEndpointScope(String hostId, String apiId, String apiVersion, String endpoint);
 
     Result<String> createMarketCode(MarketCodeCreatedEvent event);
     Result<String> deleteMarketCode(MarketCodeDeletedEvent event);
@@ -93,7 +96,7 @@ public interface PortalDbProvider extends DbProvider {
                              String ruleVersion, String ruleType, String ruleGroup, String ruleDesc,
                              String ruleBody, String ruleOwner, String common);
     Result<Map<String, Object>> queryRuleById(String ruleId);
-    Result<List<Map<String, Object>>> queryRuleByHostType(String hostId, String ruleType);
+    Result<String> queryRuleByHostType(String hostId, String ruleType);
     Result<String> createApiRule(ApiRuleCreatedEvent event);
     Result<String> deleteApiRule(ApiRuleDeletedEvent event);
     Result<List<Map<String, Object>>> queryRuleByHostApiId(String hostId, String apiId);

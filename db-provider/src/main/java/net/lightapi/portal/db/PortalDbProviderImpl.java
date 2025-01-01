@@ -2656,6 +2656,134 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     }
 
+    @Override
+    public Result<String> queryServiceEndpoint(String hostId, String apiId, String apiVersion) {
+        Result<String> result = null;
+        String sql = "SELECT host_id, api_id, api_version, endpoint, http_method,\n" +
+                "endpoint_path, endpoint_desc\n" +
+                "FROM api_endpoint_t\n" +
+                "WHERE host_id = ? AND api_id = ? AND api_version = ?\n" +
+                "ORDER BY endpoint";
+
+        List<Map<String, Object>> endpoints = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, hostId);
+            preparedStatement.setString(2, apiId);
+            preparedStatement.setString(3, apiVersion);
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("apiId", resultSet.getString("api_id"));
+                    map.put("apiVersion", resultSet.getString("api_version"));
+                    map.put("endpoint", resultSet.getString("endpoint"));
+                    map.put("httpMethod", resultSet.getString("http_method"));
+                    map.put("endpointPath", resultSet.getString("endpoint_path"));
+                    map.put("endpointDesc", resultSet.getString("endpoint_desc"));
+                    endpoints.add(map);
+                }
+            }
+            result = Success.of(JsonMapper.toJson(endpoints));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
+    public Result<String> queryEndpointScope(String hostId, String apiId, String apiVersion, String endpoint) {
+        Result<String> result = null;
+        String sql = "SELECT host_id, api_id, api_version, endpoint, scope, scope_desc \n" +
+                "FROM api_endpoint_scope_t\n" +
+                "WHERE host_id = ?\n" +
+                "AND api_id = ?\n" +
+                "AND api_version = ?\n" +
+                "AND endpoint = ?\n" +
+                "ORDER BY scope";
+
+        List<Map<String, Object>> scopes = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, hostId);
+            preparedStatement.setString(2, apiId);
+            preparedStatement.setString(3, apiVersion);
+            preparedStatement.setString(4, endpoint);
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("apiId", resultSet.getString("api_id"));
+                    map.put("apiVersion", resultSet.getString("api_version"));
+                    map.put("endpoint", resultSet.getString("endpoint"));
+                    map.put("scope", resultSet.getString("scope"));
+                    map.put("scopeDesc", resultSet.getString("scope_desc"));
+                    scopes.add(map);
+                }
+            }
+            result = Success.of(JsonMapper.toJson(scopes));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
+    public Result<String> queryEndpointRule(String hostId, String apiId, String apiVersion, String endpoint) {
+        Result<String> result = null;
+        String sql = "SELECT a.host_id, a.api_id, a.api_version, a.endpoint, r.rule_type, a.rule_id\n" +
+                "FROM api_endpoint_rule_t a, rule_t r\n" +
+                "WHERE a.rule_id = r.rule_id\n" +
+                "AND a.host_id = ?\n" +
+                "AND a.api_id = ?\n" +
+                "AND a.api_version = ?\n" +
+                "AND a.endpoint = ?\n" +
+                "ORDER BY r.rule_type";
+
+        List<Map<String, Object>> rules = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, hostId);
+            preparedStatement.setString(2, apiId);
+            preparedStatement.setString(3, apiVersion);
+            preparedStatement.setString(4, endpoint);
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("apiId", resultSet.getString("api_id"));
+                    map.put("apiVersion", resultSet.getString("api_version"));
+                    map.put("endpoint", resultSet.getString("endpoint"));
+                    map.put("ruleType", resultSet.getString("rule_type"));
+                    map.put("ruleId", resultSet.getString("rule_id"));
+                    rules.add(map);
+                }
+            }
+            result = Success.of(JsonMapper.toJson(rules));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
     public Result<String> createMarketCode(MarketCodeCreatedEvent event) {
         // cache key is based on the hostId and authCode.
         String hostId = event.getHostId();
@@ -3847,37 +3975,40 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<List<Map<String, Object>>> queryRuleByHostType(String hostId, String ruleType) {
-        Result<List<Map<String, Object>>> result;
-        String sql = "SELECT rule_id, host_id, rule_type, rule_group, rule_visibility, rule_description, rule_body, rule_owner " +
-                "update_user, update_timestamp " +
-                "FROM rule_t WHERE host_id = ? AND rule_type = ?";
+    public Result<String> queryRuleByHostType(String hostId, String ruleType) {
+        Result<String> result;
+        String sql = "SELECT r.rule_id\n" +
+                "FROM rule_t r, rule_host_t h\n" +
+                "WHERE r.rule_id = h.rule_id\n" +
+                "AND h.host_id = ?\n" +
+                "AND r.rule_type = ?\n" +
+                "UNION\n" +
+                "SELECT r.rule_id r\n" +
+                "FROM rule_t r, rule_host_t h\n" +
+                "WHERE h.host_id != ?\n" +
+                "AND r.rule_type = ?\n" +
+                "AND r.common = 'Y'";
         try (final Connection conn = ds.getConnection()) {
             List<Map<String, Object>> list = new ArrayList<>();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, hostId);
                 statement.setString(2, ruleType);
+                statement.setString(3, hostId);
+                statement.setString(4, ruleType);
+
                 try (ResultSet resultSet = statement.executeQuery()) {
                     while (resultSet.next()) {
                         Map<String, Object> map = new HashMap<>();
-                        map.put("ruleId", resultSet.getString("rule_id"));
-                        map.put("hostId", resultSet.getString("host_id"));
-                        map.put("ruleType", resultSet.getString("rule_type"));
-                        map.put("ruleGroup", resultSet.getBoolean("rule_group"));
-                        map.put("ruleVisibility", resultSet.getString("rule_visibility"));
-                        map.put("ruleDescription", resultSet.getString("rule_description"));
-                        map.put("ruleBody", resultSet.getString("rule_body"));
-                        map.put("ruleOwner", resultSet.getString("rule_owner"));
-                        map.put("updateUser", resultSet.getString("update_user"));
-                        map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
+                        map.put("id", resultSet.getString("rule_id"));
+                        map.put("label", resultSet.getString("rule_id"));
                         list.add(map);
                     }
                 }
             }
             if (list.isEmpty())
-                result = Failure.of(new Status(OBJECT_NOT_FOUND, "rule with rule type ", ruleType));
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "rule with host id and rule type ", hostId  + "|" + ruleType));
             else
-                result = Success.of(list);
+                result = Success.of(JsonMapper.toJson(list));
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
