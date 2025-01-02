@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class HostUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -152319578655007394L;
+  private static final long serialVersionUID = 7260847659183883388L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"HostUpdatedEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"host\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host name is used as the key as we check if the mail is match the host domain\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id which is a unique identifier\"},{\"name\":\"name\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"The name of the organization\"},{\"name\":\"desc\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"A short description of the organization\"},{\"name\":\"owner\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host owner id\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host detail in JSON for other properties\"},{\"name\":\"user\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"event user id\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"HostUpdatedEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostDomain\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host domain\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id which is a unique identifier\"},{\"name\":\"name\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"The name of the organization\"},{\"name\":\"desc\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"A short description of the organization\"},{\"name\":\"owner\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host owner id\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host detail in JSON for other properties\"},{\"name\":\"user\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"event user id\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -74,8 +74,8 @@ public class HostUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
   }
 
   private com.networknt.kafka.common.EventId EventId;
-  /** host name is used as the key as we check if the mail is match the host domain */
-  private java.lang.String host;
+  /** host domain */
+  private java.lang.String hostDomain;
   /** host id which is a unique identifier */
   private java.lang.String hostId;
   /** The name of the organization */
@@ -101,7 +101,7 @@ public class HostUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
   /**
    * All-args constructor.
    * @param EventId The new value for EventId
-   * @param host host name is used as the key as we check if the mail is match the host domain
+   * @param hostDomain host domain
    * @param hostId host id which is a unique identifier
    * @param name The name of the organization
    * @param desc A short description of the organization
@@ -110,9 +110,9 @@ public class HostUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
    * @param user event user id
    * @param timestamp time the event is recorded
    */
-  public HostUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String host, java.lang.String hostId, java.lang.String name, java.lang.String desc, java.lang.String owner, java.lang.String value, java.lang.String user, java.lang.Long timestamp) {
+  public HostUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostDomain, java.lang.String hostId, java.lang.String name, java.lang.String desc, java.lang.String owner, java.lang.String value, java.lang.String user, java.lang.Long timestamp) {
     this.EventId = EventId;
-    this.host = host;
+    this.hostDomain = hostDomain;
     this.hostId = hostId;
     this.name = name;
     this.desc = desc;
@@ -128,7 +128,7 @@ public class HostUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return EventId;
-    case 1: return host;
+    case 1: return hostDomain;
     case 2: return hostId;
     case 3: return name;
     case 4: return desc;
@@ -145,7 +145,7 @@ public class HostUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
-    case 1: host = value$ != null ? value$.toString() : null; break;
+    case 1: hostDomain = value$ != null ? value$.toString() : null; break;
     case 2: hostId = value$ != null ? value$.toString() : null; break;
     case 3: name = value$ != null ? value$.toString() : null; break;
     case 4: desc = value$ != null ? value$.toString() : null; break;
@@ -175,21 +175,21 @@ public class HostUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
   }
 
   /**
-   * Gets the value of the 'host' field.
-   * @return host name is used as the key as we check if the mail is match the host domain
+   * Gets the value of the 'hostDomain' field.
+   * @return host domain
    */
-  public java.lang.String getHost() {
-    return host;
+  public java.lang.String getHostDomain() {
+    return hostDomain;
   }
 
 
   /**
-   * Sets the value of the 'host' field.
-   * host name is used as the key as we check if the mail is match the host domain
+   * Sets the value of the 'hostDomain' field.
+   * host domain
    * @param value the value to set.
    */
-  public void setHost(java.lang.String value) {
-    this.host = value;
+  public void setHostDomain(java.lang.String value) {
+    this.hostDomain = value;
   }
 
   /**
@@ -361,8 +361,8 @@ public class HostUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
-    /** host name is used as the key as we check if the mail is match the host domain */
-    private java.lang.String host;
+    /** host domain */
+    private java.lang.String hostDomain;
     /** host id which is a unique identifier */
     private java.lang.String hostId;
     /** The name of the organization */
@@ -396,8 +396,8 @@ public class HostUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
       if (other.hasEventIdBuilder()) {
         this.EventIdBuilder = com.networknt.kafka.common.EventId.newBuilder(other.getEventIdBuilder());
       }
-      if (isValidValue(fields()[1], other.host)) {
-        this.host = data().deepCopy(fields()[1].schema(), other.host);
+      if (isValidValue(fields()[1], other.hostDomain)) {
+        this.hostDomain = data().deepCopy(fields()[1].schema(), other.hostDomain);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
       if (isValidValue(fields()[2], other.hostId)) {
@@ -441,8 +441,8 @@ public class HostUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
         fieldSetFlags()[0] = true;
       }
       this.EventIdBuilder = null;
-      if (isValidValue(fields()[1], other.host)) {
-        this.host = data().deepCopy(fields()[1].schema(), other.host);
+      if (isValidValue(fields()[1], other.hostDomain)) {
+        this.hostDomain = data().deepCopy(fields()[1].schema(), other.hostDomain);
         fieldSetFlags()[1] = true;
       }
       if (isValidValue(fields()[2], other.hostId)) {
@@ -552,45 +552,45 @@ public class HostUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
     }
 
     /**
-      * Gets the value of the 'host' field.
-      * host name is used as the key as we check if the mail is match the host domain
+      * Gets the value of the 'hostDomain' field.
+      * host domain
       * @return The value.
       */
-    public java.lang.String getHost() {
-      return host;
+    public java.lang.String getHostDomain() {
+      return hostDomain;
     }
 
 
     /**
-      * Sets the value of the 'host' field.
-      * host name is used as the key as we check if the mail is match the host domain
-      * @param value The value of 'host'.
+      * Sets the value of the 'hostDomain' field.
+      * host domain
+      * @param value The value of 'hostDomain'.
       * @return This builder.
       */
-    public net.lightapi.portal.user.HostUpdatedEvent.Builder setHost(java.lang.String value) {
+    public net.lightapi.portal.user.HostUpdatedEvent.Builder setHostDomain(java.lang.String value) {
       validate(fields()[1], value);
-      this.host = value;
+      this.hostDomain = value;
       fieldSetFlags()[1] = true;
       return this;
     }
 
     /**
-      * Checks whether the 'host' field has been set.
-      * host name is used as the key as we check if the mail is match the host domain
-      * @return True if the 'host' field has been set, false otherwise.
+      * Checks whether the 'hostDomain' field has been set.
+      * host domain
+      * @return True if the 'hostDomain' field has been set, false otherwise.
       */
-    public boolean hasHost() {
+    public boolean hasHostDomain() {
       return fieldSetFlags()[1];
     }
 
 
     /**
-      * Clears the value of the 'host' field.
-      * host name is used as the key as we check if the mail is match the host domain
+      * Clears the value of the 'hostDomain' field.
+      * host domain
       * @return This builder.
       */
-    public net.lightapi.portal.user.HostUpdatedEvent.Builder clearHost() {
-      host = null;
+    public net.lightapi.portal.user.HostUpdatedEvent.Builder clearHostDomain() {
+      hostDomain = null;
       fieldSetFlags()[1] = false;
       return this;
     }
@@ -917,7 +917,7 @@ public class HostUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
         } else {
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
-        record.host = fieldSetFlags()[1] ? this.host : (java.lang.String) defaultValue(fields()[1]);
+        record.hostDomain = fieldSetFlags()[1] ? this.hostDomain : (java.lang.String) defaultValue(fields()[1]);
         record.hostId = fieldSetFlags()[2] ? this.hostId : (java.lang.String) defaultValue(fields()[2]);
         record.name = fieldSetFlags()[3] ? this.name : (java.lang.String) defaultValue(fields()[3]);
         record.desc = fieldSetFlags()[4] ? this.desc : (java.lang.String) defaultValue(fields()[4]);
@@ -959,7 +959,7 @@ public class HostUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
   {
     this.EventId.customEncode(out);
 
-    out.writeString(this.host);
+    out.writeString(this.hostDomain);
 
     out.writeString(this.hostId);
 
@@ -987,7 +987,7 @@ public class HostUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
       }
       this.EventId.customDecode(in);
 
-      this.host = in.readString();
+      this.hostDomain = in.readString();
 
       this.hostId = in.readString();
 
@@ -1014,7 +1014,7 @@ public class HostUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
           break;
 
         case 1:
-          this.host = in.readString();
+          this.hostDomain = in.readString();
           break;
 
         case 2:

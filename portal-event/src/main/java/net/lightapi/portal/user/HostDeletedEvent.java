@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -916664834451179714L;
+  private static final long serialVersionUID = -3793466754931795498L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"HostDeletedEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"host\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host name is used to delete as we have to ensure that the email domain is matched\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id which is a unique identifier\"},{\"name\":\"user\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"event user id\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"HostDeletedEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"user\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"event user id\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -74,9 +74,7 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
   }
 
   private com.networknt.kafka.common.EventId EventId;
-  /** host name is used to delete as we have to ensure that the email domain is matched */
-  private java.lang.String host;
-  /** host id which is a unique identifier */
+  /** host id */
   private java.lang.String hostId;
   /** event user id */
   private java.lang.String user;
@@ -93,14 +91,12 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
   /**
    * All-args constructor.
    * @param EventId The new value for EventId
-   * @param host host name is used to delete as we have to ensure that the email domain is matched
-   * @param hostId host id which is a unique identifier
+   * @param hostId host id
    * @param user event user id
    * @param timestamp time the event is recorded
    */
-  public HostDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String host, java.lang.String hostId, java.lang.String user, java.lang.Long timestamp) {
+  public HostDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String user, java.lang.Long timestamp) {
     this.EventId = EventId;
-    this.host = host;
     this.hostId = hostId;
     this.user = user;
     this.timestamp = timestamp;
@@ -112,10 +108,9 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return EventId;
-    case 1: return host;
-    case 2: return hostId;
-    case 3: return user;
-    case 4: return timestamp;
+    case 1: return hostId;
+    case 2: return user;
+    case 3: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -125,10 +120,9 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
-    case 1: host = value$ != null ? value$.toString() : null; break;
-    case 2: hostId = value$ != null ? value$.toString() : null; break;
-    case 3: user = value$ != null ? value$.toString() : null; break;
-    case 4: timestamp = (java.lang.Long)value$; break;
+    case 1: hostId = value$ != null ? value$.toString() : null; break;
+    case 2: user = value$ != null ? value$.toString() : null; break;
+    case 3: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -151,26 +145,8 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
   }
 
   /**
-   * Gets the value of the 'host' field.
-   * @return host name is used to delete as we have to ensure that the email domain is matched
-   */
-  public java.lang.String getHost() {
-    return host;
-  }
-
-
-  /**
-   * Sets the value of the 'host' field.
-   * host name is used to delete as we have to ensure that the email domain is matched
-   * @param value the value to set.
-   */
-  public void setHost(java.lang.String value) {
-    this.host = value;
-  }
-
-  /**
    * Gets the value of the 'hostId' field.
-   * @return host id which is a unique identifier
+   * @return host id
    */
   public java.lang.String getHostId() {
     return hostId;
@@ -179,7 +155,7 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
 
   /**
    * Sets the value of the 'hostId' field.
-   * host id which is a unique identifier
+   * host id
    * @param value the value to set.
    */
   public void setHostId(java.lang.String value) {
@@ -265,9 +241,7 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
-    /** host name is used to delete as we have to ensure that the email domain is matched */
-    private java.lang.String host;
-    /** host id which is a unique identifier */
+    /** host id */
     private java.lang.String hostId;
     /** event user id */
     private java.lang.String user;
@@ -292,21 +266,17 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
       if (other.hasEventIdBuilder()) {
         this.EventIdBuilder = com.networknt.kafka.common.EventId.newBuilder(other.getEventIdBuilder());
       }
-      if (isValidValue(fields()[1], other.host)) {
-        this.host = data().deepCopy(fields()[1].schema(), other.host);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
-      if (isValidValue(fields()[2], other.hostId)) {
-        this.hostId = data().deepCopy(fields()[2].schema(), other.hostId);
+      if (isValidValue(fields()[2], other.user)) {
+        this.user = data().deepCopy(fields()[2].schema(), other.user);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.user)) {
-        this.user = data().deepCopy(fields()[3].schema(), other.user);
+      if (isValidValue(fields()[3], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[3].schema(), other.timestamp);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
-      }
-      if (isValidValue(fields()[4], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[4].schema(), other.timestamp);
-        fieldSetFlags()[4] = other.fieldSetFlags()[4];
       }
     }
 
@@ -321,21 +291,17 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
         fieldSetFlags()[0] = true;
       }
       this.EventIdBuilder = null;
-      if (isValidValue(fields()[1], other.host)) {
-        this.host = data().deepCopy(fields()[1].schema(), other.host);
+      if (isValidValue(fields()[1], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.hostId)) {
-        this.hostId = data().deepCopy(fields()[2].schema(), other.hostId);
+      if (isValidValue(fields()[2], other.user)) {
+        this.user = data().deepCopy(fields()[2].schema(), other.user);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.user)) {
-        this.user = data().deepCopy(fields()[3].schema(), other.user);
+      if (isValidValue(fields()[3], other.timestamp)) {
+        this.timestamp = data().deepCopy(fields()[3].schema(), other.timestamp);
         fieldSetFlags()[3] = true;
-      }
-      if (isValidValue(fields()[4], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[4].schema(), other.timestamp);
-        fieldSetFlags()[4] = true;
       }
     }
 
@@ -416,52 +382,8 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
     }
 
     /**
-      * Gets the value of the 'host' field.
-      * host name is used to delete as we have to ensure that the email domain is matched
-      * @return The value.
-      */
-    public java.lang.String getHost() {
-      return host;
-    }
-
-
-    /**
-      * Sets the value of the 'host' field.
-      * host name is used to delete as we have to ensure that the email domain is matched
-      * @param value The value of 'host'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.user.HostDeletedEvent.Builder setHost(java.lang.String value) {
-      validate(fields()[1], value);
-      this.host = value;
-      fieldSetFlags()[1] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'host' field has been set.
-      * host name is used to delete as we have to ensure that the email domain is matched
-      * @return True if the 'host' field has been set, false otherwise.
-      */
-    public boolean hasHost() {
-      return fieldSetFlags()[1];
-    }
-
-
-    /**
-      * Clears the value of the 'host' field.
-      * host name is used to delete as we have to ensure that the email domain is matched
-      * @return This builder.
-      */
-    public net.lightapi.portal.user.HostDeletedEvent.Builder clearHost() {
-      host = null;
-      fieldSetFlags()[1] = false;
-      return this;
-    }
-
-    /**
       * Gets the value of the 'hostId' field.
-      * host id which is a unique identifier
+      * host id
       * @return The value.
       */
     public java.lang.String getHostId() {
@@ -471,35 +393,35 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
 
     /**
       * Sets the value of the 'hostId' field.
-      * host id which is a unique identifier
+      * host id
       * @param value The value of 'hostId'.
       * @return This builder.
       */
     public net.lightapi.portal.user.HostDeletedEvent.Builder setHostId(java.lang.String value) {
-      validate(fields()[2], value);
+      validate(fields()[1], value);
       this.hostId = value;
-      fieldSetFlags()[2] = true;
+      fieldSetFlags()[1] = true;
       return this;
     }
 
     /**
       * Checks whether the 'hostId' field has been set.
-      * host id which is a unique identifier
+      * host id
       * @return True if the 'hostId' field has been set, false otherwise.
       */
     public boolean hasHostId() {
-      return fieldSetFlags()[2];
+      return fieldSetFlags()[1];
     }
 
 
     /**
       * Clears the value of the 'hostId' field.
-      * host id which is a unique identifier
+      * host id
       * @return This builder.
       */
     public net.lightapi.portal.user.HostDeletedEvent.Builder clearHostId() {
       hostId = null;
-      fieldSetFlags()[2] = false;
+      fieldSetFlags()[1] = false;
       return this;
     }
 
@@ -520,9 +442,9 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.user.HostDeletedEvent.Builder setUser(java.lang.String value) {
-      validate(fields()[3], value);
+      validate(fields()[2], value);
       this.user = value;
-      fieldSetFlags()[3] = true;
+      fieldSetFlags()[2] = true;
       return this;
     }
 
@@ -532,7 +454,7 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return True if the 'user' field has been set, false otherwise.
       */
     public boolean hasUser() {
-      return fieldSetFlags()[3];
+      return fieldSetFlags()[2];
     }
 
 
@@ -543,7 +465,7 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
       */
     public net.lightapi.portal.user.HostDeletedEvent.Builder clearUser() {
       user = null;
-      fieldSetFlags()[3] = false;
+      fieldSetFlags()[2] = false;
       return this;
     }
 
@@ -564,9 +486,9 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.user.HostDeletedEvent.Builder setTimestamp(long value) {
-      validate(fields()[4], value);
+      validate(fields()[3], value);
       this.timestamp = value;
-      fieldSetFlags()[4] = true;
+      fieldSetFlags()[3] = true;
       return this;
     }
 
@@ -576,7 +498,7 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return True if the 'timestamp' field has been set, false otherwise.
       */
     public boolean hasTimestamp() {
-      return fieldSetFlags()[4];
+      return fieldSetFlags()[3];
     }
 
 
@@ -586,7 +508,7 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.user.HostDeletedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[4] = false;
+      fieldSetFlags()[3] = false;
       return this;
     }
 
@@ -605,10 +527,9 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
         } else {
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
-        record.host = fieldSetFlags()[1] ? this.host : (java.lang.String) defaultValue(fields()[1]);
-        record.hostId = fieldSetFlags()[2] ? this.hostId : (java.lang.String) defaultValue(fields()[2]);
-        record.user = fieldSetFlags()[3] ? this.user : (java.lang.String) defaultValue(fields()[3]);
-        record.timestamp = fieldSetFlags()[4] ? this.timestamp : (java.lang.Long) defaultValue(fields()[4]);
+        record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
+        record.user = fieldSetFlags()[2] ? this.user : (java.lang.String) defaultValue(fields()[2]);
+        record.timestamp = fieldSetFlags()[3] ? this.timestamp : (java.lang.Long) defaultValue(fields()[3]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -643,8 +564,6 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
   {
     this.EventId.customEncode(out);
 
-    out.writeString(this.host);
-
     out.writeString(this.hostId);
 
     out.writeString(this.user);
@@ -663,8 +582,6 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
       }
       this.EventId.customDecode(in);
 
-      this.host = in.readString();
-
       this.hostId = in.readString();
 
       this.user = in.readString();
@@ -672,7 +589,7 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
       this.timestamp = in.readLong();
 
     } else {
-      for (int i = 0; i < 5; i++) {
+      for (int i = 0; i < 4; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -682,18 +599,14 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
           break;
 
         case 1:
-          this.host = in.readString();
-          break;
-
-        case 2:
           this.hostId = in.readString();
           break;
 
-        case 3:
+        case 2:
           this.user = in.readString();
           break;
 
-        case 4:
+        case 3:
           this.timestamp = in.readLong();
           break;
 

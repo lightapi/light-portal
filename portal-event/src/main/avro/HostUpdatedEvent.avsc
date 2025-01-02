@@ -30,9 +30,9 @@
       }
     },
     {
-      "name": "host",
+      "name": "hostDomain",
       "type": "string",
-      "doc": "host name is used as the key as we check if the mail is match the host domain"
+      "doc": "host domain"
     },
     {
       "name": "hostId",

@@ -919,6 +919,37 @@ public class HybridQueryClient {
     }
 
     /**
+     * Get host domain associated with a particular hostId. This method is called from the main getHostDomainById
+     * endpoint to get host domain based on the hostId.
+     *
+     * @param exchange HttpServerExchange
+     * @param url url of target server
+     * @param hostId host id
+     * @return Result map of entities in JSON
+     */
+    public static Result<String> getHostDomainById(HttpServerExchange exchange, String url, String hostId) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getHostDomainById\",\"version\":\"0.1.0\",\"data\":{\"hostId\":\"%s\"}}", hostId);
+        return callQueryExchangeUrl(s, exchange, url);
+    }
+
+    /**
+     * Get host domain associated with a particular hostId. This method is called from the main getHostDomainById
+     * endpoint to get host domain based on the hostId.
+     *
+     * @param exchange HttpServerExchange
+     * @param hostId host id
+     * @return Result map of entities in JSON
+     */
+    public static Result<String> getHostDomainById(HttpServerExchange exchange, String hostId) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getHostDomainById\",\"version\":\"0.1.0\",\"data\":{\"hostId\":\"%s\"}}", hostId);
+        if (config.isPortalByServiceUrl()) {
+            return callQueryExchangeUrl(s, exchange, config.getPortalQueryServiceUrl());
+        } else {
+            return callQueryExchange(s, exchange);
+        }
+    }
+
+    /**
      * Get category for host and name with exchange and url. The result contains a list of codes.
      *
      * @param exchange HttpServerExchange

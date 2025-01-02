@@ -30,14 +30,9 @@
       }
     },
     {
-      "name": "host",
-      "type": "string",
-      "doc": "host name is used to delete as we have to ensure that the email domain is matched"
-    },
-    {
       "name": "hostId",
       "type": "string",
-      "doc": "host id which is a unique identifier"
+      "doc": "host id"
     },
     {
       "name": "user",

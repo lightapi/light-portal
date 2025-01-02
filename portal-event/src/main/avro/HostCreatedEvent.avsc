@@ -30,9 +30,9 @@
       }
     },
     {
-      "name": "host",
+      "name": "hostDomain",
       "type": "string",
-      "doc": "host"
+      "doc": "host domain"
     },
     {
       "name": "hostId",
