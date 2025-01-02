@@ -14,6 +14,7 @@ import net.lightapi.portal.db.PortalDbProvider;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import scala.Int;
 
 import java.util.List;
 import java.util.Map;
@@ -85,4 +86,13 @@ public class PortalDbProviderImplTest {
         }
     }
 
+    @Test
+    void testGetNextNonce() {
+        Result<Integer> result = dbProvider.queryNonceByUserId("utgdG50vRVOX3mL1Kf83aA");
+        if(result.isFailure()) {
+            System.out.println(result.getError());
+        } else {
+            System.out.println(result.getResult());
+        }
+    }
 }
