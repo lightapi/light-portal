@@ -103,4 +103,9 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> deleteApiRule(ApiRuleDeletedEvent event);
     Result<List<Map<String, Object>>> queryRuleByHostApiId(String hostId, String apiId, String apiVersion);
 
+    Result<String> queryRole(int offset, int limit, String hostId, String roleId, String roleDesc);
+    Result<String> queryGroup(int offset, int limit, String hostId, String groupId, String groupDesc);
+    Result<String> queryPosition(int offset, int limit, String hostId, String positionId, String positionDesc, String inheritToAncestor, String inheritToSibling);
+    Result<String> queryAttribute(int offset, int limit, String hostId, String attributeId, String attributeType, String attributeDesc);
+
 }

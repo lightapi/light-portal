@@ -3728,4 +3728,275 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         return result;
     }
 
+    @Override
+    public Result<String> queryRole(int offset, int limit, String hostId, String roleId, String roleDesc) {
+        Result<String> result;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, host_id, role_id, role_desc, update_user, update_timestamp " +
+                "FROM role_t " +
+                "WHERE host_id = ?\n");
+
+
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(hostId);
+
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "role_id", roleId);
+        addCondition(whereClause, parameters, "role_desc", roleDesc);
+
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append("ORDER BY role_id\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        if(logger.isTraceEnabled()) logger.trace("queryRole sql: {}", sql);
+        int total = 0;
+        List<Map<String, Object>> roles = new ArrayList<>();
+
+
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    // only get the total once as it is the same for all rows.
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("roleId", resultSet.getString("role_id"));
+                    map.put("roleDesc", resultSet.getString("role_desc"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
+                    roles.add(map);
+                }
+            }
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("roles", roles);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+
+        return result;
+    }
+
+    @Override
+    public Result<String> queryGroup(int offset, int limit, String hostId, String groupId, String groupDesc) {
+        Result<String> result;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, host_id, group_id, group_desc, update_user, update_timestamp " +
+                "FROM group_t " +
+                "WHERE host_id = ?\n");
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(hostId);
+
+        StringBuilder whereClause = new StringBuilder();
+        addCondition(whereClause, parameters, "group_id", groupId);
+        addCondition(whereClause, parameters, "group_desc", groupDesc);
+
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append("ORDER BY group_id\n" +
+                "LIMIT ? OFFSET ?");
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> groups = new ArrayList<>();
+
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    // only get the total once as it is the same for all rows.
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("groupId", resultSet.getString("group_id"));
+                    map.put("groupDesc", resultSet.getString("group_desc"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
+                    groups.add(map);
+                }
+            }
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("groups", groups);
+            result = Success.of(JsonMapper.toJson(resultMap));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+
+    @Override
+    public Result<String> queryPosition(int offset, int limit, String hostId, String positionId, String positionDesc, String inheritToAncestor, String inheritToSibling) {
+        Result<String> result;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, host_id, position_id, position_desc, inherit_to_ancestor, inherit_to_sibling, update_user, update_timestamp " +
+                "FROM position_t " +
+                "WHERE host_id = ?\n");
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(hostId);
+
+        StringBuilder whereClause = new StringBuilder();
+        addCondition(whereClause, parameters, "position_id", positionId);
+        addCondition(whereClause, parameters, "position_desc", positionDesc);
+        addCondition(whereClause, parameters, "inherit_to_ancestor", inheritToAncestor);
+        addCondition(whereClause, parameters, "inherit_to_sibling", inheritToSibling);
+
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+        sqlBuilder.append("ORDER BY position_id\n" +
+                "LIMIT ? OFFSET ?");
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+
+        int total = 0;
+        List<Map<String, Object>> positions = new ArrayList<>();
+
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+            boolean isFirstRow = true;
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    // only get the total once as it is the same for all rows.
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("positionId", resultSet.getString("position_id"));
+                    map.put("positionDesc", resultSet.getString("position_desc"));
+                    map.put("inheritToAncestor", resultSet.getBoolean("inherit_to_ancestor"));
+                    map.put("inheritToSibling", resultSet.getBoolean("inherit_to_sibling"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
+                    positions.add(map);
+                }
+            }
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("positions", positions);
+            result = Success.of(JsonMapper.toJson(resultMap));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> queryAttribute(int offset, int limit, String hostId, String attributeId, String attributeType, String attributeDesc) {
+        Result<String> result;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, host_id, attribute_id, attribute_type, attribute_desc, update_user, update_timestamp " +
+                "FROM attribute_t " +
+                "WHERE host_id = ?\n");
+
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(hostId);
+
+        StringBuilder whereClause = new StringBuilder();
+        addCondition(whereClause, parameters, "attribute_id", attributeId);
+        addCondition(whereClause, parameters, "attribute_type", attributeType);
+        addCondition(whereClause, parameters, "attribute_desc", attributeDesc);
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+        sqlBuilder.append("ORDER BY attribute_id\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+
+        int total = 0;
+        List<Map<String, Object>> attributes = new ArrayList<>();
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    // only get the total once as it is the same for all rows.
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("attributeId", resultSet.getString("attribute_id"));
+                    map.put("attributeType", resultSet.getString("attribute_type"));
+                    map.put("attributeDesc", resultSet.getString("attribute_desc"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
+                    attributes.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("attributes", attributes);
+            result = Success.of(JsonMapper.toJson(resultMap));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
 }

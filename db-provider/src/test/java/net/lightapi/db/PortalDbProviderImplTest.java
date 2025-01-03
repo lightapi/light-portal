@@ -19,6 +19,9 @@ import scala.Int;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 @Disabled
 public class PortalDbProviderImplTest {
     public static PortalDbProvider dbProvider;
@@ -93,6 +96,63 @@ public class PortalDbProviderImplTest {
             System.out.println(result.getError());
         } else {
             System.out.println(result.getResult());
+        }
+    }
+
+    @Test
+    public void testQueryRole()  {
+        Result<String> result = dbProvider.queryRole(0, 2, "N2CMw0HGQXeLvC1wBfln2A", "se", null);
+        if(result.isFailure()) {
+            System.out.println(result.getError());
+            fail();
+        } else {
+            System.out.println(result.getResult());
+            Map<String, Object> roles = JsonMapper.string2Map(result.getResult());
+            assertTrue((Integer)roles.get("total") > 0);
+            assertTrue(((List)roles.get("roles")).size() > 0);
+        }
+    }
+
+
+    @Test
+    public void testQueryGroup() {
+        Result<String> result = dbProvider.queryGroup(0, 2, "N2CMw0HGQXeLvC1wBfln2A", "le", null);
+        if(result.isFailure()) {
+            System.out.println(result.getError());
+            fail();
+        } else {
+            System.out.println(result.getResult());
+            Map<String, Object> groups = JsonMapper.string2Map(result.getResult());
+            assertTrue((Integer)groups.get("total") > 0);
+            assertTrue(((List)groups.get("groups")).size() > 0);
+        }
+    }
+
+    @Test
+    public void testQueryPosition() {
+        Result<String> result = dbProvider.queryPosition(0, 2, "N2CMw0HGQXeLvC1wBfln2A", null, null, "Y", null);
+        if(result.isFailure()) {
+            System.out.println(result.getError());
+            fail();
+        } else {
+            System.out.println(result.getResult());
+            Map<String, Object> positions = JsonMapper.string2Map(result.getResult());
+            assertTrue((Integer)positions.get("total") > 0);
+            assertTrue(((List)positions.get("positions")).size() > 0);
+        }
+    }
+
+    @Test
+    public void testQueryAttribute() {
+        Result<String> result = dbProvider.queryAttribute(0, 2, "N2CMw0HGQXeLvC1wBfln2A", "ou", null, null);
+        if(result.isFailure()) {
+            System.out.println(result.getError());
+            fail();
+        } else {
+            System.out.println(result.getResult());
+            Map<String, Object> attributes = JsonMapper.string2Map(result.getResult());
+            assertTrue((Integer)attributes.get("total") > 0);
+            assertTrue(((List)attributes.get("attributes")).size() > 0);
         }
     }
 }
