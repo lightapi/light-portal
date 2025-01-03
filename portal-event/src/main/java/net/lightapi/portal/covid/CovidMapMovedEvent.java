@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class CovidMapMovedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 8140114558468242088L;
+  private static final long serialVersionUID = 4495583581079431995L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"CovidMapMovedEvent\",\"namespace\":\"net.lightapi.portal.covid\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":true}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"location\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"country, province and city combination\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the unique user id\"},{\"name\":\"point\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"point in JSON\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"CovidMapMovedEvent\",\"namespace\":\"net.lightapi.portal.covid\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":true}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"location\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"country, province and city combination\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the unique user id\"},{\"name\":\"point\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"point in JSON\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -82,8 +82,6 @@ public class CovidMapMovedEvent extends org.apache.avro.specific.SpecificRecordB
   private java.lang.String userId;
   /** point in JSON */
   private java.lang.String point;
-  /** time the event is recorded */
-  private long timestamp;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -99,15 +97,13 @@ public class CovidMapMovedEvent extends org.apache.avro.specific.SpecificRecordB
    * @param location country, province and city combination
    * @param userId the unique user id
    * @param point point in JSON
-   * @param timestamp time the event is recorded
    */
-  public CovidMapMovedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String location, java.lang.String userId, java.lang.String point, java.lang.Long timestamp) {
+  public CovidMapMovedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String location, java.lang.String userId, java.lang.String point) {
     this.EventId = EventId;
     this.hostId = hostId;
     this.location = location;
     this.userId = userId;
     this.point = point;
-    this.timestamp = timestamp;
   }
 
   public org.apache.avro.specific.SpecificData getSpecificData() { return MODEL$; }
@@ -120,7 +116,6 @@ public class CovidMapMovedEvent extends org.apache.avro.specific.SpecificRecordB
     case 2: return location;
     case 3: return userId;
     case 4: return point;
-    case 5: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -134,7 +129,6 @@ public class CovidMapMovedEvent extends org.apache.avro.specific.SpecificRecordB
     case 2: location = value$ != null ? value$.toString() : null; break;
     case 3: userId = value$ != null ? value$.toString() : null; break;
     case 4: point = value$ != null ? value$.toString() : null; break;
-    case 5: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -229,24 +223,6 @@ public class CovidMapMovedEvent extends org.apache.avro.specific.SpecificRecordB
   }
 
   /**
-   * Gets the value of the 'timestamp' field.
-   * @return time the event is recorded
-   */
-  public long getTimestamp() {
-    return timestamp;
-  }
-
-
-  /**
-   * Sets the value of the 'timestamp' field.
-   * time the event is recorded
-   * @param value the value to set.
-   */
-  public void setTimestamp(long value) {
-    this.timestamp = value;
-  }
-
-  /**
    * Creates a new CovidMapMovedEvent RecordBuilder.
    * @return A new CovidMapMovedEvent RecordBuilder
    */
@@ -297,8 +273,6 @@ public class CovidMapMovedEvent extends org.apache.avro.specific.SpecificRecordB
     private java.lang.String userId;
     /** point in JSON */
     private java.lang.String point;
-    /** time the event is recorded */
-    private long timestamp;
 
     /** Creates a new Builder */
     private Builder() {
@@ -334,10 +308,6 @@ public class CovidMapMovedEvent extends org.apache.avro.specific.SpecificRecordB
         this.point = data().deepCopy(fields()[4].schema(), other.point);
         fieldSetFlags()[4] = other.fieldSetFlags()[4];
       }
-      if (isValidValue(fields()[5], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[5].schema(), other.timestamp);
-        fieldSetFlags()[5] = other.fieldSetFlags()[5];
-      }
     }
 
     /**
@@ -366,10 +336,6 @@ public class CovidMapMovedEvent extends org.apache.avro.specific.SpecificRecordB
       if (isValidValue(fields()[4], other.point)) {
         this.point = data().deepCopy(fields()[4].schema(), other.point);
         fieldSetFlags()[4] = true;
-      }
-      if (isValidValue(fields()[5], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[5].schema(), other.timestamp);
-        fieldSetFlags()[5] = true;
       }
     }
 
@@ -625,49 +591,6 @@ public class CovidMapMovedEvent extends org.apache.avro.specific.SpecificRecordB
       return this;
     }
 
-    /**
-      * Gets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return The value.
-      */
-    public long getTimestamp() {
-      return timestamp;
-    }
-
-
-    /**
-      * Sets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @param value The value of 'timestamp'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.covid.CovidMapMovedEvent.Builder setTimestamp(long value) {
-      validate(fields()[5], value);
-      this.timestamp = value;
-      fieldSetFlags()[5] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'timestamp' field has been set.
-      * time the event is recorded
-      * @return True if the 'timestamp' field has been set, false otherwise.
-      */
-    public boolean hasTimestamp() {
-      return fieldSetFlags()[5];
-    }
-
-
-    /**
-      * Clears the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return This builder.
-      */
-    public net.lightapi.portal.covid.CovidMapMovedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[5] = false;
-      return this;
-    }
-
     @Override
     @SuppressWarnings("unchecked")
     public CovidMapMovedEvent build() {
@@ -687,7 +610,6 @@ public class CovidMapMovedEvent extends org.apache.avro.specific.SpecificRecordB
         record.location = fieldSetFlags()[2] ? this.location : (java.lang.String) defaultValue(fields()[2]);
         record.userId = fieldSetFlags()[3] ? this.userId : (java.lang.String) defaultValue(fields()[3]);
         record.point = fieldSetFlags()[4] ? this.point : (java.lang.String) defaultValue(fields()[4]);
-        record.timestamp = fieldSetFlags()[5] ? this.timestamp : (java.lang.Long) defaultValue(fields()[5]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -730,8 +652,6 @@ public class CovidMapMovedEvent extends org.apache.avro.specific.SpecificRecordB
 
     out.writeString(this.point);
 
-    out.writeLong(this.timestamp);
-
   }
 
   @Override public void customDecode(org.apache.avro.io.ResolvingDecoder in)
@@ -752,10 +672,8 @@ public class CovidMapMovedEvent extends org.apache.avro.specific.SpecificRecordB
 
       this.point = in.readString();
 
-      this.timestamp = in.readLong();
-
     } else {
-      for (int i = 0; i < 6; i++) {
+      for (int i = 0; i < 5; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -778,10 +696,6 @@ public class CovidMapMovedEvent extends org.apache.avro.specific.SpecificRecordB
 
         case 4:
           this.point = in.readString();
-          break;
-
-        case 5:
-          this.timestamp = in.readLong();
           break;
 
         default:

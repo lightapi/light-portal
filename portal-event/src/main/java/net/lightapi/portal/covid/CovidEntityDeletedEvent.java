@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class CovidEntityDeletedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -1835287585160766706L;
+  private static final long serialVersionUID = -5673913460174217562L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"CovidEntityDeletedEvent\",\"namespace\":\"net.lightapi.portal.covid\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"key\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"country, province and city combination\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the unique user id\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"CovidEntityDeletedEvent\",\"namespace\":\"net.lightapi.portal.covid\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"key\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"country, province and city combination\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the unique user id\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -80,8 +80,6 @@ public class CovidEntityDeletedEvent extends org.apache.avro.specific.SpecificRe
   private java.lang.String key;
   /** the unique user id */
   private java.lang.String userId;
-  /** time the event is recorded */
-  private long timestamp;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -96,14 +94,12 @@ public class CovidEntityDeletedEvent extends org.apache.avro.specific.SpecificRe
    * @param hostId host id
    * @param key country, province and city combination
    * @param userId the unique user id
-   * @param timestamp time the event is recorded
    */
-  public CovidEntityDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String key, java.lang.String userId, java.lang.Long timestamp) {
+  public CovidEntityDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String key, java.lang.String userId) {
     this.EventId = EventId;
     this.hostId = hostId;
     this.key = key;
     this.userId = userId;
-    this.timestamp = timestamp;
   }
 
   public org.apache.avro.specific.SpecificData getSpecificData() { return MODEL$; }
@@ -115,7 +111,6 @@ public class CovidEntityDeletedEvent extends org.apache.avro.specific.SpecificRe
     case 1: return hostId;
     case 2: return key;
     case 3: return userId;
-    case 4: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -128,7 +123,6 @@ public class CovidEntityDeletedEvent extends org.apache.avro.specific.SpecificRe
     case 1: hostId = value$ != null ? value$.toString() : null; break;
     case 2: key = value$ != null ? value$.toString() : null; break;
     case 3: userId = value$ != null ? value$.toString() : null; break;
-    case 4: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -205,24 +199,6 @@ public class CovidEntityDeletedEvent extends org.apache.avro.specific.SpecificRe
   }
 
   /**
-   * Gets the value of the 'timestamp' field.
-   * @return time the event is recorded
-   */
-  public long getTimestamp() {
-    return timestamp;
-  }
-
-
-  /**
-   * Sets the value of the 'timestamp' field.
-   * time the event is recorded
-   * @param value the value to set.
-   */
-  public void setTimestamp(long value) {
-    this.timestamp = value;
-  }
-
-  /**
    * Creates a new CovidEntityDeletedEvent RecordBuilder.
    * @return A new CovidEntityDeletedEvent RecordBuilder
    */
@@ -271,8 +247,6 @@ public class CovidEntityDeletedEvent extends org.apache.avro.specific.SpecificRe
     private java.lang.String key;
     /** the unique user id */
     private java.lang.String userId;
-    /** time the event is recorded */
-    private long timestamp;
 
     /** Creates a new Builder */
     private Builder() {
@@ -304,10 +278,6 @@ public class CovidEntityDeletedEvent extends org.apache.avro.specific.SpecificRe
         this.userId = data().deepCopy(fields()[3].schema(), other.userId);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
-      if (isValidValue(fields()[4], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[4].schema(), other.timestamp);
-        fieldSetFlags()[4] = other.fieldSetFlags()[4];
-      }
     }
 
     /**
@@ -332,10 +302,6 @@ public class CovidEntityDeletedEvent extends org.apache.avro.specific.SpecificRe
       if (isValidValue(fields()[3], other.userId)) {
         this.userId = data().deepCopy(fields()[3].schema(), other.userId);
         fieldSetFlags()[3] = true;
-      }
-      if (isValidValue(fields()[4], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[4].schema(), other.timestamp);
-        fieldSetFlags()[4] = true;
       }
     }
 
@@ -547,49 +513,6 @@ public class CovidEntityDeletedEvent extends org.apache.avro.specific.SpecificRe
       return this;
     }
 
-    /**
-      * Gets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return The value.
-      */
-    public long getTimestamp() {
-      return timestamp;
-    }
-
-
-    /**
-      * Sets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @param value The value of 'timestamp'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.covid.CovidEntityDeletedEvent.Builder setTimestamp(long value) {
-      validate(fields()[4], value);
-      this.timestamp = value;
-      fieldSetFlags()[4] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'timestamp' field has been set.
-      * time the event is recorded
-      * @return True if the 'timestamp' field has been set, false otherwise.
-      */
-    public boolean hasTimestamp() {
-      return fieldSetFlags()[4];
-    }
-
-
-    /**
-      * Clears the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return This builder.
-      */
-    public net.lightapi.portal.covid.CovidEntityDeletedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[4] = false;
-      return this;
-    }
-
     @Override
     @SuppressWarnings("unchecked")
     public CovidEntityDeletedEvent build() {
@@ -608,7 +531,6 @@ public class CovidEntityDeletedEvent extends org.apache.avro.specific.SpecificRe
         record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
         record.key = fieldSetFlags()[2] ? this.key : (java.lang.String) defaultValue(fields()[2]);
         record.userId = fieldSetFlags()[3] ? this.userId : (java.lang.String) defaultValue(fields()[3]);
-        record.timestamp = fieldSetFlags()[4] ? this.timestamp : (java.lang.Long) defaultValue(fields()[4]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -649,8 +571,6 @@ public class CovidEntityDeletedEvent extends org.apache.avro.specific.SpecificRe
 
     out.writeString(this.userId);
 
-    out.writeLong(this.timestamp);
-
   }
 
   @Override public void customDecode(org.apache.avro.io.ResolvingDecoder in)
@@ -669,10 +589,8 @@ public class CovidEntityDeletedEvent extends org.apache.avro.specific.SpecificRe
 
       this.userId = in.readString();
 
-      this.timestamp = in.readLong();
-
     } else {
-      for (int i = 0; i < 5; i++) {
+      for (int i = 0; i < 4; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -691,10 +609,6 @@ public class CovidEntityDeletedEvent extends org.apache.avro.specific.SpecificRe
 
         case 3:
           this.userId = in.readString();
-          break;
-
-        case 4:
-          this.timestamp = in.readLong();
           break;
 
         default:

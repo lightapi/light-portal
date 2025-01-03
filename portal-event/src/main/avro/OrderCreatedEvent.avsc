@@ -21,6 +21,12 @@
             "doc": "the number of the transactions for the id"
           },
           {
+            "name": "timestamp",
+            "type": "long",
+            "default": 0,
+            "doc": "time the event is recorded"
+          },
+          {
             "name": "derived",
             "type": "boolean",
             "default": false,
@@ -43,12 +49,6 @@
       "name": "order",
       "type": "string",
       "doc": "An order object"
-    },
-    {
-      "name": "timestamp",
-      "type": "long",
-      "default": 0,
-      "doc": "time the event is recorded"
     }
   ]
 }

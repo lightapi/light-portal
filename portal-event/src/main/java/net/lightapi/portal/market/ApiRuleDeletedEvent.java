@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class ApiRuleDeletedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -7611764103529934062L;
+  private static final long serialVersionUID = -4994484325944936547L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ApiRuleDeletedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"apiId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api id\"},{\"name\":\"ruleIds\",\"type\":{\"type\":\"array\",\"items\":{\"type\":\"string\",\"avro.java.string\":\"String\"}},\"doc\":\"one or many rule ids that remove from the apiId\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ApiRuleDeletedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"apiId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api id\"},{\"name\":\"ruleIds\",\"type\":{\"type\":\"array\",\"items\":{\"type\":\"string\",\"avro.java.string\":\"String\"}},\"doc\":\"one or many rule ids that remove from the apiId\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -80,8 +80,6 @@ public class ApiRuleDeletedEvent extends org.apache.avro.specific.SpecificRecord
   private java.lang.String apiId;
   /** one or many rule ids that remove from the apiId */
   private java.util.List<java.lang.String> ruleIds;
-  /** time the event is recorded */
-  private long timestamp;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -96,14 +94,12 @@ public class ApiRuleDeletedEvent extends org.apache.avro.specific.SpecificRecord
    * @param hostId host id
    * @param apiId api id
    * @param ruleIds one or many rule ids that remove from the apiId
-   * @param timestamp time the event is recorded
    */
-  public ApiRuleDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String apiId, java.util.List<java.lang.String> ruleIds, java.lang.Long timestamp) {
+  public ApiRuleDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String apiId, java.util.List<java.lang.String> ruleIds) {
     this.EventId = EventId;
     this.hostId = hostId;
     this.apiId = apiId;
     this.ruleIds = ruleIds;
-    this.timestamp = timestamp;
   }
 
   public org.apache.avro.specific.SpecificData getSpecificData() { return MODEL$; }
@@ -115,7 +111,6 @@ public class ApiRuleDeletedEvent extends org.apache.avro.specific.SpecificRecord
     case 1: return hostId;
     case 2: return apiId;
     case 3: return ruleIds;
-    case 4: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -128,7 +123,6 @@ public class ApiRuleDeletedEvent extends org.apache.avro.specific.SpecificRecord
     case 1: hostId = value$ != null ? value$.toString() : null; break;
     case 2: apiId = value$ != null ? value$.toString() : null; break;
     case 3: ruleIds = (java.util.List<java.lang.String>)value$; break;
-    case 4: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -205,24 +199,6 @@ public class ApiRuleDeletedEvent extends org.apache.avro.specific.SpecificRecord
   }
 
   /**
-   * Gets the value of the 'timestamp' field.
-   * @return time the event is recorded
-   */
-  public long getTimestamp() {
-    return timestamp;
-  }
-
-
-  /**
-   * Sets the value of the 'timestamp' field.
-   * time the event is recorded
-   * @param value the value to set.
-   */
-  public void setTimestamp(long value) {
-    this.timestamp = value;
-  }
-
-  /**
    * Creates a new ApiRuleDeletedEvent RecordBuilder.
    * @return A new ApiRuleDeletedEvent RecordBuilder
    */
@@ -271,8 +247,6 @@ public class ApiRuleDeletedEvent extends org.apache.avro.specific.SpecificRecord
     private java.lang.String apiId;
     /** one or many rule ids that remove from the apiId */
     private java.util.List<java.lang.String> ruleIds;
-    /** time the event is recorded */
-    private long timestamp;
 
     /** Creates a new Builder */
     private Builder() {
@@ -304,10 +278,6 @@ public class ApiRuleDeletedEvent extends org.apache.avro.specific.SpecificRecord
         this.ruleIds = data().deepCopy(fields()[3].schema(), other.ruleIds);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
-      if (isValidValue(fields()[4], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[4].schema(), other.timestamp);
-        fieldSetFlags()[4] = other.fieldSetFlags()[4];
-      }
     }
 
     /**
@@ -332,10 +302,6 @@ public class ApiRuleDeletedEvent extends org.apache.avro.specific.SpecificRecord
       if (isValidValue(fields()[3], other.ruleIds)) {
         this.ruleIds = data().deepCopy(fields()[3].schema(), other.ruleIds);
         fieldSetFlags()[3] = true;
-      }
-      if (isValidValue(fields()[4], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[4].schema(), other.timestamp);
-        fieldSetFlags()[4] = true;
       }
     }
 
@@ -547,49 +513,6 @@ public class ApiRuleDeletedEvent extends org.apache.avro.specific.SpecificRecord
       return this;
     }
 
-    /**
-      * Gets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return The value.
-      */
-    public long getTimestamp() {
-      return timestamp;
-    }
-
-
-    /**
-      * Sets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @param value The value of 'timestamp'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.ApiRuleDeletedEvent.Builder setTimestamp(long value) {
-      validate(fields()[4], value);
-      this.timestamp = value;
-      fieldSetFlags()[4] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'timestamp' field has been set.
-      * time the event is recorded
-      * @return True if the 'timestamp' field has been set, false otherwise.
-      */
-    public boolean hasTimestamp() {
-      return fieldSetFlags()[4];
-    }
-
-
-    /**
-      * Clears the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.ApiRuleDeletedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[4] = false;
-      return this;
-    }
-
     @Override
     @SuppressWarnings("unchecked")
     public ApiRuleDeletedEvent build() {
@@ -608,7 +531,6 @@ public class ApiRuleDeletedEvent extends org.apache.avro.specific.SpecificRecord
         record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
         record.apiId = fieldSetFlags()[2] ? this.apiId : (java.lang.String) defaultValue(fields()[2]);
         record.ruleIds = fieldSetFlags()[3] ? this.ruleIds : (java.util.List<java.lang.String>) defaultValue(fields()[3]);
-        record.timestamp = fieldSetFlags()[4] ? this.timestamp : (java.lang.Long) defaultValue(fields()[4]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -660,8 +582,6 @@ public class ApiRuleDeletedEvent extends org.apache.avro.specific.SpecificRecord
     if (actualSize0 != size0)
       throw new java.util.ConcurrentModificationException("Array-size written was " + size0 + ", but element count was " + actualSize0 + ".");
 
-    out.writeLong(this.timestamp);
-
   }
 
   @Override public void customDecode(org.apache.avro.io.ResolvingDecoder in)
@@ -693,10 +613,8 @@ public class ApiRuleDeletedEvent extends org.apache.avro.specific.SpecificRecord
         }
       }
 
-      this.timestamp = in.readLong();
-
     } else {
-      for (int i = 0; i < 5; i++) {
+      for (int i = 0; i < 4; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -728,10 +646,6 @@ public class ApiRuleDeletedEvent extends org.apache.avro.specific.SpecificRecord
               a0.add(e0);
             }
           }
-          break;
-
-        case 4:
-          this.timestamp = in.readLong();
           break;
 
         default:

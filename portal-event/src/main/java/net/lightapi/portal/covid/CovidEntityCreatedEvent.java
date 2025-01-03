@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class CovidEntityCreatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 3546514407289348827L;
+  private static final long serialVersionUID = -4186287176518714815L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"CovidEntityCreatedEvent\",\"namespace\":\"net.lightapi.portal.covid\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"key\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"country, province and city combination\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the unique user id\"},{\"name\":\"category\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"category\"},{\"name\":\"subcategory\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"subcategory\"},{\"name\":\"latitude\",\"type\":\"double\",\"doc\":\"latitude\"},{\"name\":\"longitude\",\"type\":\"double\",\"doc\":\"city longitude\"},{\"name\":\"introduction\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"introduction\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"CovidEntityCreatedEvent\",\"namespace\":\"net.lightapi.portal.covid\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"key\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"country, province and city combination\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the unique user id\"},{\"name\":\"category\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"category\"},{\"name\":\"subcategory\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"subcategory\"},{\"name\":\"latitude\",\"type\":\"double\",\"doc\":\"latitude\"},{\"name\":\"longitude\",\"type\":\"double\",\"doc\":\"city longitude\"},{\"name\":\"introduction\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"introduction\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -90,8 +90,6 @@ public class CovidEntityCreatedEvent extends org.apache.avro.specific.SpecificRe
   private double longitude;
   /** introduction */
   private java.lang.String introduction;
-  /** time the event is recorded */
-  private long timestamp;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -111,9 +109,8 @@ public class CovidEntityCreatedEvent extends org.apache.avro.specific.SpecificRe
    * @param latitude latitude
    * @param longitude city longitude
    * @param introduction introduction
-   * @param timestamp time the event is recorded
    */
-  public CovidEntityCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String key, java.lang.String userId, java.lang.String category, java.lang.String subcategory, java.lang.Double latitude, java.lang.Double longitude, java.lang.String introduction, java.lang.Long timestamp) {
+  public CovidEntityCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String key, java.lang.String userId, java.lang.String category, java.lang.String subcategory, java.lang.Double latitude, java.lang.Double longitude, java.lang.String introduction) {
     this.EventId = EventId;
     this.hostId = hostId;
     this.key = key;
@@ -123,7 +120,6 @@ public class CovidEntityCreatedEvent extends org.apache.avro.specific.SpecificRe
     this.latitude = latitude;
     this.longitude = longitude;
     this.introduction = introduction;
-    this.timestamp = timestamp;
   }
 
   public org.apache.avro.specific.SpecificData getSpecificData() { return MODEL$; }
@@ -140,7 +136,6 @@ public class CovidEntityCreatedEvent extends org.apache.avro.specific.SpecificRe
     case 6: return latitude;
     case 7: return longitude;
     case 8: return introduction;
-    case 9: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -158,7 +153,6 @@ public class CovidEntityCreatedEvent extends org.apache.avro.specific.SpecificRe
     case 6: latitude = (java.lang.Double)value$; break;
     case 7: longitude = (java.lang.Double)value$; break;
     case 8: introduction = value$ != null ? value$.toString() : null; break;
-    case 9: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -325,24 +319,6 @@ public class CovidEntityCreatedEvent extends org.apache.avro.specific.SpecificRe
   }
 
   /**
-   * Gets the value of the 'timestamp' field.
-   * @return time the event is recorded
-   */
-  public long getTimestamp() {
-    return timestamp;
-  }
-
-
-  /**
-   * Sets the value of the 'timestamp' field.
-   * time the event is recorded
-   * @param value the value to set.
-   */
-  public void setTimestamp(long value) {
-    this.timestamp = value;
-  }
-
-  /**
    * Creates a new CovidEntityCreatedEvent RecordBuilder.
    * @return A new CovidEntityCreatedEvent RecordBuilder
    */
@@ -401,8 +377,6 @@ public class CovidEntityCreatedEvent extends org.apache.avro.specific.SpecificRe
     private double longitude;
     /** introduction */
     private java.lang.String introduction;
-    /** time the event is recorded */
-    private long timestamp;
 
     /** Creates a new Builder */
     private Builder() {
@@ -454,10 +428,6 @@ public class CovidEntityCreatedEvent extends org.apache.avro.specific.SpecificRe
         this.introduction = data().deepCopy(fields()[8].schema(), other.introduction);
         fieldSetFlags()[8] = other.fieldSetFlags()[8];
       }
-      if (isValidValue(fields()[9], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[9].schema(), other.timestamp);
-        fieldSetFlags()[9] = other.fieldSetFlags()[9];
-      }
     }
 
     /**
@@ -502,10 +472,6 @@ public class CovidEntityCreatedEvent extends org.apache.avro.specific.SpecificRe
       if (isValidValue(fields()[8], other.introduction)) {
         this.introduction = data().deepCopy(fields()[8].schema(), other.introduction);
         fieldSetFlags()[8] = true;
-      }
-      if (isValidValue(fields()[9], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[9].schema(), other.timestamp);
-        fieldSetFlags()[9] = true;
       }
     }
 
@@ -935,49 +901,6 @@ public class CovidEntityCreatedEvent extends org.apache.avro.specific.SpecificRe
       return this;
     }
 
-    /**
-      * Gets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return The value.
-      */
-    public long getTimestamp() {
-      return timestamp;
-    }
-
-
-    /**
-      * Sets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @param value The value of 'timestamp'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.covid.CovidEntityCreatedEvent.Builder setTimestamp(long value) {
-      validate(fields()[9], value);
-      this.timestamp = value;
-      fieldSetFlags()[9] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'timestamp' field has been set.
-      * time the event is recorded
-      * @return True if the 'timestamp' field has been set, false otherwise.
-      */
-    public boolean hasTimestamp() {
-      return fieldSetFlags()[9];
-    }
-
-
-    /**
-      * Clears the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return This builder.
-      */
-    public net.lightapi.portal.covid.CovidEntityCreatedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[9] = false;
-      return this;
-    }
-
     @Override
     @SuppressWarnings("unchecked")
     public CovidEntityCreatedEvent build() {
@@ -1001,7 +924,6 @@ public class CovidEntityCreatedEvent extends org.apache.avro.specific.SpecificRe
         record.latitude = fieldSetFlags()[6] ? this.latitude : (java.lang.Double) defaultValue(fields()[6]);
         record.longitude = fieldSetFlags()[7] ? this.longitude : (java.lang.Double) defaultValue(fields()[7]);
         record.introduction = fieldSetFlags()[8] ? this.introduction : (java.lang.String) defaultValue(fields()[8]);
-        record.timestamp = fieldSetFlags()[9] ? this.timestamp : (java.lang.Long) defaultValue(fields()[9]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -1052,8 +974,6 @@ public class CovidEntityCreatedEvent extends org.apache.avro.specific.SpecificRe
 
     out.writeString(this.introduction);
 
-    out.writeLong(this.timestamp);
-
   }
 
   @Override public void customDecode(org.apache.avro.io.ResolvingDecoder in)
@@ -1082,10 +1002,8 @@ public class CovidEntityCreatedEvent extends org.apache.avro.specific.SpecificRe
 
       this.introduction = in.readString();
 
-      this.timestamp = in.readLong();
-
     } else {
-      for (int i = 0; i < 10; i++) {
+      for (int i = 0; i < 9; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -1124,10 +1042,6 @@ public class CovidEntityCreatedEvent extends org.apache.avro.specific.SpecificRe
 
         case 8:
           this.introduction = in.readString();
-          break;
-
-        case 9:
-          this.timestamp = in.readLong();
           break;
 
         default:

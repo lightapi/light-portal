@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class UserRolesUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 6206445882217383336L;
+  private static final long serialVersionUID = -7151574328867805908L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"UserRolesUpdatedEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the id\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"email\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"email of the user to be deleted\"},{\"name\":\"roles\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"updated roles in a string separated with spaces\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"UserRolesUpdatedEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the id\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"email\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"email of the user to be deleted\"},{\"name\":\"roles\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"updated roles in a string separated with spaces\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -80,8 +80,6 @@ public class UserRolesUpdatedEvent extends org.apache.avro.specific.SpecificReco
   private java.lang.String email;
   /** updated roles in a string separated with spaces */
   private java.lang.String roles;
-  /** time the event is recorded */
-  private long timestamp;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -96,14 +94,12 @@ public class UserRolesUpdatedEvent extends org.apache.avro.specific.SpecificReco
    * @param hostId host id
    * @param email email of the user to be deleted
    * @param roles updated roles in a string separated with spaces
-   * @param timestamp time the event is recorded
    */
-  public UserRolesUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String email, java.lang.String roles, java.lang.Long timestamp) {
+  public UserRolesUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String email, java.lang.String roles) {
     this.EventId = EventId;
     this.hostId = hostId;
     this.email = email;
     this.roles = roles;
-    this.timestamp = timestamp;
   }
 
   public org.apache.avro.specific.SpecificData getSpecificData() { return MODEL$; }
@@ -115,7 +111,6 @@ public class UserRolesUpdatedEvent extends org.apache.avro.specific.SpecificReco
     case 1: return hostId;
     case 2: return email;
     case 3: return roles;
-    case 4: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -128,7 +123,6 @@ public class UserRolesUpdatedEvent extends org.apache.avro.specific.SpecificReco
     case 1: hostId = value$ != null ? value$.toString() : null; break;
     case 2: email = value$ != null ? value$.toString() : null; break;
     case 3: roles = value$ != null ? value$.toString() : null; break;
-    case 4: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -205,24 +199,6 @@ public class UserRolesUpdatedEvent extends org.apache.avro.specific.SpecificReco
   }
 
   /**
-   * Gets the value of the 'timestamp' field.
-   * @return time the event is recorded
-   */
-  public long getTimestamp() {
-    return timestamp;
-  }
-
-
-  /**
-   * Sets the value of the 'timestamp' field.
-   * time the event is recorded
-   * @param value the value to set.
-   */
-  public void setTimestamp(long value) {
-    this.timestamp = value;
-  }
-
-  /**
    * Creates a new UserRolesUpdatedEvent RecordBuilder.
    * @return A new UserRolesUpdatedEvent RecordBuilder
    */
@@ -271,8 +247,6 @@ public class UserRolesUpdatedEvent extends org.apache.avro.specific.SpecificReco
     private java.lang.String email;
     /** updated roles in a string separated with spaces */
     private java.lang.String roles;
-    /** time the event is recorded */
-    private long timestamp;
 
     /** Creates a new Builder */
     private Builder() {
@@ -304,10 +278,6 @@ public class UserRolesUpdatedEvent extends org.apache.avro.specific.SpecificReco
         this.roles = data().deepCopy(fields()[3].schema(), other.roles);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
-      if (isValidValue(fields()[4], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[4].schema(), other.timestamp);
-        fieldSetFlags()[4] = other.fieldSetFlags()[4];
-      }
     }
 
     /**
@@ -332,10 +302,6 @@ public class UserRolesUpdatedEvent extends org.apache.avro.specific.SpecificReco
       if (isValidValue(fields()[3], other.roles)) {
         this.roles = data().deepCopy(fields()[3].schema(), other.roles);
         fieldSetFlags()[3] = true;
-      }
-      if (isValidValue(fields()[4], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[4].schema(), other.timestamp);
-        fieldSetFlags()[4] = true;
       }
     }
 
@@ -547,49 +513,6 @@ public class UserRolesUpdatedEvent extends org.apache.avro.specific.SpecificReco
       return this;
     }
 
-    /**
-      * Gets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return The value.
-      */
-    public long getTimestamp() {
-      return timestamp;
-    }
-
-
-    /**
-      * Sets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @param value The value of 'timestamp'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.user.UserRolesUpdatedEvent.Builder setTimestamp(long value) {
-      validate(fields()[4], value);
-      this.timestamp = value;
-      fieldSetFlags()[4] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'timestamp' field has been set.
-      * time the event is recorded
-      * @return True if the 'timestamp' field has been set, false otherwise.
-      */
-    public boolean hasTimestamp() {
-      return fieldSetFlags()[4];
-    }
-
-
-    /**
-      * Clears the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return This builder.
-      */
-    public net.lightapi.portal.user.UserRolesUpdatedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[4] = false;
-      return this;
-    }
-
     @Override
     @SuppressWarnings("unchecked")
     public UserRolesUpdatedEvent build() {
@@ -608,7 +531,6 @@ public class UserRolesUpdatedEvent extends org.apache.avro.specific.SpecificReco
         record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
         record.email = fieldSetFlags()[2] ? this.email : (java.lang.String) defaultValue(fields()[2]);
         record.roles = fieldSetFlags()[3] ? this.roles : (java.lang.String) defaultValue(fields()[3]);
-        record.timestamp = fieldSetFlags()[4] ? this.timestamp : (java.lang.Long) defaultValue(fields()[4]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -649,8 +571,6 @@ public class UserRolesUpdatedEvent extends org.apache.avro.specific.SpecificReco
 
     out.writeString(this.roles);
 
-    out.writeLong(this.timestamp);
-
   }
 
   @Override public void customDecode(org.apache.avro.io.ResolvingDecoder in)
@@ -669,10 +589,8 @@ public class UserRolesUpdatedEvent extends org.apache.avro.specific.SpecificReco
 
       this.roles = in.readString();
 
-      this.timestamp = in.readLong();
-
     } else {
-      for (int i = 0; i < 5; i++) {
+      for (int i = 0; i < 4; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -691,10 +609,6 @@ public class UserRolesUpdatedEvent extends org.apache.avro.specific.SpecificReco
 
         case 3:
           this.roles = in.readString();
-          break;
-
-        case 4:
-          this.timestamp = in.readLong();
           break;
 
         default:

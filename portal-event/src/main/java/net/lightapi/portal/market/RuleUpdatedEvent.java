@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class RuleUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 80794944578590351L;
+  private static final long serialVersionUID = 8305801857939287393L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"RuleUpdatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"ruleId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule id\"},{\"name\":\"ruleName\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule name\"},{\"name\":\"ruleVersion\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule version\"},{\"name\":\"ruleType\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule type\"},{\"name\":\"ruleGroup\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"rule group\",\"default\":null},{\"name\":\"ruleDesc\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"rule desc\",\"default\":null},{\"name\":\"ruleBody\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule body in YAML\"},{\"name\":\"ruleOwner\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule owner\"},{\"name\":\"common\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"common flag\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"RuleUpdatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"ruleId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule id\"},{\"name\":\"ruleName\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule name\"},{\"name\":\"ruleVersion\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule version\"},{\"name\":\"ruleType\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule type\"},{\"name\":\"ruleGroup\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"rule group\",\"default\":null},{\"name\":\"ruleDesc\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"rule desc\",\"default\":null},{\"name\":\"ruleBody\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule body in YAML\"},{\"name\":\"ruleOwner\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule owner\"},{\"name\":\"common\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"common flag\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -94,8 +94,6 @@ public class RuleUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
   private java.lang.String ruleOwner;
   /** common flag */
   private java.lang.String common;
-  /** time the event is recorded */
-  private long timestamp;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -117,9 +115,8 @@ public class RuleUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
    * @param ruleBody rule body in YAML
    * @param ruleOwner rule owner
    * @param common common flag
-   * @param timestamp time the event is recorded
    */
-  public RuleUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String ruleId, java.lang.String ruleName, java.lang.String ruleVersion, java.lang.String ruleType, java.lang.String ruleGroup, java.lang.String ruleDesc, java.lang.String ruleBody, java.lang.String ruleOwner, java.lang.String common, java.lang.Long timestamp) {
+  public RuleUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String ruleId, java.lang.String ruleName, java.lang.String ruleVersion, java.lang.String ruleType, java.lang.String ruleGroup, java.lang.String ruleDesc, java.lang.String ruleBody, java.lang.String ruleOwner, java.lang.String common) {
     this.EventId = EventId;
     this.hostId = hostId;
     this.ruleId = ruleId;
@@ -131,7 +128,6 @@ public class RuleUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
     this.ruleBody = ruleBody;
     this.ruleOwner = ruleOwner;
     this.common = common;
-    this.timestamp = timestamp;
   }
 
   public org.apache.avro.specific.SpecificData getSpecificData() { return MODEL$; }
@@ -150,7 +146,6 @@ public class RuleUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
     case 8: return ruleBody;
     case 9: return ruleOwner;
     case 10: return common;
-    case 11: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -170,7 +165,6 @@ public class RuleUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
     case 8: ruleBody = value$ != null ? value$.toString() : null; break;
     case 9: ruleOwner = value$ != null ? value$.toString() : null; break;
     case 10: common = value$ != null ? value$.toString() : null; break;
-    case 11: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -373,24 +367,6 @@ public class RuleUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
   }
 
   /**
-   * Gets the value of the 'timestamp' field.
-   * @return time the event is recorded
-   */
-  public long getTimestamp() {
-    return timestamp;
-  }
-
-
-  /**
-   * Sets the value of the 'timestamp' field.
-   * time the event is recorded
-   * @param value the value to set.
-   */
-  public void setTimestamp(long value) {
-    this.timestamp = value;
-  }
-
-  /**
    * Creates a new RuleUpdatedEvent RecordBuilder.
    * @return A new RuleUpdatedEvent RecordBuilder
    */
@@ -453,8 +429,6 @@ public class RuleUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
     private java.lang.String ruleOwner;
     /** common flag */
     private java.lang.String common;
-    /** time the event is recorded */
-    private long timestamp;
 
     /** Creates a new Builder */
     private Builder() {
@@ -514,10 +488,6 @@ public class RuleUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
         this.common = data().deepCopy(fields()[10].schema(), other.common);
         fieldSetFlags()[10] = other.fieldSetFlags()[10];
       }
-      if (isValidValue(fields()[11], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[11].schema(), other.timestamp);
-        fieldSetFlags()[11] = other.fieldSetFlags()[11];
-      }
     }
 
     /**
@@ -570,10 +540,6 @@ public class RuleUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
       if (isValidValue(fields()[10], other.common)) {
         this.common = data().deepCopy(fields()[10].schema(), other.common);
         fieldSetFlags()[10] = true;
-      }
-      if (isValidValue(fields()[11], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[11].schema(), other.timestamp);
-        fieldSetFlags()[11] = true;
       }
     }
 
@@ -1093,49 +1059,6 @@ public class RuleUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
       return this;
     }
 
-    /**
-      * Gets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return The value.
-      */
-    public long getTimestamp() {
-      return timestamp;
-    }
-
-
-    /**
-      * Sets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @param value The value of 'timestamp'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.RuleUpdatedEvent.Builder setTimestamp(long value) {
-      validate(fields()[11], value);
-      this.timestamp = value;
-      fieldSetFlags()[11] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'timestamp' field has been set.
-      * time the event is recorded
-      * @return True if the 'timestamp' field has been set, false otherwise.
-      */
-    public boolean hasTimestamp() {
-      return fieldSetFlags()[11];
-    }
-
-
-    /**
-      * Clears the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.RuleUpdatedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[11] = false;
-      return this;
-    }
-
     @Override
     @SuppressWarnings("unchecked")
     public RuleUpdatedEvent build() {
@@ -1161,7 +1084,6 @@ public class RuleUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
         record.ruleBody = fieldSetFlags()[8] ? this.ruleBody : (java.lang.String) defaultValue(fields()[8]);
         record.ruleOwner = fieldSetFlags()[9] ? this.ruleOwner : (java.lang.String) defaultValue(fields()[9]);
         record.common = fieldSetFlags()[10] ? this.common : (java.lang.String) defaultValue(fields()[10]);
-        record.timestamp = fieldSetFlags()[11] ? this.timestamp : (java.lang.Long) defaultValue(fields()[11]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -1228,8 +1150,6 @@ public class RuleUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
 
     out.writeString(this.common);
 
-    out.writeLong(this.timestamp);
-
   }
 
   @Override public void customDecode(org.apache.avro.io.ResolvingDecoder in)
@@ -1272,10 +1192,8 @@ public class RuleUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
 
       this.common = in.readString();
 
-      this.timestamp = in.readLong();
-
     } else {
-      for (int i = 0; i < 12; i++) {
+      for (int i = 0; i < 11; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -1332,10 +1250,6 @@ public class RuleUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
 
         case 10:
           this.common = in.readString();
-          break;
-
-        case 11:
-          this.timestamp = in.readLong();
           break;
 
         default:

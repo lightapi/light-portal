@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class MarketCodeCreatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -6097397931400065381L;
+  private static final long serialVersionUID = -3008076589237953401L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"MarketCodeCreatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"authCode\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"authorization code\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"code detail in JSON\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"MarketCodeCreatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"authCode\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"authorization code\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"code detail in JSON\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -80,8 +80,6 @@ public class MarketCodeCreatedEvent extends org.apache.avro.specific.SpecificRec
   private java.lang.String authCode;
   /** code detail in JSON */
   private java.lang.String value;
-  /** time the event is recorded */
-  private long timestamp;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -96,14 +94,12 @@ public class MarketCodeCreatedEvent extends org.apache.avro.specific.SpecificRec
    * @param hostId host id
    * @param authCode authorization code
    * @param value code detail in JSON
-   * @param timestamp time the event is recorded
    */
-  public MarketCodeCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String authCode, java.lang.String value, java.lang.Long timestamp) {
+  public MarketCodeCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String authCode, java.lang.String value) {
     this.EventId = EventId;
     this.hostId = hostId;
     this.authCode = authCode;
     this.value = value;
-    this.timestamp = timestamp;
   }
 
   public org.apache.avro.specific.SpecificData getSpecificData() { return MODEL$; }
@@ -115,7 +111,6 @@ public class MarketCodeCreatedEvent extends org.apache.avro.specific.SpecificRec
     case 1: return hostId;
     case 2: return authCode;
     case 3: return value;
-    case 4: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -128,7 +123,6 @@ public class MarketCodeCreatedEvent extends org.apache.avro.specific.SpecificRec
     case 1: hostId = value$ != null ? value$.toString() : null; break;
     case 2: authCode = value$ != null ? value$.toString() : null; break;
     case 3: value = value$ != null ? value$.toString() : null; break;
-    case 4: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -205,24 +199,6 @@ public class MarketCodeCreatedEvent extends org.apache.avro.specific.SpecificRec
   }
 
   /**
-   * Gets the value of the 'timestamp' field.
-   * @return time the event is recorded
-   */
-  public long getTimestamp() {
-    return timestamp;
-  }
-
-
-  /**
-   * Sets the value of the 'timestamp' field.
-   * time the event is recorded
-   * @param value the value to set.
-   */
-  public void setTimestamp(long value) {
-    this.timestamp = value;
-  }
-
-  /**
    * Creates a new MarketCodeCreatedEvent RecordBuilder.
    * @return A new MarketCodeCreatedEvent RecordBuilder
    */
@@ -271,8 +247,6 @@ public class MarketCodeCreatedEvent extends org.apache.avro.specific.SpecificRec
     private java.lang.String authCode;
     /** code detail in JSON */
     private java.lang.String value;
-    /** time the event is recorded */
-    private long timestamp;
 
     /** Creates a new Builder */
     private Builder() {
@@ -304,10 +278,6 @@ public class MarketCodeCreatedEvent extends org.apache.avro.specific.SpecificRec
         this.value = data().deepCopy(fields()[3].schema(), other.value);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
-      if (isValidValue(fields()[4], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[4].schema(), other.timestamp);
-        fieldSetFlags()[4] = other.fieldSetFlags()[4];
-      }
     }
 
     /**
@@ -332,10 +302,6 @@ public class MarketCodeCreatedEvent extends org.apache.avro.specific.SpecificRec
       if (isValidValue(fields()[3], other.value)) {
         this.value = data().deepCopy(fields()[3].schema(), other.value);
         fieldSetFlags()[3] = true;
-      }
-      if (isValidValue(fields()[4], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[4].schema(), other.timestamp);
-        fieldSetFlags()[4] = true;
       }
     }
 
@@ -547,49 +513,6 @@ public class MarketCodeCreatedEvent extends org.apache.avro.specific.SpecificRec
       return this;
     }
 
-    /**
-      * Gets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return The value.
-      */
-    public long getTimestamp() {
-      return timestamp;
-    }
-
-
-    /**
-      * Sets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @param value The value of 'timestamp'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.MarketCodeCreatedEvent.Builder setTimestamp(long value) {
-      validate(fields()[4], value);
-      this.timestamp = value;
-      fieldSetFlags()[4] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'timestamp' field has been set.
-      * time the event is recorded
-      * @return True if the 'timestamp' field has been set, false otherwise.
-      */
-    public boolean hasTimestamp() {
-      return fieldSetFlags()[4];
-    }
-
-
-    /**
-      * Clears the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.MarketCodeCreatedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[4] = false;
-      return this;
-    }
-
     @Override
     @SuppressWarnings("unchecked")
     public MarketCodeCreatedEvent build() {
@@ -608,7 +531,6 @@ public class MarketCodeCreatedEvent extends org.apache.avro.specific.SpecificRec
         record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
         record.authCode = fieldSetFlags()[2] ? this.authCode : (java.lang.String) defaultValue(fields()[2]);
         record.value = fieldSetFlags()[3] ? this.value : (java.lang.String) defaultValue(fields()[3]);
-        record.timestamp = fieldSetFlags()[4] ? this.timestamp : (java.lang.Long) defaultValue(fields()[4]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -649,8 +571,6 @@ public class MarketCodeCreatedEvent extends org.apache.avro.specific.SpecificRec
 
     out.writeString(this.value);
 
-    out.writeLong(this.timestamp);
-
   }
 
   @Override public void customDecode(org.apache.avro.io.ResolvingDecoder in)
@@ -669,10 +589,8 @@ public class MarketCodeCreatedEvent extends org.apache.avro.specific.SpecificRec
 
       this.value = in.readString();
 
-      this.timestamp = in.readLong();
-
     } else {
-      for (int i = 0; i < 5; i++) {
+      for (int i = 0; i < 4; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -691,10 +609,6 @@ public class MarketCodeCreatedEvent extends org.apache.avro.specific.SpecificRec
 
         case 3:
           this.value = in.readString();
-          break;
-
-        case 4:
-          this.timestamp = in.readLong();
           break;
 
         default:

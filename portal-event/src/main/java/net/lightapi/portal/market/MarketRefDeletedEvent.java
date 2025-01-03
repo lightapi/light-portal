@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class MarketRefDeletedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -2540255278243653792L;
+  private static final long serialVersionUID = 2736483941016598243L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"MarketRefDeletedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"refToken\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"reference token\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"MarketRefDeletedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"refToken\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"reference token\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -78,8 +78,6 @@ public class MarketRefDeletedEvent extends org.apache.avro.specific.SpecificReco
   private java.lang.String hostId;
   /** reference token */
   private java.lang.String refToken;
-  /** time the event is recorded */
-  private long timestamp;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -93,13 +91,11 @@ public class MarketRefDeletedEvent extends org.apache.avro.specific.SpecificReco
    * @param EventId The new value for EventId
    * @param hostId host id
    * @param refToken reference token
-   * @param timestamp time the event is recorded
    */
-  public MarketRefDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String refToken, java.lang.Long timestamp) {
+  public MarketRefDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String refToken) {
     this.EventId = EventId;
     this.hostId = hostId;
     this.refToken = refToken;
-    this.timestamp = timestamp;
   }
 
   public org.apache.avro.specific.SpecificData getSpecificData() { return MODEL$; }
@@ -110,7 +106,6 @@ public class MarketRefDeletedEvent extends org.apache.avro.specific.SpecificReco
     case 0: return EventId;
     case 1: return hostId;
     case 2: return refToken;
-    case 3: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -122,7 +117,6 @@ public class MarketRefDeletedEvent extends org.apache.avro.specific.SpecificReco
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
     case 1: hostId = value$ != null ? value$.toString() : null; break;
     case 2: refToken = value$ != null ? value$.toString() : null; break;
-    case 3: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -181,24 +175,6 @@ public class MarketRefDeletedEvent extends org.apache.avro.specific.SpecificReco
   }
 
   /**
-   * Gets the value of the 'timestamp' field.
-   * @return time the event is recorded
-   */
-  public long getTimestamp() {
-    return timestamp;
-  }
-
-
-  /**
-   * Sets the value of the 'timestamp' field.
-   * time the event is recorded
-   * @param value the value to set.
-   */
-  public void setTimestamp(long value) {
-    this.timestamp = value;
-  }
-
-  /**
    * Creates a new MarketRefDeletedEvent RecordBuilder.
    * @return A new MarketRefDeletedEvent RecordBuilder
    */
@@ -245,8 +221,6 @@ public class MarketRefDeletedEvent extends org.apache.avro.specific.SpecificReco
     private java.lang.String hostId;
     /** reference token */
     private java.lang.String refToken;
-    /** time the event is recorded */
-    private long timestamp;
 
     /** Creates a new Builder */
     private Builder() {
@@ -274,10 +248,6 @@ public class MarketRefDeletedEvent extends org.apache.avro.specific.SpecificReco
         this.refToken = data().deepCopy(fields()[2].schema(), other.refToken);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[3].schema(), other.timestamp);
-        fieldSetFlags()[3] = other.fieldSetFlags()[3];
-      }
     }
 
     /**
@@ -298,10 +268,6 @@ public class MarketRefDeletedEvent extends org.apache.avro.specific.SpecificReco
       if (isValidValue(fields()[2], other.refToken)) {
         this.refToken = data().deepCopy(fields()[2].schema(), other.refToken);
         fieldSetFlags()[2] = true;
-      }
-      if (isValidValue(fields()[3], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[3].schema(), other.timestamp);
-        fieldSetFlags()[3] = true;
       }
     }
 
@@ -469,49 +435,6 @@ public class MarketRefDeletedEvent extends org.apache.avro.specific.SpecificReco
       return this;
     }
 
-    /**
-      * Gets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return The value.
-      */
-    public long getTimestamp() {
-      return timestamp;
-    }
-
-
-    /**
-      * Sets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @param value The value of 'timestamp'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.MarketRefDeletedEvent.Builder setTimestamp(long value) {
-      validate(fields()[3], value);
-      this.timestamp = value;
-      fieldSetFlags()[3] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'timestamp' field has been set.
-      * time the event is recorded
-      * @return True if the 'timestamp' field has been set, false otherwise.
-      */
-    public boolean hasTimestamp() {
-      return fieldSetFlags()[3];
-    }
-
-
-    /**
-      * Clears the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.MarketRefDeletedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[3] = false;
-      return this;
-    }
-
     @Override
     @SuppressWarnings("unchecked")
     public MarketRefDeletedEvent build() {
@@ -529,7 +452,6 @@ public class MarketRefDeletedEvent extends org.apache.avro.specific.SpecificReco
         }
         record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
         record.refToken = fieldSetFlags()[2] ? this.refToken : (java.lang.String) defaultValue(fields()[2]);
-        record.timestamp = fieldSetFlags()[3] ? this.timestamp : (java.lang.Long) defaultValue(fields()[3]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -568,8 +490,6 @@ public class MarketRefDeletedEvent extends org.apache.avro.specific.SpecificReco
 
     out.writeString(this.refToken);
 
-    out.writeLong(this.timestamp);
-
   }
 
   @Override public void customDecode(org.apache.avro.io.ResolvingDecoder in)
@@ -586,10 +506,8 @@ public class MarketRefDeletedEvent extends org.apache.avro.specific.SpecificReco
 
       this.refToken = in.readString();
 
-      this.timestamp = in.readLong();
-
     } else {
-      for (int i = 0; i < 4; i++) {
+      for (int i = 0; i < 3; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -604,10 +522,6 @@ public class MarketRefDeletedEvent extends org.apache.avro.specific.SpecificReco
 
         case 2:
           this.refToken = in.readString();
-          break;
-
-        case 3:
-          this.timestamp = in.readLong();
           break;
 
         default:

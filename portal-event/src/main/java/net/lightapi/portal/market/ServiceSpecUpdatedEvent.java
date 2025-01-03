@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 7276922436316551245L;
+  private static final long serialVersionUID = 8159981095179328008L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ServiceSpecUpdatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"apiId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api id\"},{\"name\":\"apiVersion\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api version\"},{\"name\":\"apiType\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api type\"},{\"name\":\"spec\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service specification in JSON or YAML based on the style\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ServiceSpecUpdatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"apiId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api id\"},{\"name\":\"apiVersion\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api version\"},{\"name\":\"apiType\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api type\"},{\"name\":\"spec\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service specification in JSON or YAML based on the style\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -84,8 +84,6 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
   private java.lang.String apiType;
   /** service specification in JSON or YAML based on the style */
   private java.lang.String spec;
-  /** time the event is recorded */
-  private long timestamp;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -102,16 +100,14 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
    * @param apiVersion api version
    * @param apiType api type
    * @param spec service specification in JSON or YAML based on the style
-   * @param timestamp time the event is recorded
    */
-  public ServiceSpecUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String apiId, java.lang.String apiVersion, java.lang.String apiType, java.lang.String spec, java.lang.Long timestamp) {
+  public ServiceSpecUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String apiId, java.lang.String apiVersion, java.lang.String apiType, java.lang.String spec) {
     this.EventId = EventId;
     this.hostId = hostId;
     this.apiId = apiId;
     this.apiVersion = apiVersion;
     this.apiType = apiType;
     this.spec = spec;
-    this.timestamp = timestamp;
   }
 
   public org.apache.avro.specific.SpecificData getSpecificData() { return MODEL$; }
@@ -125,7 +121,6 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
     case 3: return apiVersion;
     case 4: return apiType;
     case 5: return spec;
-    case 6: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -140,7 +135,6 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
     case 3: apiVersion = value$ != null ? value$.toString() : null; break;
     case 4: apiType = value$ != null ? value$.toString() : null; break;
     case 5: spec = value$ != null ? value$.toString() : null; break;
-    case 6: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -253,24 +247,6 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
   }
 
   /**
-   * Gets the value of the 'timestamp' field.
-   * @return time the event is recorded
-   */
-  public long getTimestamp() {
-    return timestamp;
-  }
-
-
-  /**
-   * Sets the value of the 'timestamp' field.
-   * time the event is recorded
-   * @param value the value to set.
-   */
-  public void setTimestamp(long value) {
-    this.timestamp = value;
-  }
-
-  /**
    * Creates a new ServiceSpecUpdatedEvent RecordBuilder.
    * @return A new ServiceSpecUpdatedEvent RecordBuilder
    */
@@ -323,8 +299,6 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
     private java.lang.String apiType;
     /** service specification in JSON or YAML based on the style */
     private java.lang.String spec;
-    /** time the event is recorded */
-    private long timestamp;
 
     /** Creates a new Builder */
     private Builder() {
@@ -364,10 +338,6 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
         this.spec = data().deepCopy(fields()[5].schema(), other.spec);
         fieldSetFlags()[5] = other.fieldSetFlags()[5];
       }
-      if (isValidValue(fields()[6], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[6].schema(), other.timestamp);
-        fieldSetFlags()[6] = other.fieldSetFlags()[6];
-      }
     }
 
     /**
@@ -400,10 +370,6 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
       if (isValidValue(fields()[5], other.spec)) {
         this.spec = data().deepCopy(fields()[5].schema(), other.spec);
         fieldSetFlags()[5] = true;
-      }
-      if (isValidValue(fields()[6], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[6].schema(), other.timestamp);
-        fieldSetFlags()[6] = true;
       }
     }
 
@@ -703,49 +669,6 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
       return this;
     }
 
-    /**
-      * Gets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return The value.
-      */
-    public long getTimestamp() {
-      return timestamp;
-    }
-
-
-    /**
-      * Sets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @param value The value of 'timestamp'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.ServiceSpecUpdatedEvent.Builder setTimestamp(long value) {
-      validate(fields()[6], value);
-      this.timestamp = value;
-      fieldSetFlags()[6] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'timestamp' field has been set.
-      * time the event is recorded
-      * @return True if the 'timestamp' field has been set, false otherwise.
-      */
-    public boolean hasTimestamp() {
-      return fieldSetFlags()[6];
-    }
-
-
-    /**
-      * Clears the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.ServiceSpecUpdatedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[6] = false;
-      return this;
-    }
-
     @Override
     @SuppressWarnings("unchecked")
     public ServiceSpecUpdatedEvent build() {
@@ -766,7 +689,6 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
         record.apiVersion = fieldSetFlags()[3] ? this.apiVersion : (java.lang.String) defaultValue(fields()[3]);
         record.apiType = fieldSetFlags()[4] ? this.apiType : (java.lang.String) defaultValue(fields()[4]);
         record.spec = fieldSetFlags()[5] ? this.spec : (java.lang.String) defaultValue(fields()[5]);
-        record.timestamp = fieldSetFlags()[6] ? this.timestamp : (java.lang.Long) defaultValue(fields()[6]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -811,8 +733,6 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
 
     out.writeString(this.spec);
 
-    out.writeLong(this.timestamp);
-
   }
 
   @Override public void customDecode(org.apache.avro.io.ResolvingDecoder in)
@@ -835,10 +755,8 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
 
       this.spec = in.readString();
 
-      this.timestamp = in.readLong();
-
     } else {
-      for (int i = 0; i < 7; i++) {
+      for (int i = 0; i < 6; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -865,10 +783,6 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
 
         case 5:
           this.spec = in.readString();
-          break;
-
-        case 6:
-          this.timestamp = in.readLong();
           break;
 
         default:

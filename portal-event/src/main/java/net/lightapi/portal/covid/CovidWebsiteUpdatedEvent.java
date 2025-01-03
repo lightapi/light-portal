@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class CovidWebsiteUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -9218849667884384125L;
+  private static final long serialVersionUID = -4052749231175609145L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"CovidWebsiteUpdatedEvent\",\"namespace\":\"net.lightapi.portal.covid\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the id\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"website\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"website in string format\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the unique user id to update map store\"},{\"name\":\"country\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"country of the user to update map store\",\"default\":null},{\"name\":\"province\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"province of the user to update map store\",\"default\":null},{\"name\":\"city\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"city of the user to update map store\",\"default\":null},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"CovidWebsiteUpdatedEvent\",\"namespace\":\"net.lightapi.portal.covid\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the id\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"website\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"website in string format\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the unique user id to update map store\"},{\"name\":\"country\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"country of the user to update map store\",\"default\":null},{\"name\":\"province\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"province of the user to update map store\",\"default\":null},{\"name\":\"city\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"city of the user to update map store\",\"default\":null}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -86,8 +86,6 @@ public class CovidWebsiteUpdatedEvent extends org.apache.avro.specific.SpecificR
   private java.lang.String province;
   /** city of the user to update map store */
   private java.lang.String city;
-  /** time the event is recorded */
-  private long timestamp;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -105,9 +103,8 @@ public class CovidWebsiteUpdatedEvent extends org.apache.avro.specific.SpecificR
    * @param country country of the user to update map store
    * @param province province of the user to update map store
    * @param city city of the user to update map store
-   * @param timestamp time the event is recorded
    */
-  public CovidWebsiteUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String website, java.lang.String userId, java.lang.String country, java.lang.String province, java.lang.String city, java.lang.Long timestamp) {
+  public CovidWebsiteUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String website, java.lang.String userId, java.lang.String country, java.lang.String province, java.lang.String city) {
     this.EventId = EventId;
     this.hostId = hostId;
     this.website = website;
@@ -115,7 +112,6 @@ public class CovidWebsiteUpdatedEvent extends org.apache.avro.specific.SpecificR
     this.country = country;
     this.province = province;
     this.city = city;
-    this.timestamp = timestamp;
   }
 
   public org.apache.avro.specific.SpecificData getSpecificData() { return MODEL$; }
@@ -130,7 +126,6 @@ public class CovidWebsiteUpdatedEvent extends org.apache.avro.specific.SpecificR
     case 4: return country;
     case 5: return province;
     case 6: return city;
-    case 7: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -146,7 +141,6 @@ public class CovidWebsiteUpdatedEvent extends org.apache.avro.specific.SpecificR
     case 4: country = value$ != null ? value$.toString() : null; break;
     case 5: province = value$ != null ? value$.toString() : null; break;
     case 6: city = value$ != null ? value$.toString() : null; break;
-    case 7: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -277,24 +271,6 @@ public class CovidWebsiteUpdatedEvent extends org.apache.avro.specific.SpecificR
   }
 
   /**
-   * Gets the value of the 'timestamp' field.
-   * @return time the event is recorded
-   */
-  public long getTimestamp() {
-    return timestamp;
-  }
-
-
-  /**
-   * Sets the value of the 'timestamp' field.
-   * time the event is recorded
-   * @param value the value to set.
-   */
-  public void setTimestamp(long value) {
-    this.timestamp = value;
-  }
-
-  /**
    * Creates a new CovidWebsiteUpdatedEvent RecordBuilder.
    * @return A new CovidWebsiteUpdatedEvent RecordBuilder
    */
@@ -349,8 +325,6 @@ public class CovidWebsiteUpdatedEvent extends org.apache.avro.specific.SpecificR
     private java.lang.String province;
     /** city of the user to update map store */
     private java.lang.String city;
-    /** time the event is recorded */
-    private long timestamp;
 
     /** Creates a new Builder */
     private Builder() {
@@ -394,10 +368,6 @@ public class CovidWebsiteUpdatedEvent extends org.apache.avro.specific.SpecificR
         this.city = data().deepCopy(fields()[6].schema(), other.city);
         fieldSetFlags()[6] = other.fieldSetFlags()[6];
       }
-      if (isValidValue(fields()[7], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[7].schema(), other.timestamp);
-        fieldSetFlags()[7] = other.fieldSetFlags()[7];
-      }
     }
 
     /**
@@ -434,10 +404,6 @@ public class CovidWebsiteUpdatedEvent extends org.apache.avro.specific.SpecificR
       if (isValidValue(fields()[6], other.city)) {
         this.city = data().deepCopy(fields()[6].schema(), other.city);
         fieldSetFlags()[6] = true;
-      }
-      if (isValidValue(fields()[7], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[7].schema(), other.timestamp);
-        fieldSetFlags()[7] = true;
       }
     }
 
@@ -781,49 +747,6 @@ public class CovidWebsiteUpdatedEvent extends org.apache.avro.specific.SpecificR
       return this;
     }
 
-    /**
-      * Gets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return The value.
-      */
-    public long getTimestamp() {
-      return timestamp;
-    }
-
-
-    /**
-      * Sets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @param value The value of 'timestamp'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.covid.CovidWebsiteUpdatedEvent.Builder setTimestamp(long value) {
-      validate(fields()[7], value);
-      this.timestamp = value;
-      fieldSetFlags()[7] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'timestamp' field has been set.
-      * time the event is recorded
-      * @return True if the 'timestamp' field has been set, false otherwise.
-      */
-    public boolean hasTimestamp() {
-      return fieldSetFlags()[7];
-    }
-
-
-    /**
-      * Clears the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return This builder.
-      */
-    public net.lightapi.portal.covid.CovidWebsiteUpdatedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[7] = false;
-      return this;
-    }
-
     @Override
     @SuppressWarnings("unchecked")
     public CovidWebsiteUpdatedEvent build() {
@@ -845,7 +768,6 @@ public class CovidWebsiteUpdatedEvent extends org.apache.avro.specific.SpecificR
         record.country = fieldSetFlags()[4] ? this.country : (java.lang.String) defaultValue(fields()[4]);
         record.province = fieldSetFlags()[5] ? this.province : (java.lang.String) defaultValue(fields()[5]);
         record.city = fieldSetFlags()[6] ? this.city : (java.lang.String) defaultValue(fields()[6]);
-        record.timestamp = fieldSetFlags()[7] ? this.timestamp : (java.lang.Long) defaultValue(fields()[7]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -910,8 +832,6 @@ public class CovidWebsiteUpdatedEvent extends org.apache.avro.specific.SpecificR
       out.writeString(this.city);
     }
 
-    out.writeLong(this.timestamp);
-
   }
 
   @Override public void customDecode(org.apache.avro.io.ResolvingDecoder in)
@@ -951,10 +871,8 @@ public class CovidWebsiteUpdatedEvent extends org.apache.avro.specific.SpecificR
         this.city = in.readString();
       }
 
-      this.timestamp = in.readLong();
-
     } else {
-      for (int i = 0; i < 8; i++) {
+      for (int i = 0; i < 7; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -1000,10 +918,6 @@ public class CovidWebsiteUpdatedEvent extends org.apache.avro.specific.SpecificR
           } else {
             this.city = in.readString();
           }
-          break;
-
-        case 7:
-          this.timestamp = in.readLong();
           break;
 
         default:

@@ -2,6 +2,7 @@ package net.lightapi.portal.db;
 
 import com.networknt.config.JsonMapper;
 import com.networknt.kafka.common.AvroConverter;
+import com.networknt.kafka.common.EventId;
 import com.networknt.monad.Failure;
 import com.networknt.monad.Result;
 import com.networknt.monad.Success;
@@ -408,22 +409,21 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     /**
      * insert notification into database using different connection and transaction.
      *
-     * @param userId The userId of the user
-     * @param nonce  The nonce of the notification
+     * @param eventId The eventId of the event
      * @param eventClass The event class of the notification
      * @param json   The json string of the event
      * @param flag   The flag of the notification
      * @param error  The error message of the notification
      * @throws SQLException when there is an error in the database access
      */
-    public void insertNotification(String userId, long nonce, String eventClass, String json, boolean flag, String error) throws SQLException {
+    public void insertNotification(EventId eventId, String eventClass, String json, boolean flag, String error) throws SQLException {
         try (Connection conn = ds.getConnection();
             PreparedStatement statement = conn.prepareStatement(INSERT_NOTIFICATION)) {
-            statement.setString(1, userId);
-            statement.setLong(2, nonce);
+            statement.setString(1, eventId.getId());
+            statement.setLong(2, eventId.getNonce());
             statement.setString(3, eventClass);
             statement.setString(4, json);
-            statement.setTimestamp(5, new Timestamp(System.currentTimeMillis()));
+            statement.setTimestamp(5, new Timestamp(eventId.getTimestamp()));
             statement.setBoolean(6, flag);
             if (error != null) {
                 statement.setString(7, error);
@@ -550,17 +550,17 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(event.getUserId());
-                insertNotification(event.getEmail(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
 
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getUserId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getUserId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
@@ -631,16 +631,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(event.getEventId().getId());
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
@@ -739,16 +739,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(event.getUserId());
-                insertNotification(event.getEmail(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEmail(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getEmail(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
@@ -852,16 +852,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(event.getUserId());
-                insertNotification(event.getEmail(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEmail(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getEmail(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
@@ -893,16 +893,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(event.getEventId().getId());
-                insertNotification(event.getEmail(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEmail(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getEmail(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
@@ -935,16 +935,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(event.getEventId().getId());
-                insertNotification(event.getEmail(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEmail(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getEmail(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
@@ -977,16 +977,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(event.getEventId().getId());
-                insertNotification(event.getEmail(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEmail(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getEmail(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
@@ -1019,16 +1019,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(event.getEventId().getId());
-                insertNotification(event.getEmail(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEmail(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getEmail(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
@@ -1062,16 +1062,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(event.getEventId().getId());
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
@@ -1125,21 +1125,21 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(3, event.getToEmail());
                 statement.setString(4, event.getSubject());
                 statement.setString(5, event.getContent());
-                statement.setTimestamp(6, new Timestamp(event.getTimestamp()));
+                statement.setTimestamp(6, new Timestamp(event.getEventId().getTimestamp()));
                 statement.executeUpdate();
 
                 conn.commit();
                 result = Success.of(event.getEventId().getId());
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getFromId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getFromId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
@@ -1201,16 +1201,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(event.getRefreshToken());
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
@@ -1237,16 +1237,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(event.getEventId().getId());
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
@@ -1365,16 +1365,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(event.getAppId());
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
@@ -1467,16 +1467,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(event.getAppId());
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
@@ -1503,16 +1503,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(event.getEventId().getId());
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
@@ -1700,11 +1700,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(event.getApiId());
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
@@ -1797,7 +1797,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     statement.setNull(12, NULL);
                 }
                 statement.setString(13, event.getEventId().getId());
-                statement.setTimestamp(14, new Timestamp(event.getTimestamp()));
+                statement.setTimestamp(14, new Timestamp(event.getEventId().getTimestamp()));
                 statement.setString(15, event.getHostId());
                 statement.setString(16, event.getApiId());
 
@@ -1808,16 +1808,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(event.getApiId());
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
@@ -1844,16 +1844,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(event.getEventId().getId());
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
@@ -2007,16 +2007,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(event.getApiId());
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
@@ -2070,7 +2070,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
 
                 statement.setString(6, event.getEventId().getId());
-                statement.setTimestamp(7, new Timestamp(event.getTimestamp()));
+                statement.setTimestamp(7, new Timestamp(event.getEventId().getTimestamp()));
                 statement.setString(8, event.getHostId());
                 statement.setString(9, event.getApiId());
                 statement.setString(10, event.getApiVersion());
@@ -2081,16 +2081,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(event.getApiId());
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
@@ -2118,16 +2118,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(event.getEventId().getId());
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
 
@@ -2213,7 +2213,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 try (PreparedStatement statement = conn.prepareStatement(updateApiVersion)) {
                     statement.setString(1, event.getSpec());
                     statement.setString(2, event.getEventId().getId());
-                    statement.setTimestamp(3, new Timestamp(event.getTimestamp()));
+                    statement.setTimestamp(3, new Timestamp(event.getEventId().getTimestamp()));
                     statement.setString(4, event.getHostId());
                     statement.setString(5, event.getApiId());
                     statement.setString(6, event.getApiVersion());
@@ -2252,7 +2252,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                             statement.setString(8, (String) endpoint.get("endpointDesc"));
 
                         statement.setString(9, event.getEventId().getId());
-                        statement.setTimestamp(10, new Timestamp(event.getTimestamp()));
+                        statement.setTimestamp(10, new Timestamp(event.getEventId().getTimestamp()));
                         statement.executeUpdate();
                     }
                     // insert scopes
@@ -2270,23 +2270,23 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                             else
                                 statement.setString(6, scopeDesc[1]);
                             statement.setString(7, event.getEventId().getId());
-                            statement.setTimestamp(8, new Timestamp(event.getTimestamp()));
+                            statement.setTimestamp(8, new Timestamp(event.getEventId().getTimestamp()));
                             statement.executeUpdate();
                         }
                     }
                 }
                 conn.commit();
                 result = Success.of(event.getApiId());
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
@@ -2448,16 +2448,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(event.getApiId());
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
@@ -2487,16 +2487,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(event.getEventId().getId());
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
 
@@ -2581,7 +2581,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     statement.setString(5, event.getOwner());
                     statement.setString(6, jwk);
                     statement.setString(7, event.getEventId().getId());
-                    statement.setTimestamp(8, new Timestamp(event.getTimestamp()));
+                    statement.setTimestamp(8, new Timestamp(event.getEventId().getTimestamp()));
                     int count = statement.executeUpdate();
                     if (count == 0) {
                         throw new SQLException("failed to insert the host " + event.getHostDomain());
@@ -2595,7 +2595,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     statement.setString(4, KeyUtil.serializePrivateKey(longKeyPair.getPrivate()));
                     statement.setString(5, "L");
                     statement.setString(6, event.getEventId().getId());
-                    statement.setTimestamp(7, new Timestamp(event.getTimestamp()));
+                    statement.setTimestamp(7, new Timestamp(event.getEventId().getTimestamp()));
                     int count = statement.executeUpdate();
                     if (count == 0) {
                         throw new SQLException("failed to insert the host_key for host " + event.getHostDomain() + " kid " + longKeyId);
@@ -2609,7 +2609,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     statement.setString(4, KeyUtil.serializePrivateKey(currKeyPair.getPrivate()));
                     statement.setString(5, "C");
                     statement.setString(6, event.getEventId().getId());
-                    statement.setTimestamp(7, new Timestamp(event.getTimestamp()));
+                    statement.setTimestamp(7, new Timestamp(event.getEventId().getTimestamp()));
                     int count = statement.executeUpdate();
                     if (count == 0) {
                         throw new SQLException("failed to insert the host_key for host " + event.getHostDomain() + " kid " + currKeyId);
@@ -2617,11 +2617,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(event.getHostId());
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
@@ -2665,7 +2665,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     statement.setNull(3, NULL);
                 }
                 statement.setString(4, event.getEventId().getId());
-                statement.setTimestamp(5, new Timestamp(event.getTimestamp()));
+                statement.setTimestamp(5, new Timestamp(event.getEventId().getTimestamp()));
                 statement.setString(6, event.getHostId());
 
                 int count = statement.executeUpdate();
@@ -2675,16 +2675,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(event.getHostId());
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
@@ -2720,16 +2720,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(event.getEventId().getId());
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
@@ -2933,23 +2933,23 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(4, event.getClassPath());
                 statement.setString(5, event.getConfigDesc());
                 statement.setString(6, event.getEventId().getId());
-                statement.setTimestamp(7, new Timestamp(event.getTimestamp()));
+                statement.setTimestamp(7, new Timestamp(event.getEventId().getTimestamp()));
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("failed to insert the configuration with id " + event.getConfigId());
                 }
                 conn.commit();
                 result = Success.of(event.getConfigId());
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
@@ -2991,7 +2991,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     statement.setNull(4, NULL);
                 }
                 statement.setString(5, event.getEventId().getId());
-                statement.setTimestamp(6, new Timestamp(event.getTimestamp()));
+                statement.setTimestamp(6, new Timestamp(event.getEventId().getTimestamp()));
                 statement.setString(7, event.getConfigId());
 
                 int count = statement.executeUpdate();
@@ -3000,16 +3000,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(event.getConfigId());
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
@@ -3033,16 +3033,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(event.getEventId().getId());
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
@@ -3237,16 +3237,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(event.getRuleId());
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
@@ -3308,7 +3308,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     statement.setNull(8, NULL);
                 }
                 statement.setString(9, event.getEventId().getId());
-                statement.setTimestamp(10, new Timestamp(event.getTimestamp()));
+                statement.setTimestamp(10, new Timestamp(event.getEventId().getTimestamp()));
                 statement.setString(11, event.getRuleId());
 
                 int count = statement.executeUpdate();
@@ -3317,16 +3317,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(event.getRuleId());
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
@@ -3362,16 +3362,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(event.getEventId().getId());
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
@@ -3622,16 +3622,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(event.getApiId());
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
@@ -3667,16 +3667,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(event.getApiId());
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 logger.error("Exception:", e);
                 conn.rollback();
-                insertNotification(event.getEventId().getId(), event.getEventId().getNonce(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
@@ -3687,7 +3687,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<List<Map<String, Object>>> queryRuleByHostApiId(String hostId, String apiId) {
+    public Result<List<Map<String, Object>>> queryRuleByHostApiId(String hostId, String apiId, String apiVersion) {
         Result<List<Map<String, Object>>> result;
         String sql = "SELECT rule_id, host_id, rule_type, rule_group, rule_visibility, rule_description, rule_body, rule_owner " +
                 "update_user, update_timestamp " +

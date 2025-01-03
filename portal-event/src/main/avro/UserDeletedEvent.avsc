@@ -21,6 +21,12 @@
             "doc": "the number of the transactions for the id"
           },
           {
+            "name": "timestamp",
+            "type": "long",
+            "default": 0,
+            "doc": "time the event is recorded"
+          },
+          {
             "name": "derived",
             "type": "boolean",
             "default": false,
@@ -38,12 +44,6 @@
       "name": "email",
       "type": "string",
       "doc": "email of the user to be deleted"
-    },
-    {
-      "name": "timestamp",
-      "type": "long",
-      "default": 0,
-      "doc": "time the event is recorded"
     }
   ]
 }

@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 9182560958988539869L;
+  private static final long serialVersionUID = -8222939804965518796L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ServiceRuleUpdatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"serviceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service id\"},{\"name\":\"endpoint\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service endpoint\"},{\"name\":\"ruleType\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule type\"},{\"name\":\"rules\",\"type\":{\"type\":\"array\",\"items\":{\"type\":\"record\",\"name\":\"ServiceRule\",\"fields\":[{\"name\":\"ruleId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule id\"},{\"name\":\"roles\",\"type\":[\"null\",{\"type\":\"array\",\"items\":{\"type\":\"string\",\"avro.java.string\":\"String\"}}],\"doc\":\"roles that accesses the endpoint\",\"default\":null},{\"name\":\"variables\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"rule variables if any\",\"default\":null}]}},\"doc\":\"service rules\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ServiceRuleUpdatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"serviceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service id\"},{\"name\":\"endpoint\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service endpoint\"},{\"name\":\"ruleType\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule type\"},{\"name\":\"rules\",\"type\":{\"type\":\"array\",\"items\":{\"type\":\"record\",\"name\":\"ServiceRule\",\"fields\":[{\"name\":\"ruleId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"rule id\"},{\"name\":\"roles\",\"type\":[\"null\",{\"type\":\"array\",\"items\":{\"type\":\"string\",\"avro.java.string\":\"String\"}}],\"doc\":\"roles that accesses the endpoint\",\"default\":null},{\"name\":\"variables\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"rule variables if any\",\"default\":null}]}},\"doc\":\"service rules\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -84,8 +84,6 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
   private java.lang.String ruleType;
   /** service rules */
   private java.util.List<net.lightapi.portal.market.ServiceRule> rules;
-  /** time the event is recorded */
-  private long timestamp;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -102,16 +100,14 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
    * @param endpoint service endpoint
    * @param ruleType rule type
    * @param rules service rules
-   * @param timestamp time the event is recorded
    */
-  public ServiceRuleUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String serviceId, java.lang.String endpoint, java.lang.String ruleType, java.util.List<net.lightapi.portal.market.ServiceRule> rules, java.lang.Long timestamp) {
+  public ServiceRuleUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String serviceId, java.lang.String endpoint, java.lang.String ruleType, java.util.List<net.lightapi.portal.market.ServiceRule> rules) {
     this.EventId = EventId;
     this.hostId = hostId;
     this.serviceId = serviceId;
     this.endpoint = endpoint;
     this.ruleType = ruleType;
     this.rules = rules;
-    this.timestamp = timestamp;
   }
 
   public org.apache.avro.specific.SpecificData getSpecificData() { return MODEL$; }
@@ -125,7 +121,6 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
     case 3: return endpoint;
     case 4: return ruleType;
     case 5: return rules;
-    case 6: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -140,7 +135,6 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
     case 3: endpoint = value$ != null ? value$.toString() : null; break;
     case 4: ruleType = value$ != null ? value$.toString() : null; break;
     case 5: rules = (java.util.List<net.lightapi.portal.market.ServiceRule>)value$; break;
-    case 6: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -253,24 +247,6 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
   }
 
   /**
-   * Gets the value of the 'timestamp' field.
-   * @return time the event is recorded
-   */
-  public long getTimestamp() {
-    return timestamp;
-  }
-
-
-  /**
-   * Sets the value of the 'timestamp' field.
-   * time the event is recorded
-   * @param value the value to set.
-   */
-  public void setTimestamp(long value) {
-    this.timestamp = value;
-  }
-
-  /**
    * Creates a new ServiceRuleUpdatedEvent RecordBuilder.
    * @return A new ServiceRuleUpdatedEvent RecordBuilder
    */
@@ -323,8 +299,6 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
     private java.lang.String ruleType;
     /** service rules */
     private java.util.List<net.lightapi.portal.market.ServiceRule> rules;
-    /** time the event is recorded */
-    private long timestamp;
 
     /** Creates a new Builder */
     private Builder() {
@@ -364,10 +338,6 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
         this.rules = data().deepCopy(fields()[5].schema(), other.rules);
         fieldSetFlags()[5] = other.fieldSetFlags()[5];
       }
-      if (isValidValue(fields()[6], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[6].schema(), other.timestamp);
-        fieldSetFlags()[6] = other.fieldSetFlags()[6];
-      }
     }
 
     /**
@@ -400,10 +370,6 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
       if (isValidValue(fields()[5], other.rules)) {
         this.rules = data().deepCopy(fields()[5].schema(), other.rules);
         fieldSetFlags()[5] = true;
-      }
-      if (isValidValue(fields()[6], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[6].schema(), other.timestamp);
-        fieldSetFlags()[6] = true;
       }
     }
 
@@ -703,49 +669,6 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
       return this;
     }
 
-    /**
-      * Gets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return The value.
-      */
-    public long getTimestamp() {
-      return timestamp;
-    }
-
-
-    /**
-      * Sets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @param value The value of 'timestamp'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.ServiceRuleUpdatedEvent.Builder setTimestamp(long value) {
-      validate(fields()[6], value);
-      this.timestamp = value;
-      fieldSetFlags()[6] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'timestamp' field has been set.
-      * time the event is recorded
-      * @return True if the 'timestamp' field has been set, false otherwise.
-      */
-    public boolean hasTimestamp() {
-      return fieldSetFlags()[6];
-    }
-
-
-    /**
-      * Clears the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.ServiceRuleUpdatedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[6] = false;
-      return this;
-    }
-
     @Override
     @SuppressWarnings("unchecked")
     public ServiceRuleUpdatedEvent build() {
@@ -766,7 +689,6 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
         record.endpoint = fieldSetFlags()[3] ? this.endpoint : (java.lang.String) defaultValue(fields()[3]);
         record.ruleType = fieldSetFlags()[4] ? this.ruleType : (java.lang.String) defaultValue(fields()[4]);
         record.rules = fieldSetFlags()[5] ? this.rules : (java.util.List<net.lightapi.portal.market.ServiceRule>) defaultValue(fields()[5]);
-        record.timestamp = fieldSetFlags()[6] ? this.timestamp : (java.lang.Long) defaultValue(fields()[6]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -822,8 +744,6 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
     if (actualSize0 != size0)
       throw new java.util.ConcurrentModificationException("Array-size written was " + size0 + ", but element count was " + actualSize0 + ".");
 
-    out.writeLong(this.timestamp);
-
   }
 
   @Override public void customDecode(org.apache.avro.io.ResolvingDecoder in)
@@ -862,10 +782,8 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
         }
       }
 
-      this.timestamp = in.readLong();
-
     } else {
-      for (int i = 0; i < 7; i++) {
+      for (int i = 0; i < 6; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -908,10 +826,6 @@ public class ServiceRuleUpdatedEvent extends org.apache.avro.specific.SpecificRe
               a0.add(e0);
             }
           }
-          break;
-
-        case 6:
-          this.timestamp = in.readLong();
           break;
 
         default:

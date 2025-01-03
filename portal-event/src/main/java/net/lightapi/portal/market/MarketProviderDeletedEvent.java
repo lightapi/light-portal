@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class MarketProviderDeletedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 2378174314478252270L;
+  private static final long serialVersionUID = -2254833152202577015L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"MarketProviderDeletedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"providerId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"provider id\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"MarketProviderDeletedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"providerId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"provider id\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -78,8 +78,6 @@ public class MarketProviderDeletedEvent extends org.apache.avro.specific.Specifi
   private java.lang.String hostId;
   /** provider id */
   private java.lang.String providerId;
-  /** time the event is recorded */
-  private long timestamp;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -93,13 +91,11 @@ public class MarketProviderDeletedEvent extends org.apache.avro.specific.Specifi
    * @param EventId The new value for EventId
    * @param hostId host id
    * @param providerId provider id
-   * @param timestamp time the event is recorded
    */
-  public MarketProviderDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String providerId, java.lang.Long timestamp) {
+  public MarketProviderDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String providerId) {
     this.EventId = EventId;
     this.hostId = hostId;
     this.providerId = providerId;
-    this.timestamp = timestamp;
   }
 
   public org.apache.avro.specific.SpecificData getSpecificData() { return MODEL$; }
@@ -110,7 +106,6 @@ public class MarketProviderDeletedEvent extends org.apache.avro.specific.Specifi
     case 0: return EventId;
     case 1: return hostId;
     case 2: return providerId;
-    case 3: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -122,7 +117,6 @@ public class MarketProviderDeletedEvent extends org.apache.avro.specific.Specifi
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
     case 1: hostId = value$ != null ? value$.toString() : null; break;
     case 2: providerId = value$ != null ? value$.toString() : null; break;
-    case 3: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -181,24 +175,6 @@ public class MarketProviderDeletedEvent extends org.apache.avro.specific.Specifi
   }
 
   /**
-   * Gets the value of the 'timestamp' field.
-   * @return time the event is recorded
-   */
-  public long getTimestamp() {
-    return timestamp;
-  }
-
-
-  /**
-   * Sets the value of the 'timestamp' field.
-   * time the event is recorded
-   * @param value the value to set.
-   */
-  public void setTimestamp(long value) {
-    this.timestamp = value;
-  }
-
-  /**
    * Creates a new MarketProviderDeletedEvent RecordBuilder.
    * @return A new MarketProviderDeletedEvent RecordBuilder
    */
@@ -245,8 +221,6 @@ public class MarketProviderDeletedEvent extends org.apache.avro.specific.Specifi
     private java.lang.String hostId;
     /** provider id */
     private java.lang.String providerId;
-    /** time the event is recorded */
-    private long timestamp;
 
     /** Creates a new Builder */
     private Builder() {
@@ -274,10 +248,6 @@ public class MarketProviderDeletedEvent extends org.apache.avro.specific.Specifi
         this.providerId = data().deepCopy(fields()[2].schema(), other.providerId);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[3].schema(), other.timestamp);
-        fieldSetFlags()[3] = other.fieldSetFlags()[3];
-      }
     }
 
     /**
@@ -298,10 +268,6 @@ public class MarketProviderDeletedEvent extends org.apache.avro.specific.Specifi
       if (isValidValue(fields()[2], other.providerId)) {
         this.providerId = data().deepCopy(fields()[2].schema(), other.providerId);
         fieldSetFlags()[2] = true;
-      }
-      if (isValidValue(fields()[3], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[3].schema(), other.timestamp);
-        fieldSetFlags()[3] = true;
       }
     }
 
@@ -469,49 +435,6 @@ public class MarketProviderDeletedEvent extends org.apache.avro.specific.Specifi
       return this;
     }
 
-    /**
-      * Gets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return The value.
-      */
-    public long getTimestamp() {
-      return timestamp;
-    }
-
-
-    /**
-      * Sets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @param value The value of 'timestamp'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.MarketProviderDeletedEvent.Builder setTimestamp(long value) {
-      validate(fields()[3], value);
-      this.timestamp = value;
-      fieldSetFlags()[3] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'timestamp' field has been set.
-      * time the event is recorded
-      * @return True if the 'timestamp' field has been set, false otherwise.
-      */
-    public boolean hasTimestamp() {
-      return fieldSetFlags()[3];
-    }
-
-
-    /**
-      * Clears the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.MarketProviderDeletedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[3] = false;
-      return this;
-    }
-
     @Override
     @SuppressWarnings("unchecked")
     public MarketProviderDeletedEvent build() {
@@ -529,7 +452,6 @@ public class MarketProviderDeletedEvent extends org.apache.avro.specific.Specifi
         }
         record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
         record.providerId = fieldSetFlags()[2] ? this.providerId : (java.lang.String) defaultValue(fields()[2]);
-        record.timestamp = fieldSetFlags()[3] ? this.timestamp : (java.lang.Long) defaultValue(fields()[3]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -568,8 +490,6 @@ public class MarketProviderDeletedEvent extends org.apache.avro.specific.Specifi
 
     out.writeString(this.providerId);
 
-    out.writeLong(this.timestamp);
-
   }
 
   @Override public void customDecode(org.apache.avro.io.ResolvingDecoder in)
@@ -586,10 +506,8 @@ public class MarketProviderDeletedEvent extends org.apache.avro.specific.Specifi
 
       this.providerId = in.readString();
 
-      this.timestamp = in.readLong();
-
     } else {
-      for (int i = 0; i < 4; i++) {
+      for (int i = 0; i < 3; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -604,10 +522,6 @@ public class MarketProviderDeletedEvent extends org.apache.avro.specific.Specifi
 
         case 2:
           this.providerId = in.readString();
-          break;
-
-        case 3:
-          this.timestamp = in.readLong();
           break;
 
         default:

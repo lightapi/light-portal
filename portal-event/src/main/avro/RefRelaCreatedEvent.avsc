@@ -21,6 +21,12 @@
             "doc": "the number of the transactions for the user"
           },
           {
+            "name": "timestamp",
+            "type": "long",
+            "default": 0,
+            "doc": "time the event is recorded"
+          },
+          {
             "name": "derived",
             "type": "boolean",
             "default": false,
@@ -58,12 +64,6 @@
       "name": "label",
       "type": "string",
       "doc": "value label in language"
-    },
-    {
-      "name": "timestamp",
-      "type": "long",
-      "default": 0,
-      "doc": "time the event is recorded"
     }
   ]
 }

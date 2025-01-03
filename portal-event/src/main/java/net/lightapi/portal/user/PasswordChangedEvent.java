@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class PasswordChangedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 7605731053517878149L;
+  private static final long serialVersionUID = 5507427703954631277L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"PasswordChangedEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the id\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"password\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"new hashed password for the email account\"},{\"name\":\"oldPassword\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"old password for verification on the event processing\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"PasswordChangedEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the id\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"password\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"new hashed password for the email account\"},{\"name\":\"oldPassword\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"old password for verification on the event processing\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -80,8 +80,6 @@ public class PasswordChangedEvent extends org.apache.avro.specific.SpecificRecor
   private java.lang.String password;
   /** old password for verification on the event processing */
   private java.lang.String oldPassword;
-  /** time the event is recorded */
-  private long timestamp;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -96,14 +94,12 @@ public class PasswordChangedEvent extends org.apache.avro.specific.SpecificRecor
    * @param hostId host id
    * @param password new hashed password for the email account
    * @param oldPassword old password for verification on the event processing
-   * @param timestamp time the event is recorded
    */
-  public PasswordChangedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String password, java.lang.String oldPassword, java.lang.Long timestamp) {
+  public PasswordChangedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String password, java.lang.String oldPassword) {
     this.EventId = EventId;
     this.hostId = hostId;
     this.password = password;
     this.oldPassword = oldPassword;
-    this.timestamp = timestamp;
   }
 
   public org.apache.avro.specific.SpecificData getSpecificData() { return MODEL$; }
@@ -115,7 +111,6 @@ public class PasswordChangedEvent extends org.apache.avro.specific.SpecificRecor
     case 1: return hostId;
     case 2: return password;
     case 3: return oldPassword;
-    case 4: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -128,7 +123,6 @@ public class PasswordChangedEvent extends org.apache.avro.specific.SpecificRecor
     case 1: hostId = value$ != null ? value$.toString() : null; break;
     case 2: password = value$ != null ? value$.toString() : null; break;
     case 3: oldPassword = value$ != null ? value$.toString() : null; break;
-    case 4: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -205,24 +199,6 @@ public class PasswordChangedEvent extends org.apache.avro.specific.SpecificRecor
   }
 
   /**
-   * Gets the value of the 'timestamp' field.
-   * @return time the event is recorded
-   */
-  public long getTimestamp() {
-    return timestamp;
-  }
-
-
-  /**
-   * Sets the value of the 'timestamp' field.
-   * time the event is recorded
-   * @param value the value to set.
-   */
-  public void setTimestamp(long value) {
-    this.timestamp = value;
-  }
-
-  /**
    * Creates a new PasswordChangedEvent RecordBuilder.
    * @return A new PasswordChangedEvent RecordBuilder
    */
@@ -271,8 +247,6 @@ public class PasswordChangedEvent extends org.apache.avro.specific.SpecificRecor
     private java.lang.String password;
     /** old password for verification on the event processing */
     private java.lang.String oldPassword;
-    /** time the event is recorded */
-    private long timestamp;
 
     /** Creates a new Builder */
     private Builder() {
@@ -304,10 +278,6 @@ public class PasswordChangedEvent extends org.apache.avro.specific.SpecificRecor
         this.oldPassword = data().deepCopy(fields()[3].schema(), other.oldPassword);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
-      if (isValidValue(fields()[4], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[4].schema(), other.timestamp);
-        fieldSetFlags()[4] = other.fieldSetFlags()[4];
-      }
     }
 
     /**
@@ -332,10 +302,6 @@ public class PasswordChangedEvent extends org.apache.avro.specific.SpecificRecor
       if (isValidValue(fields()[3], other.oldPassword)) {
         this.oldPassword = data().deepCopy(fields()[3].schema(), other.oldPassword);
         fieldSetFlags()[3] = true;
-      }
-      if (isValidValue(fields()[4], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[4].schema(), other.timestamp);
-        fieldSetFlags()[4] = true;
       }
     }
 
@@ -547,49 +513,6 @@ public class PasswordChangedEvent extends org.apache.avro.specific.SpecificRecor
       return this;
     }
 
-    /**
-      * Gets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return The value.
-      */
-    public long getTimestamp() {
-      return timestamp;
-    }
-
-
-    /**
-      * Sets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @param value The value of 'timestamp'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.user.PasswordChangedEvent.Builder setTimestamp(long value) {
-      validate(fields()[4], value);
-      this.timestamp = value;
-      fieldSetFlags()[4] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'timestamp' field has been set.
-      * time the event is recorded
-      * @return True if the 'timestamp' field has been set, false otherwise.
-      */
-    public boolean hasTimestamp() {
-      return fieldSetFlags()[4];
-    }
-
-
-    /**
-      * Clears the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return This builder.
-      */
-    public net.lightapi.portal.user.PasswordChangedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[4] = false;
-      return this;
-    }
-
     @Override
     @SuppressWarnings("unchecked")
     public PasswordChangedEvent build() {
@@ -608,7 +531,6 @@ public class PasswordChangedEvent extends org.apache.avro.specific.SpecificRecor
         record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
         record.password = fieldSetFlags()[2] ? this.password : (java.lang.String) defaultValue(fields()[2]);
         record.oldPassword = fieldSetFlags()[3] ? this.oldPassword : (java.lang.String) defaultValue(fields()[3]);
-        record.timestamp = fieldSetFlags()[4] ? this.timestamp : (java.lang.Long) defaultValue(fields()[4]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -649,8 +571,6 @@ public class PasswordChangedEvent extends org.apache.avro.specific.SpecificRecor
 
     out.writeString(this.oldPassword);
 
-    out.writeLong(this.timestamp);
-
   }
 
   @Override public void customDecode(org.apache.avro.io.ResolvingDecoder in)
@@ -669,10 +589,8 @@ public class PasswordChangedEvent extends org.apache.avro.specific.SpecificRecor
 
       this.oldPassword = in.readString();
 
-      this.timestamp = in.readLong();
-
     } else {
-      for (int i = 0; i < 5; i++) {
+      for (int i = 0; i < 4; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -691,10 +609,6 @@ public class PasswordChangedEvent extends org.apache.avro.specific.SpecificRecor
 
         case 3:
           this.oldPassword = in.readString();
-          break;
-
-        case 4:
-          this.timestamp = in.readLong();
           break;
 
         default:

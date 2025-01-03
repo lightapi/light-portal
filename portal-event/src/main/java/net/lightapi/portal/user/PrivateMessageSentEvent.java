@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 7830280675111963840L;
+  private static final long serialVersionUID = -3279092350738785820L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"PrivateMessageSentEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"fromId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"From userId that matches the EventId.id email\"},{\"name\":\"toEmail\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"The target email\"},{\"name\":\"subject\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"Subject of the message\"},{\"name\":\"content\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"Content of the message\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"PrivateMessageSentEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"fromId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"From userId that matches the EventId.id email\"},{\"name\":\"toEmail\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"The target email\"},{\"name\":\"subject\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"Subject of the message\"},{\"name\":\"content\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"Content of the message\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -84,8 +84,6 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
   private java.lang.String subject;
   /** Content of the message */
   private java.lang.String content;
-  /** time the event is recorded */
-  private long timestamp;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -102,16 +100,14 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
    * @param toEmail The target email
    * @param subject Subject of the message
    * @param content Content of the message
-   * @param timestamp time the event is recorded
    */
-  public PrivateMessageSentEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String fromId, java.lang.String toEmail, java.lang.String subject, java.lang.String content, java.lang.Long timestamp) {
+  public PrivateMessageSentEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String fromId, java.lang.String toEmail, java.lang.String subject, java.lang.String content) {
     this.EventId = EventId;
     this.hostId = hostId;
     this.fromId = fromId;
     this.toEmail = toEmail;
     this.subject = subject;
     this.content = content;
-    this.timestamp = timestamp;
   }
 
   public org.apache.avro.specific.SpecificData getSpecificData() { return MODEL$; }
@@ -125,7 +121,6 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
     case 3: return toEmail;
     case 4: return subject;
     case 5: return content;
-    case 6: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -140,7 +135,6 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
     case 3: toEmail = value$ != null ? value$.toString() : null; break;
     case 4: subject = value$ != null ? value$.toString() : null; break;
     case 5: content = value$ != null ? value$.toString() : null; break;
-    case 6: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -253,24 +247,6 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
   }
 
   /**
-   * Gets the value of the 'timestamp' field.
-   * @return time the event is recorded
-   */
-  public long getTimestamp() {
-    return timestamp;
-  }
-
-
-  /**
-   * Sets the value of the 'timestamp' field.
-   * time the event is recorded
-   * @param value the value to set.
-   */
-  public void setTimestamp(long value) {
-    this.timestamp = value;
-  }
-
-  /**
    * Creates a new PrivateMessageSentEvent RecordBuilder.
    * @return A new PrivateMessageSentEvent RecordBuilder
    */
@@ -323,8 +299,6 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
     private java.lang.String subject;
     /** Content of the message */
     private java.lang.String content;
-    /** time the event is recorded */
-    private long timestamp;
 
     /** Creates a new Builder */
     private Builder() {
@@ -364,10 +338,6 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
         this.content = data().deepCopy(fields()[5].schema(), other.content);
         fieldSetFlags()[5] = other.fieldSetFlags()[5];
       }
-      if (isValidValue(fields()[6], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[6].schema(), other.timestamp);
-        fieldSetFlags()[6] = other.fieldSetFlags()[6];
-      }
     }
 
     /**
@@ -400,10 +370,6 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
       if (isValidValue(fields()[5], other.content)) {
         this.content = data().deepCopy(fields()[5].schema(), other.content);
         fieldSetFlags()[5] = true;
-      }
-      if (isValidValue(fields()[6], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[6].schema(), other.timestamp);
-        fieldSetFlags()[6] = true;
       }
     }
 
@@ -703,49 +669,6 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
       return this;
     }
 
-    /**
-      * Gets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return The value.
-      */
-    public long getTimestamp() {
-      return timestamp;
-    }
-
-
-    /**
-      * Sets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @param value The value of 'timestamp'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.user.PrivateMessageSentEvent.Builder setTimestamp(long value) {
-      validate(fields()[6], value);
-      this.timestamp = value;
-      fieldSetFlags()[6] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'timestamp' field has been set.
-      * time the event is recorded
-      * @return True if the 'timestamp' field has been set, false otherwise.
-      */
-    public boolean hasTimestamp() {
-      return fieldSetFlags()[6];
-    }
-
-
-    /**
-      * Clears the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return This builder.
-      */
-    public net.lightapi.portal.user.PrivateMessageSentEvent.Builder clearTimestamp() {
-      fieldSetFlags()[6] = false;
-      return this;
-    }
-
     @Override
     @SuppressWarnings("unchecked")
     public PrivateMessageSentEvent build() {
@@ -766,7 +689,6 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
         record.toEmail = fieldSetFlags()[3] ? this.toEmail : (java.lang.String) defaultValue(fields()[3]);
         record.subject = fieldSetFlags()[4] ? this.subject : (java.lang.String) defaultValue(fields()[4]);
         record.content = fieldSetFlags()[5] ? this.content : (java.lang.String) defaultValue(fields()[5]);
-        record.timestamp = fieldSetFlags()[6] ? this.timestamp : (java.lang.Long) defaultValue(fields()[6]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -811,8 +733,6 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
 
     out.writeString(this.content);
 
-    out.writeLong(this.timestamp);
-
   }
 
   @Override public void customDecode(org.apache.avro.io.ResolvingDecoder in)
@@ -835,10 +755,8 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
 
       this.content = in.readString();
 
-      this.timestamp = in.readLong();
-
     } else {
-      for (int i = 0; i < 7; i++) {
+      for (int i = 0; i < 6; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -865,10 +783,6 @@ public class PrivateMessageSentEvent extends org.apache.avro.specific.SpecificRe
 
         case 5:
           this.content = in.readString();
-          break;
-
-        case 6:
-          this.timestamp = in.readLong();
           break;
 
         default:

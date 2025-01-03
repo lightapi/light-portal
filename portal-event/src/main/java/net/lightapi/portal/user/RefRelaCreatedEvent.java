@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 6195799918448859267L;
+  private static final long serialVersionUID = -4591198238585846882L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"RefRelaCreatedEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"rela\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"reference rela name\"},{\"name\":\"language\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"value label language\"},{\"name\":\"from\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"From value of the relationship\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"reference value\"},{\"name\":\"label\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"value label in language\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"RefRelaCreatedEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"rela\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"reference rela name\"},{\"name\":\"language\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"value label language\"},{\"name\":\"from\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"From value of the relationship\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"reference value\"},{\"name\":\"label\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"value label in language\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -86,8 +86,6 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
   private java.lang.String value;
   /** value label in language */
   private java.lang.String label;
-  /** time the event is recorded */
-  private long timestamp;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -105,9 +103,8 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
    * @param from From value of the relationship
    * @param value reference value
    * @param label value label in language
-   * @param timestamp time the event is recorded
    */
-  public RefRelaCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String rela, java.lang.String language, java.lang.String from, java.lang.String value, java.lang.String label, java.lang.Long timestamp) {
+  public RefRelaCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String rela, java.lang.String language, java.lang.String from, java.lang.String value, java.lang.String label) {
     this.EventId = EventId;
     this.hostId = hostId;
     this.rela = rela;
@@ -115,7 +112,6 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
     this.from = from;
     this.value = value;
     this.label = label;
-    this.timestamp = timestamp;
   }
 
   public org.apache.avro.specific.SpecificData getSpecificData() { return MODEL$; }
@@ -130,7 +126,6 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
     case 4: return from;
     case 5: return value;
     case 6: return label;
-    case 7: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -146,7 +141,6 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
     case 4: from = value$ != null ? value$.toString() : null; break;
     case 5: value = value$ != null ? value$.toString() : null; break;
     case 6: label = value$ != null ? value$.toString() : null; break;
-    case 7: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -277,24 +271,6 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
   }
 
   /**
-   * Gets the value of the 'timestamp' field.
-   * @return time the event is recorded
-   */
-  public long getTimestamp() {
-    return timestamp;
-  }
-
-
-  /**
-   * Sets the value of the 'timestamp' field.
-   * time the event is recorded
-   * @param value the value to set.
-   */
-  public void setTimestamp(long value) {
-    this.timestamp = value;
-  }
-
-  /**
    * Creates a new RefRelaCreatedEvent RecordBuilder.
    * @return A new RefRelaCreatedEvent RecordBuilder
    */
@@ -349,8 +325,6 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
     private java.lang.String value;
     /** value label in language */
     private java.lang.String label;
-    /** time the event is recorded */
-    private long timestamp;
 
     /** Creates a new Builder */
     private Builder() {
@@ -394,10 +368,6 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
         this.label = data().deepCopy(fields()[6].schema(), other.label);
         fieldSetFlags()[6] = other.fieldSetFlags()[6];
       }
-      if (isValidValue(fields()[7], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[7].schema(), other.timestamp);
-        fieldSetFlags()[7] = other.fieldSetFlags()[7];
-      }
     }
 
     /**
@@ -434,10 +404,6 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
       if (isValidValue(fields()[6], other.label)) {
         this.label = data().deepCopy(fields()[6].schema(), other.label);
         fieldSetFlags()[6] = true;
-      }
-      if (isValidValue(fields()[7], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[7].schema(), other.timestamp);
-        fieldSetFlags()[7] = true;
       }
     }
 
@@ -781,49 +747,6 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
       return this;
     }
 
-    /**
-      * Gets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return The value.
-      */
-    public long getTimestamp() {
-      return timestamp;
-    }
-
-
-    /**
-      * Sets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @param value The value of 'timestamp'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.user.RefRelaCreatedEvent.Builder setTimestamp(long value) {
-      validate(fields()[7], value);
-      this.timestamp = value;
-      fieldSetFlags()[7] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'timestamp' field has been set.
-      * time the event is recorded
-      * @return True if the 'timestamp' field has been set, false otherwise.
-      */
-    public boolean hasTimestamp() {
-      return fieldSetFlags()[7];
-    }
-
-
-    /**
-      * Clears the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return This builder.
-      */
-    public net.lightapi.portal.user.RefRelaCreatedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[7] = false;
-      return this;
-    }
-
     @Override
     @SuppressWarnings("unchecked")
     public RefRelaCreatedEvent build() {
@@ -845,7 +768,6 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
         record.from = fieldSetFlags()[4] ? this.from : (java.lang.String) defaultValue(fields()[4]);
         record.value = fieldSetFlags()[5] ? this.value : (java.lang.String) defaultValue(fields()[5]);
         record.label = fieldSetFlags()[6] ? this.label : (java.lang.String) defaultValue(fields()[6]);
-        record.timestamp = fieldSetFlags()[7] ? this.timestamp : (java.lang.Long) defaultValue(fields()[7]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -892,8 +814,6 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
 
     out.writeString(this.label);
 
-    out.writeLong(this.timestamp);
-
   }
 
   @Override public void customDecode(org.apache.avro.io.ResolvingDecoder in)
@@ -918,10 +838,8 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
 
       this.label = in.readString();
 
-      this.timestamp = in.readLong();
-
     } else {
-      for (int i = 0; i < 8; i++) {
+      for (int i = 0; i < 7; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -952,10 +870,6 @@ public class RefRelaCreatedEvent extends org.apache.avro.specific.SpecificRecord
 
         case 6:
           this.label = in.readString();
-          break;
-
-        case 7:
-          this.timestamp = in.readLong();
           break;
 
         default:

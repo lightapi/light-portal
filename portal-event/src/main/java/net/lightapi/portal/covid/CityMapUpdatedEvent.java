@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 5316695850316131415L;
+  private static final long serialVersionUID = -9135761805698139458L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"CityMapUpdatedEvent\",\"namespace\":\"net.lightapi.portal.covid\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"country\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"country\"},{\"name\":\"province\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"province\"},{\"name\":\"city\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"city\"},{\"name\":\"latitude\",\"type\":\"double\",\"doc\":\"city latitude\"},{\"name\":\"longitude\",\"type\":\"double\",\"doc\":\"city longitude\"},{\"name\":\"zoom\",\"type\":\"int\",\"doc\":\"initial zoom\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"CityMapUpdatedEvent\",\"namespace\":\"net.lightapi.portal.covid\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"country\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"country\"},{\"name\":\"province\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"province\"},{\"name\":\"city\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"city\"},{\"name\":\"latitude\",\"type\":\"double\",\"doc\":\"city latitude\"},{\"name\":\"longitude\",\"type\":\"double\",\"doc\":\"city longitude\"},{\"name\":\"zoom\",\"type\":\"int\",\"doc\":\"initial zoom\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -88,8 +88,6 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
   private double longitude;
   /** initial zoom */
   private int zoom;
-  /** time the event is recorded */
-  private long timestamp;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -108,9 +106,8 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
    * @param latitude city latitude
    * @param longitude city longitude
    * @param zoom initial zoom
-   * @param timestamp time the event is recorded
    */
-  public CityMapUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String country, java.lang.String province, java.lang.String city, java.lang.Double latitude, java.lang.Double longitude, java.lang.Integer zoom, java.lang.Long timestamp) {
+  public CityMapUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String country, java.lang.String province, java.lang.String city, java.lang.Double latitude, java.lang.Double longitude, java.lang.Integer zoom) {
     this.EventId = EventId;
     this.hostId = hostId;
     this.country = country;
@@ -119,7 +116,6 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
     this.latitude = latitude;
     this.longitude = longitude;
     this.zoom = zoom;
-    this.timestamp = timestamp;
   }
 
   public org.apache.avro.specific.SpecificData getSpecificData() { return MODEL$; }
@@ -135,7 +131,6 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
     case 5: return latitude;
     case 6: return longitude;
     case 7: return zoom;
-    case 8: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -152,7 +147,6 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
     case 5: latitude = (java.lang.Double)value$; break;
     case 6: longitude = (java.lang.Double)value$; break;
     case 7: zoom = (java.lang.Integer)value$; break;
-    case 8: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -301,24 +295,6 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
   }
 
   /**
-   * Gets the value of the 'timestamp' field.
-   * @return time the event is recorded
-   */
-  public long getTimestamp() {
-    return timestamp;
-  }
-
-
-  /**
-   * Sets the value of the 'timestamp' field.
-   * time the event is recorded
-   * @param value the value to set.
-   */
-  public void setTimestamp(long value) {
-    this.timestamp = value;
-  }
-
-  /**
    * Creates a new CityMapUpdatedEvent RecordBuilder.
    * @return A new CityMapUpdatedEvent RecordBuilder
    */
@@ -375,8 +351,6 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
     private double longitude;
     /** initial zoom */
     private int zoom;
-    /** time the event is recorded */
-    private long timestamp;
 
     /** Creates a new Builder */
     private Builder() {
@@ -424,10 +398,6 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
         this.zoom = data().deepCopy(fields()[7].schema(), other.zoom);
         fieldSetFlags()[7] = other.fieldSetFlags()[7];
       }
-      if (isValidValue(fields()[8], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[8].schema(), other.timestamp);
-        fieldSetFlags()[8] = other.fieldSetFlags()[8];
-      }
     }
 
     /**
@@ -468,10 +438,6 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
       if (isValidValue(fields()[7], other.zoom)) {
         this.zoom = data().deepCopy(fields()[7].schema(), other.zoom);
         fieldSetFlags()[7] = true;
-      }
-      if (isValidValue(fields()[8], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[8].schema(), other.timestamp);
-        fieldSetFlags()[8] = true;
       }
     }
 
@@ -856,49 +822,6 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
       return this;
     }
 
-    /**
-      * Gets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return The value.
-      */
-    public long getTimestamp() {
-      return timestamp;
-    }
-
-
-    /**
-      * Sets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @param value The value of 'timestamp'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.covid.CityMapUpdatedEvent.Builder setTimestamp(long value) {
-      validate(fields()[8], value);
-      this.timestamp = value;
-      fieldSetFlags()[8] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'timestamp' field has been set.
-      * time the event is recorded
-      * @return True if the 'timestamp' field has been set, false otherwise.
-      */
-    public boolean hasTimestamp() {
-      return fieldSetFlags()[8];
-    }
-
-
-    /**
-      * Clears the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return This builder.
-      */
-    public net.lightapi.portal.covid.CityMapUpdatedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[8] = false;
-      return this;
-    }
-
     @Override
     @SuppressWarnings("unchecked")
     public CityMapUpdatedEvent build() {
@@ -921,7 +844,6 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
         record.latitude = fieldSetFlags()[5] ? this.latitude : (java.lang.Double) defaultValue(fields()[5]);
         record.longitude = fieldSetFlags()[6] ? this.longitude : (java.lang.Double) defaultValue(fields()[6]);
         record.zoom = fieldSetFlags()[7] ? this.zoom : (java.lang.Integer) defaultValue(fields()[7]);
-        record.timestamp = fieldSetFlags()[8] ? this.timestamp : (java.lang.Long) defaultValue(fields()[8]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -970,8 +892,6 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
 
     out.writeInt(this.zoom);
 
-    out.writeLong(this.timestamp);
-
   }
 
   @Override public void customDecode(org.apache.avro.io.ResolvingDecoder in)
@@ -998,10 +918,8 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
 
       this.zoom = in.readInt();
 
-      this.timestamp = in.readLong();
-
     } else {
-      for (int i = 0; i < 9; i++) {
+      for (int i = 0; i < 8; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -1036,10 +954,6 @@ public class CityMapUpdatedEvent extends org.apache.avro.specific.SpecificRecord
 
         case 7:
           this.zoom = in.readInt();
-          break;
-
-        case 8:
-          this.timestamp = in.readLong();
           break;
 
         default:

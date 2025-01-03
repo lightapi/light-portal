@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 2923154660404098216L;
+  private static final long serialVersionUID = -4455548883143070860L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"UserUpdatedEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the id\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"email\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"email address of the updated user\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique user id\"},{\"name\":\"language\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the preferred language of the user\"},{\"name\":\"value\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"user detail in JSON, include firstName, lastName, gender, birthday, postCode, address\",\"default\":null},{\"name\":\"taijiWallet\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"taiji blockchain address of the user\",\"default\":null},{\"name\":\"country\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"country of the user\",\"default\":null},{\"name\":\"province\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"province of the user\",\"default\":null},{\"name\":\"city\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"city of the user\",\"default\":null},{\"name\":\"oldCountry\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"old country of the user, used to move the maproot\",\"default\":null},{\"name\":\"oldProvince\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"old province of the user, used to move the maproot\",\"default\":null},{\"name\":\"oldCity\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"old city of the user, used to move the maproot\",\"default\":null},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"UserUpdatedEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the id\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"email\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"email address of the updated user\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique user id\"},{\"name\":\"language\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the preferred language of the user\"},{\"name\":\"value\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"user detail in JSON, include firstName, lastName, gender, birthday, postCode, address\",\"default\":null},{\"name\":\"taijiWallet\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"taiji blockchain address of the user\",\"default\":null},{\"name\":\"country\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"country of the user\",\"default\":null},{\"name\":\"province\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"province of the user\",\"default\":null},{\"name\":\"city\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"city of the user\",\"default\":null},{\"name\":\"oldCountry\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"old country of the user, used to move the maproot\",\"default\":null},{\"name\":\"oldProvince\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"old province of the user, used to move the maproot\",\"default\":null},{\"name\":\"oldCity\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"old city of the user, used to move the maproot\",\"default\":null}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -98,8 +98,6 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
   private java.lang.String oldProvince;
   /** old city of the user, used to move the maproot */
   private java.lang.String oldCity;
-  /** time the event is recorded */
-  private long timestamp;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -123,9 +121,8 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
    * @param oldCountry old country of the user, used to move the maproot
    * @param oldProvince old province of the user, used to move the maproot
    * @param oldCity old city of the user, used to move the maproot
-   * @param timestamp time the event is recorded
    */
-  public UserUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String email, java.lang.String userId, java.lang.String language, java.lang.String value, java.lang.String taijiWallet, java.lang.String country, java.lang.String province, java.lang.String city, java.lang.String oldCountry, java.lang.String oldProvince, java.lang.String oldCity, java.lang.Long timestamp) {
+  public UserUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String email, java.lang.String userId, java.lang.String language, java.lang.String value, java.lang.String taijiWallet, java.lang.String country, java.lang.String province, java.lang.String city, java.lang.String oldCountry, java.lang.String oldProvince, java.lang.String oldCity) {
     this.EventId = EventId;
     this.hostId = hostId;
     this.email = email;
@@ -139,7 +136,6 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
     this.oldCountry = oldCountry;
     this.oldProvince = oldProvince;
     this.oldCity = oldCity;
-    this.timestamp = timestamp;
   }
 
   public org.apache.avro.specific.SpecificData getSpecificData() { return MODEL$; }
@@ -160,7 +156,6 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
     case 10: return oldCountry;
     case 11: return oldProvince;
     case 12: return oldCity;
-    case 13: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -182,7 +177,6 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
     case 10: oldCountry = value$ != null ? value$.toString() : null; break;
     case 11: oldProvince = value$ != null ? value$.toString() : null; break;
     case 12: oldCity = value$ != null ? value$.toString() : null; break;
-    case 13: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -421,24 +415,6 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
   }
 
   /**
-   * Gets the value of the 'timestamp' field.
-   * @return time the event is recorded
-   */
-  public long getTimestamp() {
-    return timestamp;
-  }
-
-
-  /**
-   * Sets the value of the 'timestamp' field.
-   * time the event is recorded
-   * @param value the value to set.
-   */
-  public void setTimestamp(long value) {
-    this.timestamp = value;
-  }
-
-  /**
    * Creates a new UserUpdatedEvent RecordBuilder.
    * @return A new UserUpdatedEvent RecordBuilder
    */
@@ -505,8 +481,6 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
     private java.lang.String oldProvince;
     /** old city of the user, used to move the maproot */
     private java.lang.String oldCity;
-    /** time the event is recorded */
-    private long timestamp;
 
     /** Creates a new Builder */
     private Builder() {
@@ -574,10 +548,6 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
         this.oldCity = data().deepCopy(fields()[12].schema(), other.oldCity);
         fieldSetFlags()[12] = other.fieldSetFlags()[12];
       }
-      if (isValidValue(fields()[13], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[13].schema(), other.timestamp);
-        fieldSetFlags()[13] = other.fieldSetFlags()[13];
-      }
     }
 
     /**
@@ -638,10 +608,6 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
       if (isValidValue(fields()[12], other.oldCity)) {
         this.oldCity = data().deepCopy(fields()[12].schema(), other.oldCity);
         fieldSetFlags()[12] = true;
-      }
-      if (isValidValue(fields()[13], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[13].schema(), other.timestamp);
-        fieldSetFlags()[13] = true;
       }
     }
 
@@ -1249,49 +1215,6 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
       return this;
     }
 
-    /**
-      * Gets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return The value.
-      */
-    public long getTimestamp() {
-      return timestamp;
-    }
-
-
-    /**
-      * Sets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @param value The value of 'timestamp'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.user.UserUpdatedEvent.Builder setTimestamp(long value) {
-      validate(fields()[13], value);
-      this.timestamp = value;
-      fieldSetFlags()[13] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'timestamp' field has been set.
-      * time the event is recorded
-      * @return True if the 'timestamp' field has been set, false otherwise.
-      */
-    public boolean hasTimestamp() {
-      return fieldSetFlags()[13];
-    }
-
-
-    /**
-      * Clears the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return This builder.
-      */
-    public net.lightapi.portal.user.UserUpdatedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[13] = false;
-      return this;
-    }
-
     @Override
     @SuppressWarnings("unchecked")
     public UserUpdatedEvent build() {
@@ -1319,7 +1242,6 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
         record.oldCountry = fieldSetFlags()[10] ? this.oldCountry : (java.lang.String) defaultValue(fields()[10]);
         record.oldProvince = fieldSetFlags()[11] ? this.oldProvince : (java.lang.String) defaultValue(fields()[11]);
         record.oldCity = fieldSetFlags()[12] ? this.oldCity : (java.lang.String) defaultValue(fields()[12]);
-        record.timestamp = fieldSetFlags()[13] ? this.timestamp : (java.lang.Long) defaultValue(fields()[13]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -1426,8 +1348,6 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
       out.writeString(this.oldCity);
     }
 
-    out.writeLong(this.timestamp);
-
   }
 
   @Override public void customDecode(org.apache.avro.io.ResolvingDecoder in)
@@ -1504,10 +1424,8 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
         this.oldCity = in.readString();
       }
 
-      this.timestamp = in.readLong();
-
     } else {
-      for (int i = 0; i < 14; i++) {
+      for (int i = 0; i < 13; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -1602,10 +1520,6 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
           } else {
             this.oldCity = in.readString();
           }
-          break;
-
-        case 13:
-          this.timestamp = in.readLong();
           break;
 
         default:

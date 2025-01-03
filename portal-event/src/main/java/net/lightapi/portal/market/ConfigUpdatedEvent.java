@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -830973767819712119L;
+  private static final long serialVersionUID = -6992117849249981297L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ConfigUpdatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"configId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"configuration id\"},{\"name\":\"configType\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"configuration type D Deployment H Handler M Module\"},{\"name\":\"infraType\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"infrastructure type: GN Generic LN Linux WD Windows KB Kubernetes OS Openshift AW AWS AZ Azure GC GCP\",\"default\":\"GN\"},{\"name\":\"classPath\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"class path\"},{\"name\":\"configDesc\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"configuration description\"},{\"name\":\"owner\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"user id\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ConfigUpdatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"configId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"configuration id\"},{\"name\":\"configType\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"configuration type D Deployment H Handler M Module\"},{\"name\":\"infraType\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"infrastructure type: GN Generic LN Linux WD Windows KB Kubernetes OS Openshift AW AWS AZ Azure GC GCP\",\"default\":\"GN\"},{\"name\":\"classPath\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"class path\"},{\"name\":\"configDesc\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"configuration description\"},{\"name\":\"owner\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"user id\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -88,8 +88,6 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
   private java.lang.String configDesc;
   /** user id */
   private java.lang.String owner;
-  /** time the event is recorded */
-  private long timestamp;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -108,9 +106,8 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
    * @param classPath class path
    * @param configDesc configuration description
    * @param owner user id
-   * @param timestamp time the event is recorded
    */
-  public ConfigUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String configId, java.lang.String configType, java.lang.String infraType, java.lang.String classPath, java.lang.String configDesc, java.lang.String owner, java.lang.Long timestamp) {
+  public ConfigUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String configId, java.lang.String configType, java.lang.String infraType, java.lang.String classPath, java.lang.String configDesc, java.lang.String owner) {
     this.EventId = EventId;
     this.hostId = hostId;
     this.configId = configId;
@@ -119,7 +116,6 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
     this.classPath = classPath;
     this.configDesc = configDesc;
     this.owner = owner;
-    this.timestamp = timestamp;
   }
 
   public org.apache.avro.specific.SpecificData getSpecificData() { return MODEL$; }
@@ -135,7 +131,6 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
     case 5: return classPath;
     case 6: return configDesc;
     case 7: return owner;
-    case 8: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -152,7 +147,6 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
     case 5: classPath = value$ != null ? value$.toString() : null; break;
     case 6: configDesc = value$ != null ? value$.toString() : null; break;
     case 7: owner = value$ != null ? value$.toString() : null; break;
-    case 8: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -301,24 +295,6 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
   }
 
   /**
-   * Gets the value of the 'timestamp' field.
-   * @return time the event is recorded
-   */
-  public long getTimestamp() {
-    return timestamp;
-  }
-
-
-  /**
-   * Sets the value of the 'timestamp' field.
-   * time the event is recorded
-   * @param value the value to set.
-   */
-  public void setTimestamp(long value) {
-    this.timestamp = value;
-  }
-
-  /**
    * Creates a new ConfigUpdatedEvent RecordBuilder.
    * @return A new ConfigUpdatedEvent RecordBuilder
    */
@@ -375,8 +351,6 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
     private java.lang.String configDesc;
     /** user id */
     private java.lang.String owner;
-    /** time the event is recorded */
-    private long timestamp;
 
     /** Creates a new Builder */
     private Builder() {
@@ -424,10 +398,6 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
         this.owner = data().deepCopy(fields()[7].schema(), other.owner);
         fieldSetFlags()[7] = other.fieldSetFlags()[7];
       }
-      if (isValidValue(fields()[8], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[8].schema(), other.timestamp);
-        fieldSetFlags()[8] = other.fieldSetFlags()[8];
-      }
     }
 
     /**
@@ -468,10 +438,6 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
       if (isValidValue(fields()[7], other.owner)) {
         this.owner = data().deepCopy(fields()[7].schema(), other.owner);
         fieldSetFlags()[7] = true;
-      }
-      if (isValidValue(fields()[8], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[8].schema(), other.timestamp);
-        fieldSetFlags()[8] = true;
       }
     }
 
@@ -859,49 +825,6 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
       return this;
     }
 
-    /**
-      * Gets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return The value.
-      */
-    public long getTimestamp() {
-      return timestamp;
-    }
-
-
-    /**
-      * Sets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @param value The value of 'timestamp'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.ConfigUpdatedEvent.Builder setTimestamp(long value) {
-      validate(fields()[8], value);
-      this.timestamp = value;
-      fieldSetFlags()[8] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'timestamp' field has been set.
-      * time the event is recorded
-      * @return True if the 'timestamp' field has been set, false otherwise.
-      */
-    public boolean hasTimestamp() {
-      return fieldSetFlags()[8];
-    }
-
-
-    /**
-      * Clears the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.ConfigUpdatedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[8] = false;
-      return this;
-    }
-
     @Override
     @SuppressWarnings("unchecked")
     public ConfigUpdatedEvent build() {
@@ -924,7 +847,6 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
         record.classPath = fieldSetFlags()[5] ? this.classPath : (java.lang.String) defaultValue(fields()[5]);
         record.configDesc = fieldSetFlags()[6] ? this.configDesc : (java.lang.String) defaultValue(fields()[6]);
         record.owner = fieldSetFlags()[7] ? this.owner : (java.lang.String) defaultValue(fields()[7]);
-        record.timestamp = fieldSetFlags()[8] ? this.timestamp : (java.lang.Long) defaultValue(fields()[8]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -973,8 +895,6 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
 
     out.writeString(this.owner);
 
-    out.writeLong(this.timestamp);
-
   }
 
   @Override public void customDecode(org.apache.avro.io.ResolvingDecoder in)
@@ -1001,10 +921,8 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
 
       this.owner = in.readString();
 
-      this.timestamp = in.readLong();
-
     } else {
-      for (int i = 0; i < 9; i++) {
+      for (int i = 0; i < 8; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -1039,10 +957,6 @@ public class ConfigUpdatedEvent extends org.apache.avro.specific.SpecificRecordB
 
         case 7:
           this.owner = in.readString();
-          break;
-
-        case 8:
-          this.timestamp = in.readLong();
           break;
 
         default:

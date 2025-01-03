@@ -14,10 +14,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 3907728745507804850L;
+  private static final long serialVersionUID = 5491421087666275392L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ConfigDeletedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"configId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"configuration id\"},{\"name\":\"owner\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"user id\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ConfigDeletedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"configId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"configuration id\"},{\"name\":\"owner\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"user id\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -80,8 +80,6 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
   private java.lang.String configId;
   /** user id */
   private java.lang.String owner;
-  /** time the event is recorded */
-  private long timestamp;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -96,14 +94,12 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
    * @param hostId host id
    * @param configId configuration id
    * @param owner user id
-   * @param timestamp time the event is recorded
    */
-  public ConfigDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String configId, java.lang.String owner, java.lang.Long timestamp) {
+  public ConfigDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String configId, java.lang.String owner) {
     this.EventId = EventId;
     this.hostId = hostId;
     this.configId = configId;
     this.owner = owner;
-    this.timestamp = timestamp;
   }
 
   public org.apache.avro.specific.SpecificData getSpecificData() { return MODEL$; }
@@ -115,7 +111,6 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
     case 1: return hostId;
     case 2: return configId;
     case 3: return owner;
-    case 4: return timestamp;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -128,7 +123,6 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
     case 1: hostId = value$ != null ? value$.toString() : null; break;
     case 2: configId = value$ != null ? value$.toString() : null; break;
     case 3: owner = value$ != null ? value$.toString() : null; break;
-    case 4: timestamp = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -205,24 +199,6 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
   }
 
   /**
-   * Gets the value of the 'timestamp' field.
-   * @return time the event is recorded
-   */
-  public long getTimestamp() {
-    return timestamp;
-  }
-
-
-  /**
-   * Sets the value of the 'timestamp' field.
-   * time the event is recorded
-   * @param value the value to set.
-   */
-  public void setTimestamp(long value) {
-    this.timestamp = value;
-  }
-
-  /**
    * Creates a new ConfigDeletedEvent RecordBuilder.
    * @return A new ConfigDeletedEvent RecordBuilder
    */
@@ -271,8 +247,6 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
     private java.lang.String configId;
     /** user id */
     private java.lang.String owner;
-    /** time the event is recorded */
-    private long timestamp;
 
     /** Creates a new Builder */
     private Builder() {
@@ -304,10 +278,6 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
         this.owner = data().deepCopy(fields()[3].schema(), other.owner);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
-      if (isValidValue(fields()[4], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[4].schema(), other.timestamp);
-        fieldSetFlags()[4] = other.fieldSetFlags()[4];
-      }
     }
 
     /**
@@ -332,10 +302,6 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
       if (isValidValue(fields()[3], other.owner)) {
         this.owner = data().deepCopy(fields()[3].schema(), other.owner);
         fieldSetFlags()[3] = true;
-      }
-      if (isValidValue(fields()[4], other.timestamp)) {
-        this.timestamp = data().deepCopy(fields()[4].schema(), other.timestamp);
-        fieldSetFlags()[4] = true;
       }
     }
 
@@ -547,49 +513,6 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
       return this;
     }
 
-    /**
-      * Gets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return The value.
-      */
-    public long getTimestamp() {
-      return timestamp;
-    }
-
-
-    /**
-      * Sets the value of the 'timestamp' field.
-      * time the event is recorded
-      * @param value The value of 'timestamp'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.ConfigDeletedEvent.Builder setTimestamp(long value) {
-      validate(fields()[4], value);
-      this.timestamp = value;
-      fieldSetFlags()[4] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'timestamp' field has been set.
-      * time the event is recorded
-      * @return True if the 'timestamp' field has been set, false otherwise.
-      */
-    public boolean hasTimestamp() {
-      return fieldSetFlags()[4];
-    }
-
-
-    /**
-      * Clears the value of the 'timestamp' field.
-      * time the event is recorded
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.ConfigDeletedEvent.Builder clearTimestamp() {
-      fieldSetFlags()[4] = false;
-      return this;
-    }
-
     @Override
     @SuppressWarnings("unchecked")
     public ConfigDeletedEvent build() {
@@ -608,7 +531,6 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
         record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
         record.configId = fieldSetFlags()[2] ? this.configId : (java.lang.String) defaultValue(fields()[2]);
         record.owner = fieldSetFlags()[3] ? this.owner : (java.lang.String) defaultValue(fields()[3]);
-        record.timestamp = fieldSetFlags()[4] ? this.timestamp : (java.lang.Long) defaultValue(fields()[4]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -649,8 +571,6 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
 
     out.writeString(this.owner);
 
-    out.writeLong(this.timestamp);
-
   }
 
   @Override public void customDecode(org.apache.avro.io.ResolvingDecoder in)
@@ -669,10 +589,8 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
 
       this.owner = in.readString();
 
-      this.timestamp = in.readLong();
-
     } else {
-      for (int i = 0; i < 5; i++) {
+      for (int i = 0; i < 4; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -691,10 +609,6 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
 
         case 3:
           this.owner = in.readString();
-          break;
-
-        case 4:
-          this.timestamp = in.readLong();
           break;
 
         default:

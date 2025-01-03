@@ -21,6 +21,12 @@
             "doc": "the number of the transactions for the user"
           },
           {
+            "name": "timestamp",
+            "type": "long",
+            "default": 0,
+            "doc": "time the event is recorded"
+          },
+          {
             "name": "derived",
             "type": "boolean",
             "default": false,
@@ -69,12 +75,6 @@
       "name": "check",
       "type": "string",
       "doc": "the health info from the registry request body"
-    },
-    {
-      "name": "timestamp",
-      "type": "long",
-      "default": 0,
-      "doc": "time the event is recorded"
     }
   ]
 }
