@@ -3689,33 +3689,33 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<List<Map<String, Object>>> queryRuleByHostApiId(String hostId, String apiId, String apiVersion) {
         Result<List<Map<String, Object>>> result;
-        String sql = "SELECT rule_id, host_id, rule_type, rule_group, rule_visibility, rule_description, rule_body, rule_owner " +
-                "update_user, update_timestamp " +
-                "FROM rule_t r, api_rule_t a WHERE r.rule_id = a.rule_id AND r.host_id = ? AND a.api_id = ?";
+        String sql = "SELECT h.host_id, r.rule_id, r.rule_type, a.endpoint, r.rule_body\n" +
+                "FROM rule_t r, rule_host_t h, api_endpoint_rule_t a \n" +
+                "WHERE r.rule_id = h.rule_id\n" +
+                "AND h.host_id = a.host_id\n" +
+                "AND h.host_id = ?\n" +
+                "AND a.api_id = ?\n" +
+                "AND a.api_version = ?";
         try (final Connection conn = ds.getConnection()) {
             List<Map<String, Object>> list = new ArrayList<>();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, hostId);
                 statement.setString(2, apiId);
+                statement.setString(3, apiVersion);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     while (resultSet.next()) {
                         Map<String, Object> map = new HashMap<>();
-                        map.put("ruleId", resultSet.getString("rule_id"));
                         map.put("hostId", resultSet.getString("host_id"));
+                        map.put("ruleId", resultSet.getString("rule_id"));
                         map.put("ruleType", resultSet.getString("rule_type"));
-                        map.put("ruleGroup", resultSet.getBoolean("rule_group"));
-                        map.put("ruleVisibility", resultSet.getString("rule_visibility"));
-                        map.put("ruleDescription", resultSet.getString("rule_description"));
+                        map.put("endpoint", resultSet.getString("endpoint"));
                         map.put("ruleBody", resultSet.getString("rule_body"));
-                        map.put("ruleOwner", resultSet.getString("rule_owner"));
-                        map.put("updateUser", resultSet.getString("update_user"));
-                        map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
                         list.add(map);
                     }
                 }
             }
             if (list.isEmpty())
-                result = Failure.of(new Status(OBJECT_NOT_FOUND, "rule with rule apiId ", apiId));
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "rule with hostId " + hostId + " apiId " + apiId + " apiVersion " + apiVersion));
             else
                 result = Success.of(list);
         } catch (SQLException e) {
