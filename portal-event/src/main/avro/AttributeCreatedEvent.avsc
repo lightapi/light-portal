@@ -1,0 +1,59 @@
+{
+  "type": "record",
+  "name": "AttributeCreatedEvent",
+  "namespace": "net.lightapi.portal.market",
+  "fields": [
+    {
+      "name": "EventId",
+      "type": {
+        "type": "record",
+        "name": "EventId",
+        "namespace": "com.networknt.kafka.common",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "doc": "a unique identifier"
+          },
+          {
+            "name": "nonce",
+            "type": "long",
+            "doc": "the number of the transactions for the user"
+          },
+          {
+            "name": "timestamp",
+            "type": "long",
+            "default": 0,
+            "doc": "time the event is recorded"
+          },
+          {
+            "name": "derived",
+            "type": "boolean",
+            "default": false,
+            "doc": "indicate if the event is derived from event processor"
+          }
+        ]
+      }
+    },
+    {
+      "name": "hostId",
+      "type": "string",
+      "doc": "host id"
+    },
+    {
+      "name": "attributeId",
+      "type": "string",
+      "doc": "attribute id"
+    },
+    {
+      "name": "attributeType",
+      "type": "string",
+      "doc": "attribute type"
+    },
+    {
+      "name": "attributeDesc",
+      "type": "string",
+      "doc": "attribute desc"
+    }
+  ]
+}

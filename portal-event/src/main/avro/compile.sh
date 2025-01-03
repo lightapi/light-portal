@@ -109,6 +109,19 @@ java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema ConfigCr
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema ConfigUpdatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema ConfigDeletedEvent.avsc .
 
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema RoleCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema RoleUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema RoleDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema GroupCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema GroupUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema GroupDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema AttributeCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema AttributeUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema AttributeDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema PositionCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema PositionUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema PositionDeletedEvent.avsc .
+
 # Update events to implement from KycEvent interface in order to group these events in streams processing.
 
 # find . -name '*Event.java' -exec sed -i "s/implements org.apache.avro.specific.SpecificRecord/implements UserEvent/g" {} +
@@ -216,6 +229,20 @@ mv net/lightapi/portal/market/ApiRuleDeletedEvent.java ../java/net/lightapi/port
 mv net/lightapi/portal/market/ConfigCreatedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/ConfigUpdatedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/ConfigDeletedEvent.java ../java/net/lightapi/portal/market
+
+mv net/lightapi/portal/market/RoleCreatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/RoleUpdatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/RoleDeletedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/GroupCreatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/GroupUpdatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/GroupDeletedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/AttributeCreatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/AttributeUpdatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/AttributeDeletedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/PositionCreatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/PositionUpdatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/PositionDeletedEvent.java ../java/net/lightapi/portal/market
+
 
 mv net/lightapi/portal/controller/ControllerRegisteredEvent.java ../java/net/lightapi/portal/controller
 mv net/lightapi/portal/controller/ControllerDeregisteredEvent.java ../java/net/lightapi/portal/controller
