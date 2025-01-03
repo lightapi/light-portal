@@ -1,0 +1,49 @@
+# This is a configuration file for light-portal service
+# Indicate if we need to send out the confirmation email during user registration
+sendEmail: ${portal.sendEmail:false}
+# The event topic for user-command
+topic: ${portal.topic:portal-event}
+# Indicate if the portal is running in multi-tenent mode. Default is false.
+multitenancy: ${portal.multitenancy:false}
+# The host of the server that accepts the email confirmation
+cmdHost: ${portal.cmdHost:https://localhost:8439}
+# The command path of the server that accepts the email confirmation
+cmdPath: ${portal.cmdPath:/portal/command?cmd=}
+# The host for password reset. This is usually the login view site.
+resetHost: ${portal.resetHost:https://localhost:3000}
+# The host for the portal. This is usually the portal view site.
+portalHost: ${portal.portalHost:https://localhost:3000}
+# Admin user email for the bootstrap
+admin: ${portal.admin:steve.hu@lightapi.net}
+# Portal data folder for contents that are not suitable for Kafka
+dataPath: ${portal.dataPath:/data}
+
+# User Streams
+# Kafka Streams User application.id which is the consumer group.id
+userApplicationId: ${portal.userApplicationId:user}
+# Kafka Streams User application portal-userid topic.
+userIdTopic: ${portal.userIdTopic:portal-userid}
+# Kafka Streams User application portal-taiji topic
+taijiTopic: ${portal.taijiTopic:portal-taiji}
+# Kafka Streams User application portal-reference topic
+referenceTopic: ${portal.referenceTopic:portal-reference}
+
+# Notification Streams
+# Kafka Streams Notification application.id which is the consumer group.id
+notificationApplicationId: ${portal.notificationApplicationId:notification}
+# Kafka Streams Notification topic
+notificationTopic: ${portal.notificationTopic:portal-notification}
+
+# Nonce Streams
+# Kafka Streams Nonce application.id which is the consumer group.id
+nonceApplicationId: ${portal.nonceApplicationId:nonce}
+# Kafka Streams Nonce topic
+nonceTopic: ${portal.nonceTopic:portal-nonce}
+
+# Market Streams
+# Kafka Streams Market application.id which is the consumer group.id
+marketApplicationId: ${portal.marketApplication:market}
+
+# Maproot Streams
+# Kafka Streams Maproot application.id which is the consumer group.id
+maprootApplicationId: ${portal.maprootApplication:maproot}
