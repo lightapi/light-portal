@@ -133,11 +133,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "        WHEN u.user_type = 'C' THEN c.customer_id\n" +
                 "        ELSE NULL\n" +
                 "    END AS entity_id,\n" +
-                "    CASE WHEN u.user_type = 'E' THEN string_agg(DISTINCT p.position_name, ' ' ORDER BY p.position_name) ELSE NULL END AS positions,\n" +
-                "    string_agg(DISTINCT r.role_name, ' ' ORDER BY r.role_name) AS roles,\n" +
-                "    string_agg(DISTINCT g.group_name, ' ' ORDER BY g.group_name) AS groups,\n" +
+                "    CASE WHEN u.user_type = 'E' THEN string_agg(DISTINCT p.position_id, ' ' ORDER BY p.position_id) ELSE NULL END AS positions,\n" +
+                "    string_agg(DISTINCT r.role_id, ' ' ORDER BY r.role_id) AS roles,\n" +
+                "    string_agg(DISTINCT g.group_id, ' ' ORDER BY g.group_id) AS groups,\n" +
                 "     CASE\n" +
-                "        WHEN COUNT(DISTINCT at.attribute_name || '^=^' || aut.attribute_value) > 0 THEN string_agg(DISTINCT at.attribute_name || '^=^' || aut.attribute_value, '~' ORDER BY at.attribute_name || '^=^' || aut.attribute_value)\n" +
+                "        WHEN COUNT(DISTINCT at.attribute_id || '^=^' || aut.attribute_value) > 0 THEN string_agg(DISTINCT at.attribute_id || '^=^' || aut.attribute_value, '~' ORDER BY at.attribute_id || '^=^' || aut.attribute_value)\n" +
                 "        ELSE NULL\n" +
                 "    END AS attributes\n" +
                 "FROM\n" +
