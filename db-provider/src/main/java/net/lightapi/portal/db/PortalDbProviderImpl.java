@@ -4170,7 +4170,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updatePosition(PositionUpdatedEvent event) {
-        final String updatePosition = "UPDATE position_t SET position_desc = ?, inherit_to_ancestor = ?, inherit_to_sibling, " +
+        final String updatePosition = "UPDATE position_t SET position_desc = ?, inherit_to_ancestor = ?, inherit_to_sibling = ?, " +
                 "update_user = ?, update_timestamp = ? " +
                 "WHERE host_id = ? AND position_id = ?";
 
@@ -4382,7 +4382,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateAttribute(AttributeUpdatedEvent event) {
-        final String updateAttribute = "UPDATE attribute_t SET attribute_desc = ?, attribute_type ?," +
+        final String updateAttribute = "UPDATE attribute_t SET attribute_desc = ?, attribute_type = ?," +
                 "update_user = ?, update_timestamp = ? " +
                 "WHERE host_id = ? AND attribute_id = ?";
 
