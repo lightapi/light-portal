@@ -107,20 +107,28 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> updateRole(RoleUpdatedEvent event);
     Result<String> deleteRole(RoleDeletedEvent event);
     Result<String> queryRole(int offset, int limit, String hostId, String roleId, String roleDesc);
+    Result<String> queryRolePermission(int offset, int limit, String hostId, String roleId, String apiId, String apiVersion, String endpoint);
+    Result<String> queryRoleUser(int offset, int limit, String hostId, String roleId, String userId, String entityId, String email, String firstName, String lastName, String userType);
 
     Result<String> createGroup(GroupCreatedEvent event);
     Result<String> updateGroup(GroupUpdatedEvent event);
     Result<String> deleteGroup(GroupDeletedEvent event);
     Result<String> queryGroup(int offset, int limit, String hostId, String groupId, String groupDesc);
+    Result<String> queryGroupPermission(int offset, int limit, String hostId, String groupId, String apiId, String apiVersion, String endpoint);
+    Result<String> queryGroupUser(int offset, int limit, String hostId, String groupId, String userId, String entityId, String email, String firstName, String lastName, String userType);
 
     Result<String> createPosition(PositionCreatedEvent event);
     Result<String> updatePosition(PositionUpdatedEvent event);
     Result<String> deletePosition(PositionDeletedEvent event);
     Result<String> queryPosition(int offset, int limit, String hostId, String positionId, String positionDesc, String inheritToAncestor, String inheritToSibling);
+    Result<String> queryPositionPermission(int offset, int limit, String hostId, String positionId, String positionType,String inheritToAncestor, String inheritToSibling, String apiId, String apiVersion, String endpoint);
+    Result<String> queryPositionUser(int offset, int limit, String hostId, String positionId, String positionType, String inheritToAncestor, String inheritToSibling, String userId, String entityId, String email, String firstName, String lastName, String userType);
 
     Result<String> createAttribute(AttributeCreatedEvent event);
     Result<String> updateAttribute(AttributeUpdatedEvent event);
     Result<String> deleteAttribute(AttributeDeletedEvent event);
     Result<String> queryAttribute(int offset, int limit, String hostId, String attributeId, String attributeType, String attributeDesc);
+    Result<String> queryAttributePermission(int offset, int limit, String hostId, String attributeId, String attributeType, String attributeValue, String apiId, String apiVersion, String endpoint);
+    Result<String> queryAttributeUser(int offset, int limit, String hostId, String attributeId, String attributeType, String attributeValue, String userId, String entityId, String email, String firstName, String lastName, String userType);
 
 }

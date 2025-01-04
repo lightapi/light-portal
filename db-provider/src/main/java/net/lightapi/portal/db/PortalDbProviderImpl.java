@@ -3927,6 +3927,174 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         return result;
     }
 
+    @Override
+    public Result<String> queryRolePermission(int offset, int limit, String hostId, String roleId, String apiId, String apiVersion, String endpoint) {
+        Result<String> result;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
+                "r.host_id, r.role_id, p.api_id, p.api_version, p.endpoint\n" +
+                "FROM role_t r, role_permission_t p\n" +
+                "WHERE r.role_id = p.role_id\n" +
+                "AND r.host_id = ?\n");
+
+
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(hostId);
+
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "role_id", roleId);
+        addCondition(whereClause, parameters, "api_id", apiId);
+        addCondition(whereClause, parameters, "api_version", apiVersion);
+        addCondition(whereClause, parameters, "endpoint", endpoint);
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append("ORDER BY r.role_id, p.api_id, p.api_version, p.endpoint\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        if(logger.isTraceEnabled()) logger.trace("queryRolePermission sql: {}", sql);
+        int total = 0;
+        List<Map<String, Object>> rolePermissions = new ArrayList<>();
+
+
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    // only get the total once as it is the same for all rows.
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("roleId", resultSet.getString("role_id"));
+                    map.put("apiId", resultSet.getString("api_id"));
+                    map.put("apiVersion", resultSet.getString("api_version"));
+                    map.put("endpoint", resultSet.getString("endpoint"));
+                    rolePermissions.add(map);
+                }
+            }
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("rolePermissions", rolePermissions);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+
+        return result;
+
+    }
+
+    @Override
+    public Result<String> queryRoleUser(int offset, int limit, String hostId, String roleId, String userId, String entityId, String email, String firstName, String lastName, String userType) {
+        Result<String> result;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
+                "r.host_id, r.role_id, u.user_id, u.email, u.user_type, \n" +
+                "CASE\n" +
+                "    WHEN u.user_type = 'C' THEN c.customer_id\n" +
+                "    WHEN u.user_type = 'E' THEN e.employee_id\n" +
+                "    ELSE NULL -- Handle other cases if needed\n" +
+                "END AS entity_id,\n" +
+                "e.manager_id, u.first_name, u.last_name\n" +
+                "FROM user_t u\n" +
+                "LEFT JOIN\n" +
+                "    customer_t c ON u.user_id = c.user_id AND u.user_type = 'C'\n" +
+                "LEFT JOIN\n" +
+                "    employee_t e ON u.user_id = e.user_id AND u.user_type = 'E'\n" +
+                "INNER JOIN\n" +
+                "    role_user_t r ON r.user_id = u.user_id\n" +
+                "AND r.host_id = ?\n");
+
+
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(hostId);
+
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "role_id", roleId);
+        addCondition(whereClause, parameters, "user_id", userId);
+        addCondition(whereClause, parameters, "entity_id", entityId);
+        addCondition(whereClause, parameters, "email", email);
+        addCondition(whereClause, parameters, "first_name", firstName);
+        addCondition(whereClause, parameters, "last_name", lastName);
+        addCondition(whereClause, parameters, "user_type", userType);
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append("ORDER BY r.role_id, u.user_id\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        if(logger.isTraceEnabled()) logger.trace("queryRoleUser sql: {}", sql);
+        int total = 0;
+        List<Map<String, Object>> roleUsers = new ArrayList<>();
+
+
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    // only get the total once as it is the same for all rows.
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("roleId", resultSet.getString("role_id"));
+                    map.put("userId", resultSet.getString("user_id"));
+                    map.put("entityId", resultSet.getString("entity_id"));
+                    map.put("email", resultSet.getString("email"));
+                    map.put("firstName", resultSet.getString("first_name"));
+                    map.put("lastName", resultSet.getString("last_name"));
+                    map.put("userType", resultSet.getString("user_type"));
+                    roleUsers.add(map);
+                }
+            }
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("roleUsers", roleUsers);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+
+        return result;
+
+    }
 
     @Override
     public Result<String> createGroup(GroupCreatedEvent event) {
@@ -4112,6 +4280,174 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
         return result;
+    }
+
+    @Override
+    public Result<String> queryGroupPermission(int offset, int limit, String hostId, String groupId, String apiId, String apiVersion, String endpoint) {
+        Result<String> result;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
+                "g.host_id, g.group_id, p.api_id, p.api_version, p.endpoint\n" +
+                "FROM group_t g, group_permission_t p\n" +
+                "WHERE g.group_id = p.group_id\n" +
+                "AND g.host_id = ?\n");
+
+
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(hostId);
+
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "group_id", groupId);
+        addCondition(whereClause, parameters, "api_id", apiId);
+        addCondition(whereClause, parameters, "api_version", apiVersion);
+        addCondition(whereClause, parameters, "endpoint", endpoint);
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append("ORDER BY g.group_id, p.api_id, p.api_version, p.endpoint\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        if(logger.isTraceEnabled()) logger.trace("queryGroupPermission sql: {}", sql);
+        int total = 0;
+        List<Map<String, Object>> groupPermissions = new ArrayList<>();
+
+
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    // only get the total once as it is the same for all rows.
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("groupId", resultSet.getString("group_id"));
+                    map.put("apiId", resultSet.getString("api_id"));
+                    map.put("apiVersion", resultSet.getString("api_version"));
+                    map.put("endpoint", resultSet.getString("endpoint"));
+                    groupPermissions.add(map);
+                }
+            }
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("groupPermissions", groupPermissions);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+
+        return result;
+
+    }
+
+    @Override
+    public Result<String> queryGroupUser(int offset, int limit, String hostId, String groupId, String userId, String entityId, String email, String firstName, String lastName, String userType) {
+        Result<String> result;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
+                "g.host_id, g.group_id, u.user_id, u.email, u.user_type, \n" +
+                "CASE\n" +
+                "    WHEN u.user_type = 'C' THEN c.customer_id\n" +
+                "    WHEN u.user_type = 'E' THEN e.employee_id\n" +
+                "    ELSE NULL -- Handle other cases if needed\n" +
+                "END AS entity_id,\n" +
+                "e.manager_id, u.first_name, u.last_name\n" +
+                "FROM user_t u\n" +
+                "LEFT JOIN\n" +
+                "    customer_t c ON u.user_id = c.user_id AND u.user_type = 'C'\n" +
+                "LEFT JOIN\n" +
+                "    employee_t e ON u.user_id = e.user_id AND u.user_type = 'E'\n" +
+                "INNER JOIN\n" +
+                "    group_user_t g ON g.user_id = u.user_id\n" +
+                "AND g.host_id = ?\n");
+
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(hostId);
+
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "group_id", groupId);
+        addCondition(whereClause, parameters, "user_id", userId);
+        addCondition(whereClause, parameters, "entity_id", entityId);
+        addCondition(whereClause, parameters, "email", email);
+        addCondition(whereClause, parameters, "first_name", firstName);
+        addCondition(whereClause, parameters, "last_name", lastName);
+        addCondition(whereClause, parameters, "user_type", userType);
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append("ORDER BY g.group_id, u.user_id\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        if(logger.isTraceEnabled()) logger.trace("queryGroupUser sql: {}", sql);
+        int total = 0;
+        List<Map<String, Object>> groupUsers = new ArrayList<>();
+
+
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    // only get the total once as it is the same for all rows.
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("groupId", resultSet.getString("group_id"));
+                    map.put("userId", resultSet.getString("user_id"));
+                    map.put("entityId", resultSet.getString("entity_id"));
+                    map.put("email", resultSet.getString("email"));
+                    map.put("firstName", resultSet.getString("first_name"));
+                    map.put("lastName", resultSet.getString("last_name"));
+                    map.put("userType", resultSet.getString("user_type"));
+                    groupUsers.add(map);
+                }
+            }
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("groupUsers", groupUsers);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+
+        return result;
+
     }
 
 
@@ -4328,6 +4664,180 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         return result;
     }
 
+    @Override
+    public Result<String> queryPositionPermission(int offset, int limit, String hostId, String positionId, String positionType, String inheritToAncestor, String inheritToSibling, String apiId, String apiVersion, String endpoint) {
+        Result<String> result;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
+                "o.host_id, o.position_id, o.position_type, o.inherit_to_ancestor, o.inherit_to_sibling, " +
+                "p.api_id, p.api_version, p.endpoint\n" +
+                "FROM position_t o, position_permission_t p\n" +
+                "WHERE o.position_id = p.position_id\n" +
+                "AND o.host_id = ?\n");
+
+
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(hostId);
+
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "position_id", positionId);
+        addCondition(whereClause, parameters, "position_type", positionType);
+        addCondition(whereClause, parameters, "inherit_to_ancestor", inheritToAncestor);
+        addCondition(whereClause, parameters, "inherit_to_sibling", inheritToSibling);
+        addCondition(whereClause, parameters, "api_id", apiId);
+        addCondition(whereClause, parameters, "api_version", apiVersion);
+        addCondition(whereClause, parameters, "endpoint", endpoint);
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append("ORDER BY o.position_id, p.api_id, p.api_version, p.endpoint\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        if(logger.isTraceEnabled()) logger.trace("queryPositionPermission sql: {}", sql);
+        int total = 0;
+        List<Map<String, Object>> positionPermissions = new ArrayList<>();
+
+
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    // only get the total once as it is the same for all rows.
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("positionId", resultSet.getString("position_id"));
+                    map.put("positionType", resultSet.getString("position_type"));
+                    map.put("inheritToAncestor", resultSet.getString("inherit_to_ancestor"));
+                    map.put("inheritToSibling", resultSet.getString("inherit_to_sibling"));
+                    map.put("apiId", resultSet.getString("api_id"));
+                    map.put("apiVersion", resultSet.getString("api_version"));
+                    map.put("endpoint", resultSet.getString("endpoint"));
+                    positionPermissions.add(map);
+                }
+            }
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("positionPermissions", positionPermissions);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+
+        return result;
+
+    }
+
+    @Override
+    public Result<String> queryPositionUser(int offset, int limit, String hostId, String positionId, String positionType, String inheritToAncestor, String inheritToSibling, String userId, String entityId, String email, String firstName, String lastName, String userType) {
+        Result<String> result;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
+                "ep.host_id, ep.position_id, ep.position_type, u.user_id, \n" +
+                "u.email, u.user_type, e.employee_id AS entity_id,\n" +
+                "e.manager_id, u.first_name, u.last_name\n" +
+                "FROM user_t u\n" +
+                "INNER JOIN\n" +
+                "    employee_t e ON u.user_id = e.user_id AND u.user_type = 'E'\n" +
+                "INNER JOIN\n" +
+                "    employee_position_t ep ON ep.employee_id = e.employee_id\n" +
+                "AND ep.host_id = ?\n");
+
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(hostId);
+
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "position_id", positionId);
+        addCondition(whereClause, parameters, "position_type", positionType);
+        addCondition(whereClause, parameters, "inherit_to_ancestor", inheritToAncestor);
+        addCondition(whereClause, parameters, "inherit_to_sibling", inheritToSibling);
+        addCondition(whereClause, parameters, "user_id", userId);
+        addCondition(whereClause, parameters, "entity_id", entityId);
+        addCondition(whereClause, parameters, "email", email);
+        addCondition(whereClause, parameters, "first_name", firstName);
+        addCondition(whereClause, parameters, "last_name", lastName);
+        addCondition(whereClause, parameters, "user_type", userType);
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append("ORDER BY ep.position_id, u.user_id\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        if(logger.isTraceEnabled()) logger.trace("queryPositionUser sql: {}", sql);
+        int total = 0;
+        List<Map<String, Object>> positionUsers = new ArrayList<>();
+
+
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    // only get the total once as it is the same for all rows.
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("positionId", resultSet.getString("position_id"));
+                    map.put("positionType", resultSet.getString("position_type"));
+                    map.put("inheritToAncestor", resultSet.getString("inherit_to_ancestor"));
+                    map.put("inheritToSibling", resultSet.getString("inherit_to_sibling"));
+                    map.put("userId", resultSet.getString("user_id"));
+                    map.put("entityId", resultSet.getString("entity_id"));
+                    map.put("email", resultSet.getString("email"));
+                    map.put("firstName", resultSet.getString("first_name"));
+                    map.put("lastName", resultSet.getString("last_name"));
+                    map.put("userType", resultSet.getString("user_type"));
+                    positionUsers.add(map);
+                }
+            }
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("positionUsers", positionUsers);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+
+        return result;
+
+    }
 
     @Override
     public Result<String> createAttribute(AttributeCreatedEvent event) {
@@ -4530,6 +5040,184 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
         return result;
+    }
+
+    @Override
+    public Result<String> queryAttributePermission(int offset, int limit, String hostId, String attributeId, String attributeType, String attributeValue, String apiId, String apiVersion, String endpoint) {
+        Result<String> result;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
+                "a.host_id, a.attribute_id, a.attribute_type, a.attribute_value, " +
+                "p.api_id, p.api_version, p.endpoint\n" +
+                "FROM attribute_t a, attribute_permission_t p\n" +
+                "WHERE a.attribute_id = p.attribute_id\n" +
+                "AND a.host_id = ?\n");
+
+
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(hostId);
+
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "attribute_id", attributeId);
+        addCondition(whereClause, parameters, "attribute_type", attributeType);
+        addCondition(whereClause, parameters, "attribute_value", attributeValue);
+        addCondition(whereClause, parameters, "api_id", apiId);
+        addCondition(whereClause, parameters, "api_version", apiVersion);
+        addCondition(whereClause, parameters, "endpoint", endpoint);
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append("ORDER BY a.attribute_id, p.api_id, p.api_version, p.endpoint\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        if(logger.isTraceEnabled()) logger.trace("queryAttributePermission sql: {}", sql);
+        int total = 0;
+        List<Map<String, Object>> attributePermissions = new ArrayList<>();
+
+
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    // only get the total once as it is the same for all rows.
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("attributeId", resultSet.getString("attribute_id"));
+                    map.put("attributeType", resultSet.getString("attribute_type"));
+                    map.put("attributeValue", resultSet.getString("attribute_value"));
+                    map.put("apiId", resultSet.getString("api_id"));
+                    map.put("apiVersion", resultSet.getString("api_version"));
+                    map.put("endpoint", resultSet.getString("endpoint"));
+                    attributePermissions.add(map);
+                }
+            }
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("attributePermissions", attributePermissions);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+
+        return result;
+
+    }
+
+    @Override
+    public Result<String> queryAttributeUser(int offset, int limit, String hostId, String attributeId, String attributeType, String attributeValue, String userId, String entityId, String email, String firstName, String lastName, String userType) {
+        Result<String> result;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
+                "a.host_id, a.attribute_id, a.attribute_type, a.attribute_value, " +
+                "u.user_id, u.email, u.user_type, \n" +
+                "CASE\n" +
+                "    WHEN u.user_type = 'C' THEN c.customer_id\n" +
+                "    WHEN u.user_type = 'E' THEN e.employee_id\n" +
+                "    ELSE NULL -- Handle other cases if needed\n" +
+                "END AS entity_id,\n" +
+                "e.manager_id, u.first_name, u.last_name\n" +
+                "FROM user_t u\n" +
+                "LEFT JOIN\n" +
+                "    customer_t c ON u.user_id = c.user_id AND u.user_type = 'C'\n" +
+                "LEFT JOIN\n" +
+                "    employee_t e ON u.user_id = e.user_id AND u.user_type = 'E'\n" +
+                "INNER JOIN\n" +
+                "    attribute_user_t a ON a.user_id = u.user_id\n" +
+                "AND a.host_id = ?\n");
+
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(hostId);
+
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "attribute_id", attributeId);
+        addCondition(whereClause, parameters, "attribute_type", attributeType);
+        addCondition(whereClause, parameters, "attribute_value", attributeValue);
+        addCondition(whereClause, parameters, "user_id", userId);
+        addCondition(whereClause, parameters, "entity_id", entityId);
+        addCondition(whereClause, parameters, "email", email);
+        addCondition(whereClause, parameters, "first_name", firstName);
+        addCondition(whereClause, parameters, "last_name", lastName);
+        addCondition(whereClause, parameters, "user_type", userType);
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append("ORDER BY a.attribute_id, u.user_id\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        if(logger.isTraceEnabled()) logger.trace("queryGroupUser sql: {}", sql);
+        int total = 0;
+        List<Map<String, Object>> attributeUsers = new ArrayList<>();
+
+
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    // only get the total once as it is the same for all rows.
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("attributeId", resultSet.getString("attribute_id"));
+                    map.put("attributeType", resultSet.getString("attribute_type"));
+                    map.put("attributeValue", resultSet.getString("attribute_value"));
+                    map.put("userId", resultSet.getString("user_id"));
+                    map.put("entityId", resultSet.getString("entity_id"));
+                    map.put("email", resultSet.getString("email"));
+                    map.put("firstName", resultSet.getString("first_name"));
+                    map.put("lastName", resultSet.getString("last_name"));
+                    map.put("userType", resultSet.getString("user_type"));
+                    attributeUsers.add(map);
+                }
+            }
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("attributeUsers", attributeUsers);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+
+        return result;
+
     }
 
 }
