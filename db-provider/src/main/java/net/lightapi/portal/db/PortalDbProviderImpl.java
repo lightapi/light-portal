@@ -4341,12 +4341,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(insertAttribute)) {
                 statement.setString(1, event.getHostId());
                 statement.setString(2, event.getAttributeId());
-                if (event.getAttributeDesc() != null)
-                    statement.setString(3, event.getAttributeDesc());
+
+                if(event.getAttributeType() != null)
+                    statement.setString(3, event.getAttributeType());
                 else
                     statement.setNull(3, NULL);
-                if(event.getAttributeType() != null)
-                    statement.setString(4, event.getAttributeType());
+
+                if (event.getAttributeDesc() != null)
+                    statement.setString(4, event.getAttributeDesc());
                 else
                     statement.setNull(4, NULL);
 
