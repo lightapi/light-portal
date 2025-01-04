@@ -4307,8 +4307,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("hostId", resultSet.getString("host_id"));
                     map.put("positionId", resultSet.getString("position_id"));
                     map.put("positionDesc", resultSet.getString("position_desc"));
-                    map.put("inheritToAncestor", resultSet.getBoolean("inherit_to_ancestor"));
-                    map.put("inheritToSibling", resultSet.getBoolean("inherit_to_sibling"));
+                    map.put("inheritToAncestor", resultSet.getString("inherit_to_ancestor"));
+                    map.put("inheritToSibling", resultSet.getString("inherit_to_sibling"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
                     positions.add(map);
