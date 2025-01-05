@@ -4665,11 +4665,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> queryPositionPermission(int offset, int limit, String hostId, String positionId, String positionType, String inheritToAncestor, String inheritToSibling, String apiId, String apiVersion, String endpoint) {
+    public Result<String> queryPositionPermission(int offset, int limit, String hostId, String positionId, String inheritToAncestor, String inheritToSibling, String apiId, String apiVersion, String endpoint) {
         Result<String> result;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
-                "o.host_id, o.position_id, o.position_type, o.inherit_to_ancestor, o.inherit_to_sibling, " +
+                "o.host_id, o.position_id, o.inherit_to_ancestor, o.inherit_to_sibling, " +
                 "p.api_id, p.api_version, p.endpoint\n" +
                 "FROM position_t o, position_permission_t p\n" +
                 "WHERE o.position_id = p.position_id\n" +
@@ -4683,7 +4683,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         StringBuilder whereClause = new StringBuilder();
 
         addCondition(whereClause, parameters, "position_id", positionId);
-        addCondition(whereClause, parameters, "position_type", positionType);
         addCondition(whereClause, parameters, "inherit_to_ancestor", inheritToAncestor);
         addCondition(whereClause, parameters, "inherit_to_sibling", inheritToSibling);
         addCondition(whereClause, parameters, "api_id", apiId);
@@ -4721,7 +4720,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                     map.put("hostId", resultSet.getString("host_id"));
                     map.put("positionId", resultSet.getString("position_id"));
-                    map.put("positionType", resultSet.getString("position_type"));
                     map.put("inheritToAncestor", resultSet.getString("inherit_to_ancestor"));
                     map.put("inheritToSibling", resultSet.getString("inherit_to_sibling"));
                     map.put("apiId", resultSet.getString("api_id"));
@@ -4752,7 +4750,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         Result<String> result;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
-                "ep.host_id, ep.position_id, ep.position_type, u.user_id, \n" +
+                "ep.host_id, ep.position_id, ep.position_type, \n " +
+                "ep.start_date, ep.end_date, u.user_id, \n" +
                 "u.email, u.user_type, e.employee_id AS entity_id,\n" +
                 "e.manager_id, u.first_name, u.last_name\n" +
                 "FROM user_t u\n" +
@@ -4770,8 +4769,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         addCondition(whereClause, parameters, "position_id", positionId);
         addCondition(whereClause, parameters, "position_type", positionType);
-        addCondition(whereClause, parameters, "inherit_to_ancestor", inheritToAncestor);
-        addCondition(whereClause, parameters, "inherit_to_sibling", inheritToSibling);
         addCondition(whereClause, parameters, "user_id", userId);
         addCondition(whereClause, parameters, "entity_id", entityId);
         addCondition(whereClause, parameters, "email", email);
@@ -4811,8 +4808,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("hostId", resultSet.getString("host_id"));
                     map.put("positionId", resultSet.getString("position_id"));
                     map.put("positionType", resultSet.getString("position_type"));
-                    map.put("inheritToAncestor", resultSet.getString("inherit_to_ancestor"));
-                    map.put("inheritToSibling", resultSet.getString("inherit_to_sibling"));
+                    map.put("startDate", resultSet.getDate("start_date"));
+                    map.put("endDate", resultSet.getString("end_date"));
                     map.put("userId", resultSet.getString("user_id"));
                     map.put("entityId", resultSet.getString("entity_id"));
                     map.put("email", resultSet.getString("email"));
@@ -5047,7 +5044,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         Result<String> result;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
-                "a.host_id, a.attribute_id, a.attribute_type, a.attribute_value, " +
+                "a.host_id, a.attribute_id, a.attribute_type, p.attribute_value, " +
                 "p.api_id, p.api_version, p.endpoint\n" +
                 "FROM attribute_t a, attribute_permission_t p\n" +
                 "WHERE a.attribute_id = p.attribute_id\n" +
@@ -5128,7 +5125,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         Result<String> result;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
-                "a.host_id, a.attribute_id, a.attribute_type, a.attribute_value, " +
+                "a.host_id, a.attribute_id, at.attribute_type, a.attribute_value, \n" +
+                "a.start_date, a.end_date, \n" +
                 "u.user_id, u.email, u.user_type, \n" +
                 "CASE\n" +
                 "    WHEN u.user_type = 'C' THEN c.customer_id\n" +
@@ -5141,6 +5139,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "    customer_t c ON u.user_id = c.user_id AND u.user_type = 'C'\n" +
                 "LEFT JOIN\n" +
                 "    employee_t e ON u.user_id = e.user_id AND u.user_type = 'E'\n" +
+                "INNER JOIN\n" +
+                "    attribute_t at ON at.user_id = u.user_id\n" +
                 "INNER JOIN\n" +
                 "    attribute_user_t a ON a.user_id = u.user_id\n" +
                 "AND a.host_id = ?\n");
@@ -5194,6 +5194,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("attributeId", resultSet.getString("attribute_id"));
                     map.put("attributeType", resultSet.getString("attribute_type"));
                     map.put("attributeValue", resultSet.getString("attribute_value"));
+                    map.put("startDate", resultSet.getDate("start_date"));
+                    map.put("endDate", resultSet.getString("end_date"));
                     map.put("userId", resultSet.getString("user_id"));
                     map.put("entityId", resultSet.getString("entity_id"));
                     map.put("email", resultSet.getString("email"));
