@@ -4008,7 +4008,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         Result<String> result;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
-                "r.host_id, r.role_id, u.user_id, u.email, u.user_type, \n" +
+                "r.host_id, r.role_id, r.start_date, r.end_date, \n" +
+                "u.user_id, u.email, u.user_type, \n" +
                 "CASE\n" +
                 "    WHEN u.user_type = 'C' THEN c.customer_id\n" +
                 "    WHEN u.user_type = 'E' THEN e.employee_id\n" +
@@ -4070,6 +4071,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                     map.put("hostId", resultSet.getString("host_id"));
                     map.put("roleId", resultSet.getString("role_id"));
+                    map.put("startDate", resultSet.getTimestamp("start_date"));
+                    map.put("endDate", resultSet.getTimestamp("end_date"));
                     map.put("userId", resultSet.getString("user_id"));
                     map.put("entityId", resultSet.getString("entity_id"));
                     map.put("email", resultSet.getString("email"));
@@ -4363,7 +4366,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         Result<String> result;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
-                "g.host_id, g.group_id, u.user_id, u.email, u.user_type, \n" +
+                "g.host_id, g.group_id, g.start_date, g.end_date, \n" +
+                "u.user_id, u.email, u.user_type, \n" +
                 "CASE\n" +
                 "    WHEN u.user_type = 'C' THEN c.customer_id\n" +
                 "    WHEN u.user_type = 'E' THEN e.employee_id\n" +
@@ -4424,6 +4428,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                     map.put("hostId", resultSet.getString("host_id"));
                     map.put("groupId", resultSet.getString("group_id"));
+                    map.put("startDate", resultSet.getTimestamp("start_date"));
+                    map.put("endDate", resultSet.getTimestamp("end_date"));
                     map.put("userId", resultSet.getString("user_id"));
                     map.put("entityId", resultSet.getString("entity_id"));
                     map.put("email", resultSet.getString("email"));
@@ -5140,9 +5146,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "LEFT JOIN\n" +
                 "    employee_t e ON u.user_id = e.user_id AND u.user_type = 'E'\n" +
                 "INNER JOIN\n" +
-                "    attribute_t at ON at.user_id = u.user_id\n" +
-                "INNER JOIN\n" +
                 "    attribute_user_t a ON a.user_id = u.user_id\n" +
+                "INNER JOIN\n" +
+                "    attribute_t at ON at.attribute_id = a.attribute_id\n" +
                 "AND a.host_id = ?\n");
 
         List<Object> parameters = new ArrayList<>();
