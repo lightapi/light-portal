@@ -4009,7 +4009,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         Result<String> result;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
-                "r.host_id, r.role_id, r.start_date, r.end_date, \n" +
+                "r.host_id, r.role_id, r.start_ts, r.end_date, \n" +
                 "u.user_id, u.email, u.user_type, \n" +
                 "CASE\n" +
                 "    WHEN u.user_type = 'C' THEN c.customer_id\n" +
@@ -4072,8 +4072,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                     map.put("hostId", resultSet.getString("host_id"));
                     map.put("roleId", resultSet.getString("role_id"));
-                    map.put("startDate", resultSet.getTimestamp("start_date"));
-                    map.put("endDate", resultSet.getTimestamp("end_date"));
+                    map.put("startTs", resultSet.getTimestamp("start_ts"));
+                    map.put("endTs", resultSet.getTimestamp("end_date"));
                     map.put("userId", resultSet.getString("user_id"));
                     map.put("entityId", resultSet.getString("entity_id"));
                     map.put("email", resultSet.getString("email"));
@@ -4591,7 +4591,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         Result<String> result;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
-                "g.host_id, g.group_id, g.start_date, g.end_date, \n" +
+                "g.host_id, g.group_id, g.start_ts, g.end_date, \n" +
                 "u.user_id, u.email, u.user_type, \n" +
                 "CASE\n" +
                 "    WHEN u.user_type = 'C' THEN c.customer_id\n" +
@@ -4653,8 +4653,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                     map.put("hostId", resultSet.getString("host_id"));
                     map.put("groupId", resultSet.getString("group_id"));
-                    map.put("startDate", resultSet.getTimestamp("start_date"));
-                    map.put("endDate", resultSet.getTimestamp("end_date"));
+                    map.put("startTs", resultSet.getTimestamp("start_ts"));
+                    map.put("endTs", resultSet.getTimestamp("end_date"));
                     map.put("userId", resultSet.getString("user_id"));
                     map.put("entityId", resultSet.getString("entity_id"));
                     map.put("email", resultSet.getString("email"));
@@ -5201,7 +5201,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
                 "ep.host_id, ep.position_id, ep.position_type, \n " +
-                "ep.start_date, ep.end_date, u.user_id, \n" +
+                "ep.start_ts, ep.end_date, u.user_id, \n" +
                 "u.email, u.user_type, e.employee_id AS entity_id,\n" +
                 "e.manager_id, u.first_name, u.last_name\n" +
                 "FROM user_t u\n" +
@@ -5258,8 +5258,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("hostId", resultSet.getString("host_id"));
                     map.put("positionId", resultSet.getString("position_id"));
                     map.put("positionType", resultSet.getString("position_type"));
-                    map.put("startDate", resultSet.getDate("start_date"));
-                    map.put("endDate", resultSet.getString("end_date"));
+                    map.put("startTs", resultSet.getDate("start_ts"));
+                    map.put("endTs", resultSet.getString("end_ts"));
                     map.put("userId", resultSet.getString("user_id"));
                     map.put("entityId", resultSet.getString("entity_id"));
                     map.put("email", resultSet.getString("email"));
@@ -5799,7 +5799,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
                 "a.host_id, a.attribute_id, at.attribute_type, a.attribute_value, \n" +
-                "a.start_date, a.end_date, \n" +
+                "a.start_ts, a.end_ts, \n" +
                 "u.user_id, u.email, u.user_type, \n" +
                 "CASE\n" +
                 "    WHEN u.user_type = 'C' THEN c.customer_id\n" +
@@ -5867,8 +5867,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("attributeId", resultSet.getString("attribute_id"));
                     map.put("attributeType", resultSet.getString("attribute_type"));
                     map.put("attributeValue", resultSet.getString("attribute_value"));
-                    map.put("startDate", resultSet.getDate("start_date"));
-                    map.put("endDate", resultSet.getString("end_date"));
+                    map.put("startTs", resultSet.getDate("start_ts"));
+                    map.put("endTs", resultSet.getString("end_ts"));
                     map.put("userId", resultSet.getString("user_id"));
                     map.put("entityId", resultSet.getString("entity_id"));
                     map.put("email", resultSet.getString("email"));
@@ -6026,7 +6026,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createAttributeUser(AttributeUserCreatedEvent event) {
-        final String insertGroup = "INSERT INTO attribute_user_t (host_id, attribute_id, attribute_value, user_id, start_date, end_date, update_user, update_ts) " +
+        final String insertGroup = "INSERT INTO attribute_user_t (host_id, attribute_id, attribute_value, user_id, start_ts, end_ts, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?,  ?, ?, ?)";
 
         Result<String> result = null;
@@ -6079,7 +6079,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateAttributeUser(AttributeUserUpdatedEvent event) {
-        final String updateGroup = "UPDATE attribute_user_t SET attribute_value = ?, start_date = ?, end_date = ?, update_user = ?, update_ts = ? " +
+        final String updateGroup = "UPDATE attribute_user_t SET attribute_value = ?, start_ts = ?, end_ts = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? AND attribute_id = ? AND user_id = ?";
 
         Result<String> result = null;
