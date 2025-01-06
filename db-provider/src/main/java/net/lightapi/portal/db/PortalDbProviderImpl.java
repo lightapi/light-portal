@@ -1152,6 +1152,33 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
+    public Result<String> queryUserLabel(String hostId) {
+        Result<String> result = null;
+        String sql = "SELECT u.user_id, u.email FROM user_t u, user_host_t h WHERE u.user_id = h.user_id AND h.host_id = ?";
+        List<Map<String, Object>> labels = new ArrayList<>();
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, hostId);
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", resultSet.getString("user_id"));
+                    map.put("label", resultSet.getString("email"));
+                    labels.add(map);
+                }
+            }
+            result = Success.of(JsonMapper.toJson(labels));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
     public Result<String> createRefreshToken(MarketTokenCreatedEvent event) {
         final String insertUser = "INSERT INTO refresh_token_t (refresh_token, host_id, user_id, client_id, scope, " +
                 "user_type, roles, csrf, custom_claim) " +

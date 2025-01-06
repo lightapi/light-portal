@@ -41,6 +41,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> cancelOrder(OrderCancelledEvent event);
     Result<String> deliverOrder(OrderDeliveredEvent event);
     Result<String> sendPrivateMessage(PrivateMessageSentEvent event);
+    Result<String> queryUserLabel(String hostId);
 
     Result<String> createRefreshToken(MarketTokenCreatedEvent event);
     Result<String> queryRefreshToken(String refreshToken);
