@@ -58,6 +58,10 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> queryService(int offset, int limit, String hostId, String apiId, String apiName,
                                 String apiDesc, String operationOwner, String deliveryOwner, String region, String businessGroup,
                                 String lob, String platform, String capability, String gitRepo, String apiTags, String apiStatus);
+    Result<String> queryApiLabel(String hostId);
+    Result<String> queryApiVersionLabel(String hostId, String apiId);
+    Result<String> queryEndpointLabel(String hostId, String apiId, String apiVersion);
+
     Result<String> createServiceVersion(ServiceVersionCreatedEvent event);
     Result<String> updateServiceVersion(ServiceVersionUpdatedEvent event);
     Result<String> deleteServiceVersion(ServiceVersionDeletedEvent event);
