@@ -59,7 +59,8 @@
           "type": "long",
           "logicalType": "timestamp-millis"
         }
-      ]
+      ],
+      "default": null
     },
     {
       "name": "startTz",
@@ -67,7 +68,8 @@
         "null",
         "string"
       ],
-      "doc": "start time zone. (e.g., 'America/New_York') (nullable)."
+      "doc": "start time zone. (e.g., 'America/New_York') (nullable).",
+      "default": null
     },
     {
       "name": "endTs",
@@ -78,7 +80,8 @@
           "type": "long",
           "logicalType": "timestamp-millis"
         }
-      ]
+      ],
+      "default": null
     },
     {
       "name": "endTz",
@@ -86,7 +89,8 @@
         "null",
         "string"
       ],
-      "doc": "end time zone. (e.g., 'America/New_York') (nullable)."
+      "doc": "end time zone. (e.g., 'America/New_York') (nullable).",
+      "default": null
     }
   ]
 }

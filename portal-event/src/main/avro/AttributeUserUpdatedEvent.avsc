@@ -57,6 +57,7 @@
     {
       "name": "startTs",
       "doc": "start timestamp UTC milliseconds since the epoch (nullable).",
+      "default": null,
       "type": [
         "null",
         {
@@ -71,11 +72,13 @@
         "null",
         "string"
       ],
+      "default": null,
       "doc": "start time zone. (e.g., 'America/New_York') (nullable)."
     },
     {
       "name": "endTs",
       "doc": "end timestamp UTC milliseconds since the epoch (nullable).",
+      "default": null,
       "type": [
         "null",
         {
@@ -90,6 +93,7 @@
         "null",
         "string"
       ],
+      "default": null,
       "doc": "end time zone. (e.g., 'America/New_York') (nullable)."
     }
   ]
