@@ -107,6 +107,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> updateRole(RoleUpdatedEvent event);
     Result<String> deleteRole(RoleDeletedEvent event);
     Result<String> queryRole(int offset, int limit, String hostId, String roleId, String roleDesc);
+    Result<String> queryRoleId(String hostId);
     Result<String> queryRolePermission(int offset, int limit, String hostId, String roleId, String apiId, String apiVersion, String endpoint);
     Result<String> queryRoleUser(int offset, int limit, String hostId, String roleId, String userId, String entityId, String email, String firstName, String lastName, String userType);
     Result<String> createRolePermission(RolePermissionCreatedEvent event);

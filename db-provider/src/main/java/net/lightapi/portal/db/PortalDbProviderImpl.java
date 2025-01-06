@@ -3929,6 +3929,38 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
+    public Result<String> queryRoleId(String hostId) {
+        final String sql = "SELECT role_id from role_t WHERE host_id = ?";
+        Result<String> result;
+        try (final Connection conn = ds.getConnection()) {
+            List<Map<String, Object>> list = new ArrayList<>();
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, hostId);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    while (resultSet.next()) {
+                        Map<String, Object> map = new HashMap<>();
+                        String id = resultSet.getString("role_id");
+                        map.put("id", id);
+                        map.put("label", id);
+                        list.add(map);
+                    }
+                }
+            }
+            if (list.isEmpty())
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "role", hostId));
+            else
+                result = Success.of(JsonMapper.toJson(list));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
     public Result<String> queryRolePermission(int offset, int limit, String hostId, String roleId, String apiId, String apiVersion, String endpoint) {
         Result<String> result;
         StringBuilder sqlBuilder = new StringBuilder();
