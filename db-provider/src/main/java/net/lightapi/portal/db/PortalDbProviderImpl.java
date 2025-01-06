@@ -4041,7 +4041,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         Result<String> result;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
-                "r.host_id, r.role_id, r.start_ts, r.end_date, \n" +
+                "r.host_id, r.role_id, r.start_ts, r.end_ts, \n" +
                 "u.user_id, u.email, u.user_type, \n" +
                 "CASE\n" +
                 "    WHEN u.user_type = 'C' THEN c.customer_id\n" +
@@ -4105,7 +4105,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("hostId", resultSet.getString("host_id"));
                     map.put("roleId", resultSet.getString("role_id"));
                     map.put("startTs", resultSet.getTimestamp("start_ts"));
-                    map.put("endTs", resultSet.getTimestamp("end_date"));
+                    map.put("endTs", resultSet.getTimestamp("end_ts"));
                     map.put("userId", resultSet.getString("user_id"));
                     map.put("entityId", resultSet.getString("entity_id"));
                     map.put("email", resultSet.getString("email"));
@@ -4623,7 +4623,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         Result<String> result;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
-                "g.host_id, g.group_id, g.start_ts, g.end_date, \n" +
+                "g.host_id, g.group_id, g.start_ts, g.end_ts, \n" +
                 "u.user_id, u.email, u.user_type, \n" +
                 "CASE\n" +
                 "    WHEN u.user_type = 'C' THEN c.customer_id\n" +
@@ -4686,7 +4686,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("hostId", resultSet.getString("host_id"));
                     map.put("groupId", resultSet.getString("group_id"));
                     map.put("startTs", resultSet.getTimestamp("start_ts"));
-                    map.put("endTs", resultSet.getTimestamp("end_date"));
+                    map.put("endTs", resultSet.getTimestamp("end_ts"));
                     map.put("userId", resultSet.getString("user_id"));
                     map.put("entityId", resultSet.getString("entity_id"));
                     map.put("email", resultSet.getString("email"));
@@ -5233,7 +5233,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
                 "ep.host_id, ep.position_id, ep.position_type, \n " +
-                "ep.start_ts, ep.end_date, u.user_id, \n" +
+                "ep.start_ts, ep.end_ts, u.user_id, \n" +
                 "u.email, u.user_type, e.employee_id AS entity_id,\n" +
                 "e.manager_id, u.first_name, u.last_name\n" +
                 "FROM user_t u\n" +
