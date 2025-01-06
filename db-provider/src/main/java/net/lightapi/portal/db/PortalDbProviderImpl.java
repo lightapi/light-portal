@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 
 import java.security.KeyPair;
 import java.sql.*;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -1299,7 +1300,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> createClient(MarketClientCreatedEvent event) {
         final String insertUser = "INSERT INTO app_t (host_id, app_id, app_name, app_desc, " +
                 "is_kafka_app, client_id, client_type, client_profile, client_secret, client_scope, custom_claim, " +
-                "redirect_uri, authenticate_class, deref_client_id, operation_owner, delivery_owner, update_user, update_timestamp) " +
+                "redirect_uri, authenticate_class, deref_client_id, operation_owner, delivery_owner, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?)";
         Result<String> result = null;
         Map<String, Object> map = JsonMapper.string2Map(event.getValue());
@@ -1388,7 +1389,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> updateClient(MarketClientUpdatedEvent event) {
         final String updateApplication = "UPDATE app_t SET app_name = ?, app_desc = ?, is_kafka_app = ?, " +
                 "client_type = ?, client_profile = ?, client_scope = ?, custom_claim = ?, redirect_uri = ?, authenticate_class = ?, " +
-                "deref_client_id = ?, operation_owner = ?, delivery_owner = ?, update_user = ?, update_timestamp = ? " +
+                "deref_client_id = ?, operation_owner = ?, delivery_owner = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? AND app_id = ?";
 
         Result<String> result = null;
@@ -1528,7 +1529,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         String sql =
                 "SELECT host_id, app_id, app_name, app_desc, is_kafka_app, client_id, " +
                         "client_type, client_profile, client_secret, client_scope, custom_claim, redirect_uri, authenticate_class, " +
-                        "deref_client_id, operation_owner, delivery_owner, update_user, update_timestamp " +
+                        "deref_client_id, operation_owner, delivery_owner, update_user, update_ts " +
                         "FROM app_t WHERE client_id = ?";
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
@@ -1552,7 +1553,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("operationOwner", resultSet.getString("operation_owner"));
                         map.put("deliveryOwner", resultSet.getString("delivery_owner"));
                         map.put("updateUser", resultSet.getString("update_user"));
-                        map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
+                        map.put("updateTs", resultSet.getTimestamp("update_ts"));
                     }
                 }
             }
@@ -1577,7 +1578,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         String sql =
                 "SELECT host_id, app_id, app_name, app_desc, is_kafka_app, client_id, " +
                         "client_type, client_profile, client_secret, client_scope, custom_claim, redirect_uri, authenticate_class, " +
-                        "deref_client_id, operation_owner, delivery_owner, update_user, update_timestamp " +
+                        "deref_client_id, operation_owner, delivery_owner, update_user, update_ts " +
                         "FROM app_t WHERE host = ? AND app_id = ?";
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
@@ -1602,7 +1603,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("operationOwner", resultSet.getString("operation_owner"));
                         map.put("deliveryOwner", resultSet.getString("delivery_owner"));
                         map.put("updateUser", resultSet.getString("update_user"));
-                        map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
+                        map.put("updateTs", resultSet.getTimestamp("update_ts"));
                     }
                 }
             }
@@ -1626,7 +1627,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         final String insertUser = "INSERT INTO api_t (host_id, api_id, api_name, " +
                 "api_desc, operation_owner, delivery_owner, region, business_group, " +
                 "lob, platform, capability, git_repo, api_tags, " +
-                "api_status, update_user, update_timestamp) " +
+                "api_status, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?)";
         Result<String> result = null;
         Map<String, Object> map = JsonMapper.string2Map(event.getValue());
@@ -1722,7 +1723,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> updateService(MarketServiceUpdatedEvent event) {
         final String updateApi = "UPDATE api_t SET api_name = ?, api_desc = ? " +
                 "operation_owner = ?, delivery_owner = ?, region = ?, business_group = ?, lob = ?, platform = ?, " +
-                "capability = ?, git_repo = ?, api_tags = ?, api_status = ?,  update_user = ?, update_timestamp = ? " +
+                "capability = ?, git_repo = ?, api_tags = ?, api_status = ?,  update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? AND api_id = ?";
 
         Result<String> result = null;
@@ -1963,7 +1964,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> createServiceVersion(ServiceVersionCreatedEvent event) {
         final String insertUser = "INSERT INTO api_version_t (host_id, api_id, api_version, api_type, service_id, api_version_desc, " +
-                "spec_link, spec, update_user, update_timestamp) " +
+                "spec_link, spec, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?)";
         Result<String> result = null;
         Map<String, Object> map = JsonMapper.string2Map(event.getValue());
@@ -2029,7 +2030,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> updateServiceVersion(ServiceVersionUpdatedEvent event) {
         final String updateApi = "UPDATE api_version_t SET api_type = ?, service_id = ?, api_version_desc = ?, spec_link = ?,  spec = ?," +
-                "update_user = ?, update_timestamp = ? " +
+                "update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? AND api_id = ? AND api_version = ?";
 
         Result<String> result = null;
@@ -2194,14 +2195,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> updateServiceSpec(ServiceSpecUpdatedEvent event, List<Map<String, Object>> endpoints) {
         final String updateApiVersion = "UPDATE api_version_t SET spec = ?, " +
-                "update_user = ?, update_timestamp = ? " +
+                "update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? AND api_id = ? AND api_version = ?";
         final String deleteEndpoint = "DELETE FROM api_endpoint_t WHERE host_id = ? AND api_id = ? AND api_version = ?";
         final String insertEndpoint = "INSERT INTO api_endpoint_t (host_id, api_id, api_version, endpoint, http_method, " +
-                "endpoint_path, endpoint_name, endpoint_desc, update_user, update_timestamp) " +
+                "endpoint_path, endpoint_name, endpoint_desc, update_user, update_ts) " +
                 "VALUES (?,? ,?, ?, ?,  ?, ?, ?, ?, ?)";
         final String insertScope = "INSERT INTO api_endpoint_scope_t (host_id, api_id, api_version, endpoint, scope, scope_desc, " +
-                "update_user, update_timestamp) " +
+                "update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?,  ?, ?, ?)";
 
 
@@ -2428,7 +2429,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> createEndpointRule(EndpointRuleCreatedEvent event) {
         final String insertUser = "INSERT INTO api_endpoint_rule_t (host_id, api_id, api_version, endpoint, rule_id, " +
-                "update_user, update_timestamp) " +
+                "update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?,   ?, ?)";
         Result<String> result = null;
         try (Connection conn = ds.getConnection()) {
@@ -2552,9 +2553,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createHost(HostCreatedEvent event) {
-        final String insertHost = "INSERT INTO host_t (host_id, host_domain, org_name, org_desc, org_owner, jwk, update_user, update_timestamp) " +
+        final String insertHost = "INSERT INTO host_t (host_id, host_domain, org_name, org_desc, org_owner, jwk, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        final String insertHostKey = "INSERT INTO host_key_t (host_id, kid, public_key, private_key, key_type, update_user, update_timestamp) " +
+        final String insertHostKey = "INSERT INTO host_key_t (host_id, kid, public_key, private_key, key_type, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
         Result<String> result;
@@ -2641,7 +2642,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> updateHost(HostUpdatedEvent event) {
         final String updateHost = "UPDATE host_t SET org_name = ?, org_desc = ?, org_owner = ?, update_user = ? " +
-                "update_timestamp = ? " +
+                "update_ts = ? " +
                 "WHERE host_id = ?";
 
         Result<String> result = null;
@@ -2782,7 +2783,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("orgOwner", resultSet.getString("org_owner"));
                         map.put("jwk", resultSet.getString("jwk"));
                         map.put("updateUser", resultSet.getString("update_user"));
-                        map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
+                        map.put("updateTs", resultSet.getTimestamp("update_ts"));
                     }
                 }
             }
@@ -2818,7 +2819,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("orgOwner", resultSet.getString("org_owner"));
                         map.put("jwk", resultSet.getString("jwk"));
                         map.put("updateUser", resultSet.getString("update_user"));
-                        map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
+                        map.put("updateTs", resultSet.getTimestamp("update_ts"));
                     }
                 }
             }
@@ -2871,7 +2872,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> getHost(int limit, int offset) {
         final String getHost = "SELECT COUNT(*) OVER () AS total,\n" +
                 "host_id, host_domain, org_name, org_desc, \n" +
-                "org_owner, jwk, update_user, update_timestamp \n" +
+                "org_owner, jwk, update_user, update_ts \n" +
                 "FROM host_t LIMIT ? OFFSET ?";
         Result<String> result;
         int total = 0;
@@ -2895,7 +2896,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("orgOwner", resultSet.getString("org_owner"));
                         map.put("jwk", resultSet.getString("jwk"));
                         map.put("updateUser", resultSet.getString("update_user"));
-                        map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
+                        map.put("updateTs", resultSet.getTimestamp("update_ts"));
                         hosts.add(map);
                     }
                 }
@@ -2920,7 +2921,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createConfig(ConfigCreatedEvent event) {
-        final String insertHost = "INSERT INTO configuration_t (configuration_id, configuration_type, infrastructure_type_id, class_path, configuration_description, update_user, update_timestamp) " +
+        final String insertHost = "INSERT INTO configuration_t (configuration_id, configuration_type, infrastructure_type_id, class_path, configuration_description, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?,   ?, ?)";
         Result<String> result;
         try (Connection conn = ds.getConnection()) {
@@ -2962,7 +2963,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> updateConfig(ConfigUpdatedEvent event) {
         final String updateHost = "UPDATE configuration_t SET configuration_type = ?, infrastructure_type_id = ?, class_path = ?, configuration_description = ?, update_user = ? " +
-                "update_timestamp = ? " +
+                "update_ts = ? " +
                 "WHERE configuration_id = ?";
 
         Result<String> result = null;
@@ -3067,7 +3068,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("classPath", resultSet.getString("class_path"));
                         map.put("configDesc", resultSet.getString("configuration_desc"));
                         map.put("updateUser", resultSet.getString("update_user"));
-                        map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
+                        map.put("updateTs", resultSet.getTimestamp("update_ts"));
                     }
                 }
             }
@@ -3101,7 +3102,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("classPath", resultSet.getString("class_path"));
                         map.put("configDesc", resultSet.getString("configuration_desc"));
                         map.put("updateUser", resultSet.getString("update_user"));
-                        map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
+                        map.put("updateTs", resultSet.getTimestamp("update_ts"));
                     }
                 }
             }
@@ -3136,7 +3137,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("privateKey", resultSet.getString("private_key"));
                         map.put("keyType", resultSet.getString("key_type"));
                         map.put("updateUser", resultSet.getString("update_user"));
-                        map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
+                        map.put("updateTs", resultSet.getTimestamp("update_ts"));
                     }
                 }
             }
@@ -3170,7 +3171,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("privateKey", resultSet.getString("private_key"));
                         map.put("keyType", resultSet.getString("key_type"));
                         map.put("updateUser", resultSet.getString("update_user"));
-                        map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
+                        map.put("updateTs", resultSet.getTimestamp("update_ts"));
                     }
                 }
             }
@@ -3191,9 +3192,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> createRule(RuleCreatedEvent event) {
         final String insertRule = "INSERT INTO rule_t (rule_id, rule_name, rule_version, rule_type, rule_group, " +
-                "rule_desc, rule_body, rule_owner, common, update_user, update_timestamp) " +
+                "rule_desc, rule_body, rule_owner, common, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,  ?)";
-        final String insertHostRule = "INSERT INTO rule_host_t (host_id, rule_id, update_user, update_timestamp) " +
+        final String insertHostRule = "INSERT INTO rule_host_t (host_id, rule_id, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?)";
 
         Result<String> result = null;
@@ -3259,7 +3260,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> updateRule(RuleUpdatedEvent event) {
         final String updateRule = "UPDATE rule_t SET rule_name = ?, rule_version = ?, rule_type = ?, rule_group = ?, rule_desc = ?, " +
-                "rule_body = ?, rule_owner = ?, common = ?, update_user = ?, update_timestamp = ? " +
+                "rule_body = ?, rule_owner = ?, common = ?, update_user = ?, update_ts = ? " +
                 "WHERE rule_id = ?";
 
         Result<String> result = null;
@@ -3386,7 +3387,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<List<Map<String, Object>>> queryRuleByHostGroup(String hostId, String groupId) {
         Result<List<Map<String, Object>>> result;
         String sql = "SELECT rule_id, host_id, rule_type, rule_group, rule_visibility, rule_description, rule_body, rule_owner " +
-                "update_user, update_timestamp " +
+                "update_user, update_ts " +
                 "FROM rule_t WHERE host_id = ? AND rule_group = ?";
         try (final Connection conn = ds.getConnection()) {
             List<Map<String, Object>> list = new ArrayList<>();
@@ -3405,7 +3406,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("ruleBody", resultSet.getString("rule_body"));
                         map.put("ruleOwner", resultSet.getString("rule_owner"));
                         map.put("updateUser", resultSet.getString("update_user"));
-                        map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
+                        map.put("updateTs", resultSet.getTimestamp("update_ts"));
                         list.add(map);
                     }
                 }
@@ -3432,7 +3433,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total, h.host_id, r.rule_id, r.rule_name, r.rule_version, " +
                 "r.rule_type, r.rule_group, r.common, r.rule_desc, r.rule_body, r.rule_owner, " +
-                "r.update_user, r.update_timestamp " +
+                "r.update_user, r.update_ts " +
                 "FROM rule_t r, rule_host_t h " +
                 "WHERE r.rule_id = h.rule_id " +
                 "AND h.host_id = ?\n" +
@@ -3490,7 +3491,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("ruleBody", resultSet.getString("rule_body"));
                     map.put("ruleOwner", resultSet.getString("rule_owner"));
                     map.put("updateUser", resultSet.getString("update_user"));
-                    map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
+                    map.put("updateTs", resultSet.getTimestamp("update_ts"));
                     rules.add(map);
                 }
             }
@@ -3512,7 +3513,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<Map<String, Object>> queryRuleById(String ruleId) {
         Result<Map<String, Object>> result;
         String sql = "SELECT rule_id, host_id, rule_type, rule_group, rule_visibility, rule_description, rule_body, rule_owner " +
-                "update_user, update_timestamp " +
+                "update_user, update_ts " +
                 "FROM rule_t WHERE rule_id = ?";
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
@@ -3529,7 +3530,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("ruleBody", resultSet.getString("rule_body"));
                         map.put("ruleOwner", resultSet.getString("rule_owner"));
                         map.put("updateUser", resultSet.getString("update_user"));
-                        map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
+                        map.put("updateTs", resultSet.getTimestamp("update_ts"));
                     }
                 }
             }
@@ -3594,7 +3595,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createApiRule(ApiRuleCreatedEvent event) {
-        final String insertApiRule = "INSERT INTO api_rule_t (api_id, rule_id, update_user, update_timestamp) " +
+        final String insertApiRule = "INSERT INTO api_rule_t (api_id, rule_id, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?)";
         Result<String> result = null;
         List<String> ruleIds = event.getRuleIds();
@@ -3731,7 +3732,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createRole(RoleCreatedEvent event) {
-        final String insertRole = "INSERT INTO role_t (host_id, role_id, role_desc, update_user, update_timestamp) " +
+        final String insertRole = "INSERT INTO role_t (host_id, role_id, role_desc, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?)";
 
         Result<String> result = null;
@@ -3776,7 +3777,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateRole(RoleUpdatedEvent event) {
-        final String updateRole = "UPDATE role_t SET role_desc = ?, update_user = ?, update_timestamp = ? " +
+        final String updateRole = "UPDATE role_t SET role_desc = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? AND role_id = ?";
 
         Result<String> result = null;
@@ -3858,7 +3859,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> queryRole(int offset, int limit, String hostId, String roleId, String roleDesc) {
         Result<String> result;
         StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, host_id, role_id, role_desc, update_user, update_timestamp " +
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, host_id, role_id, role_desc, update_user, update_ts " +
                 "FROM role_t " +
                 "WHERE host_id = ?\n");
 
@@ -3906,7 +3907,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("roleId", resultSet.getString("role_id"));
                     map.put("roleDesc", resultSet.getString("role_desc"));
                     map.put("updateUser", resultSet.getString("update_user"));
-                    map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
+                    map.put("updateTs", resultSet.getTimestamp("update_ts"));
                     roles.add(map);
                 }
             }
@@ -4100,8 +4101,232 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
+    public Result<String> createRolePermission(RolePermissionCreatedEvent event) {
+        final String insertRole = "INSERT INTO role_permission_t (host_id, role_id, api_id, api_version, endpoint, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?,  ?, ?)";
+
+        Result<String> result = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            // no duplicate record, insert the user into database and write a success notification.
+            try (PreparedStatement statement = conn.prepareStatement(insertRole)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getRoleId());
+                statement.setString(3, event.getApiId());
+                statement.setString(4, event.getApiVersion());
+                statement.setString(5, event.getEndpoint());
+                statement.setString(6, event.getEventId().getId());
+                statement.setTimestamp(7, new Timestamp(event.getEventId().getTimestamp()));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert role permission " + event.getRoleId());
+                }
+                conn.commit();
+                result = Success.of(event.getRoleId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
+    public Result<String> deleteRolePermission(RolePermissionDeletedEvent event) {
+        final String deleteRole = "DELETE from role_permission_t WHERE host_id = ? AND role_id = ? AND api_id = ? AND api_version = ? AND endpoint = ?";
+        Result<String> result;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(deleteRole)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getRoleId());
+                statement.setString(3, event.getApiId());
+                statement.setString(4, event.getApiVersion());
+                statement.setString(5, event.getEndpoint());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("no record is deleted for role " + event.getRoleId());
+                }
+                conn.commit();
+                result = Success.of(event.getEventId().getId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> createRoleUser(RoleUserCreatedEvent event) {
+        final String insertRole = "INSERT INTO role_user_t (host_id, role_id, user_id, start_ts, end_ts, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?,  ?, ?)";
+
+        Result<String> result = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            // no duplicate record, insert the user into database and write a success notification.
+            try (PreparedStatement statement = conn.prepareStatement(insertRole)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getRoleId());
+                statement.setString(3, event.getUserId());
+
+                if(event.getStartTs() != null)
+                    statement.setObject(4, event.getStartTs());
+                else
+                    statement.setNull(4, NULL);
+
+                if (event.getEndTs() != null) {
+                    statement.setObject(5, event.getEndTs());
+                } else {
+                    statement.setNull(5, NULL);
+                }
+                statement.setString(6, event.getEventId().getId());
+                statement.setTimestamp(7, new Timestamp(event.getEventId().getTimestamp()));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert role user " + event.getRoleId());
+                }
+                conn.commit();
+                result = Success.of(event.getRoleId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
+    public Result<String> updateRoleUser(RoleUserUpdatedEvent event) {
+        final String updateRole = "UPDATE role_user_t SET start_ts = ?, end_ts = ?, update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? AND role_id = ? AND user_id = ?";
+
+        Result<String> result = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement statement = conn.prepareStatement(updateRole)) {
+                if(event.getStartTs() != null)
+                    statement.setObject(1, event.getStartTs());
+                else
+                    statement.setNull(1, NULL);
+
+                if (event.getEndTs() != null) {
+                    statement.setObject(2, event.getEndTs());
+                } else {
+                    statement.setNull(2, NULL);
+                }
+                statement.setString(3, event.getEventId().getId());
+                statement.setTimestamp(4, new Timestamp(event.getEventId().getTimestamp()));
+                statement.setString(5, event.getHostId());
+                statement.setString(6, event.getRoleId());
+                statement.setString(7, event.getUserId());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("no record is updated for role user " + event.getRoleId());
+                }
+                conn.commit();
+                result = Success.of(event.getRoleId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
+    public Result<String> deleteRoleUser(RoleUserDeletedEvent event) {
+        final String deleteRole = "DELETE from role_user_t WHERE host_id = ? AND role_id = ? AND user_id = ?";
+        Result<String> result;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(deleteRole)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getRoleId());
+                statement.setString(3, event.getUserId());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("no record is deleted for role user " + event.getRoleId());
+                }
+                conn.commit();
+                result = Success.of(event.getEventId().getId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
     public Result<String> createGroup(GroupCreatedEvent event) {
-        final String insertGroup = "INSERT INTO group_t (host_id, group_id, group_desc, update_user, update_timestamp) " +
+        final String insertGroup = "INSERT INTO group_t (host_id, group_id, group_desc, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?)";
 
         Result<String> result = null;
@@ -4145,7 +4370,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateGroup(GroupUpdatedEvent event) {
-        final String updateGroup = "UPDATE group_t SET group_desc = ?, update_user = ?, update_timestamp = ? " +
+        final String updateGroup = "UPDATE group_t SET group_desc = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? AND group_id = ?";
 
         Result<String> result = null;
@@ -4226,7 +4451,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> queryGroup(int offset, int limit, String hostId, String groupId, String groupDesc) {
         Result<String> result;
         StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, host_id, group_id, group_desc, update_user, update_timestamp " +
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, host_id, group_id, group_desc, update_user, update_ts " +
                 "FROM group_t " +
                 "WHERE host_id = ?\n");
         List<Object> parameters = new ArrayList<>();
@@ -4267,7 +4492,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("groupId", resultSet.getString("group_id"));
                     map.put("groupDesc", resultSet.getString("group_desc"));
                     map.put("updateUser", resultSet.getString("update_user"));
-                    map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
+                    map.put("updateTs", resultSet.getTimestamp("update_ts"));
                     groups.add(map);
                 }
             }
@@ -4456,11 +4681,230 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     }
 
+    @Override
+    public Result<String> createGroupPermission(GroupPermissionCreatedEvent event) {
+        final String insertGroup = "INSERT INTO group_permission_t (host_id, group_id, api_id, api_version, endpoint, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?,  ?, ?)";
+
+        Result<String> result = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            // no duplicate record, insert the user into database and write a success notification.
+            try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getGroupId());
+                statement.setString(3, event.getApiId());
+                statement.setString(4, event.getApiVersion());
+                statement.setString(5, event.getEndpoint());
+                statement.setString(6, event.getEventId().getId());
+                statement.setTimestamp(7, new Timestamp(event.getEventId().getTimestamp()));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert group permission " + event.getGroupId());
+                }
+                conn.commit();
+                result = Success.of(event.getGroupId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+    @Override
+    public Result<String> deleteGroupPermission(GroupPermissionDeletedEvent event) {
+        final String deleteGroup = "DELETE from group_permission_t WHERE host_id = ? AND group_id = ? AND api_id = ? AND api_version = ? AND endpoint = ?";
+        Result<String> result;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getGroupId());
+                statement.setString(3, event.getApiId());
+                statement.setString(4, event.getApiVersion());
+                statement.setString(5, event.getEndpoint());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("no record is deleted for group permission " + event.getGroupId());
+                }
+                conn.commit();
+                result = Success.of(event.getEventId().getId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+    @Override
+    public Result<String> createGroupUser(GroupUserCreatedEvent event) {
+        final String insertGroup = "INSERT INTO group_user_t (host_id, group_id, user_id, start_ts, end_ts, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?,  ?, ?)";
+
+        Result<String> result = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            // no duplicate record, insert the user into database and write a success notification.
+            try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getGroupId());
+                statement.setString(3, event.getUserId());
+
+                if(event.getStartTs() != null)
+                    statement.setObject(4, event.getStartTs());
+                else
+                    statement.setNull(4, NULL);
+
+                if (event.getEndTs() != null) {
+                    statement.setObject(5, event.getEndTs());
+                } else {
+                    statement.setNull(5, NULL);
+                }
+                statement.setString(6, event.getEventId().getId());
+                statement.setTimestamp(7, new Timestamp(event.getEventId().getTimestamp()));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert group user " + event.getGroupId());
+                }
+                conn.commit();
+                result = Success.of(event.getGroupId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+    @Override
+    public Result<String> updateGroupUser(GroupUserUpdatedEvent event) {
+        final String updateGroup = "UPDATE group_user_t SET start_ts = ?, end_ts = ?, update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? AND group_id = ? AND user_id = ?";
+
+        Result<String> result = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
+                if(event.getStartTs() != null)
+                    statement.setObject(1, event.getStartTs());
+                else
+                    statement.setNull(1, NULL);
+
+                if (event.getEndTs() != null) {
+                    statement.setObject(2, event.getEndTs());
+                } else {
+                    statement.setNull(2, NULL);
+                }
+                statement.setString(3, event.getEventId().getId());
+                statement.setTimestamp(4, new Timestamp(event.getEventId().getTimestamp()));
+                statement.setString(5, event.getHostId());
+                statement.setString(6, event.getGroupId());
+                statement.setString(7, event.getUserId());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("no record is updated for group user " + event.getGroupId());
+                }
+                conn.commit();
+                result = Success.of(event.getGroupId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+    @Override
+    public Result<String> deleteGroupUser(GroupUserDeletedEvent event) {
+        final String deleteGroup = "DELETE from group_user_t WHERE host_id = ? AND group_id = ? AND user_id = ?";
+        Result<String> result;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getGroupId());
+                statement.setString(3, event.getUserId());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("no record is deleted for group user " + event.getGroupId());
+                }
+                conn.commit();
+                result = Success.of(event.getEventId().getId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
 
     @Override
     public Result<String> createPosition(PositionCreatedEvent event) {
         final String insertPosition = "INSERT INTO position_t (host_id, position_id, position_desc, " +
-                "inherit_to_ancestor, inherit_to_sibling, update_user, update_timestamp) " +
+                "inherit_to_ancestor, inherit_to_sibling, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
         Result<String> result = null;
@@ -4513,7 +4957,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> updatePosition(PositionUpdatedEvent event) {
         final String updatePosition = "UPDATE position_t SET position_desc = ?, inherit_to_ancestor = ?, inherit_to_sibling = ?, " +
-                "update_user = ?, update_timestamp = ? " +
+                "update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? AND position_id = ?";
 
         Result<String> result = null;
@@ -4606,7 +5050,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> queryPosition(int offset, int limit, String hostId, String positionId, String positionDesc, String inheritToAncestor, String inheritToSibling) {
         Result<String> result;
         StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, host_id, position_id, position_desc, inherit_to_ancestor, inherit_to_sibling, update_user, update_timestamp " +
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, host_id, position_id, position_desc, inherit_to_ancestor, inherit_to_sibling, update_user, update_ts " +
                 "FROM position_t " +
                 "WHERE host_id = ?\n");
         List<Object> parameters = new ArrayList<>();
@@ -4652,7 +5096,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("inheritToAncestor", resultSet.getString("inherit_to_ancestor"));
                     map.put("inheritToSibling", resultSet.getString("inherit_to_sibling"));
                     map.put("updateUser", resultSet.getString("update_user"));
-                    map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
+                    map.put("updateTs", resultSet.getTimestamp("update_ts"));
                     positions.add(map);
                 }
             }
@@ -4841,11 +5285,234 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         return result;
 
     }
+    @Override
+    public Result<String> createPositionPermission(PositionPermissionCreatedEvent event) {
+        final String insertGroup = "INSERT INTO position_permission_t (host_id, position_id, api_id, api_version, endpoint, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?,  ?, ?)";
+
+        Result<String> result = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            // no duplicate record, insert the user into database and write a success notification.
+            try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getPositionId());
+                statement.setString(3, event.getApiId());
+                statement.setString(4, event.getApiVersion());
+                statement.setString(5, event.getEndpoint());
+                statement.setString(6, event.getEventId().getId());
+                statement.setTimestamp(7, new Timestamp(event.getEventId().getTimestamp()));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert position permission " + event.getPositionId());
+                }
+                conn.commit();
+                result = Success.of(event.getPositionId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
+    public Result<String> deletePositionPermission(PositionPermissionDeletedEvent event) {
+        final String deleteGroup = "DELETE from position_permission_t WHERE host_id = ? AND position_id = ? AND api_id = ? AND api_version = ? AND endpoint = ?";
+        Result<String> result;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getPositionId());
+                statement.setString(3, event.getApiId());
+                statement.setString(4, event.getApiVersion());
+                statement.setString(5, event.getEndpoint());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("no record is deleted for position permission " + event.getPositionId());
+                }
+                conn.commit();
+                result = Success.of(event.getEventId().getId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> createPositionUser(PositionUserCreatedEvent event) {
+        final String insertGroup = "INSERT INTO position_user_t (host_id, position_id, user_id, start_ts, end_ts, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?,  ?, ?)";
+
+        Result<String> result = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            // no duplicate record, insert the user into database and write a success notification.
+            try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getPositionId());
+                statement.setString(3, event.getUserId());
+
+                if(event.getStartTs() != null)
+                    statement.setObject(4, event.getStartTs());
+                else
+                    statement.setNull(4, NULL);
+
+                if (event.getEndTs() != null) {
+                    statement.setObject(5, event.getEndTs());
+                } else {
+                    statement.setNull(5, NULL);
+                }
+                statement.setString(6, event.getEventId().getId());
+                statement.setTimestamp(7, new Timestamp(event.getEventId().getTimestamp()));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert position user " + event.getPositionId());
+                }
+                conn.commit();
+                result = Success.of(event.getPositionId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
+    public Result<String> updatePositionUser(PositionUserUpdatedEvent event) {
+        final String updateGroup = "UPDATE position_user_t SET start_ts = ?, end_ts = ?, update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? AND position_id = ? AND user_id = ?";
+
+        Result<String> result = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
+                if(event.getStartTs() != null)
+                    statement.setObject(1, event.getStartTs());
+                else
+                    statement.setNull(1, NULL);
+
+                if (event.getEndTs() != null) {
+                    statement.setObject(2, event.getEndTs());
+                } else {
+                    statement.setNull(2, NULL);
+                }
+                statement.setString(3, event.getEventId().getId());
+                statement.setTimestamp(4, new Timestamp(event.getEventId().getTimestamp()));
+                statement.setString(5, event.getHostId());
+                statement.setString(6, event.getPositionId());
+                statement.setString(7, event.getUserId());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("no record is updated for position user " + event.getPositionId());
+                }
+                conn.commit();
+                result = Success.of(event.getPositionId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
+    public Result<String> deletePositionUser(PositionUserDeletedEvent event) {
+        final String deleteGroup = "DELETE from position_user_t WHERE host_id = ? AND position_id = ? AND user_id = ?";
+        Result<String> result;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getPositionId());
+                statement.setString(3, event.getUserId());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("no record is deleted for position user " + event.getPositionId());
+                }
+                conn.commit();
+                result = Success.of(event.getEventId().getId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
 
     @Override
     public Result<String> createAttribute(AttributeCreatedEvent event) {
         final String insertAttribute = "INSERT INTO attribute_t (host_id, attribute_id, attribute_type, " +
-                "attribute_desc, update_user, update_timestamp) " +
+                "attribute_desc, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?, ?)";
 
         Result<String> result = null;
@@ -4896,7 +5563,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> updateAttribute(AttributeUpdatedEvent event) {
         final String updateAttribute = "UPDATE attribute_t SET attribute_desc = ?, attribute_type = ?," +
-                "update_user = ?, update_timestamp = ? " +
+                "update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? AND attribute_id = ?";
 
         Result<String> result = null;
@@ -4983,7 +5650,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> queryAttribute(int offset, int limit, String hostId, String attributeId, String attributeType, String attributeDesc) {
         Result<String> result;
         StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, host_id, attribute_id, attribute_type, attribute_desc, update_user, update_timestamp " +
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, host_id, attribute_id, attribute_type, attribute_desc, update_user, update_ts " +
                 "FROM attribute_t " +
                 "WHERE host_id = ?\n");
 
@@ -5026,7 +5693,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("attributeType", resultSet.getString("attribute_type"));
                     map.put("attributeDesc", resultSet.getString("attribute_desc"));
                     map.put("updateUser", resultSet.getString("update_user"));
-                    map.put("updateTimestamp", resultSet.getTimestamp("update_timestamp"));
+                    map.put("updateTs", resultSet.getTimestamp("update_ts"));
                     attributes.add(map);
                 }
             }
@@ -5224,6 +5891,278 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
 
+        return result;
+
+    }
+
+    @Override
+    public Result<String> createAttributePermission(AttributePermissionCreatedEvent event) {
+        final String insertGroup = "INSERT INTO attribute_permission_t (host_id, attribute_id, attribute_value, api_id, api_version, endpoint, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?,  ?, ?)";
+
+        Result<String> result = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            // no duplicate record, insert the user into database and write a success notification.
+            try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getAttributeId());
+                statement.setString(3, event.getAttributeValue());
+                statement.setString(4, event.getApiId());
+                statement.setString(5, event.getApiVersion());
+                statement.setString(6, event.getEndpoint());
+                statement.setString(7, event.getEventId().getId());
+                statement.setTimestamp(8, new Timestamp(event.getEventId().getTimestamp()));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert attribute permission " + event.getAttributeId());
+                }
+                conn.commit();
+                result = Success.of(event.getAttributeId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> updateAttributePermission(AttributePermissionUpdatedEvent event) {
+        final String updateGroup = "UPDATE attribute_permission_t SET attribute_value = ?, update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? AND attribute_id = ? AND api_id = ? AND api_version = ? AND endpoint = ?";
+
+        Result<String> result = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
+                statement.setString(1, event.getAttributeValue());
+                statement.setString(2, event.getEventId().getId());
+                statement.setTimestamp(3, new Timestamp(event.getEventId().getTimestamp()));
+
+                statement.setString(4, event.getHostId());
+                statement.setString(5, event.getAttributeId());
+                statement.setString(6, event.getApiId());
+                statement.setString(7, event.getApiVersion());
+                statement.setString(8, event.getEndpoint());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("no record is updated for attribute permission " + event.getAttributeId());
+                }
+                conn.commit();
+                result = Success.of(event.getAttributeId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
+    public Result<String> deleteAttributePermission(AttributePermissionDeletedEvent event) {
+        final String deleteGroup = "DELETE from attribute_permission_t WHERE host_id = ? AND attribute_id = ? " +
+                "AND api_id = ? AND api_version = ? AND endpoint = ?";
+        Result<String> result;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getAttributeId());
+                statement.setString(3, event.getApiId());
+                statement.setString(4, event.getApiVersion());
+                statement.setString(5, event.getEndpoint());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("no record is deleted for attribute permission " + event.getAttributeId());
+                }
+                conn.commit();
+                result = Success.of(event.getEventId().getId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
+    public Result<String> createAttributeUser(AttributeUserCreatedEvent event) {
+        final String insertGroup = "INSERT INTO attribute_user_t (host_id, attribute_id, attribute_value, user_id, start_date, end_date, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?,  ?, ?, ?)";
+
+        Result<String> result = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            // no duplicate record, insert the user into database and write a success notification.
+            try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getAttributeId());
+                statement.setString(3, event.getAttributeValue());
+
+                if(event.getStartTs() != null)
+                    statement.setObject(4, event.getStartTs());
+                else
+                    statement.setNull(4, NULL);
+
+                if (event.getEndTs() != null) {
+                    statement.setObject(5, event.getEndTs());
+                } else {
+                    statement.setNull(5, NULL);
+                }
+                statement.setString(6, event.getEventId().getId());
+                statement.setTimestamp(7, new Timestamp(event.getEventId().getTimestamp()));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert attribute user " + event.getAttributeId());
+                }
+                conn.commit();
+                result = Success.of(event.getAttributeId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
+    public Result<String> updateAttributeUser(AttributeUserUpdatedEvent event) {
+        final String updateGroup = "UPDATE attribute_user_t SET attribute_value = ?, start_date = ?, end_date = ?, update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? AND attribute_id = ? AND user_id = ?";
+
+        Result<String> result = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
+                statement.setString(1, event.getAttributeValue());
+                if(event.getStartTs() != null)
+                    statement.setObject(2, event.getStartTs());
+                else
+                    statement.setNull(2, NULL);
+
+                if (event.getEndTs() != null) {
+                    statement.setObject(3, event.getEndTs());
+                } else {
+                    statement.setNull(3, NULL);
+                }
+                statement.setString(4, event.getEventId().getId());
+                statement.setTimestamp(5, new Timestamp(event.getEventId().getTimestamp()));
+                statement.setString(6, event.getHostId());
+                statement.setString(7, event.getAttributeId());
+                statement.setString(8, event.getUserId());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("no record is updated for attribute user " + event.getAttributeId());
+                }
+                conn.commit();
+                result = Success.of(event.getAttributeId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
+    public Result<String> deleteAttributeUser(AttributeUserDeletedEvent event) {
+        final String deleteGroup = "DELETE from attribute_user_t WHERE host_id = ? AND attribute_id = ? AND user_id = ?";
+        Result<String> result;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getAttributeId());
+                statement.setString(3, event.getUserId());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("no record is deleted for attribute user " + event.getAttributeId());
+                }
+                conn.commit();
+                result = Success.of(event.getEventId().getId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
         return result;
 
     }

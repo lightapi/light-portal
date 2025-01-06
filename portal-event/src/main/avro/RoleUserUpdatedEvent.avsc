@@ -1,0 +1,92 @@
+{
+  "type": "record",
+  "name": "RoleUserUpdatedEvent",
+  "namespace": "net.lightapi.portal.market",
+  "fields": [
+    {
+      "name": "EventId",
+      "type": {
+        "type": "record",
+        "name": "EventId",
+        "namespace": "com.networknt.kafka.common",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "doc": "a unique identifier"
+          },
+          {
+            "name": "nonce",
+            "type": "long",
+            "doc": "the number of the transactions for the user"
+          },
+          {
+            "name": "timestamp",
+            "type": "long",
+            "default": 0,
+            "doc": "time the event is recorded"
+          },
+          {
+            "name": "derived",
+            "type": "boolean",
+            "default": false,
+            "doc": "indicate if the event is derived from event processor"
+          }
+        ]
+      }
+    },
+    {
+      "name": "hostId",
+      "doc": "host id",
+      "type": "string"
+    },
+    {
+      "name":"roleId",
+      "doc": "role id",
+      "type": "string"
+    },
+    {
+      "name": "userId",
+      "doc": "user id",
+      "type": "string"
+    },
+    {
+      "name": "startTs",
+      "doc": "start timestamp UTC milliseconds since the epoch (nullable).",
+      "type": [
+        "null",
+        {
+          "type": "long",
+          "logicalType": "timestamp-millis"
+        }
+      ]
+    },
+    {
+      "name": "startTz",
+      "type": [
+        "null",
+        "string"
+      ],
+      "doc": "start time zone. (e.g., 'America/New_York') (nullable)."
+    },
+    {
+      "name": "endTs",
+      "doc": "end timestamp UTC milliseconds since the epoch (nullable).",
+      "type": [
+        "null",
+        {
+          "type": "long",
+          "logicalType": "timestamp-millis"
+        }
+      ]
+    },
+    {
+      "name": "endTz",
+      "type": [
+        "null",
+        "string"
+      ],
+      "doc": "end time zone. (e.g., 'America/New_York') (nullable)."
+    }
+  ]
+}

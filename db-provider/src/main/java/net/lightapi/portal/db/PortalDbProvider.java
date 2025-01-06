@@ -109,6 +109,11 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> queryRole(int offset, int limit, String hostId, String roleId, String roleDesc);
     Result<String> queryRolePermission(int offset, int limit, String hostId, String roleId, String apiId, String apiVersion, String endpoint);
     Result<String> queryRoleUser(int offset, int limit, String hostId, String roleId, String userId, String entityId, String email, String firstName, String lastName, String userType);
+    Result<String> createRolePermission(RolePermissionCreatedEvent event);
+    Result<String> deleteRolePermission(RolePermissionDeletedEvent event);
+    Result<String> createRoleUser(RoleUserCreatedEvent event);
+    Result<String> updateRoleUser(RoleUserUpdatedEvent event);
+    Result<String> deleteRoleUser(RoleUserDeletedEvent event);
 
     Result<String> createGroup(GroupCreatedEvent event);
     Result<String> updateGroup(GroupUpdatedEvent event);
@@ -116,6 +121,12 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> queryGroup(int offset, int limit, String hostId, String groupId, String groupDesc);
     Result<String> queryGroupPermission(int offset, int limit, String hostId, String groupId, String apiId, String apiVersion, String endpoint);
     Result<String> queryGroupUser(int offset, int limit, String hostId, String groupId, String userId, String entityId, String email, String firstName, String lastName, String userType);
+    Result<String> createGroupPermission(GroupPermissionCreatedEvent event);
+    Result<String> deleteGroupPermission(GroupPermissionDeletedEvent event);
+    Result<String> createGroupUser(GroupUserCreatedEvent event);
+    Result<String> updateGroupUser(GroupUserUpdatedEvent event);
+    Result<String> deleteGroupUser(GroupUserDeletedEvent event);
+
 
     Result<String> createPosition(PositionCreatedEvent event);
     Result<String> updatePosition(PositionUpdatedEvent event);
@@ -123,6 +134,11 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> queryPosition(int offset, int limit, String hostId, String positionId, String positionDesc, String inheritToAncestor, String inheritToSibling);
     Result<String> queryPositionPermission(int offset, int limit, String hostId, String positionId, String inheritToAncestor, String inheritToSibling, String apiId, String apiVersion, String endpoint);
     Result<String> queryPositionUser(int offset, int limit, String hostId, String positionId, String positionType, String inheritToAncestor, String inheritToSibling, String userId, String entityId, String email, String firstName, String lastName, String userType);
+    Result<String> createPositionPermission(PositionPermissionCreatedEvent event);
+    Result<String> deletePositionPermission(PositionPermissionDeletedEvent event);
+    Result<String> createPositionUser(PositionUserCreatedEvent event);
+    Result<String> updatePositionUser(PositionUserUpdatedEvent event);
+    Result<String> deletePositionUser(PositionUserDeletedEvent event);
 
     Result<String> createAttribute(AttributeCreatedEvent event);
     Result<String> updateAttribute(AttributeUpdatedEvent event);
@@ -130,5 +146,11 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> queryAttribute(int offset, int limit, String hostId, String attributeId, String attributeType, String attributeDesc);
     Result<String> queryAttributePermission(int offset, int limit, String hostId, String attributeId, String attributeType, String attributeValue, String apiId, String apiVersion, String endpoint);
     Result<String> queryAttributeUser(int offset, int limit, String hostId, String attributeId, String attributeType, String attributeValue, String userId, String entityId, String email, String firstName, String lastName, String userType);
+    Result<String> createAttributePermission(AttributePermissionCreatedEvent event);
+    Result<String> updateAttributePermission(AttributePermissionUpdatedEvent event);
+    Result<String> deleteAttributePermission(AttributePermissionDeletedEvent event);
+    Result<String> createAttributeUser(AttributeUserCreatedEvent event);
+    Result<String> updateAttributeUser(AttributeUserUpdatedEvent event);
+    Result<String> deleteAttributeUser(AttributeUserDeletedEvent event);
 
 }

@@ -112,15 +112,41 @@ java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema ConfigDe
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema RoleCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema RoleUpdatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema RoleDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema RolePermissionCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema RolePermissionDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema RoleUserCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema RoleUserDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema RoleUserUpdatedEvent.avsc .
+
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema GroupCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema GroupUpdatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema GroupDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema GroupPermissionCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema GroupPermissionDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema GroupUserCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema GroupUserDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema GroupUserUpdatedEvent.avsc .
+
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema AttributeCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema AttributeUpdatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema AttributeDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema AttributePermissionCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema AttributePermissionDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema AttributePermissionUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema AttributeUserCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema AttributeUserDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema AttributeUserUpdatedEvent.avsc .
+
+
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema PositionCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema PositionUpdatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema PositionDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema PositionPermissionCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema PositionPermissionDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema PositionUserCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema PositionUserDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema PositionUserUpdatedEvent.avsc .
+
 
 # Update events to implement from KycEvent interface in order to group these events in streams processing.
 
@@ -233,15 +259,42 @@ mv net/lightapi/portal/market/ConfigDeletedEvent.java ../java/net/lightapi/porta
 mv net/lightapi/portal/market/RoleCreatedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/RoleUpdatedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/RoleDeletedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/RolePermissionCreatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/RolePermissionDeletedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/RoleUserCreatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/RoleUserDeletedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/RoleUserUpdatedEvent.java ../java/net/lightapi/portal/market
+
+
 mv net/lightapi/portal/market/GroupCreatedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/GroupUpdatedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/GroupDeletedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/GroupPermissionCreatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/GroupPermissionDeletedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/GroupUserCreatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/GroupUserDeletedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/GroupUserUpdatedEvent.java ../java/net/lightapi/portal/market
+
+
 mv net/lightapi/portal/market/AttributeCreatedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/AttributeUpdatedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/AttributeDeletedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/AttributePermissionCreatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/AttributePermissionDeletedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/AttributePermissionUpdatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/AttributeUserCreatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/AttributeUserDeletedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/AttributeUserUpdatedEvent.java ../java/net/lightapi/portal/market
+
+
 mv net/lightapi/portal/market/PositionCreatedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/PositionUpdatedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/PositionDeletedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/PositionPermissionCreatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/PositionPermissionDeletedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/PositionUserCreatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/PositionUserDeletedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/PositionUserUpdatedEvent.java ../java/net/lightapi/portal/market
 
 
 mv net/lightapi/portal/controller/ControllerRegisteredEvent.java ../java/net/lightapi/portal/controller
