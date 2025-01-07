@@ -114,7 +114,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> updateRole(RoleUpdatedEvent event);
     Result<String> deleteRole(RoleDeletedEvent event);
     Result<String> queryRole(int offset, int limit, String hostId, String roleId, String roleDesc);
-    Result<String> queryRoleId(String hostId);
+    Result<String> queryRoleLabel(String hostId);
     Result<String> queryRolePermission(int offset, int limit, String hostId, String roleId, String apiId, String apiVersion, String endpoint);
     Result<String> queryRoleUser(int offset, int limit, String hostId, String roleId, String userId, String entityId, String email, String firstName, String lastName, String userType);
     Result<String> createRolePermission(RolePermissionCreatedEvent event);
@@ -127,6 +127,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> updateGroup(GroupUpdatedEvent event);
     Result<String> deleteGroup(GroupDeletedEvent event);
     Result<String> queryGroup(int offset, int limit, String hostId, String groupId, String groupDesc);
+    Result<String> queryGroupLabel(String hostId);
     Result<String> queryGroupPermission(int offset, int limit, String hostId, String groupId, String apiId, String apiVersion, String endpoint);
     Result<String> queryGroupUser(int offset, int limit, String hostId, String groupId, String userId, String entityId, String email, String firstName, String lastName, String userType);
     Result<String> createGroupPermission(GroupPermissionCreatedEvent event);
@@ -140,6 +141,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> updatePosition(PositionUpdatedEvent event);
     Result<String> deletePosition(PositionDeletedEvent event);
     Result<String> queryPosition(int offset, int limit, String hostId, String positionId, String positionDesc, String inheritToAncestor, String inheritToSibling);
+    Result<String> queryPositionLabel(String hostId);
     Result<String> queryPositionPermission(int offset, int limit, String hostId, String positionId, String inheritToAncestor, String inheritToSibling, String apiId, String apiVersion, String endpoint);
     Result<String> queryPositionUser(int offset, int limit, String hostId, String positionId, String positionType, String inheritToAncestor, String inheritToSibling, String userId, String entityId, String email, String firstName, String lastName, String userType);
     Result<String> createPositionPermission(PositionPermissionCreatedEvent event);
@@ -152,6 +154,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> updateAttribute(AttributeUpdatedEvent event);
     Result<String> deleteAttribute(AttributeDeletedEvent event);
     Result<String> queryAttribute(int offset, int limit, String hostId, String attributeId, String attributeType, String attributeDesc);
+    Result<String> queryAttributeLabel(String hostId);
     Result<String> queryAttributePermission(int offset, int limit, String hostId, String attributeId, String attributeType, String attributeValue, String apiId, String apiVersion, String endpoint);
     Result<String> queryAttributeUser(int offset, int limit, String hostId, String attributeId, String attributeType, String attributeValue, String userId, String entityId, String email, String firstName, String lastName, String userType);
     Result<String> createAttributePermission(AttributePermissionCreatedEvent event);

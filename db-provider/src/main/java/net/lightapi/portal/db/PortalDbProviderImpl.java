@@ -4229,7 +4229,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> queryRoleId(String hostId) {
+    public Result<String> queryRoleLabel(String hostId) {
         final String sql = "SELECT role_id from role_t WHERE host_id = ?";
         Result<String> result;
         try (final Connection conn = ds.getConnection()) {
@@ -4832,6 +4832,38 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             resultMap.put("total", total);
             resultMap.put("groups", groups);
             result = Success.of(JsonMapper.toJson(resultMap));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> queryGroupLabel(String hostId) {
+        final String sql = "SELECT group_id from group_t WHERE host_id = ?";
+        Result<String> result;
+        try (final Connection conn = ds.getConnection()) {
+            List<Map<String, Object>> list = new ArrayList<>();
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, hostId);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    while (resultSet.next()) {
+                        Map<String, Object> map = new HashMap<>();
+                        String id = resultSet.getString("group_id");
+                        map.put("id", id);
+                        map.put("label", id);
+                        list.add(map);
+                    }
+                }
+            }
+            if (list.isEmpty())
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "group", hostId));
+            else
+                result = Success.of(JsonMapper.toJson(list));
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
@@ -5447,6 +5479,38 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
+    public Result<String> queryPositionLabel(String hostId) {
+        final String sql = "SELECT position_id from position_t WHERE host_id = ?";
+        Result<String> result;
+        try (final Connection conn = ds.getConnection()) {
+            List<Map<String, Object>> list = new ArrayList<>();
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, hostId);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    while (resultSet.next()) {
+                        Map<String, Object> map = new HashMap<>();
+                        String id = resultSet.getString("position_id");
+                        map.put("id", id);
+                        map.put("label", id);
+                        list.add(map);
+                    }
+                }
+            }
+            if (list.isEmpty())
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "position", hostId));
+            else
+                result = Success.of(JsonMapper.toJson(list));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
     public Result<String> queryPositionPermission(int offset, int limit, String hostId, String positionId, String inheritToAncestor, String inheritToSibling, String apiId, String apiVersion, String endpoint) {
         Result<String> result;
         StringBuilder sqlBuilder = new StringBuilder();
@@ -6034,6 +6098,38 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             resultMap.put("total", total);
             resultMap.put("attributes", attributes);
             result = Success.of(JsonMapper.toJson(resultMap));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> queryAttributeLabel(String hostId) {
+        final String sql = "SELECT attribute_id from attribute_t WHERE host_id = ?";
+        Result<String> result;
+        try (final Connection conn = ds.getConnection()) {
+            List<Map<String, Object>> list = new ArrayList<>();
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, hostId);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    while (resultSet.next()) {
+                        Map<String, Object> map = new HashMap<>();
+                        String id = resultSet.getString("attribute_id");
+                        map.put("id", id);
+                        map.put("label", id);
+                        list.add(map);
+                    }
+                }
+            }
+            if (list.isEmpty())
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "attribute", hostId));
+            else
+                result = Success.of(JsonMapper.toJson(list));
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
