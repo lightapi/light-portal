@@ -2621,6 +2621,193 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         return result;
     }
 
+    @Override
+    public Result<String> queryServiceRule(String hostId, String apiId, String apiVersion) {
+        Result<String> result = null;
+        String sql = "SELECT a.host_id, a.api_id, a.api_version, a.endpoint, r.rule_type, a.rule_id\n" +
+                "FROM api_endpoint_rule_t a, rule_t r\n" +
+                "WHERE a.rule_id = r.rule_id\n" +
+                "AND a.host_id =?\n" +
+                "AND a.api_id = ?\n" +
+                "AND a.api_version = ?\n" +
+                "ORDER BY r.rule_type";
+        String sqlRuleBody = "SELECT rule_id, rule_body FROM rule_t WHERE rule_id = ?";
+        List<Map<String, Object>> rules = new ArrayList<>();
+        Map<String, Object> ruleBodies = new HashMap<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, hostId);
+            preparedStatement.setString(2, apiId);
+            preparedStatement.setString(3, apiVersion);
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("apiId", resultSet.getString("api_id"));
+                    map.put("apiVersion", resultSet.getString("api_version"));
+                    map.put("endpoint", resultSet.getString("endpoint"));
+                    map.put("ruleType", resultSet.getString("rule_type"));
+                    String ruleId = resultSet.getString("rule_id");
+                    map.put("ruleId", ruleId);
+                    rules.add(map);
+
+                    // Get rule body if not already cached
+                    if (!ruleBodies.containsKey(ruleId)) {
+                        String ruleBody = fetchRuleBody(connection, sqlRuleBody, ruleId);
+                        // convert the json string to map.
+                        Map<String, Object> bodyMap = JsonMapper.string2Map(ruleBody);
+                        ruleBodies.put(ruleId, bodyMap);
+                    }
+                }
+            }
+            Map<String, Object> combinedResult = new HashMap<>();
+            combinedResult.put("rules", rules);
+            combinedResult.put("ruleBodies", ruleBodies);
+            result = Success.of(JsonMapper.toJson(combinedResult));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    private String fetchRuleBody(Connection connection, String sqlRuleBody, String ruleId) throws SQLException {
+        try (PreparedStatement preparedStatement = connection.prepareStatement(sqlRuleBody)) {
+            preparedStatement.setString(1, ruleId);
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getString("rule_body");
+                }
+            }
+        }
+        return null; // or throw an exception if you consider this an error state.
+    }
+
+    @Override
+    public Result<String> queryServicePermission(String hostId, String apiId, String apiVersion) {
+        Result<String> result = null;
+        String sql = "SELECT\n" +
+                "    CASE\n" +
+                "        WHEN COUNT(ae.endpoint) > 0 THEN\n" +
+                "            JSON_AGG(\n" +
+                "                JSON_BUILD_OBJECT(\n" +
+                "                    'endpoint', ae.endpoint,\n" +
+                "                    'roles', COALESCE((\n" +
+                "                        SELECT JSON_ARRAYAGG(\n" +
+                "                            JSON_BUILD_OBJECT(\n" +
+                "                                'roleId', rp.role_id\n" +
+                "                            )\n" +
+                "                        )\n" +
+                "                        FROM role_permission_t rp\n" +
+                "                        WHERE rp.host_id = ?\n" +
+                "                        AND rp.api_id = ?\n" +
+                "                        AND rp.api_version = ?\n" +
+                "                        AND rp.endpoint = ae.endpoint\n" +
+                "                    ), '[]'),\n" +
+                "                    'positions', COALESCE((\n" +
+                "                        SELECT JSON_ARRAYAGG(\n" +
+                "                             JSON_BUILD_OBJECT(\n" +
+                "                                'positionId', pp.position_id\n" +
+                "                             )\n" +
+                "                         )\n" +
+                "                        FROM position_permission_t pp\n" +
+                "                        WHERE pp.host_id = ?\n" +
+                "                        AND pp.api_id = ?\n" +
+                "                        AND pp.api_version = ?\n" +
+                "                        AND pp.endpoint = ae.endpoint\n" +
+                "                    ), '[]'),\n" +
+                "                    'groups', COALESCE((\n" +
+                "                        SELECT JSON_ARRAYAGG(\n" +
+                "                            JSON_BUILD_OBJECT(\n" +
+                "                               'groupId', gp.group_id\n" +
+                "                            )\n" +
+                "                        )\n" +
+                "                        FROM group_permission_t gp\n" +
+                "                        WHERE gp.host_id = ?\n" +
+                "                        AND gp.api_id = ?\n" +
+                "                        AND gp.api_version = ?\n" +
+                "                        AND gp.endpoint = ae.endpoint\n" +
+                "                    ), '[]'),\n" +
+                "                    'attributes', COALESCE((\n" +
+                "                        SELECT JSON_ARRAYAGG(\n" +
+                "                            JSON_BUILD_OBJECT(\n" +
+                "                                'attribute_id', ap.attribute_id, \n" +
+                "                                'attribute_value', ap.attribute_value, \n" +
+                "                                'attribute_type', a.attribute_type\n" +
+                "                            )\n" +
+                "                        )\n" +
+                "                        FROM attribute_permission_t ap, attribute_t a\n" +
+                "                        WHERE ap.attribute_id = a.attribute_id\n" +
+                "                        AND ap.host_id = ?\n" +
+                "                        AND ap.api_id = ?\n" +
+                "                        AND ap.api_version = ?\n" +
+                "                        AND ap.endpoint = ae.endpoint\n" +
+                "                    ), '[]'),\n" +
+                "                    'users', COALESCE((\n" +
+                "                        SELECT JSON_ARRAYAGG(\n" +
+                "                            JSON_BUILD_OBJECT(\n" +
+                "                                 'userId', user_id,\n" +
+                "                                 'startTs', start_ts,\n" +
+                "                                 'endTs', end_ts\n" +
+                "                            )\n" +
+                "                        )\n" +
+                "                        FROM user_permission_t up\n" +
+                "                        WHERE up.host_id = ?\n" +
+                "                        AND up.api_id = ?\n" +
+                "                        AND up.api_version = ?\n" +
+                "                        AND up.endpoint = ae.endpoint\n" +
+                "                    ), '[]')\n" +
+                "                )\n" +
+                "            )\n" +
+                "        ELSE NULL\n" +
+                "    END AS permissions\n" +
+                "FROM\n" +
+                "    api_endpoint_t ae\n" +
+                "WHERE\n" +
+                "    ae.host_id = ?\n" +
+                "    AND ae.api_id = ?\n" +
+                "    AND ae.api_version = ?;\n";
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, hostId);
+            preparedStatement.setString(2, apiId);
+            preparedStatement.setString(3, apiVersion);
+            preparedStatement.setString(4, hostId);
+            preparedStatement.setString(5, apiId);
+            preparedStatement.setString(6, apiVersion);
+            preparedStatement.setString(7, hostId);
+            preparedStatement.setString(8, apiId);
+            preparedStatement.setString(9, apiVersion);
+            preparedStatement.setString(10, hostId);
+            preparedStatement.setString(11, apiId);
+            preparedStatement.setString(12, apiVersion);
+            preparedStatement.setString(13, hostId);
+            preparedStatement.setString(14, apiId);
+            preparedStatement.setString(15, apiVersion);
+            preparedStatement.setString(16, hostId);
+            preparedStatement.setString(17, apiId);
+            preparedStatement.setString(18, apiVersion);
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    String permissionsJson = resultSet.getString("permissions");
+                    result = Success.of(permissionsJson);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
 
     public Result<String> createMarketCode(MarketCodeCreatedEvent event) {
         // cache key is based on the hostId and authCode.

@@ -73,6 +73,8 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> queryEndpointScope(String hostId, String apiId, String apiVersion, String endpoint);
     Result<String> createEndpointRule(EndpointRuleCreatedEvent event);
     Result<String> deleteEndpointRule(EndpointRuleDeletedEvent event);
+    Result<String> queryServiceRule(String hostId, String apiId, String apiVersion);
+    Result<String> queryServicePermission(String hostId, String apiId, String apiVersion);
 
     Result<String> createMarketCode(MarketCodeCreatedEvent event);
     Result<String> deleteMarketCode(MarketCodeDeletedEvent event);

@@ -155,4 +155,18 @@ public class PortalDbProviderImplTest {
             assertTrue(((List)attributes.get("attributes")).size() > 0);
         }
     }
+
+    @Test
+    public void testQueryServicePermission() {
+        Result<String> result = dbProvider.queryServicePermission("N2CMw0HGQXeLvC1wBfln2A", "0100", "1.0.0");
+        if(result.isFailure()) {
+            System.out.println(result.getError());
+            fail();
+        } else {
+            System.out.println(result.getResult());
+            List<Map<String, Object>> permissions = JsonMapper.string2List(result.getResult());
+            assertTrue(permissions.size() > 0);
+        }
+    }
+
 }
