@@ -3730,39 +3730,142 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                                     String ruleVersion, String ruleType, String ruleGroup, String ruleDesc,
                                     String ruleBody, String ruleOwner, String common) {
         Result<String> result;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, h.host_id, r.rule_id, r.rule_name, r.rule_version, " +
-                "r.rule_type, r.rule_group, r.common, r.rule_desc, r.rule_body, r.rule_owner, " +
-                "r.update_user, r.update_ts " +
-                "FROM rule_t r, rule_host_t h " +
-                "WHERE r.rule_id = h.rule_id " +
-                "AND h.host_id = ?\n" +
-                "AND r.common = ? OR h.host_id = ?\n");
+        String sql;
         List<Object> parameters = new ArrayList<>();
-        parameters.add(hostId);
-        parameters.add(common);
-        parameters.add(hostId);
+        if(common == null || common.equalsIgnoreCase("N")) {
+            StringBuilder sqlBuilder = new StringBuilder();
+            sqlBuilder.append("SELECT COUNT(*) OVER () AS total, h.host_id, r.rule_id, r.rule_name, r.rule_version, " +
+                    "r.rule_type, r.rule_group, r.common, r.rule_desc, r.rule_body, r.rule_owner, " +
+                    "r.update_user, r.update_ts " +
+                    "FROM rule_t r, rule_host_t h " +
+                    "WHERE r.rule_id = h.rule_id " +
+                    "AND h.host_id = ?\n");
+            parameters.add(hostId);
 
-        StringBuilder whereClause = new StringBuilder();
+            StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "rule_id", ruleId);
-        addCondition(whereClause, parameters, "rule_name", ruleName);
-        addCondition(whereClause, parameters, "rule_version", ruleVersion);
-        addCondition(whereClause, parameters, "rule_type", ruleType);
-        addCondition(whereClause, parameters, "rule_group", ruleGroup);
-        addCondition(whereClause, parameters, "rule_desc", ruleDesc);
-        addCondition(whereClause, parameters, "rule_body", ruleBody);
-        addCondition(whereClause, parameters, "rule_owner", ruleOwner);
+            addCondition(whereClause, parameters, "rule_id", ruleId);
+            addCondition(whereClause, parameters, "rule_name", ruleName);
+            addCondition(whereClause, parameters, "rule_version", ruleVersion);
+            addCondition(whereClause, parameters, "rule_type", ruleType);
+            addCondition(whereClause, parameters, "rule_group", ruleGroup);
+            addCondition(whereClause, parameters, "rule_desc", ruleDesc);
+            addCondition(whereClause, parameters, "rule_body", ruleBody);
+            addCondition(whereClause, parameters, "rule_owner", ruleOwner);
 
-        if (whereClause.length() > 0) {
-            sqlBuilder.append("AND ").append(whereClause);
+            if (whereClause.length() > 0) {
+                sqlBuilder.append("AND ").append(whereClause);
+            }
+            sqlBuilder.append("ORDER BY rule_id\n" +
+                    "LIMIT ? OFFSET ?");
+
+            parameters.add(limit);
+            parameters.add(offset);
+            sql = sqlBuilder.toString();
+        } else {
+            StringBuilder sqlBuilder = new StringBuilder();
+            sqlBuilder.append("SELECT \n" +
+                    "                        COUNT(*) OVER () AS total,\n" +
+                    "                        host_id,\n" +
+                    "                        rule_id,\n" +
+                    "                        rule_name,\n" +
+                    "                        rule_version,\n" +
+                    "                        rule_type,\n" +
+                    "                        rule_group,\n" +
+                    "                        common,\n" +
+                    "                        rule_desc,\n" +
+                    "                        rule_body,\n" +
+                    "                        rule_owner,\n" +
+                    "                        update_user,\n" +
+                    "                        update_ts\n" +
+                    "                    FROM (\n" +
+                    "                       SELECT \n" +
+                    "                        h.host_id,\n" +
+                    "                        r.rule_id,\n" +
+                    "                        r.rule_name,\n" +
+                    "                        r.rule_version,\n" +
+                    "                        r.rule_type,\n" +
+                    "                        r.rule_group,\n" +
+                    "                        r.common,\n" +
+                    "                        r.rule_desc,\n" +
+                    "                        r.rule_body,\n" +
+                    "                        r.rule_owner,\n" +
+                    "                        r.update_user,\n" +
+                    "                        r.update_ts\n" +
+                    "                    FROM rule_t r\n" +
+                    "                    JOIN rule_host_t h ON r.rule_id = h.rule_id\n" +
+                    "                    WHERE h.host_id = ?\n");
+            parameters.add(hostId);
+            StringBuilder whereClause = new StringBuilder();
+
+            addCondition(whereClause, parameters, "r.rule_id", ruleId);
+            addCondition(whereClause, parameters, "r.rule_name", ruleName);
+            addCondition(whereClause, parameters, "r.rule_version", ruleVersion);
+            addCondition(whereClause, parameters, "r.rule_type", ruleType);
+            addCondition(whereClause, parameters, "r.rule_group", ruleGroup);
+            addCondition(whereClause, parameters, "r.rule_desc", ruleDesc);
+            addCondition(whereClause, parameters, "r.rule_body", ruleBody);
+            addCondition(whereClause, parameters, "r.rule_owner", ruleOwner);
+            if (whereClause.length() > 0) {
+                sqlBuilder.append("AND ").append(whereClause);
+            }
+
+            sqlBuilder.append("                    \n" +
+                    "                    UNION ALL\n" +
+                    "                    \n" +
+                    "                   SELECT\n" +
+                    "                        h.host_id,\n" +
+                    "                        r.rule_id,\n" +
+                    "                        r.rule_name,\n" +
+                    "                        r.rule_version,\n" +
+                    "                        r.rule_type,\n" +
+                    "                        r.rule_group,\n" +
+                    "                        r.common,\n" +
+                    "                        r.rule_desc,\n" +
+                    "                        r.rule_body,\n" +
+                    "                        r.rule_owner,\n" +
+                    "                        r.update_user,\n" +
+                    "                        r.update_ts\n" +
+                    "                    FROM rule_t r\n" +
+                    "                    JOIN rule_host_t h ON r.rule_id = h.rule_id\n" +
+                    "                    WHERE r.common = 'Y'\n" +
+                    "                      AND h.host_id != ?\n" +
+                    "                       AND  NOT EXISTS (\n" +
+                    "                         SELECT 1\n" +
+                    "                        FROM rule_host_t eh\n" +
+                    "                         WHERE eh.rule_id = r.rule_id\n" +
+                    "                         AND eh.host_id=?\n" +
+                    "                     )\n");
+            parameters.add(hostId);
+            parameters.add(hostId);
+
+
+            StringBuilder whereClauseCommon = new StringBuilder();
+            addCondition(whereClauseCommon, parameters, "r.rule_id", ruleId);
+            addCondition(whereClauseCommon, parameters, "r.rule_name", ruleName);
+            addCondition(whereClauseCommon, parameters, "r.rule_version", ruleVersion);
+            addCondition(whereClauseCommon, parameters, "r.rule_type", ruleType);
+            addCondition(whereClauseCommon, parameters, "r.rule_group", ruleGroup);
+            addCondition(whereClauseCommon, parameters, "r.rule_desc", ruleDesc);
+            addCondition(whereClauseCommon, parameters, "r.rule_body", ruleBody);
+            addCondition(whereClauseCommon, parameters, "r.rule_owner", ruleOwner);
+
+            if (whereClauseCommon.length() > 0) {
+                sqlBuilder.append("AND ").append(whereClauseCommon);
+            }
+
+
+            sqlBuilder.append("                 ) AS combined_rules\n");
+
+            sqlBuilder.append("ORDER BY rule_id\n" +
+                    "LIMIT ? OFFSET ?");
+
+            parameters.add(limit);
+            parameters.add(offset);
+
+            sql = sqlBuilder.toString();
         }
-        sqlBuilder.append("ORDER BY rule_id\n" +
-                "LIMIT ? OFFSET ?");
 
-        parameters.add(limit);
-        parameters.add(offset);
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> rules = new ArrayList<>();
 
