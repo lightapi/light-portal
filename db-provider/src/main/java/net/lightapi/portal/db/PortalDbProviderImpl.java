@@ -7913,7 +7913,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> queryAttributeRowFilter(int offset, int limit, String hostId, String AttributeId, String attributeType, String attributeValue, String apiId, String apiVersion, String endpoint) {
+    public Result<String> queryAttributeRowFilter(int offset, int limit, String hostId, String attributeId, String attributeValue, String apiId, String apiVersion, String endpoint) {
         Result<String> result;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
@@ -7928,8 +7928,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "attribute_id", AttributeId);
-        addCondition(whereClause, parameters, "attribute_type", attributeType);
+        addCondition(whereClause, parameters, "attribute_id", attributeId);
         addCondition(whereClause, parameters, "attribute_value", attributeValue);
         addCondition(whereClause, parameters, "api_id", apiId);
         addCondition(whereClause, parameters, "api_version", apiVersion);
@@ -8126,7 +8125,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> queryAttributeColFilter(int offset, int limit, String hostId, String AttributeId, String attributeType, String attributeValue, String apiId, String apiVersion, String endpoint) {
+    public Result<String> queryAttributeColFilter(int offset, int limit, String hostId, String attributeId, String attributeValue, String apiId, String apiVersion, String endpoint) {
         Result<String> result;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
@@ -8141,8 +8140,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "attribute_id", AttributeId);
-        addCondition(whereClause, parameters, "attribute_type", attributeType);
+        addCondition(whereClause, parameters, "attribute_id", attributeId);
         addCondition(whereClause, parameters, "attribute_value", attributeValue);
         addCondition(whereClause, parameters, "api_id", apiId);
         addCondition(whereClause, parameters, "api_version", apiVersion);
