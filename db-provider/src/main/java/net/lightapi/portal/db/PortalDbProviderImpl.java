@@ -4760,6 +4760,411 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
+    public Result<String> queryRoleRowFilter(int offset, int limit, String hostId, String roleId, String apiId, String apiVersion, String endpoint) {
+        Result<String> result;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
+                "r.host_id, r.role_id, p.api_id, p.api_version, p.endpoint, p.col_name, p.operator, p.col_value\n" +
+                "FROM role_t r, role_row_filter_t p\n" +
+                "WHERE r.role_id = p.role_id\n" +
+                "AND r.host_id = ?\n");
+
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(hostId);
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "role_id", roleId);
+        addCondition(whereClause, parameters, "api_id", apiId);
+        addCondition(whereClause, parameters, "api_version", apiVersion);
+        addCondition(whereClause, parameters, "endpoint", endpoint);
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append("ORDER BY r.role_id, p.api_id, p.api_version, p.endpoint, p.col_name\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        if(logger.isTraceEnabled()) logger.trace("queryRoleRowFilter sql: {}", sql);
+        int total = 0;
+        List<Map<String, Object>> roleRowFilters = new ArrayList<>();
+
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    // only get the total once as it is the same for all rows.
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("roleId", resultSet.getString("role_id"));
+                    map.put("apiId", resultSet.getString("api_id"));
+                    map.put("apiVersion", resultSet.getString("api_version"));
+                    map.put("endpoint", resultSet.getString("endpoint"));
+                    map.put("colName", resultSet.getString("col_name"));
+                    map.put("operator", resultSet.getString("operator"));
+                    map.put("colValue", resultSet.getString("col_value"));
+                    roleRowFilters.add(map);
+                }
+            }
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("roleRowFilters", roleRowFilters);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+
+        return result;
+    }
+
+    @Override
+    public Result<String> deleteRoleRowFilter(RoleRowFilterDeletedEvent event) {
+        final String deleteRole = "DELETE from role_row_filter_t WHERE host_id = ? AND role_id = ? AND api_id = ? AND api_version = ? AND endpoint = ? AND col_name = ?";
+        Result<String> result;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(deleteRole)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getRoleId());
+                statement.setString(3, event.getApiId());
+                statement.setString(4, event.getApiVersion());
+                statement.setString(5, event.getEndpoint());
+                statement.setString(6, event.getColName());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("no record is deleted for role row filter " + event.getRoleId());
+                }
+                conn.commit();
+                result = Success.of(event.getEventId().getId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> createRoleRowFilter(RoleRowFilterCreatedEvent event) {
+        final String insertRole = "INSERT INTO role_row_filter_t (host_id, role_id, api_id, api_version, endpoint, col_name, operator, col_value, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        Result<String> result = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            // no duplicate record, insert the user into database and write a success notification.
+            try (PreparedStatement statement = conn.prepareStatement(insertRole)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getRoleId());
+                statement.setString(3, event.getApiId());
+                statement.setString(4, event.getApiVersion());
+                statement.setString(5, event.getEndpoint());
+                statement.setString(6, event.getColName());
+                statement.setString(7, event.getOperator());
+                statement.setString(8, event.getColValue());
+                statement.setString(9, event.getEventId().getId());
+                statement.setTimestamp(10, new Timestamp(event.getEventId().getTimestamp()));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert role row filter " + event.getRoleId());
+                }
+                conn.commit();
+                result = Success.of(event.getRoleId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> updateRoleRowFilter(RoleRowFilterUpdatedEvent event) {
+        final String updateRole = "UPDATE role_row_filter_t SET operator = ?, col_value = ?, update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? AND role_id = ? AND api_id = ? AND api_version = ? AND endpoint = ? AND col_name = ?";
+
+        Result<String> result = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement statement = conn.prepareStatement(updateRole)) {
+                statement.setString(1, event.getOperator());
+                statement.setString(2, event.getColValue());
+                statement.setString(3, event.getEventId().getId());
+                statement.setTimestamp(4, new Timestamp(event.getEventId().getTimestamp()));
+                statement.setString(5, event.getHostId());
+                statement.setString(6, event.getRoleId());
+                statement.setString(7, event.getApiId());
+                statement.setString(8, event.getApiVersion());
+                statement.setString(9, event.getEndpoint());
+                statement.setString(10, event.getColName());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("no record is updated for role row filter " + event.getRoleId());
+                }
+                conn.commit();
+                result = Success.of(event.getRoleId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> queryRoleColFilter(int offset, int limit, String hostId, String roleId, String apiId, String apiVersion, String endpoint) {
+        Result<String> result;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
+                "r.host_id, r.role_id, p.api_id, p.api_version, p.endpoint, p.columns\n" +
+                "FROM role_t r, role_col_filter_t p\n" +
+                "WHERE r.role_id = p.role_id\n" +
+                "AND r.host_id = ?\n");
+
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(hostId);
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "role_id", roleId);
+        addCondition(whereClause, parameters, "api_id", apiId);
+        addCondition(whereClause, parameters, "api_version", apiVersion);
+        addCondition(whereClause, parameters, "endpoint", endpoint);
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append("ORDER BY r.role_id, p.api_id, p.api_version, p.endpoint\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        if(logger.isTraceEnabled()) logger.trace("queryRoleColFilter sql: {}", sql);
+        int total = 0;
+        List<Map<String, Object>> roleColFilters = new ArrayList<>();
+
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    // only get the total once as it is the same for all rows.
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("roleId", resultSet.getString("role_id"));
+                    map.put("apiId", resultSet.getString("api_id"));
+                    map.put("apiVersion", resultSet.getString("api_version"));
+                    map.put("endpoint", resultSet.getString("endpoint"));
+                    map.put("columns", resultSet.getString("columns"));
+                    roleColFilters.add(map);
+                }
+            }
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("roleColFilters", roleColFilters);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+
+        return result;
+    }
+
+    @Override
+    public Result<String> createRoleColFilter(RoleColFilterCreatedEvent event) {
+        final String insertRole = "INSERT INTO role_col_filter_t (host_id, role_id, api_id, api_version, endpoint, columns, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+
+        Result<String> result = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            // no duplicate record, insert the user into database and write a success notification.
+            try (PreparedStatement statement = conn.prepareStatement(insertRole)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getRoleId());
+                statement.setString(3, event.getApiId());
+                statement.setString(4, event.getApiVersion());
+                statement.setString(5, event.getEndpoint());
+                statement.setString(6, event.getColumns());
+                statement.setString(7, event.getEventId().getId());
+                statement.setTimestamp(8, new Timestamp(event.getEventId().getTimestamp()));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert role col filter " + event.getRoleId());
+                }
+                conn.commit();
+                result = Success.of(event.getRoleId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deleteRoleColFilter(RoleColFilterDeletedEvent event) {
+        final String deleteRole = "DELETE from role_col_filter_t WHERE host_id = ? AND role_id = ? AND api_id = ? AND api_version = ? AND endpoint = ?";
+        Result<String> result;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(deleteRole)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getRoleId());
+                statement.setString(3, event.getApiId());
+                statement.setString(4, event.getApiVersion());
+                statement.setString(5, event.getEndpoint());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("no record is deleted for role col filter " + event.getRoleId());
+                }
+                conn.commit();
+                result = Success.of(event.getEventId().getId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> updateRoleColFilter(RoleColFilterUpdatedEvent event) {
+        final String updateRole = "UPDATE role_col_filter_t SET columns = ?, update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? AND role_id = ? AND api_id = ? AND api_version = ? AND endpoint = ?";
+
+        Result<String> result = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement statement = conn.prepareStatement(updateRole)) {
+                statement.setString(1, event.getColumns());
+                statement.setString(2, event.getEventId().getId());
+                statement.setTimestamp(3, new Timestamp(event.getEventId().getTimestamp()));
+                statement.setString(4, event.getHostId());
+                statement.setString(5, event.getRoleId());
+                statement.setString(6, event.getApiId());
+                statement.setString(7, event.getApiVersion());
+                statement.setString(8, event.getEndpoint());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("no record is updated for role col filter " + event.getRoleId());
+                }
+                conn.commit();
+                result = Success.of(event.getRoleId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
     public Result<String> createGroup(GroupCreatedEvent event) {
         final String insertGroup = "INSERT INTO group_t (host_id, group_id, group_desc, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?)";
@@ -5367,6 +5772,412 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         return result;
 
     }
+
+    @Override
+    public Result<String> queryGroupRowFilter(int offset, int limit, String hostId, String GroupId, String apiId, String apiVersion, String endpoint) {
+        Result<String> result;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
+                "g.host_id, g.group_id, p.api_id, p.api_version, p.endpoint, p.col_name, p.operator, p.col_value\n" +
+                "FROM group_t g, group_row_filter_t p\n" +
+                "WHERE g.group_id = p.group_id\n" +
+                "AND g.host_id = ?\n");
+
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(hostId);
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "group_id", GroupId);
+        addCondition(whereClause, parameters, "api_id", apiId);
+        addCondition(whereClause, parameters, "api_version", apiVersion);
+        addCondition(whereClause, parameters, "endpoint", endpoint);
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append("ORDER BY g.group_id, p.api_id, p.api_version, p.endpoint\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        if(logger.isTraceEnabled()) logger.trace("queryGroupRowFilter sql: {}", sql);
+        int total = 0;
+        List<Map<String, Object>> groupRowFilters = new ArrayList<>();
+
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    // only get the total once as it is the same for all rows.
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("groupId", resultSet.getString("group_id"));
+                    map.put("apiId", resultSet.getString("api_id"));
+                    map.put("apiVersion", resultSet.getString("api_version"));
+                    map.put("endpoint", resultSet.getString("endpoint"));
+                    map.put("colName", resultSet.getString("col_name"));
+                    map.put("operator", resultSet.getString("operator"));
+                    map.put("colValue", resultSet.getString("col_value"));
+                    groupRowFilters.add(map);
+                }
+            }
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("groupRowFilters", groupRowFilters);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+
+        return result;
+    }
+
+    @Override
+    public Result<String> createGroupRowFilter(GroupRowFilterCreatedEvent event) {
+        final String insertGroup = "INSERT INTO group_row_filter_t (host_id, group_id, api_id, api_version, endpoint, col_name, operator, col_value, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        Result<String> result = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            // no duplicate record, insert the user into database and write a success notification.
+            try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getGroupId());
+                statement.setString(3, event.getApiId());
+                statement.setString(4, event.getApiVersion());
+                statement.setString(5, event.getEndpoint());
+                statement.setString(6, event.getColName());
+                statement.setString(7, event.getOperator());
+                statement.setString(8, event.getColValue());
+                statement.setString(9, event.getEventId().getId());
+                statement.setTimestamp(10, new Timestamp(event.getEventId().getTimestamp()));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert group row filter " + event.getGroupId());
+                }
+                conn.commit();
+                result = Success.of(event.getGroupId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> updateGroupRowFilter(GroupRowFilterUpdatedEvent event) {
+        final String updateGroup = "UPDATE group_row_filter_t SET operator = ?, col_value = ?, update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? AND group_id = ? AND api_id = ? AND api_version = ? AND endpoint = ? AND col_name = ?";
+
+        Result<String> result = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
+                statement.setString(1, event.getOperator());
+                statement.setString(2, event.getColValue());
+                statement.setString(3, event.getEventId().getId());
+                statement.setTimestamp(4, new Timestamp(event.getEventId().getTimestamp()));
+                statement.setString(5, event.getHostId());
+                statement.setString(6, event.getGroupId());
+                statement.setString(7, event.getApiId());
+                statement.setString(8, event.getApiVersion());
+                statement.setString(9, event.getEndpoint());
+                statement.setString(10, event.getColName());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("no record is updated for group row filter " + event.getGroupId());
+                }
+                conn.commit();
+                result = Success.of(event.getGroupId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deleteGroupRowFilter(GroupRowFilterDeletedEvent event) {
+        final String deleteGroup = "DELETE from group_row_filter_t WHERE host_id = ? AND group_id = ? AND api_id = ? AND api_version = ? AND endpoint = ? AND col_name = ?";
+        Result<String> result;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getGroupId());
+                statement.setString(3, event.getApiId());
+                statement.setString(4, event.getApiVersion());
+                statement.setString(5, event.getEndpoint());
+                statement.setString(6, event.getColName());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("no record is deleted for group row filter " + event.getGroupId());
+                }
+                conn.commit();
+                result = Success.of(event.getEventId().getId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> queryGroupColFilter(int offset, int limit, String hostId, String GroupId, String apiId, String apiVersion, String endpoint) {
+        Result<String> result;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
+                "g.host_id, g.group_id, p.api_id, p.api_version, p.endpoint, p.columns\n" +
+                "FROM group_t g, group_col_filter_t p\n" +
+                "WHERE g.group_id = p.group_id\n" +
+                "AND g.host_id = ?\n");
+
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(hostId);
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "group_id", GroupId);
+        addCondition(whereClause, parameters, "api_id", apiId);
+        addCondition(whereClause, parameters, "api_version", apiVersion);
+        addCondition(whereClause, parameters, "endpoint", endpoint);
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append("ORDER BY g.group_id, p.api_id, p.api_version, p.endpoint\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        if(logger.isTraceEnabled()) logger.trace("queryGroupColFilter sql: {}", sql);
+        int total = 0;
+        List<Map<String, Object>> groupColFilters = new ArrayList<>();
+
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    // only get the total once as it is the same for all rows.
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("groupId", resultSet.getString("group_id"));
+                    map.put("apiId", resultSet.getString("api_id"));
+                    map.put("apiVersion", resultSet.getString("api_version"));
+                    map.put("endpoint", resultSet.getString("endpoint"));
+                    map.put("columns", resultSet.getString("columns"));
+                    groupColFilters.add(map);
+                }
+            }
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("groupColFilters", groupColFilters);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+
+        return result;
+    }
+
+    @Override
+    public Result<String> createGroupColFilter(GroupColFilterCreatedEvent event) {
+        final String insertGroup = "INSERT INTO group_col_filter_t (host_id, group_id, api_id, api_version, endpoint, columns, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+
+        Result<String> result = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            // no duplicate record, insert the user into database and write a success notification.
+            try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getGroupId());
+                statement.setString(3, event.getApiId());
+                statement.setString(4, event.getApiVersion());
+                statement.setString(5, event.getEndpoint());
+                statement.setString(6, event.getColumns());
+                statement.setString(7, event.getEventId().getId());
+                statement.setTimestamp(8, new Timestamp(event.getEventId().getTimestamp()));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert group col filter " + event.getGroupId());
+                }
+                conn.commit();
+                result = Success.of(event.getGroupId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> updateGroupColFilter(GroupColFilterUpdatedEvent event) {
+        final String updateGroup = "UPDATE group_col_filter_t SET columns = ?, update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? AND group_id = ? AND api_id = ? AND api_version = ? AND endpoint = ?";
+
+        Result<String> result = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
+                statement.setString(1, event.getColumns());
+                statement.setString(2, event.getEventId().getId());
+                statement.setTimestamp(3, new Timestamp(event.getEventId().getTimestamp()));
+                statement.setString(4, event.getHostId());
+                statement.setString(5, event.getGroupId());
+                statement.setString(6, event.getApiId());
+                statement.setString(7, event.getApiVersion());
+                statement.setString(8, event.getEndpoint());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("no record is updated for group col filter " + event.getGroupId());
+                }
+                conn.commit();
+                result = Success.of(event.getGroupId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deleteGroupColFilter(GroupColFilterDeletedEvent event) {
+        final String deleteGroup = "DELETE from group_col_filter_t WHERE host_id = ? AND group_id = ? AND api_id = ? AND api_version = ? AND endpoint = ?";
+        Result<String> result;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getGroupId());
+                statement.setString(3, event.getApiId());
+                statement.setString(4, event.getApiVersion());
+                statement.setString(5, event.getEndpoint());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("no record is deleted for group col filter " + event.getGroupId());
+                }
+                conn.commit();
+                result = Success.of(event.getEventId().getId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
 
     @Override
     public Result<String> createPosition(PositionCreatedEvent event) {
@@ -6006,6 +6817,409 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         }
         return result;
 
+    }
+
+    @Override
+    public Result<String> queryPositionRowFilter(int offset, int limit, String hostId, String PositionId, String apiId, String apiVersion, String endpoint) {
+        Result<String> result;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
+                "o.host_id, o.position_id, p.api_id, p.api_version, p.endpoint, p.col_name, p.operator, p.col_value\n" +
+                "FROM position_t o, position_row_filter_t p\n" +
+                "WHERE o.position_id = p.position_id\n" +
+                "AND o.host_id = ?\n");
+
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(hostId);
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "position_id", PositionId);
+        addCondition(whereClause, parameters, "api_id", apiId);
+        addCondition(whereClause, parameters, "api_version", apiVersion);
+        addCondition(whereClause, parameters, "endpoint", endpoint);
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append("ORDER BY o.position_id, p.api_id, p.api_version, p.endpoint\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        if(logger.isTraceEnabled()) logger.trace("queryPositionRowFilter sql: {}", sql);
+        int total = 0;
+        List<Map<String, Object>> positionRowFilters = new ArrayList<>();
+
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    // only get the total once as it is the same for all rows.
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("positionId", resultSet.getString("position_id"));
+                    map.put("apiId", resultSet.getString("api_id"));
+                    map.put("apiVersion", resultSet.getString("api_version"));
+                    map.put("endpoint", resultSet.getString("endpoint"));
+                    map.put("colName", resultSet.getString("col_name"));
+                    map.put("operator", resultSet.getString("operator"));
+                    map.put("colValue", resultSet.getString("col_value"));
+                    positionRowFilters.add(map);
+                }
+            }
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("positionRowFilters", positionRowFilters);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> createPositionRowFilter(PositionRowFilterCreatedEvent event) {
+        final String insertGroup = "INSERT INTO position_row_filter_t (host_id, position_id, api_id, api_version, endpoint, col_name, operator, col_value, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        Result<String> result = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            // no duplicate record, insert the user into database and write a success notification.
+            try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getPositionId());
+                statement.setString(3, event.getApiId());
+                statement.setString(4, event.getApiVersion());
+                statement.setString(5, event.getEndpoint());
+                statement.setString(6, event.getColName());
+                statement.setString(7, event.getOperator());
+                statement.setString(8, event.getColValue());
+                statement.setString(9, event.getEventId().getId());
+                statement.setTimestamp(10, new Timestamp(event.getEventId().getTimestamp()));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert position row filter " + event.getPositionId());
+                }
+                conn.commit();
+                result = Success.of(event.getPositionId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> updatePositionRowFilter(PositionRowFilterUpdatedEvent event) {
+        final String updateGroup = "UPDATE position_row_filter_t SET operator = ?, col_value = ?, update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? AND position_id = ? AND api_id = ? AND api_version = ? AND endpoint = ? AND col_name = ?";
+
+        Result<String> result = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
+                statement.setString(1, event.getOperator());
+                statement.setString(2, event.getColValue());
+                statement.setString(3, event.getEventId().getId());
+                statement.setTimestamp(4, new Timestamp(event.getEventId().getTimestamp()));
+                statement.setString(5, event.getHostId());
+                statement.setString(6, event.getPositionId());
+                statement.setString(7, event.getApiId());
+                statement.setString(8, event.getApiVersion());
+                statement.setString(9, event.getEndpoint());
+                statement.setString(10, event.getColName());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("no record is updated for position row filter " + event.getPositionId());
+                }
+                conn.commit();
+                result = Success.of(event.getPositionId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deletePositionRowFilter(PositionRowFilterDeletedEvent event) {
+        final String deleteGroup = "DELETE from position_row_filter_t WHERE host_id = ? AND position_id = ? AND api_id = ? AND api_version = ? AND endpoint = ? AND col_name = ?";
+        Result<String> result;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getPositionId());
+                statement.setString(3, event.getApiId());
+                statement.setString(4, event.getApiVersion());
+                statement.setString(5, event.getEndpoint());
+                statement.setString(6, event.getColName());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("no record is deleted for position row filter " + event.getPositionId());
+                }
+                conn.commit();
+                result = Success.of(event.getEventId().getId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> queryPositionColFilter(int offset, int limit, String hostId, String PositionId, String apiId, String apiVersion, String endpoint) {
+        Result<String> result;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
+                "o.host_id, o.position_id, p.api_id, p.api_version, p.endpoint, p.columns\n" +
+                "FROM position_t o, position_col_filter_t p\n" +
+                "WHERE o.position_id = p.position_id\n" +
+                "AND o.host_id = ?\n");
+
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(hostId);
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "position_id", PositionId);
+        addCondition(whereClause, parameters, "api_id", apiId);
+        addCondition(whereClause, parameters, "api_version", apiVersion);
+        addCondition(whereClause, parameters, "endpoint", endpoint);
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append("ORDER BY o.position_id, p.api_id, p.api_version, p.endpoint\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        if(logger.isTraceEnabled()) logger.trace("queryPositionColFilter sql: {}", sql);
+        int total = 0;
+        List<Map<String, Object>> positionColFilters = new ArrayList<>();
+
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    // only get the total once as it is the same for all rows.
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("positionId", resultSet.getString("position_id"));
+                    map.put("apiId", resultSet.getString("api_id"));
+                    map.put("apiVersion", resultSet.getString("api_version"));
+                    map.put("endpoint", resultSet.getString("endpoint"));
+                    map.put("columns", resultSet.getString("columns"));
+                    positionColFilters.add(map);
+                }
+            }
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("positionColFilters", positionColFilters);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> createPositionColFilter(PositionColFilterCreatedEvent event) {
+        final String insertGroup = "INSERT INTO position_col_filter_t (host_id, position_id, api_id, api_version, endpoint, columns, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+
+        Result<String> result = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            // no duplicate record, insert the user into database and write a success notification.
+            try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getPositionId());
+                statement.setString(3, event.getApiId());
+                statement.setString(4, event.getApiVersion());
+                statement.setString(5, event.getEndpoint());
+                statement.setString(6, event.getColumns());
+                statement.setString(7, event.getEventId().getId());
+                statement.setTimestamp(8, new Timestamp(event.getEventId().getTimestamp()));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert position col filter " + event.getPositionId());
+                }
+                conn.commit();
+                result = Success.of(event.getPositionId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> updatePositionColFilter(PositionColFilterUpdatedEvent event) {
+        final String updateGroup = "UPDATE position_col_filter_t SET columns = ?, update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? AND position_id = ? AND api_id = ? AND api_version = ? AND endpoint = ?";
+
+        Result<String> result = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
+                statement.setString(1, event.getColumns());
+                statement.setString(2, event.getEventId().getId());
+                statement.setTimestamp(3, new Timestamp(event.getEventId().getTimestamp()));
+                statement.setString(4, event.getHostId());
+                statement.setString(5, event.getPositionId());
+                statement.setString(6, event.getApiId());
+                statement.setString(7, event.getApiVersion());
+                statement.setString(8, event.getEndpoint());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("no record is updated for position col filter " + event.getPositionId());
+                }
+                conn.commit();
+                result = Success.of(event.getPositionId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deletePositionColFilter(PositionColFilterDeletedEvent event) {
+        final String deleteGroup = "DELETE from position_col_filter_t WHERE host_id = ? AND position_id = ? AND api_id = ? AND api_version = ? AND endpoint = ?";
+        Result<String> result;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getPositionId());
+                statement.setString(3, event.getApiId());
+                statement.setString(4, event.getApiVersion());
+                statement.setString(5, event.getEndpoint());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("no record is deleted for position col filter " + event.getPositionId());
+                }
+                conn.commit();
+                result = Success.of(event.getEventId().getId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
     }
 
     @Override
@@ -6696,6 +7910,426 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         }
         return result;
 
+    }
+
+    @Override
+    public Result<String> queryAttributeRowFilter(int offset, int limit, String hostId, String AttributeId, String attributeType, String attributeValue, String apiId, String apiVersion, String endpoint) {
+        Result<String> result;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
+                "a.host_id, a.attribute_id, at.attribute_type, p.attribute_value, " +
+                "p.api_id, p.api_version, p.endpoint, p.col_name, p.operator, p.col_value\n" +
+                "FROM attribute_t a, attribute_row_filter_t p, attribute_user_t at\n" +
+                "WHERE a.attribute_id = p.attribute_id\n" +
+                "AND a.host_id = ?\n");
+
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(hostId);
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "attribute_id", AttributeId);
+        addCondition(whereClause, parameters, "attribute_type", attributeType);
+        addCondition(whereClause, parameters, "attribute_value", attributeValue);
+        addCondition(whereClause, parameters, "api_id", apiId);
+        addCondition(whereClause, parameters, "api_version", apiVersion);
+        addCondition(whereClause, parameters, "endpoint", endpoint);
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append("ORDER BY a.attribute_id, p.api_id, p.api_version, p.endpoint\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        if(logger.isTraceEnabled()) logger.trace("queryAttributeRowFilter sql: {}", sql);
+        int total = 0;
+        List<Map<String, Object>> attributeRowFilters = new ArrayList<>();
+
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    // only get the total once as it is the same for all rows.
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("attributeId", resultSet.getString("attribute_id"));
+                    map.put("attributeType", resultSet.getString("attribute_type"));
+                    map.put("attributeValue", resultSet.getString("attribute_value"));
+                    map.put("apiId", resultSet.getString("api_id"));
+                    map.put("apiVersion", resultSet.getString("api_version"));
+                    map.put("endpoint", resultSet.getString("endpoint"));
+                    map.put("colName", resultSet.getString("col_name"));
+                    map.put("operator", resultSet.getString("operator"));
+                    map.put("colValue", resultSet.getString("col_value"));
+                    attributeRowFilters.add(map);
+                }
+            }
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("attributeRowFilters", attributeRowFilters);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+
+        return result;
+    }
+
+    @Override
+    public Result<String> createAttributeRowFilter(AttributeRowFilterCreatedEvent event) {
+        final String insertGroup = "INSERT INTO attribute_row_filter_t (host_id, attribute_id, attribute_value, api_id, api_version, endpoint, col_name, operator, col_value, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        Result<String> result = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            // no duplicate record, insert the user into database and write a success notification.
+            try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getAttributeId());
+                statement.setString(3, event.getAttributeValue());
+                statement.setString(4, event.getApiId());
+                statement.setString(5, event.getApiVersion());
+                statement.setString(6, event.getEndpoint());
+                statement.setString(7, event.getColName());
+                statement.setString(8, event.getOperator());
+                statement.setString(9, event.getColValue());
+                statement.setString(10, event.getEventId().getId());
+                statement.setTimestamp(11, new Timestamp(event.getEventId().getTimestamp()));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert attribute row filter " + event.getAttributeId());
+                }
+                conn.commit();
+                result = Success.of(event.getAttributeId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> updateAttributeRowFilter(AttributeRowFilterUpdatedEvent event) {
+        final String updateGroup = "UPDATE attribute_row_filter_t SET attribute_value = ?, api_id = ?, api_version = ?, endpoint = ?, col_name = ?, operator = ?, col_value = ?, update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? AND attribute_id = ?";
+
+        Result<String> result = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
+                statement.setString(1, event.getAttributeValue());
+                statement.setString(2, event.getApiId());
+                statement.setString(3, event.getApiVersion());
+                statement.setString(4, event.getEndpoint());
+                statement.setString(5, event.getColName());
+                statement.setString(6, event.getOperator());
+                statement.setString(7, event.getColValue());
+                statement.setString(8, event.getEventId().getId());
+                statement.setTimestamp(9, new Timestamp(event.getEventId().getTimestamp()));
+
+                statement.setString(10, event.getHostId());
+                statement.setString(11, event.getAttributeId());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("no record is updated for attribute row filter " + event.getAttributeId());
+                }
+                conn.commit();
+                result = Success.of(event.getAttributeId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deleteAttributeRowFilter(AttributeRowFilterDeletedEvent event) {
+        final String deleteGroup = "DELETE from attribute_row_filter_t WHERE host_id = ? AND attribute_id = ? " +
+                "AND api_id = ? AND api_version = ? AND endpoint = ?";
+        Result<String> result;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getAttributeId());
+                statement.setString(3, event.getApiId());
+                statement.setString(4, event.getApiVersion());
+                statement.setString(5, event.getEndpoint());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("no record is deleted for attribute row filter " + event.getAttributeId());
+                }
+                conn.commit();
+                result = Success.of(event.getEventId().getId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> queryAttributeColFilter(int offset, int limit, String hostId, String AttributeId, String attributeType, String attributeValue, String apiId, String apiVersion, String endpoint) {
+        Result<String> result;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
+                "a.host_id, a.attribute_id, a.attribute_type, p.attribute_value, " +
+                "p.api_id, p.api_version, p.endpoint, p.columns\n" +
+                "FROM attribute_t a, attribute_col_filter_t p\n" +
+                "WHERE a.attribute_id = p.attribute_id\n" +
+                "AND a.host_id = ?\n");
+
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(hostId);
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "attribute_id", AttributeId);
+        addCondition(whereClause, parameters, "attribute_type", attributeType);
+        addCondition(whereClause, parameters, "attribute_value", attributeValue);
+        addCondition(whereClause, parameters, "api_id", apiId);
+        addCondition(whereClause, parameters, "api_version", apiVersion);
+        addCondition(whereClause, parameters, "endpoint", endpoint);
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append("ORDER BY a.attribute_id, p.api_id, p.api_version, p.endpoint\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        if(logger.isTraceEnabled()) logger.trace("queryAttributeColFilter sql: {}", sql);
+        int total = 0;
+        List<Map<String, Object>> attributeColFilters = new ArrayList<>();
+
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    // only get the total once as it is the same for all rows.
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("attributeId", resultSet.getString("attribute_id"));
+                    map.put("attributeType", resultSet.getString("attribute_type"));
+                    map.put("attributeValue", resultSet.getString("attribute_value"));
+                    map.put("apiId", resultSet.getString("api_id"));
+                    map.put("apiVersion", resultSet.getString("api_version"));
+                    map.put("endpoint", resultSet.getString("endpoint"));
+                    map.put("columns", resultSet.getString("columns"));
+                    attributeColFilters.add(map);
+                }
+            }
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("attributeColFilters", attributeColFilters);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+
+        return result;
+    }
+
+    @Override
+    public Result<String> createAttributeColFilter(AttributeColFilterCreatedEvent event) {
+        final String insertGroup = "INSERT INTO attribute_col_filter_t (host_id, attribute_id, attribute_value, api_id, api_version, endpoint, columns, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        Result<String> result = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            // no duplicate record, insert the user into database and write a success notification.
+            try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getAttributeId());
+                statement.setString(3, event.getAttributeValue());
+                statement.setString(4, event.getApiId());
+                statement.setString(5, event.getApiVersion());
+                statement.setString(6, event.getEndpoint());
+                statement.setString(7, event.getColumns());
+                statement.setString(8, event.getEventId().getId());
+                statement.setTimestamp(9, new Timestamp(event.getEventId().getTimestamp()));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert attribute col filter " + event.getAttributeId());
+                }
+                conn.commit();
+                result = Success.of(event.getAttributeId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> updateAttributeColFilter(AttributeColFilterUpdatedEvent event) {
+        final String updateGroup = "UPDATE attribute_col_filter_t SET attribute_value = ?, api_id = ?, api_version = ?, endpoint = ?, columns = ?, update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? AND attribute_id = ?";
+
+        Result<String> result = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
+                statement.setString(1, event.getAttributeValue());
+                statement.setString(2, event.getApiId());
+                statement.setString(3, event.getApiVersion());
+                statement.setString(4, event.getEndpoint());
+                statement.setString(5, event.getColumns());
+                statement.setString(6, event.getEventId().getId());
+                statement.setTimestamp(7, new Timestamp(event.getEventId().getTimestamp()));
+
+                statement.setString(8, event.getHostId());
+                statement.setString(9, event.getAttributeId());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("no record is updated for attribute col filter " + event.getAttributeId());
+                }
+                conn.commit();
+                result = Success.of(event.getAttributeId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deleteAttributeColFilter(AttributeColFilterDeletedEvent event) {
+        final String deleteGroup = "DELETE from attribute_col_filter_t WHERE host_id = ? AND attribute_id = ? " +
+                "AND api_id = ? AND api_version = ? AND endpoint = ?";
+        Result<String> result;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getAttributeId());
+                statement.setString(3, event.getApiId());
+                statement.setString(4, event.getApiVersion());
+                statement.setString(5, event.getEndpoint());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("no record is deleted for attribute col filter " + event.getAttributeId());
+                }
+                conn.commit();
+                result = Success.of(event.getEventId().getId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
     }
 
 }

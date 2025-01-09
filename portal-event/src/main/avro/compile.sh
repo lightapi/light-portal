@@ -117,6 +117,13 @@ java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema RolePerm
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema RoleUserCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema RoleUserDeletedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema RoleUserUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema RoleRowFilterCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema RoleRowFilterUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema RoleRowFilterDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema RoleColFilterCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema RoleColFilterUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema RoleColFilterDeletedEvent.avsc .
+
 
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema GroupCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema GroupUpdatedEvent.avsc .
@@ -126,6 +133,13 @@ java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema GroupPer
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema GroupUserCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema GroupUserDeletedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema GroupUserUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema GroupRowFilterCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema GroupRowFilterUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema GroupRowFilterDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema GroupColFilterCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema GroupColFilterUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema GroupColFilterDeletedEvent.avsc .
+
 
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema AttributeCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema AttributeUpdatedEvent.avsc .
@@ -136,7 +150,12 @@ java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema Attribut
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema AttributeUserCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema AttributeUserDeletedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema AttributeUserUpdatedEvent.avsc .
-
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema AttributeRowFilterCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema AttributeRowFilterUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema AttributeRowFilterDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema AttributeColFilterCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema AttributeColFilterUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema AttributeColFilterDeletedEvent.avsc .
 
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema PositionCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema PositionUpdatedEvent.avsc .
@@ -146,7 +165,12 @@ java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema Position
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema PositionUserCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema PositionUserDeletedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema PositionUserUpdatedEvent.avsc .
-
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema PositionRowFilterCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema PositionRowFilterUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema PositionRowFilterDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema PositionColFilterCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema PositionColFilterUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.11.0.jar compile -string schema PositionColFilterDeletedEvent.avsc .
 
 # Update events to implement from KycEvent interface in order to group these events in streams processing.
 
@@ -264,6 +288,12 @@ mv net/lightapi/portal/market/RolePermissionDeletedEvent.java ../java/net/lighta
 mv net/lightapi/portal/market/RoleUserCreatedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/RoleUserDeletedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/RoleUserUpdatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/RoleRowFilterCreatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/RoleRowFilterUpdatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/RoleRowFilterDeletedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/RoleColFilterCreatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/RoleColFilterUpdatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/RoleColFilterDeletedEvent.java ../java/net/lightapi/portal/market
 
 
 mv net/lightapi/portal/market/GroupCreatedEvent.java ../java/net/lightapi/portal/market
@@ -274,6 +304,12 @@ mv net/lightapi/portal/market/GroupPermissionDeletedEvent.java ../java/net/light
 mv net/lightapi/portal/market/GroupUserCreatedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/GroupUserDeletedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/GroupUserUpdatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/GroupRowFilterCreatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/GroupRowFilterUpdatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/GroupRowFilterDeletedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/GroupColFilterCreatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/GroupColFilterUpdatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/GroupColFilterDeletedEvent.java ../java/net/lightapi/portal/market
 
 
 mv net/lightapi/portal/market/AttributeCreatedEvent.java ../java/net/lightapi/portal/market
@@ -285,6 +321,12 @@ mv net/lightapi/portal/market/AttributePermissionUpdatedEvent.java ../java/net/l
 mv net/lightapi/portal/market/AttributeUserCreatedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/AttributeUserDeletedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/AttributeUserUpdatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/AttributeRowFilterCreatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/AttributeRowFilterUpdatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/AttributeRowFilterDeletedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/AttributeColFilterCreatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/AttributeColFilterUpdatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/AttributeColFilterDeletedEvent.java ../java/net/lightapi/portal/market
 
 
 mv net/lightapi/portal/market/PositionCreatedEvent.java ../java/net/lightapi/portal/market
@@ -295,7 +337,12 @@ mv net/lightapi/portal/market/PositionPermissionDeletedEvent.java ../java/net/li
 mv net/lightapi/portal/market/PositionUserCreatedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/PositionUserDeletedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/PositionUserUpdatedEvent.java ../java/net/lightapi/portal/market
-
+mv net/lightapi/portal/market/PositionRowFilterCreatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/PositionRowFilterUpdatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/PositionRowFilterDeletedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/PositionColFilterCreatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/PositionColFilterUpdatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/market/PositionColFilterDeletedEvent.java ../java/net/lightapi/portal/market
 
 mv net/lightapi/portal/controller/ControllerRegisteredEvent.java ../java/net/lightapi/portal/controller
 mv net/lightapi/portal/controller/ControllerDeregisteredEvent.java ../java/net/lightapi/portal/controller

@@ -122,6 +122,14 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> createRoleUser(RoleUserCreatedEvent event);
     Result<String> updateRoleUser(RoleUserUpdatedEvent event);
     Result<String> deleteRoleUser(RoleUserDeletedEvent event);
+    Result<String> queryRoleRowFilter(int offset, int limit, String hostId, String roleId, String apiId, String apiVersion, String endpoint);
+    Result<String> createRoleRowFilter(RoleRowFilterCreatedEvent event);
+    Result<String> updateRoleRowFilter(RoleRowFilterUpdatedEvent event);
+    Result<String> deleteRoleRowFilter(RoleRowFilterDeletedEvent event);
+    Result<String> queryRoleColFilter(int offset, int limit, String hostId, String roleId, String apiId, String apiVersion, String endpoint);
+    Result<String> createRoleColFilter(RoleColFilterCreatedEvent event);
+    Result<String> updateRoleColFilter(RoleColFilterUpdatedEvent event);
+    Result<String> deleteRoleColFilter(RoleColFilterDeletedEvent event);
 
     Result<String> createGroup(GroupCreatedEvent event);
     Result<String> updateGroup(GroupUpdatedEvent event);
@@ -135,6 +143,14 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> createGroupUser(GroupUserCreatedEvent event);
     Result<String> updateGroupUser(GroupUserUpdatedEvent event);
     Result<String> deleteGroupUser(GroupUserDeletedEvent event);
+    Result<String> queryGroupRowFilter(int offset, int limit, String hostId, String GroupId, String apiId, String apiVersion, String endpoint);
+    Result<String> createGroupRowFilter(GroupRowFilterCreatedEvent event);
+    Result<String> updateGroupRowFilter(GroupRowFilterUpdatedEvent event);
+    Result<String> deleteGroupRowFilter(GroupRowFilterDeletedEvent event);
+    Result<String> queryGroupColFilter(int offset, int limit, String hostId, String GroupId, String apiId, String apiVersion, String endpoint);
+    Result<String> createGroupColFilter(GroupColFilterCreatedEvent event);
+    Result<String> updateGroupColFilter(GroupColFilterUpdatedEvent event);
+    Result<String> deleteGroupColFilter(GroupColFilterDeletedEvent event);
 
 
     Result<String> createPosition(PositionCreatedEvent event);
@@ -149,6 +165,14 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> createPositionUser(PositionUserCreatedEvent event);
     Result<String> updatePositionUser(PositionUserUpdatedEvent event);
     Result<String> deletePositionUser(PositionUserDeletedEvent event);
+    Result<String> queryPositionRowFilter(int offset, int limit, String hostId, String PositionId, String apiId, String apiVersion, String endpoint);
+    Result<String> createPositionRowFilter(PositionRowFilterCreatedEvent event);
+    Result<String> updatePositionRowFilter(PositionRowFilterUpdatedEvent event);
+    Result<String> deletePositionRowFilter(PositionRowFilterDeletedEvent event);
+    Result<String> queryPositionColFilter(int offset, int limit, String hostId, String PositionId, String apiId, String apiVersion, String endpoint);
+    Result<String> createPositionColFilter(PositionColFilterCreatedEvent event);
+    Result<String> updatePositionColFilter(PositionColFilterUpdatedEvent event);
+    Result<String> deletePositionColFilter(PositionColFilterDeletedEvent event);
 
     Result<String> createAttribute(AttributeCreatedEvent event);
     Result<String> updateAttribute(AttributeUpdatedEvent event);
@@ -163,5 +187,13 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> createAttributeUser(AttributeUserCreatedEvent event);
     Result<String> updateAttributeUser(AttributeUserUpdatedEvent event);
     Result<String> deleteAttributeUser(AttributeUserDeletedEvent event);
+    Result<String> queryAttributeRowFilter(int offset, int limit, String hostId, String AttributeId, String attributeType, String attributeValue, String apiId, String apiVersion, String endpoint);
+    Result<String> createAttributeRowFilter(AttributeRowFilterCreatedEvent event);
+    Result<String> updateAttributeRowFilter(AttributeRowFilterUpdatedEvent event);
+    Result<String> deleteAttributeRowFilter(AttributeRowFilterDeletedEvent event);
+    Result<String> queryAttributeColFilter(int offset, int limit, String hostId, String AttributeId, String attributeType, String attributeValue, String apiId, String apiVersion, String endpoint);
+    Result<String> createAttributeColFilter(AttributeColFilterCreatedEvent event);
+    Result<String> updateAttributeColFilter(AttributeColFilterUpdatedEvent event);
+    Result<String> deleteAttributeColFilter(AttributeColFilterDeletedEvent event);
 
 }
