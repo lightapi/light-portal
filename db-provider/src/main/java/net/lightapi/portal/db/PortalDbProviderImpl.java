@@ -2809,6 +2809,265 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         return result;
     }
 
+    @Override
+    public Result<List<String>> queryServiceFilter(String hostId, String apiId, String apiVersion) {
+        Result<List<String>> result = null;
+        String sql = "SELECT\n" +
+                "    JSON_BUILD_OBJECT(\n" +
+                "        'role_row', JSON_AGG(\n" +
+                "            JSON_BUILD_OBJECT(\n" +
+                "                'endpoint', endpoint,\n" +
+                "                'roleId', role_id,\n" +
+                "                'colName', col_name,\n" +
+                "                'operator', operator,\n" +
+                "                'colValue', col_value\n" +
+                "            )\n" +
+                "        )\n" +
+                "    ) AS result\n" +
+                "FROM\n" +
+                "    role_row_filter_t\n" +
+                "WHERE\n" +
+                "    host_id = ?\n" +
+                "    AND api_id = ?\n" +
+                "    AND api_version = ?\n" +
+                "GROUP BY ()\n" +
+                "HAVING COUNT(*) > 0 \n" +
+                "UNION ALL\n" +
+                "SELECT\n" +
+                "    JSON_BUILD_OBJECT(\n" +
+                "        'role_col', JSON_AGG(\n" +
+                "            JSON_BUILD_OBJECT(\n" +
+                "                'endpoint', endpoint,\n" +
+                "                'roleId', role_id,\n" +
+                "                'columns', columns\n" +
+                "            )\n" +
+                "        )\n" +
+                "    ) AS result\n" +
+                "FROM\n" +
+                "    role_col_filter_t\n" +
+                "WHERE\n" +
+                "    host_id = ?\n" +
+                "    AND api_id = ?\n" +
+                "    AND api_version = ?\n" +
+                "GROUP BY ()\n" +
+                "HAVING COUNT(*) > 0\n" +
+                "UNION ALL\n" +
+                "SELECT\n" +
+                "    JSON_BUILD_OBJECT(\n" +
+                "        'group_row', JSON_AGG(\n" +
+                "            JSON_BUILD_OBJECT(\n" +
+                "                'endpoint', endpoint,\n" +
+                "                'groupId', group_id,\n" +
+                "                'colName', col_name,\n" +
+                "                'operator', operator,\n" +
+                "                'colValue', col_value\n" +
+                "            )\n" +
+                "        )\n" +
+                "    ) AS result\n" +
+                "FROM\n" +
+                "    group_row_filter_t\n" +
+                "WHERE\n" +
+                "    host_id = ?\n" +
+                "    AND api_id = ?\n" +
+                "    AND api_version = ?\n" +
+                "GROUP BY ()\n" +
+                "HAVING COUNT(*) > 0 \n" +
+                "UNION ALL\n" +
+                "SELECT\n" +
+                "    JSON_BUILD_OBJECT(\n" +
+                "        'group_col', JSON_AGG(\n" +
+                "            JSON_BUILD_OBJECT(\n" +
+                "                'endpoint', endpoint,\n" +
+                "                'groupId', group_id,\n" +
+                "                'columns', columns\n" +
+                "            )\n" +
+                "        )\n" +
+                "    ) AS result\n" +
+                "FROM\n" +
+                "    group_col_filter_t\n" +
+                "WHERE\n" +
+                "    host_id = ?\n" +
+                "    AND api_id = ?\n" +
+                "    AND api_version = ?\n" +
+                "GROUP BY ()\n" +
+                "HAVING COUNT(*) > 0\n" +
+                "UNION ALL\n" +
+                "SELECT\n" +
+                "    JSON_BUILD_OBJECT(\n" +
+                "        'position_row', JSON_AGG(\n" +
+                "            JSON_BUILD_OBJECT(\n" +
+                "                'endpoint', endpoint,\n" +
+                "                'positionId', position_id,\n" +
+                "                'colName', col_name,\n" +
+                "                'operator', operator,\n" +
+                "                'colValue', col_value\n" +
+                "            )\n" +
+                "        )\n" +
+                "    ) AS result\n" +
+                "FROM\n" +
+                "    position_row_filter_t\n" +
+                "WHERE\n" +
+                "    host_id = ?\n" +
+                "    AND api_id = ?\n" +
+                "    AND api_version = ?\n" +
+                "GROUP BY ()\n" +
+                "HAVING COUNT(*) > 0 \n" +
+                "UNION ALL\n" +
+                "SELECT\n" +
+                "    JSON_BUILD_OBJECT(\n" +
+                "        'position_col', JSON_AGG(\n" +
+                "            JSON_BUILD_OBJECT(\n" +
+                "                'endpoint', endpoint,\n" +
+                "                'positionId', position_id,\n" +
+                "                'columns', columns\n" +
+                "            )\n" +
+                "        )\n" +
+                "    ) AS result\n" +
+                "FROM\n" +
+                "    position_col_filter_t\n" +
+                "WHERE\n" +
+                "    host_id = ?\n" +
+                "    AND api_id = ?\n" +
+                "    AND api_version = ?\n" +
+                "GROUP BY ()\n" +
+                "HAVING COUNT(*) > 0\n" +
+                "UNION ALL\n" +
+                "SELECT\n" +
+                "    JSON_BUILD_OBJECT(\n" +
+                "        'attribute_row', JSON_AGG(\n" +
+                "            JSON_BUILD_OBJECT(\n" +
+                "                'endpoint', endpoint,\n" +
+                "                'attributeId', attribute_id,\n" +
+                "                'attributeValue', attribute_value,\n" +
+                "                'colName', col_name,\n" +
+                "                'operator', operator,\n" +
+                "                'colValue', col_value\n" +
+                "            )\n" +
+                "        )\n" +
+                "    ) AS result\n" +
+                "FROM\n" +
+                "    attribute_row_filter_t\n" +
+                "WHERE\n" +
+                "    host_id = ?\n" +
+                "    AND api_id = ?\n" +
+                "    AND api_version = ?\n" +
+                "GROUP BY ()\n" +
+                "HAVING COUNT(*) > 0 \n" +
+                "UNION ALL\n" +
+                "SELECT\n" +
+                "    JSON_BUILD_OBJECT(\n" +
+                "        'attribute_col', JSON_AGG(\n" +
+                "            JSON_BUILD_OBJECT(\n" +
+                "                'endpoint', endpoint,\n" +
+                "                'attributeId', attribute_id,\n" +
+                "                'attributeValue', attribute_value,\n" +
+                "                'columns', columns\n" +
+                "            )\n" +
+                "        )\n" +
+                "    ) AS result\n" +
+                "FROM\n" +
+                "    attribute_col_filter_t\n" +
+                "WHERE\n" +
+                "    host_id = ?\n" +
+                "    AND api_id = ?\n" +
+                "    AND api_version = ?\n" +
+                "GROUP BY ()\n" +
+                "HAVING COUNT(*) > 0\n" +
+                "UNION ALL\n" +
+                "SELECT\n" +
+                "    JSON_BUILD_OBJECT(\n" +
+                "        'user_row', JSON_AGG(\n" +
+                "            JSON_BUILD_OBJECT(\n" +
+                "                'endpoint', endpoint,\n" +
+                "                'userId', user_id,\n" +
+                "                'startTs', start_ts,\n" +
+                "                'endTs', end_ts,\n" +
+                "                'colName', col_name,\n" +
+                "                'operator', operator,\n" +
+                "                'colValue', col_value\n" +
+                "            )\n" +
+                "        )\n" +
+                "    ) AS result\n" +
+                "FROM\n" +
+                "    user_row_filter_t\n" +
+                "WHERE\n" +
+                "    host_id = ?\n" +
+                "    AND api_id = ?\n" +
+                "    AND api_version = ?\n" +
+                "GROUP BY ()\n" +
+                "HAVING COUNT(*) > 0 \n" +
+                "UNION ALL\n" +
+                "SELECT\n" +
+                "    JSON_BUILD_OBJECT(\n" +
+                "        'user_col', JSON_AGG(\n" +
+                "            JSON_BUILD_OBJECT(\n" +
+                "                'endpoint', endpoint,\n" +
+                "                'userId', user_id,\n" +
+                "                'startTs', start_ts,\n" +
+                "                'endTs', end_ts,\n" +
+                "                'columns', columns\n" +
+                "            )\n" +
+                "        )\n" +
+                "    ) AS result\n" +
+                "FROM\n" +
+                "    user_col_filter_t\n" +
+                "WHERE\n" +
+                "    host_id = ?\n" +
+                "    AND api_id = ?\n" +
+                "    AND api_version = ?\n" +
+                "GROUP BY ()\n" +
+                "HAVING COUNT(*) > 0\n";
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, hostId);
+            preparedStatement.setString(2, apiId);
+            preparedStatement.setString(3, apiVersion);
+            preparedStatement.setString(4, hostId);
+            preparedStatement.setString(5, apiId);
+            preparedStatement.setString(6, apiVersion);
+            preparedStatement.setString(7, hostId);
+            preparedStatement.setString(8, apiId);
+            preparedStatement.setString(9, apiVersion);
+            preparedStatement.setString(10, hostId);
+            preparedStatement.setString(11, apiId);
+            preparedStatement.setString(12, apiVersion);
+            preparedStatement.setString(13, hostId);
+            preparedStatement.setString(14, apiId);
+            preparedStatement.setString(15, apiVersion);
+            preparedStatement.setString(16, hostId);
+            preparedStatement.setString(17, apiId);
+            preparedStatement.setString(18, apiVersion);
+            preparedStatement.setString(19, hostId);
+            preparedStatement.setString(20, apiId);
+            preparedStatement.setString(21, apiVersion);
+            preparedStatement.setString(22, hostId);
+            preparedStatement.setString(23, apiId);
+            preparedStatement.setString(24, apiVersion);
+            preparedStatement.setString(25, hostId);
+            preparedStatement.setString(26, apiId);
+            preparedStatement.setString(27, apiVersion);
+            preparedStatement.setString(28, hostId);
+            preparedStatement.setString(29, apiId);
+            preparedStatement.setString(30, apiVersion);
+            List<String> list = new ArrayList<>();
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    String json = resultSet.getString("result");
+                    list.add(json);
+                }
+            }
+            result = Success.of(list);
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
     public Result<String> createMarketCode(MarketCodeCreatedEvent event) {
         // cache key is based on the hostId and authCode.
         String hostId = event.getHostId();

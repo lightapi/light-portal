@@ -19,8 +19,7 @@ import scala.Int;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 @Disabled
 public class PortalDbProviderImplTest {
@@ -166,6 +165,19 @@ public class PortalDbProviderImplTest {
             System.out.println(result.getResult());
             List<Map<String, Object>> permissions = JsonMapper.string2List(result.getResult());
             assertTrue(permissions.size() > 0);
+        }
+    }
+
+    @Test
+    public void testQueryServiceFilter() {
+        Result<List<String>> result = dbProvider.queryServiceFilter("N2CMw0HGQXeLvC1wBfln2A", "0100", "1.0.0");
+        if(result.isFailure()) {
+            System.out.println(result.getError());
+            fail();
+        } else {
+            System.out.println(result.getResult());
+            List<String> filters = result.getResult();
+            assertFalse(filters.isEmpty());
         }
     }
 
