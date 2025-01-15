@@ -5,7 +5,6 @@
  */
 package net.lightapi.portal.covid;
 
-import org.apache.avro.generic.GenericArray;
 import org.apache.avro.specific.SpecificData;
 import org.apache.avro.util.Utf8;
 import org.apache.avro.message.BinaryMessageEncoder;
@@ -23,10 +22,10 @@ public class CovidEntityUpdatedEvent extends org.apache.avro.specific.SpecificRe
   private static final SpecificData MODEL$ = new SpecificData();
 
   private static final BinaryMessageEncoder<CovidEntityUpdatedEvent> ENCODER =
-      new BinaryMessageEncoder<CovidEntityUpdatedEvent>(MODEL$, SCHEMA$);
+      new BinaryMessageEncoder<>(MODEL$, SCHEMA$);
 
   private static final BinaryMessageDecoder<CovidEntityUpdatedEvent> DECODER =
-      new BinaryMessageDecoder<CovidEntityUpdatedEvent>(MODEL$, SCHEMA$);
+      new BinaryMessageDecoder<>(MODEL$, SCHEMA$);
 
   /**
    * Return the BinaryMessageEncoder instance used by this class.
@@ -50,7 +49,7 @@ public class CovidEntityUpdatedEvent extends org.apache.avro.specific.SpecificRe
    * @return a BinaryMessageDecoder instance for this class backed by the given SchemaStore
    */
   public static BinaryMessageDecoder<CovidEntityUpdatedEvent> createDecoder(SchemaStore resolver) {
-    return new BinaryMessageDecoder<CovidEntityUpdatedEvent>(MODEL$, SCHEMA$, resolver);
+    return new BinaryMessageDecoder<>(MODEL$, SCHEMA$, resolver);
   }
 
   /**
@@ -122,9 +121,14 @@ public class CovidEntityUpdatedEvent extends org.apache.avro.specific.SpecificRe
     this.introduction = introduction;
   }
 
+  @Override
   public org.apache.avro.specific.SpecificData getSpecificData() { return MODEL$; }
+
+  @Override
   public org.apache.avro.Schema getSchema() { return SCHEMA$; }
+
   // Used by DatumWriter.  Applications should not call.
+  @Override
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return EventId;
@@ -141,6 +145,7 @@ public class CovidEntityUpdatedEvent extends org.apache.avro.specific.SpecificRe
   }
 
   // Used by DatumReader.  Applications should not call.
+  @Override
   @SuppressWarnings(value="unchecked")
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
@@ -1051,3 +1056,13 @@ public class CovidEntityUpdatedEvent extends org.apache.avro.specific.SpecificRe
     }
   }
 }
+
+
+
+
+
+
+
+
+
+

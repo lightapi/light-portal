@@ -5,7 +5,6 @@
  */
 package net.lightapi.portal.user;
 
-import org.apache.avro.generic.GenericArray;
 import org.apache.avro.specific.SpecificData;
 import org.apache.avro.util.Utf8;
 import org.apache.avro.message.BinaryMessageEncoder;
@@ -23,10 +22,10 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
   private static final SpecificData MODEL$ = new SpecificData();
 
   private static final BinaryMessageEncoder<UserUpdatedEvent> ENCODER =
-      new BinaryMessageEncoder<UserUpdatedEvent>(MODEL$, SCHEMA$);
+      new BinaryMessageEncoder<>(MODEL$, SCHEMA$);
 
   private static final BinaryMessageDecoder<UserUpdatedEvent> DECODER =
-      new BinaryMessageDecoder<UserUpdatedEvent>(MODEL$, SCHEMA$);
+      new BinaryMessageDecoder<>(MODEL$, SCHEMA$);
 
   /**
    * Return the BinaryMessageEncoder instance used by this class.
@@ -50,7 +49,7 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
    * @return a BinaryMessageDecoder instance for this class backed by the given SchemaStore
    */
   public static BinaryMessageDecoder<UserUpdatedEvent> createDecoder(SchemaStore resolver) {
-    return new BinaryMessageDecoder<UserUpdatedEvent>(MODEL$, SCHEMA$, resolver);
+    return new BinaryMessageDecoder<>(MODEL$, SCHEMA$, resolver);
   }
 
   /**
@@ -138,9 +137,14 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
     this.oldCity = oldCity;
   }
 
+  @Override
   public org.apache.avro.specific.SpecificData getSpecificData() { return MODEL$; }
+
+  @Override
   public org.apache.avro.Schema getSchema() { return SCHEMA$; }
+
   // Used by DatumWriter.  Applications should not call.
+  @Override
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return EventId;
@@ -161,6 +165,7 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
   }
 
   // Used by DatumReader.  Applications should not call.
+  @Override
   @SuppressWarnings(value="unchecked")
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
@@ -1529,3 +1534,13 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
     }
   }
 }
+
+
+
+
+
+
+
+
+
+

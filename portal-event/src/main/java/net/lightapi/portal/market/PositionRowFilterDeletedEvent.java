@@ -5,7 +5,6 @@
  */
 package net.lightapi.portal.market;
 
-import org.apache.avro.generic.GenericArray;
 import org.apache.avro.specific.SpecificData;
 import org.apache.avro.util.Utf8;
 import org.apache.avro.message.BinaryMessageEncoder;
@@ -23,10 +22,10 @@ public class PositionRowFilterDeletedEvent extends org.apache.avro.specific.Spec
   private static final SpecificData MODEL$ = new SpecificData();
 
   private static final BinaryMessageEncoder<PositionRowFilterDeletedEvent> ENCODER =
-      new BinaryMessageEncoder<PositionRowFilterDeletedEvent>(MODEL$, SCHEMA$);
+      new BinaryMessageEncoder<>(MODEL$, SCHEMA$);
 
   private static final BinaryMessageDecoder<PositionRowFilterDeletedEvent> DECODER =
-      new BinaryMessageDecoder<PositionRowFilterDeletedEvent>(MODEL$, SCHEMA$);
+      new BinaryMessageDecoder<>(MODEL$, SCHEMA$);
 
   /**
    * Return the BinaryMessageEncoder instance used by this class.
@@ -50,7 +49,7 @@ public class PositionRowFilterDeletedEvent extends org.apache.avro.specific.Spec
    * @return a BinaryMessageDecoder instance for this class backed by the given SchemaStore
    */
   public static BinaryMessageDecoder<PositionRowFilterDeletedEvent> createDecoder(SchemaStore resolver) {
-    return new BinaryMessageDecoder<PositionRowFilterDeletedEvent>(MODEL$, SCHEMA$, resolver);
+    return new BinaryMessageDecoder<>(MODEL$, SCHEMA$, resolver);
   }
 
   /**
@@ -114,9 +113,14 @@ public class PositionRowFilterDeletedEvent extends org.apache.avro.specific.Spec
     this.colName = colName;
   }
 
+  @Override
   public org.apache.avro.specific.SpecificData getSpecificData() { return MODEL$; }
+
+  @Override
   public org.apache.avro.Schema getSchema() { return SCHEMA$; }
+
   // Used by DatumWriter.  Applications should not call.
+  @Override
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return EventId;
@@ -131,6 +135,7 @@ public class PositionRowFilterDeletedEvent extends org.apache.avro.specific.Spec
   }
 
   // Used by DatumReader.  Applications should not call.
+  @Override
   @SuppressWarnings(value="unchecked")
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
@@ -879,3 +884,13 @@ public class PositionRowFilterDeletedEvent extends org.apache.avro.specific.Spec
     }
   }
 }
+
+
+
+
+
+
+
+
+
+

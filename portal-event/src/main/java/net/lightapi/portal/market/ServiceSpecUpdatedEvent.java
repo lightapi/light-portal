@@ -5,7 +5,6 @@
  */
 package net.lightapi.portal.market;
 
-import org.apache.avro.generic.GenericArray;
 import org.apache.avro.specific.SpecificData;
 import org.apache.avro.util.Utf8;
 import org.apache.avro.message.BinaryMessageEncoder;
@@ -23,10 +22,10 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
   private static final SpecificData MODEL$ = new SpecificData();
 
   private static final BinaryMessageEncoder<ServiceSpecUpdatedEvent> ENCODER =
-      new BinaryMessageEncoder<ServiceSpecUpdatedEvent>(MODEL$, SCHEMA$);
+      new BinaryMessageEncoder<>(MODEL$, SCHEMA$);
 
   private static final BinaryMessageDecoder<ServiceSpecUpdatedEvent> DECODER =
-      new BinaryMessageDecoder<ServiceSpecUpdatedEvent>(MODEL$, SCHEMA$);
+      new BinaryMessageDecoder<>(MODEL$, SCHEMA$);
 
   /**
    * Return the BinaryMessageEncoder instance used by this class.
@@ -50,7 +49,7 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
    * @return a BinaryMessageDecoder instance for this class backed by the given SchemaStore
    */
   public static BinaryMessageDecoder<ServiceSpecUpdatedEvent> createDecoder(SchemaStore resolver) {
-    return new BinaryMessageDecoder<ServiceSpecUpdatedEvent>(MODEL$, SCHEMA$, resolver);
+    return new BinaryMessageDecoder<>(MODEL$, SCHEMA$, resolver);
   }
 
   /**
@@ -110,9 +109,14 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
     this.spec = spec;
   }
 
+  @Override
   public org.apache.avro.specific.SpecificData getSpecificData() { return MODEL$; }
+
+  @Override
   public org.apache.avro.Schema getSchema() { return SCHEMA$; }
+
   // Used by DatumWriter.  Applications should not call.
+  @Override
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return EventId;
@@ -126,6 +130,7 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
   }
 
   // Used by DatumReader.  Applications should not call.
+  @Override
   @SuppressWarnings(value="unchecked")
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
@@ -792,3 +797,13 @@ public class ServiceSpecUpdatedEvent extends org.apache.avro.specific.SpecificRe
     }
   }
 }
+
+
+
+
+
+
+
+
+
+

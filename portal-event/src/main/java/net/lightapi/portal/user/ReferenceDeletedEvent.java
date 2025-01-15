@@ -5,7 +5,6 @@
  */
 package net.lightapi.portal.user;
 
-import org.apache.avro.generic.GenericArray;
 import org.apache.avro.specific.SpecificData;
 import org.apache.avro.util.Utf8;
 import org.apache.avro.message.BinaryMessageEncoder;
@@ -23,10 +22,10 @@ public class ReferenceDeletedEvent extends org.apache.avro.specific.SpecificReco
   private static final SpecificData MODEL$ = new SpecificData();
 
   private static final BinaryMessageEncoder<ReferenceDeletedEvent> ENCODER =
-      new BinaryMessageEncoder<ReferenceDeletedEvent>(MODEL$, SCHEMA$);
+      new BinaryMessageEncoder<>(MODEL$, SCHEMA$);
 
   private static final BinaryMessageDecoder<ReferenceDeletedEvent> DECODER =
-      new BinaryMessageDecoder<ReferenceDeletedEvent>(MODEL$, SCHEMA$);
+      new BinaryMessageDecoder<>(MODEL$, SCHEMA$);
 
   /**
    * Return the BinaryMessageEncoder instance used by this class.
@@ -50,7 +49,7 @@ public class ReferenceDeletedEvent extends org.apache.avro.specific.SpecificReco
    * @return a BinaryMessageDecoder instance for this class backed by the given SchemaStore
    */
   public static BinaryMessageDecoder<ReferenceDeletedEvent> createDecoder(SchemaStore resolver) {
-    return new BinaryMessageDecoder<ReferenceDeletedEvent>(MODEL$, SCHEMA$, resolver);
+    return new BinaryMessageDecoder<>(MODEL$, SCHEMA$, resolver);
   }
 
   /**
@@ -106,9 +105,14 @@ public class ReferenceDeletedEvent extends org.apache.avro.specific.SpecificReco
     this.value = value;
   }
 
+  @Override
   public org.apache.avro.specific.SpecificData getSpecificData() { return MODEL$; }
+
+  @Override
   public org.apache.avro.Schema getSchema() { return SCHEMA$; }
+
   // Used by DatumWriter.  Applications should not call.
+  @Override
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return EventId;
@@ -121,6 +125,7 @@ public class ReferenceDeletedEvent extends org.apache.avro.specific.SpecificReco
   }
 
   // Used by DatumReader.  Applications should not call.
+  @Override
   @SuppressWarnings(value="unchecked")
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
@@ -705,3 +710,13 @@ public class ReferenceDeletedEvent extends org.apache.avro.specific.SpecificReco
     }
   }
 }
+
+
+
+
+
+
+
+
+
+
