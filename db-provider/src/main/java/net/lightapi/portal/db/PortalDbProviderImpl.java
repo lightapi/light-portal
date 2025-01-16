@@ -2158,7 +2158,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         }
 
 
-        sqlBuilder.append("ORDER BY api_id\n" +
+        sqlBuilder.append(" ORDER BY api_id\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -4242,19 +4242,19 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
             StringBuilder whereClause = new StringBuilder();
 
-            addCondition(whereClause, parameters, "rule_id", ruleId);
-            addCondition(whereClause, parameters, "rule_name", ruleName);
-            addCondition(whereClause, parameters, "rule_version", ruleVersion);
-            addCondition(whereClause, parameters, "rule_type", ruleType);
-            addCondition(whereClause, parameters, "rule_group", ruleGroup);
-            addCondition(whereClause, parameters, "rule_desc", ruleDesc);
-            addCondition(whereClause, parameters, "rule_body", ruleBody);
-            addCondition(whereClause, parameters, "rule_owner", ruleOwner);
+            addCondition(whereClause, parameters, "r.rule_id", ruleId);
+            addCondition(whereClause, parameters, "r.rule_name", ruleName);
+            addCondition(whereClause, parameters, "r.rule_version", ruleVersion);
+            addCondition(whereClause, parameters, "r.rule_type", ruleType);
+            addCondition(whereClause, parameters, "r.rule_group", ruleGroup);
+            addCondition(whereClause, parameters, "r.rule_desc", ruleDesc);
+            addCondition(whereClause, parameters, "r.rule_body", ruleBody);
+            addCondition(whereClause, parameters, "r.rule_owner", ruleOwner);
 
             if (whereClause.length() > 0) {
                 sqlBuilder.append("AND ").append(whereClause);
             }
-            sqlBuilder.append("ORDER BY rule_id\n" +
+            sqlBuilder.append(" ORDER BY rule_id\n" +
                     "LIMIT ? OFFSET ?");
 
             parameters.add(limit);
@@ -4779,7 +4779,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append("ORDER BY role_id\n" +
+        sqlBuilder.append(" ORDER BY role_id\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -4878,16 +4878,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "role_id", roleId);
-        addCondition(whereClause, parameters, "api_id", apiId);
-        addCondition(whereClause, parameters, "api_version", apiVersion);
-        addCondition(whereClause, parameters, "endpoint", endpoint);
+        addCondition(whereClause, parameters, "r.role_id", roleId);
+        addCondition(whereClause, parameters, "p.api_id", apiId);
+        addCondition(whereClause, parameters, "p.api_version", apiVersion);
+        addCondition(whereClause, parameters, "p.endpoint", endpoint);
 
         if (whereClause.length() > 0) {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append("ORDER BY r.role_id, p.api_id, p.api_version, p.endpoint\n" +
+        sqlBuilder.append(" ORDER BY r.role_id, p.api_id, p.api_version, p.endpoint\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -4966,19 +4966,19 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "role_id", roleId);
-        addCondition(whereClause, parameters, "user_id", userId);
+        addCondition(whereClause, parameters, "r.role_id", roleId);
+        addCondition(whereClause, parameters, "u.user_id", userId);
         addCondition(whereClause, parameters, "entity_id", entityId);
-        addCondition(whereClause, parameters, "email", email);
-        addCondition(whereClause, parameters, "first_name", firstName);
-        addCondition(whereClause, parameters, "last_name", lastName);
-        addCondition(whereClause, parameters, "user_type", userType);
+        addCondition(whereClause, parameters, "u.email", email);
+        addCondition(whereClause, parameters, "u.first_name", firstName);
+        addCondition(whereClause, parameters, "u.last_name", lastName);
+        addCondition(whereClause, parameters, "u.user_type", userType);
 
         if (whereClause.length() > 0) {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append("ORDER BY r.role_id, u.user_id\n" +
+        sqlBuilder.append(" ORDER BY r.role_id, u.user_id\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -5272,16 +5272,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "role_id", roleId);
-        addCondition(whereClause, parameters, "api_id", apiId);
-        addCondition(whereClause, parameters, "api_version", apiVersion);
-        addCondition(whereClause, parameters, "endpoint", endpoint);
+        addCondition(whereClause, parameters, "r.role_id", roleId);
+        addCondition(whereClause, parameters, "p.api_id", apiId);
+        addCondition(whereClause, parameters, "p.api_version", apiVersion);
+        addCondition(whereClause, parameters, "p.endpoint", endpoint);
 
         if (whereClause.length() > 0) {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append("ORDER BY r.role_id, p.api_id, p.api_version, p.endpoint, p.col_name\n" +
+        sqlBuilder.append(" ORDER BY r.role_id, p.api_id, p.api_version, p.endpoint, p.col_name\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -5478,16 +5478,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "role_id", roleId);
-        addCondition(whereClause, parameters, "api_id", apiId);
-        addCondition(whereClause, parameters, "api_version", apiVersion);
-        addCondition(whereClause, parameters, "endpoint", endpoint);
+        addCondition(whereClause, parameters, "r.role_id", roleId);
+        addCondition(whereClause, parameters, "p.api_id", apiId);
+        addCondition(whereClause, parameters, "p.api_version", apiVersion);
+        addCondition(whereClause, parameters, "p.endpoint", endpoint);
 
         if (whereClause.length() > 0) {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append("ORDER BY r.role_id, p.api_id, p.api_version, p.endpoint\n" +
+        sqlBuilder.append(" ORDER BY r.role_id, p.api_id, p.api_version, p.endpoint\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -5804,7 +5804,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append("ORDER BY group_id\n" +
+        sqlBuilder.append(" ORDER BY group_id\n" +
                 "LIMIT ? OFFSET ?");
         parameters.add(limit);
         parameters.add(offset);
@@ -5897,16 +5897,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "group_id", groupId);
-        addCondition(whereClause, parameters, "api_id", apiId);
-        addCondition(whereClause, parameters, "api_version", apiVersion);
-        addCondition(whereClause, parameters, "endpoint", endpoint);
+        addCondition(whereClause, parameters, "g.group_id", groupId);
+        addCondition(whereClause, parameters, "p.api_id", apiId);
+        addCondition(whereClause, parameters, "p.api_version", apiVersion);
+        addCondition(whereClause, parameters, "p.endpoint", endpoint);
 
         if (whereClause.length() > 0) {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append("ORDER BY g.group_id, p.api_id, p.api_version, p.endpoint\n" +
+        sqlBuilder.append(" ORDER BY g.group_id, p.api_id, p.api_version, p.endpoint\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -5984,19 +5984,19 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "group_id", groupId);
-        addCondition(whereClause, parameters, "user_id", userId);
+        addCondition(whereClause, parameters, "g.group_id", groupId);
+        addCondition(whereClause, parameters, "u.user_id", userId);
         addCondition(whereClause, parameters, "entity_id", entityId);
-        addCondition(whereClause, parameters, "email", email);
-        addCondition(whereClause, parameters, "first_name", firstName);
-        addCondition(whereClause, parameters, "last_name", lastName);
-        addCondition(whereClause, parameters, "user_type", userType);
+        addCondition(whereClause, parameters, "u.email", email);
+        addCondition(whereClause, parameters, "u.first_name", firstName);
+        addCondition(whereClause, parameters, "u.last_name", lastName);
+        addCondition(whereClause, parameters, "u.user_type", userType);
 
         if (whereClause.length() > 0) {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append("ORDER BY g.group_id, u.user_id\n" +
+        sqlBuilder.append(" ORDER BY g.group_id, u.user_id\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -6286,16 +6286,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "group_id", GroupId);
-        addCondition(whereClause, parameters, "api_id", apiId);
-        addCondition(whereClause, parameters, "api_version", apiVersion);
-        addCondition(whereClause, parameters, "endpoint", endpoint);
+        addCondition(whereClause, parameters, "g.group_id", GroupId);
+        addCondition(whereClause, parameters, "p.api_id", apiId);
+        addCondition(whereClause, parameters, "p.api_version", apiVersion);
+        addCondition(whereClause, parameters, "p.endpoint", endpoint);
 
         if (whereClause.length() > 0) {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append("ORDER BY g.group_id, p.api_id, p.api_version, p.endpoint\n" +
+        sqlBuilder.append(" ORDER BY g.group_id, p.api_id, p.api_version, p.endpoint\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -6492,16 +6492,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "group_id", GroupId);
-        addCondition(whereClause, parameters, "api_id", apiId);
-        addCondition(whereClause, parameters, "api_version", apiVersion);
-        addCondition(whereClause, parameters, "endpoint", endpoint);
+        addCondition(whereClause, parameters, "g.group_id", GroupId);
+        addCondition(whereClause, parameters, "p.api_id", apiId);
+        addCondition(whereClause, parameters, "p.api_version", apiVersion);
+        addCondition(whereClause, parameters, "p.endpoint", endpoint);
 
         if (whereClause.length() > 0) {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append("ORDER BY g.group_id, p.api_id, p.api_version, p.endpoint\n" +
+        sqlBuilder.append(" ORDER BY g.group_id, p.api_id, p.api_version, p.endpoint\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -6842,7 +6842,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         if (whereClause.length() > 0) {
             sqlBuilder.append("AND ").append(whereClause);
         }
-        sqlBuilder.append("ORDER BY position_id\n" +
+        sqlBuilder.append(" ORDER BY position_id\n" +
                 "LIMIT ? OFFSET ?");
         parameters.add(limit);
         parameters.add(offset);
@@ -6940,18 +6940,18 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "position_id", positionId);
-        addCondition(whereClause, parameters, "inherit_to_ancestor", inheritToAncestor);
-        addCondition(whereClause, parameters, "inherit_to_sibling", inheritToSibling);
-        addCondition(whereClause, parameters, "api_id", apiId);
-        addCondition(whereClause, parameters, "api_version", apiVersion);
-        addCondition(whereClause, parameters, "endpoint", endpoint);
+        addCondition(whereClause, parameters, "o.position_id", positionId);
+        addCondition(whereClause, parameters, "o.inherit_to_ancestor", inheritToAncestor);
+        addCondition(whereClause, parameters, "o.inherit_to_sibling", inheritToSibling);
+        addCondition(whereClause, parameters, "p.api_id", apiId);
+        addCondition(whereClause, parameters, "p.api_version", apiVersion);
+        addCondition(whereClause, parameters, "p.endpoint", endpoint);
 
         if (whereClause.length() > 0) {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append("ORDER BY o.position_id, p.api_id, p.api_version, p.endpoint\n" +
+        sqlBuilder.append(" ORDER BY o.position_id, p.api_id, p.api_version, p.endpoint\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -7025,20 +7025,20 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "position_id", positionId);
-        addCondition(whereClause, parameters, "position_type", positionType);
-        addCondition(whereClause, parameters, "user_id", userId);
+        addCondition(whereClause, parameters, "ep.position_id", positionId);
+        addCondition(whereClause, parameters, "ep.position_type", positionType);
+        addCondition(whereClause, parameters, "u.user_id", userId);
         addCondition(whereClause, parameters, "entity_id", entityId);
-        addCondition(whereClause, parameters, "email", email);
-        addCondition(whereClause, parameters, "first_name", firstName);
-        addCondition(whereClause, parameters, "last_name", lastName);
-        addCondition(whereClause, parameters, "user_type", userType);
+        addCondition(whereClause, parameters, "u.email", email);
+        addCondition(whereClause, parameters, "u.first_name", firstName);
+        addCondition(whereClause, parameters, "u.last_name", lastName);
+        addCondition(whereClause, parameters, "u.user_type", userType);
 
         if (whereClause.length() > 0) {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append("ORDER BY ep.position_id, u.user_id\n" +
+        sqlBuilder.append(" ORDER BY ep.position_id, u.user_id\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -7332,16 +7332,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "position_id", PositionId);
-        addCondition(whereClause, parameters, "api_id", apiId);
-        addCondition(whereClause, parameters, "api_version", apiVersion);
-        addCondition(whereClause, parameters, "endpoint", endpoint);
+        addCondition(whereClause, parameters, "o.position_id", PositionId);
+        addCondition(whereClause, parameters, "p.api_id", apiId);
+        addCondition(whereClause, parameters, "p.api_version", apiVersion);
+        addCondition(whereClause, parameters, "p.endpoint", endpoint);
 
         if (whereClause.length() > 0) {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append("ORDER BY o.position_id, p.api_id, p.api_version, p.endpoint\n" +
+        sqlBuilder.append(" ORDER BY o.position_id, p.api_id, p.api_version, p.endpoint\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -7537,16 +7537,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "position_id", PositionId);
-        addCondition(whereClause, parameters, "api_id", apiId);
-        addCondition(whereClause, parameters, "api_version", apiVersion);
-        addCondition(whereClause, parameters, "endpoint", endpoint);
+        addCondition(whereClause, parameters, "o.position_id", PositionId);
+        addCondition(whereClause, parameters, "p.api_id", apiId);
+        addCondition(whereClause, parameters, "p.api_version", apiVersion);
+        addCondition(whereClause, parameters, "p.endpoint", endpoint);
 
         if (whereClause.length() > 0) {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append("ORDER BY o.position_id, p.api_id, p.api_version, p.endpoint\n" +
+        sqlBuilder.append(" ORDER BY o.position_id, p.api_id, p.api_version, p.endpoint\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -7876,7 +7876,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         if (whereClause.length() > 0) {
             sqlBuilder.append("AND ").append(whereClause);
         }
-        sqlBuilder.append("ORDER BY attribute_id\n" +
+        sqlBuilder.append(" ORDER BY attribute_id\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -7973,18 +7973,18 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "attribute_id", attributeId);
-        addCondition(whereClause, parameters, "attribute_type", attributeType);
-        addCondition(whereClause, parameters, "attribute_value", attributeValue);
-        addCondition(whereClause, parameters, "api_id", apiId);
-        addCondition(whereClause, parameters, "api_version", apiVersion);
-        addCondition(whereClause, parameters, "endpoint", endpoint);
+        addCondition(whereClause, parameters, "a.attribute_id", attributeId);
+        addCondition(whereClause, parameters, "a.attribute_type", attributeType);
+        addCondition(whereClause, parameters, "a.attribute_value", attributeValue);
+        addCondition(whereClause, parameters, "p.api_id", apiId);
+        addCondition(whereClause, parameters, "p.api_version", apiVersion);
+        addCondition(whereClause, parameters, "p.endpoint", endpoint);
 
         if (whereClause.length() > 0) {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append("ORDER BY a.attribute_id, p.api_id, p.api_version, p.endpoint\n" +
+        sqlBuilder.append(" ORDER BY a.attribute_id, p.api_id, p.api_version, p.endpoint\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -8067,21 +8067,21 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "attribute_id", attributeId);
-        addCondition(whereClause, parameters, "attribute_type", attributeType);
-        addCondition(whereClause, parameters, "attribute_value", attributeValue);
-        addCondition(whereClause, parameters, "user_id", userId);
+        addCondition(whereClause, parameters, "a.attribute_id", attributeId);
+        addCondition(whereClause, parameters, "a.attribute_type", attributeType);
+        addCondition(whereClause, parameters, "a.attribute_value", attributeValue);
+        addCondition(whereClause, parameters, "u.user_id", userId);
         addCondition(whereClause, parameters, "entity_id", entityId);
-        addCondition(whereClause, parameters, "email", email);
-        addCondition(whereClause, parameters, "first_name", firstName);
-        addCondition(whereClause, parameters, "last_name", lastName);
-        addCondition(whereClause, parameters, "user_type", userType);
+        addCondition(whereClause, parameters, "u.email", email);
+        addCondition(whereClause, parameters, "u.first_name", firstName);
+        addCondition(whereClause, parameters, "u.last_name", lastName);
+        addCondition(whereClause, parameters, "u.user_type", userType);
 
         if (whereClause.length() > 0) {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append("ORDER BY a.attribute_id, u.user_id\n" +
+        sqlBuilder.append(" ORDER BY a.attribute_id, u.user_id\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -8426,17 +8426,17 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "attribute_id", attributeId);
-        addCondition(whereClause, parameters, "attribute_value", attributeValue);
-        addCondition(whereClause, parameters, "api_id", apiId);
-        addCondition(whereClause, parameters, "api_version", apiVersion);
-        addCondition(whereClause, parameters, "endpoint", endpoint);
+        addCondition(whereClause, parameters, "a.attribute_id", attributeId);
+        addCondition(whereClause, parameters, "p.attribute_value", attributeValue);
+        addCondition(whereClause, parameters, "p.api_id", apiId);
+        addCondition(whereClause, parameters, "p.api_version", apiVersion);
+        addCondition(whereClause, parameters, "p.endpoint", endpoint);
 
         if (whereClause.length() > 0) {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append("ORDER BY a.attribute_id, p.api_id, p.api_version, p.endpoint\n" +
+        sqlBuilder.append(" ORDER BY a.attribute_id, p.api_id, p.api_version, p.endpoint\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -8638,17 +8638,17 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "attribute_id", attributeId);
-        addCondition(whereClause, parameters, "attribute_value", attributeValue);
-        addCondition(whereClause, parameters, "api_id", apiId);
-        addCondition(whereClause, parameters, "api_version", apiVersion);
-        addCondition(whereClause, parameters, "endpoint", endpoint);
+        addCondition(whereClause, parameters, "a.attribute_id", attributeId);
+        addCondition(whereClause, parameters, "p.attribute_value", attributeValue);
+        addCondition(whereClause, parameters, "p.api_id", apiId);
+        addCondition(whereClause, parameters, "p.api_version", apiVersion);
+        addCondition(whereClause, parameters, "p.endpoint", endpoint);
 
         if (whereClause.length() > 0) {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append("ORDER BY a.attribute_id, p.api_id, p.api_version, p.endpoint\n" +
+        sqlBuilder.append(" ORDER BY a.attribute_id, p.api_id, p.api_version, p.endpoint\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
