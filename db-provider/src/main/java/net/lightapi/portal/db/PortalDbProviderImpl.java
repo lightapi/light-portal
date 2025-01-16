@@ -881,6 +881,43 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     /**
+     * Update the verified to true and nonce in the user_t table based on the hostId and userId. Write a success notification.
+     *
+     * @param event UserVerifiedEvent
+     * @return  Result of userId
+     */
+    @Override
+    public Result<String> verifyUser(UserVerifiedEvent event) {
+        final String updateUserByUserId = "UPDATE user_t SET token = null, verified = true WHERE user_id = ?";
+        Result<String> result;
+        try (Connection conn = ds.getConnection()){
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(updateUserByUserId)) {
+                statement.setString(1, event.getUserId());
+                statement.execute();
+                conn.commit();
+                result = Success.of(event.getUserId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+    /**
      * check the email, user_id is unique. if not, write an error notification. If yes, insert
      * the user into database and write a success notification.
      *

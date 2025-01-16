@@ -32,6 +32,7 @@ public interface PortalDbProvider extends DbProvider {
                                      String address, String postCode, Boolean verified, Boolean locked);
     Result<String> createUser(UserCreatedEvent event);
     Result<String> confirmUser(UserConfirmedEvent event);
+    Result<String> verifyUser(UserVerifiedEvent event);
     Result<Integer> queryNonceByUserId(String userId);
     Result<String> createSocialUser(SocialUserCreatedEvent event);
     Result<String> updateUser(UserUpdatedEvent event);

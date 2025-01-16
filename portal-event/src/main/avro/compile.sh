@@ -5,6 +5,7 @@
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema UserCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema UserUpdatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema UserConfirmedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema UserVerifiedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema UserDeletedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema PasswordResetEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema PasswordForgotEvent.avsc .
@@ -181,6 +182,7 @@ java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema Position
 mv net/lightapi/portal/user/UserCreatedEvent.java ../java/net/lightapi/portal/user
 mv net/lightapi/portal/user/UserUpdatedEvent.java ../java/net/lightapi/portal/user
 mv net/lightapi/portal/user/UserConfirmedEvent.java ../java/net/lightapi/portal/user
+mv net/lightapi/portal/user/UserVerifiedEvent.java ../java/net/lightapi/portal/user
 mv net/lightapi/portal/user/UserDeletedEvent.java ../java/net/lightapi/portal/user
 mv net/lightapi/portal/user/PasswordResetEvent.java ../java/net/lightapi/portal/user
 mv net/lightapi/portal/user/PasswordForgotEvent.java ../java/net/lightapi/portal/user
