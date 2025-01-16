@@ -181,4 +181,16 @@ public class PortalDbProviderImplTest {
         }
     }
 
+    @Test
+    void testListUserByHostId() {
+        Result<String> result = dbProvider.queryUserByHostId(0, 2, "N2CMw0HGQXeLvC1wBfln2A", null, null,
+                null, null,null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null);
+        if(result.isFailure()) {
+            System.out.println(result.getError());
+        } else {
+            System.out.println(result.getResult());
+        }
+    }
+
 }

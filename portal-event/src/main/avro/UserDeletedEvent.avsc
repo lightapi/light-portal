@@ -41,9 +41,9 @@
       "doc": "host id"
     },
     {
-      "name": "email",
+      "name": "userId",
       "type": "string",
-      "doc": "email of the user to be deleted"
+      "doc": "user id of the user to be deleted"
     }
   ]
 }

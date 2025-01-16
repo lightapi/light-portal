@@ -43,12 +43,17 @@
     {
       "name": "userId",
       "type": "string",
-      "doc": "the unique user id"
+      "doc": "the unique uuid user id"
     },
     {
       "name": "userType",
       "type": "string",
       "doc": "the user type"
+    },
+    {
+      "name": "entityId",
+      "type": "string",
+      "doc": "the entity id that can be employee id or customer id"
     },
     {
       "name": "email",

@@ -367,6 +367,60 @@ public class HybridQueryClient {
      }
 
     /**
+     * Get User by userType and entityId with the current credentials in the exchange. This means the same user is
+     * trying to get its user object from userType and entityId. Or an Admin user is doing so with an authorization code
+     * token.
+     *
+     * @param exchange HttpServerExchange
+     * @param userType userType
+     * @param entityId entityId
+     * @return Result of user email
+     */
+    public static Result<String> getUserByTypeEntityId(HttpServerExchange exchange, String userType, String entityId) {
+        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"user\",\"action\":\"queryUserByTypeEntityId\",\"version\":\"0.1.0\",\"data\":{\"userType\":\"%s\",\"entityId\":\"%s\"}}", userType, entityId);
+        if (config.isPortalByServiceUrl()) {
+            return callQueryExchangeUrl(command, exchange, config.getPortalQueryServiceUrl());
+        } else {
+            return callQueryExchange(command, exchange);
+        }
+    }
+
+    /**
+     * Get User by userType and entityId with the same credentials token. It must be the same user or an admin user. Given there is
+     * an url in the parameter, that means this is coming from the Kafka lookup already so the exact url is specified.
+     *
+     * @param exchange HttpServerExchange
+     * @param url to a specific host
+     * @param userType userType
+     * @param entityId entityId
+     * @return Result of user email
+     */
+    public static Result<String> getUserByTypeEntityId(HttpServerExchange exchange, String url, String userType, String entityId) {
+        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"user\",\"action\":\"queryUserByTypeEntityId\",\"version\":\"0.1.0\",\"data\":{\"userType\":\"%s\",\"entityId\":\"%s\"}}", userType, entityId);
+        return callQueryExchangeUrl(command, exchange, url);
+    }
+
+    /**
+     * Get User by userType and entityId between service to service invocation. The token will be a client credential
+     * token so that there is no user_id in the JWT to bypass the match verification. This is an internal
+     * method that is called between portal services and a client credential token must be provided.
+     *
+     * @param userType user type
+     * @param entityId entity id
+     * @param token a client credential JWT token
+     * @return Result of user email
+     */
+    public static Result<String> getUserByTypeEntityId(String userType, String entityId, String token) {
+        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"user\",\"action\":\"queryUserByTypeEntityId\",\"version\":\"0.1.0\",\"data\":{\"userType\":\"%s\",\"entityId\":\"%s\"}}", userType, entityId);
+        if (config.isPortalByServiceUrl()) {
+            return callQueryTokenUrl(command, token, config.getPortalQueryServiceUrl());
+        } else {
+            return callQueryWithToken(command, token);
+        }
+    }
+
+
+    /**
      * Get Nonce for the user by email. The result also indicates the user exists in the system.
      *
      * @param exchange HttpServerExchange

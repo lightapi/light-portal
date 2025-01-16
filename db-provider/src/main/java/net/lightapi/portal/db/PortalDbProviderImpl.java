@@ -16,7 +16,6 @@ import org.slf4j.LoggerFactory;
 
 import java.security.KeyPair;
 import java.sql.*;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -320,6 +319,80 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
+    public Result<String> queryUserByTypeEntityId(String userType, String entityId) {
+        Result<String> result = null;
+        String sqlEmployee =
+                "SELECT h.host_id, u.user_id, e.employee_id as entity_id, u.email, u.password, \n" +
+                        "u.language, u.first_name, u.last_name, u.user_type, u.phone_number, \n" +
+                        "u.gender, u.birthday, u.country, u.province, u.city, \n" +
+                        "u.address, u.post_code, u.verified, u.token, u.locked, \n" +
+                        "u.nonce\n" +
+                        "FROM user_t u, user_host_t h, employee_t e\n" +
+                        "WHERE u.user_id = h.user_id\n" +
+                        "AND h.host_id = e.host_id\n" +
+                        "AND h.user_id = e.user_id\n" +
+                        "AND e.employee_id = ? \n";
+        String sqlCustomer =
+                "SELECT h.host_id, u.user_id, c.customer_id as entity_id, u.email, u.password, \n" +
+                        "u.language, u.first_name, u.last_name, u.user_type, u.phone_number, \n" +
+                        "u.gender, u.birthday, u.country, u.province, u.city, \n" +
+                        "u.address, u.post_code, u.verified, u.token, u.locked, \n" +
+                        "u.nonce\n" +
+                        "FROM user_t u, user_host_t h, customer_t c\n" +
+                        "WHERE u.user_id = h.user_id\n" +
+                        "AND h.host_id = c.host_id\n" +
+                        "AND h.user_id = c.user_id\n" +
+                        "AND c.customer_id = ? \n";
+        String sql = userType.equals("E") ? sqlEmployee : sqlCustomer;
+        try (final Connection conn = ds.getConnection()) {
+            Map<String, Object> map = new HashMap<>();
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, entityId);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        map.put("hostId", resultSet.getString("host_id"));
+                        map.put("userId", resultSet.getString("user_id"));
+                        map.put("entityId", resultSet.getString("entity_id"));
+                        map.put("email", resultSet.getString("email"));
+                        map.put("password", resultSet.getString("password"));
+
+                        map.put("language", resultSet.getString("language"));
+                        map.put("firstName", resultSet.getString("first_name"));
+                        map.put("lastName", resultSet.getString("last_name"));
+                        map.put("userType", resultSet.getString("user_type"));
+                        map.put("phoneNumber", resultSet.getString("phone_number"));
+
+                        map.put("gender", resultSet.getString("gender"));
+                        map.put("birthday", resultSet.getDate("birthday"));
+                        map.put("country", resultSet.getString("country"));
+                        map.put("province", resultSet.getString("province"));
+                        map.put("city", resultSet.getString("city"));
+
+                        map.put("address", resultSet.getString("address"));
+                        map.put("postCode", resultSet.getString("post_code"));
+                        map.put("verified", resultSet.getBoolean("verified"));
+                        map.put("token", resultSet.getString("token"));
+                        map.put("locked", resultSet.getBoolean("locked"));
+
+                        map.put("nonce", resultSet.getLong("nonce"));
+                    }
+                }
+            }
+            if (map.size() == 0)
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "entityId", entityId));
+            else
+                result = Success.of(JsonMapper.toJson(map));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
     public Result<String> queryUserByWallet(String cryptoType, String cryptoAddress) {
         Result<String> result = null;
         String sql =
@@ -360,7 +433,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                 }
             }
-            if (map.size() == 0)
+            if (map.isEmpty())
                 result = Failure.of(new Status(OBJECT_NOT_FOUND, "user", cryptoType + cryptoAddress));
             else
                 result = Success.of(JsonMapper.toJson(map));
@@ -371,6 +444,119 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             logger.error("Exception:", e);
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
+        return result;
+    }
+
+    @Override
+    public Result<String> queryUserByHostId(int offset, int limit, String hostId, String email, String language, String userType,
+                                     String entityId, String referralId, String managerId, String firstName, String lastName,
+                                     String phoneNumber, String gender, String birthday, String country, String province, String city,
+                                     String address, String postCode, Boolean verified, Boolean locked) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
+                "uh.host_id, u.user_id, u.email, u.language, u.first_name, u.last_name, u.user_type, u.phone_number, " +
+                "u.gender, u.birthday, u.country, u.province, u.city, u.address, u.post_code, u.verified, u.locked,\n" +
+                "COALESCE(c.customer_id, e.employee_id) AS entity_id, c.referral_id, e.manager_id\n" +
+                "FROM user_t u\n" +
+                "LEFT JOIN user_host_t uh ON u.user_id = uh.user_id\n" +
+                "LEFT JOIN customer_t c ON uh.host_id = c.host_id AND u.user_id = c.user_id\n" +
+                "LEFT JOIN employee_t e ON uh.host_id = e.host_id AND u.user_id = e.user_id\n" +
+                "WHERE uh.host_id = ?\n");
+
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(hostId);
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "u.email", email);
+        addCondition(whereClause, parameters, "u.language", language);
+        addCondition(whereClause, parameters, "u.user_type", userType);
+        addCondition(whereClause, parameters, "COALESCE(c.customer_id, e.employee_id)", entityId); // Using COALESCE here
+        addCondition(whereClause, parameters, "c.referral_id", referralId);
+        addCondition(whereClause, parameters, "e.manager_id", managerId);
+        addCondition(whereClause, parameters, "u.first_name", firstName);
+        addCondition(whereClause, parameters, "u.last_name", lastName);
+        addCondition(whereClause, parameters, "u.phone_number", phoneNumber);
+        addCondition(whereClause, parameters, "u.gender", gender);
+        addCondition(whereClause, parameters, "u.birthday", birthday);
+        addCondition(whereClause, parameters, "u.country", country);
+        addCondition(whereClause, parameters, "u.province", province);
+        addCondition(whereClause, parameters, "u.city", city);
+        addCondition(whereClause, parameters, "u.address", address);
+        addCondition(whereClause, parameters, "u.post_code", postCode);
+        addCondition(whereClause, parameters, "u.verified", verified);
+        addCondition(whereClause, parameters, "u.locked", locked);
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append(" ORDER BY u.last_name\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        if(logger.isDebugEnabled()) logger.debug("sql = {}", sql);
+        int total = 0;
+        List<Map<String, Object>> users = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("userId", resultSet.getString("user_id"));
+                    map.put("email", resultSet.getString("email"));
+                    map.put("language", resultSet.getString("language"));
+                    map.put("userType", resultSet.getString("user_type"));
+                    map.put("firstName", resultSet.getString("first_name"));
+                    map.put("lastName", resultSet.getString("last_name"));
+                    map.put("phoneNumber", resultSet.getString("phone_number"));
+                    map.put("gender", resultSet.getString("gender"));
+                    // handling date properly
+                    map.put("birthday", resultSet.getDate("birthday") != null ? resultSet.getDate("birthday").toString() : null);
+                    map.put("country", resultSet.getString("country"));
+                    map.put("province", resultSet.getString("province"));
+                    map.put("city", resultSet.getString("city"));
+                    map.put("address", resultSet.getString("address"));
+                    map.put("postCode", resultSet.getString("post_code"));
+                    map.put("verified", resultSet.getBoolean("verified"));
+                    map.put("locked", resultSet.getBoolean("locked"));
+                    map.put("entityId", resultSet.getString("entity_id"));
+                    map.put("referralId", resultSet.getString("referral_id"));
+                    map.put("managerId", resultSet.getString("manager_id"));
+
+                    users.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("users", users);
+            result = Success.of(JsonMapper.toJson(resultMap));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+
         return result;
     }
 
@@ -447,27 +633,46 @@ public class PortalDbProviderImpl implements PortalDbProvider {
      */
     @Override
     public Result<String> createUser(UserCreatedEvent event) {
-        final String queryIdEmail = "SELECT nonce FROM user_t WHERE user_id = ? OR email = ?";
+        final String queryEmailEntityId = "SELECT\n" +
+                "    u.user_id,\n" +
+                "    u.email,\n" +
+                "    COALESCE(c.customer_id, e.employee_id) AS entity_id\n" +
+                "FROM\n" +
+                "    user_t u\n" +
+                "LEFT JOIN\n" +
+                "    user_host_t uh ON u.user_id = uh.user_id\n" +
+                "LEFT JOIN\n" +
+                "    customer_t c ON uh.host_id = c.host_id AND u.user_id = c.user_id\n" +
+                "LEFT JOIN\n" +
+                "    employee_t e ON uh.host_id = e.host_id AND u.user_id = e.user_id\n" +
+                "WHERE\n" +
+                "    (u.email = ? OR COALESCE(c.customer_id, e.employee_id) = ?)\n" +
+                "    AND u.user_type IN ('C', 'E')";
+
         final String insertUser = "INSERT INTO user_t (user_id, email, password, language, first_name, " +
                 "last_name, user_type, phone_number, gender, birthday, " +
                 "country, province, city, address, post_code, " +
-                "verified), token, locked " +
+                "verified, token, locked) " +
                 "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,  ?, ?, ?)";
         final String insertUserHost = "INSERT INTO user_host_t (user_id, host_id) VALUES (?, ?)";
+        final String insertCustomer = "INSERT INTO customer_t (host_id, customer_id, user_id, referral_id) " +
+                "VALUES (?, ?, ?, ?)";
+        final String insertEmployee = "INSERT INTO employee_t (host_id, employee_id, user_id, manager_id) " +
+                "VALUES (?, ?, ?, ?)";
 
         Result<String> result = null;
         Map<String, Object> map = JsonMapper.string2Map(event.getValue());
         try (Connection conn = ds.getConnection()){
             conn.setAutoCommit(false);
             try {
-                try (PreparedStatement statement = conn.prepareStatement(queryIdEmail)) {
-                    statement.setString(1, event.getUserId());
-                    statement.setString(2, event.getEmail());
+                try (PreparedStatement statement = conn.prepareStatement(queryEmailEntityId)) {
+                    statement.setString(1, event.getEmail());
+                    statement.setString(2, event.getEntityId());
                     try (ResultSet resultSet = statement.executeQuery()) {
                         if (resultSet.next()) {
                             // found duplicate record, write an error notification.
-                            logger.error("userId {} or email {} already exists in database.", event.getUserId(), event.getEmail());
-                            throw new SQLException(String.format("userId %s or email %s already exists in database.", event.getUserId(), event.getEmail()));
+                            logger.error("entityId {} or email {} already exists in database.", event.getEntityId(), event.getEmail());
+                            throw new SQLException(String.format("entityId %s or email %s already exists in database.", event.getEntityId(), event.getEmail()));
                         }
                     }
                 }
@@ -488,10 +693,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     else
                         statement.setNull(6, NULL);
 
-                    if (map.get("user_type") != null)
-                        statement.setString(7, (String) map.get("user_type"));
-                    else
-                        statement.setNull(7, NULL);
+                    statement.setString(7, event.getUserType());
 
                     if (map.get("phone_number") != null)
                         statement.setString(8, (String) map.get("phone_number"));
@@ -549,10 +751,37 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     statement.setString(2, event.getHostId());
                     statement.execute();
                 }
+                // insert customer or employee based on user_type
+                if(event.getUserType().equals("E")) {
+                    try (PreparedStatement statement = conn.prepareStatement(insertEmployee)) {
+                        statement.setString(1, event.getHostId());
+                        statement.setString(2, event.getEntityId());
+                        statement.setString(3, event.getUserId());
+                        if(map.get("manager_id") != null) {
+                            statement.setString(4, (String) map.get("manager_id"));
+                        } else {
+                            statement.setNull(4, NULL);
+                        }
+                        statement.execute();
+                    }
+                } else if(event.getUserType().equals("C")) {
+                    try (PreparedStatement statement = conn.prepareStatement(insertCustomer)) {
+                        statement.setString(1, event.getHostId());
+                        statement.setString(2, event.getEntityId());
+                        statement.setString(3, event.getUserId());
+                        if(map.get("referral_id") != null) {
+                            statement.setString(4, (String) map.get("referral_id"));
+                        } else {
+                            statement.setNull(4, NULL);
+                        }
+                        statement.execute();
+                    }
+                } else {
+                    throw new SQLException("user_type is not valid: " + event.getUserType());
+                }
                 conn.commit();
                 result = Success.of(event.getUserId());
                 insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
-
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
@@ -609,8 +838,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
      */
     @Override
     public Result<String> confirmUser(UserConfirmedEvent event) {
-        final String queryTokenByEmail = "SELECT token FROM user_t WHERE email = ? AND token = ?";
-        final String updateUserByEmail = "UPDATE user_t SET token = null, verified = true, nonce = ? WHERE email = ?";
+        final String queryTokenByEmail = "SELECT token FROM user_t WHERE user_id = ? AND token = ?";
+        final String updateUserByEmail = "UPDATE user_t SET token = null, verified = true, nonce = ? WHERE user_id = ?";
         Result<String> result;
         try (Connection conn = ds.getConnection()){
             conn.setAutoCommit(false);
@@ -627,7 +856,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         }
                     } else {
                         // record is not found with the email and token. write an error notification.
-                        throw new SQLException(String.format("token %s is not matched for email %s.", event.getToken(), event.getEventId().getId()));
+                        throw new SQLException(String.format("token %s is not matched for userId %s.", event.getToken(), event.getEventId().getId()));
                     }
                 }
                 conn.commit();
@@ -880,17 +1109,17 @@ public class PortalDbProviderImpl implements PortalDbProvider {
      */
     @Override
     public Result<String> deleteUser(UserDeletedEvent event) {
-        final String deleteUserById = "DELETE from user_t WHERE email = ?";
-        // other user related tables will be deleted by database with cascade delete
+        // delete only user_t, other tables will be cacade deleted by database
+        final String deleteUserById = "DELETE from user_t WHERE user_id = ?";
         Result<String> result;
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteUserById)) {
-                statement.setString(1, event.getEmail());
+                statement.setString(1, event.getUserId());
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     // no record is deleted, write an error notification.
-                    throw new SQLException(String.format("no record is deleted by email %s", event.getEmail()));
+                    throw new SQLException(String.format("no record is deleted by userId %s", event.getUserId()));
                 }
                 conn.commit();
                 result = Success.of(event.getEventId().getId());
@@ -2302,6 +2531,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             whereClause.append(" LIKE '%' || ? || '%'");
             parameters.add(value);
 
+        }
+    }
+
+    private void addCondition(StringBuilder whereClause, List<Object> parameters, String columnName, Object value) {
+        if (value != null) {
+            if (whereClause.length() > 0) {
+                whereClause.append(" AND ");
+            }
+            whereClause.append(columnName).append(" = ?");
+            parameters.add(value);
         }
     }
 
