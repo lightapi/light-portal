@@ -51,6 +51,16 @@
       "doc": "a unique user id"
     },
     {
+      "name": "entityId",
+      "type": "string",
+      "doc": "a unique user id for customer or employee"
+    },
+    {
+      "name": "userType",
+      "type": "string",
+      "doc": "user type C or E"
+    },
+    {
       "name": "language",
       "type": "string",
       "doc": "the preferred language of the user"
@@ -59,13 +69,7 @@
       "name": "value",
       "type": ["null", "string"],
       "default": null,
-      "doc": "user detail in JSON, include firstName, lastName, gender, birthday, postCode, address"
-    },
-    {
-      "name": "taijiWallet",
-      "type": ["null", "string"],
-      "default": null,
-      "doc": "taiji blockchain address of the user"
+      "doc": "user detail in JSON, include referralId, managerId, firstName, lastName, phoneNumber, gender, birthday, postCode, address"
     },
     {
       "name": "country",

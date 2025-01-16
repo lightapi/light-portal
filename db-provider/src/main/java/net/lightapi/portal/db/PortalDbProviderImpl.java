@@ -996,10 +996,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
      */
     @Override
     public Result<String> updateUser(UserUpdatedEvent event) {
-        final String updateUser = "UPDATE user_t SET language = ?, first_name = ?, last_name = ?, user_type = ?, " +
-                "phone_number = ?, gender = ?, birthday = ?, country = ?, province = ?, city = ?, address = ?, " +
-                "post_code = ? " +
+        final String updateUser = "UPDATE user_t SET language = ?, first_name = ?, last_name = ?, phone_number = ?," +
+                "gender = ?, birthday = ?, country = ?, province = ?, city = ?, address = ?, post_code = ? " +
                 "WHERE user_id = ?";
+        final String updateCustomer = "UPDATE customer_t SET referral_id = ? WHERE host_id = ? AND customer_id = ?";
+        final String updateEmployee = "UPDATE employee_t SET manager_id = ? WHERE host_id = ? AND employee_id = ?";
         Result<String> result = null;
         Map<String, Object> map = JsonMapper.string2Map(event.getValue());
         try (Connection conn = ds.getConnection()){
@@ -1017,70 +1018,93 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 else
                     statement.setNull(3, NULL);
 
-                if (map.get("user_type") != null)
-                    statement.setString(4, (String) map.get("user_type"));
+                if (map.get("phone_number") != null)
+                    statement.setString(4, (String) map.get("phone_number"));
                 else
                     statement.setNull(4, NULL);
 
-                if (map.get("phone_number") != null)
-                    statement.setString(5, (String) map.get("phone_number"));
-                else
-                    statement.setNull(5, NULL);
-
                 if(map.get("gender") != null) {
-                    statement.setString(6, (String) map.get("gender"));
+                    statement.setString(5, (String) map.get("gender"));
                 } else {
-                    statement.setNull(6, NULL);
+                    statement.setNull(5, NULL);
                 }
 
                 java.util.Date birthday = (java.util.Date) map.get("birthday");
                 if (birthday != null) {
-                    statement.setDate(7, new java.sql.Date(birthday.getTime()));
+                    statement.setDate(6, new java.sql.Date(birthday.getTime()));
+                } else {
+                    statement.setNull(6, NULL);
+                }
+
+                String countryObject = event.getCountry();
+                if (countryObject != null) {
+                    statement.setString(7, countryObject);
                 } else {
                     statement.setNull(7, NULL);
                 }
 
-                Object countryObject = map.get("country");
-                if (countryObject != null) {
-                    statement.setString(8, (String) countryObject);
+                String provinceObject = event.getProvince();
+                if (provinceObject != null) {
+                    statement.setString(8, provinceObject);
                 } else {
                     statement.setNull(8, NULL);
                 }
 
-                Object provinceObject = map.get("province");
-                if (provinceObject != null) {
-                    statement.setString(9, (String) provinceObject);
+                String cityObject = event.getCity();
+                if (cityObject != null) {
+                    statement.setString(9, cityObject);
                 } else {
                     statement.setNull(9, NULL);
                 }
 
-                Object cityObject = map.get("city");
-                if (cityObject != null) {
-                    statement.setString(10, (String) cityObject);
+                Object addressObject = map.get("address");
+                if (addressObject != null) {
+                    statement.setString(10, (String) addressObject);
                 } else {
                     statement.setNull(10, NULL);
                 }
 
-                Object addressObject = map.get("address");
-                if (addressObject != null) {
-                    statement.setString(11, (String) addressObject);
+                Object postCodeObject = map.get("post_code");
+                if (postCodeObject != null) {
+                    statement.setString(11, (String) postCodeObject);
                 } else {
                     statement.setNull(11, NULL);
                 }
-
-                Object postCodeObject = map.get("post_code");
-                if (postCodeObject != null) {
-                    statement.setString(12, (String) postCodeObject);
-                } else {
-                    statement.setNull(12, NULL);
-                }
-                statement.setString(13, event.getUserId());
+                statement.setString(12, event.getUserId());
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     // no record is updated, write an error notification.
                     throw new SQLException(String.format("no record is updated by userId %s", event.getUserId()));
                 }
+                // TODO there are old country, province and city in the event for maproot, so we need to update them
+                // update customer or employee based on user_type
+                if(event.getUserType().equals("E")) {
+                    try (PreparedStatement updateStatement = conn.prepareStatement(updateEmployee)) {
+                        if(map.get("manager_id") != null) {
+                            updateStatement.setString(1, (String) map.get("manager_id"));
+                        } else {
+                            updateStatement.setNull(1, NULL);
+                        }
+                        updateStatement.setString(2, event.getHostId());
+                        updateStatement.setString(3, event.getEntityId());
+                        updateStatement.execute();
+                    }
+                } else if(event.getUserType().equals("C")) {
+                    try (PreparedStatement updateStatement = conn.prepareStatement(updateCustomer)) {
+                        if(map.get("referral_id") != null) {
+                            updateStatement.setString(1, (String) map.get("referral_id"));
+                        } else {
+                            updateStatement.setNull(1, NULL);
+                        }
+                        updateStatement.setString(2, event.getHostId());
+                        updateStatement.setString(3, event.getEntityId());
+                        updateStatement.execute();
+                    }
+                } else {
+                    throw new SQLException("user_type is not valid: " + event.getUserType());
+                }
                 conn.commit();
+                if(logger.isTraceEnabled()) logger.trace("update user success: {}", event.getUserId());
                 result = Success.of(event.getUserId());
                 insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {

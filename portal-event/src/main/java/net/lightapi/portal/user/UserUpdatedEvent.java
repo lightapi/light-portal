@@ -13,10 +13,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -4455548883143070860L;
+  private static final long serialVersionUID = 1646515062204990487L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"UserUpdatedEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the id\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"email\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"email address of the updated user\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique user id\"},{\"name\":\"language\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the preferred language of the user\"},{\"name\":\"value\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"user detail in JSON, include firstName, lastName, gender, birthday, postCode, address\",\"default\":null},{\"name\":\"taijiWallet\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"taiji blockchain address of the user\",\"default\":null},{\"name\":\"country\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"country of the user\",\"default\":null},{\"name\":\"province\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"province of the user\",\"default\":null},{\"name\":\"city\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"city of the user\",\"default\":null},{\"name\":\"oldCountry\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"old country of the user, used to move the maproot\",\"default\":null},{\"name\":\"oldProvince\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"old province of the user, used to move the maproot\",\"default\":null},{\"name\":\"oldCity\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"old city of the user, used to move the maproot\",\"default\":null}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"UserUpdatedEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the id\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"email\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"email address of the updated user\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique user id\"},{\"name\":\"entityId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique user id for customer or employee\"},{\"name\":\"userType\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"user type C or E\"},{\"name\":\"language\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the preferred language of the user\"},{\"name\":\"value\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"user detail in JSON, include referralId, managerId, firstName, lastName, phoneNumber, gender, birthday, postCode, address\",\"default\":null},{\"name\":\"country\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"country of the user\",\"default\":null},{\"name\":\"province\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"province of the user\",\"default\":null},{\"name\":\"city\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"city of the user\",\"default\":null},{\"name\":\"oldCountry\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"old country of the user, used to move the maproot\",\"default\":null},{\"name\":\"oldProvince\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"old province of the user, used to move the maproot\",\"default\":null},{\"name\":\"oldCity\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"old city of the user, used to move the maproot\",\"default\":null}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -79,12 +79,14 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
   private java.lang.String email;
   /** a unique user id */
   private java.lang.String userId;
+  /** a unique user id for customer or employee */
+  private java.lang.String entityId;
+  /** user type C or E */
+  private java.lang.String userType;
   /** the preferred language of the user */
   private java.lang.String language;
-  /** user detail in JSON, include firstName, lastName, gender, birthday, postCode, address */
+  /** user detail in JSON, include referralId, managerId, firstName, lastName, phoneNumber, gender, birthday, postCode, address */
   private java.lang.String value;
-  /** taiji blockchain address of the user */
-  private java.lang.String taijiWallet;
   /** country of the user */
   private java.lang.String country;
   /** province of the user */
@@ -111,9 +113,10 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
    * @param hostId host id
    * @param email email address of the updated user
    * @param userId a unique user id
+   * @param entityId a unique user id for customer or employee
+   * @param userType user type C or E
    * @param language the preferred language of the user
-   * @param value user detail in JSON, include firstName, lastName, gender, birthday, postCode, address
-   * @param taijiWallet taiji blockchain address of the user
+   * @param value user detail in JSON, include referralId, managerId, firstName, lastName, phoneNumber, gender, birthday, postCode, address
    * @param country country of the user
    * @param province province of the user
    * @param city city of the user
@@ -121,14 +124,15 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
    * @param oldProvince old province of the user, used to move the maproot
    * @param oldCity old city of the user, used to move the maproot
    */
-  public UserUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String email, java.lang.String userId, java.lang.String language, java.lang.String value, java.lang.String taijiWallet, java.lang.String country, java.lang.String province, java.lang.String city, java.lang.String oldCountry, java.lang.String oldProvince, java.lang.String oldCity) {
+  public UserUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String email, java.lang.String userId, java.lang.String entityId, java.lang.String userType, java.lang.String language, java.lang.String value, java.lang.String country, java.lang.String province, java.lang.String city, java.lang.String oldCountry, java.lang.String oldProvince, java.lang.String oldCity) {
     this.EventId = EventId;
     this.hostId = hostId;
     this.email = email;
     this.userId = userId;
+    this.entityId = entityId;
+    this.userType = userType;
     this.language = language;
     this.value = value;
-    this.taijiWallet = taijiWallet;
     this.country = country;
     this.province = province;
     this.city = city;
@@ -151,15 +155,16 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
     case 1: return hostId;
     case 2: return email;
     case 3: return userId;
-    case 4: return language;
-    case 5: return value;
-    case 6: return taijiWallet;
-    case 7: return country;
-    case 8: return province;
-    case 9: return city;
-    case 10: return oldCountry;
-    case 11: return oldProvince;
-    case 12: return oldCity;
+    case 4: return entityId;
+    case 5: return userType;
+    case 6: return language;
+    case 7: return value;
+    case 8: return country;
+    case 9: return province;
+    case 10: return city;
+    case 11: return oldCountry;
+    case 12: return oldProvince;
+    case 13: return oldCity;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -173,15 +178,16 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
     case 1: hostId = value$ != null ? value$.toString() : null; break;
     case 2: email = value$ != null ? value$.toString() : null; break;
     case 3: userId = value$ != null ? value$.toString() : null; break;
-    case 4: language = value$ != null ? value$.toString() : null; break;
-    case 5: value = value$ != null ? value$.toString() : null; break;
-    case 6: taijiWallet = value$ != null ? value$.toString() : null; break;
-    case 7: country = value$ != null ? value$.toString() : null; break;
-    case 8: province = value$ != null ? value$.toString() : null; break;
-    case 9: city = value$ != null ? value$.toString() : null; break;
-    case 10: oldCountry = value$ != null ? value$.toString() : null; break;
-    case 11: oldProvince = value$ != null ? value$.toString() : null; break;
-    case 12: oldCity = value$ != null ? value$.toString() : null; break;
+    case 4: entityId = value$ != null ? value$.toString() : null; break;
+    case 5: userType = value$ != null ? value$.toString() : null; break;
+    case 6: language = value$ != null ? value$.toString() : null; break;
+    case 7: value = value$ != null ? value$.toString() : null; break;
+    case 8: country = value$ != null ? value$.toString() : null; break;
+    case 9: province = value$ != null ? value$.toString() : null; break;
+    case 10: city = value$ != null ? value$.toString() : null; break;
+    case 11: oldCountry = value$ != null ? value$.toString() : null; break;
+    case 12: oldProvince = value$ != null ? value$.toString() : null; break;
+    case 13: oldCity = value$ != null ? value$.toString() : null; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -258,6 +264,42 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
   }
 
   /**
+   * Gets the value of the 'entityId' field.
+   * @return a unique user id for customer or employee
+   */
+  public java.lang.String getEntityId() {
+    return entityId;
+  }
+
+
+  /**
+   * Sets the value of the 'entityId' field.
+   * a unique user id for customer or employee
+   * @param value the value to set.
+   */
+  public void setEntityId(java.lang.String value) {
+    this.entityId = value;
+  }
+
+  /**
+   * Gets the value of the 'userType' field.
+   * @return user type C or E
+   */
+  public java.lang.String getUserType() {
+    return userType;
+  }
+
+
+  /**
+   * Sets the value of the 'userType' field.
+   * user type C or E
+   * @param value the value to set.
+   */
+  public void setUserType(java.lang.String value) {
+    this.userType = value;
+  }
+
+  /**
    * Gets the value of the 'language' field.
    * @return the preferred language of the user
    */
@@ -277,7 +319,7 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
 
   /**
    * Gets the value of the 'value' field.
-   * @return user detail in JSON, include firstName, lastName, gender, birthday, postCode, address
+   * @return user detail in JSON, include referralId, managerId, firstName, lastName, phoneNumber, gender, birthday, postCode, address
    */
   public java.lang.String getValue() {
     return value;
@@ -286,29 +328,11 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
 
   /**
    * Sets the value of the 'value' field.
-   * user detail in JSON, include firstName, lastName, gender, birthday, postCode, address
+   * user detail in JSON, include referralId, managerId, firstName, lastName, phoneNumber, gender, birthday, postCode, address
    * @param value the value to set.
    */
   public void setValue(java.lang.String value) {
     this.value = value;
-  }
-
-  /**
-   * Gets the value of the 'taijiWallet' field.
-   * @return taiji blockchain address of the user
-   */
-  public java.lang.String getTaijiWallet() {
-    return taijiWallet;
-  }
-
-
-  /**
-   * Sets the value of the 'taijiWallet' field.
-   * taiji blockchain address of the user
-   * @param value the value to set.
-   */
-  public void setTaijiWallet(java.lang.String value) {
-    this.taijiWallet = value;
   }
 
   /**
@@ -468,12 +492,14 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
     private java.lang.String email;
     /** a unique user id */
     private java.lang.String userId;
+    /** a unique user id for customer or employee */
+    private java.lang.String entityId;
+    /** user type C or E */
+    private java.lang.String userType;
     /** the preferred language of the user */
     private java.lang.String language;
-    /** user detail in JSON, include firstName, lastName, gender, birthday, postCode, address */
+    /** user detail in JSON, include referralId, managerId, firstName, lastName, phoneNumber, gender, birthday, postCode, address */
     private java.lang.String value;
-    /** taiji blockchain address of the user */
-    private java.lang.String taijiWallet;
     /** country of the user */
     private java.lang.String country;
     /** province of the user */
@@ -517,41 +543,45 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
         this.userId = data().deepCopy(fields()[3].schema(), other.userId);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
-      if (isValidValue(fields()[4], other.language)) {
-        this.language = data().deepCopy(fields()[4].schema(), other.language);
+      if (isValidValue(fields()[4], other.entityId)) {
+        this.entityId = data().deepCopy(fields()[4].schema(), other.entityId);
         fieldSetFlags()[4] = other.fieldSetFlags()[4];
       }
-      if (isValidValue(fields()[5], other.value)) {
-        this.value = data().deepCopy(fields()[5].schema(), other.value);
+      if (isValidValue(fields()[5], other.userType)) {
+        this.userType = data().deepCopy(fields()[5].schema(), other.userType);
         fieldSetFlags()[5] = other.fieldSetFlags()[5];
       }
-      if (isValidValue(fields()[6], other.taijiWallet)) {
-        this.taijiWallet = data().deepCopy(fields()[6].schema(), other.taijiWallet);
+      if (isValidValue(fields()[6], other.language)) {
+        this.language = data().deepCopy(fields()[6].schema(), other.language);
         fieldSetFlags()[6] = other.fieldSetFlags()[6];
       }
-      if (isValidValue(fields()[7], other.country)) {
-        this.country = data().deepCopy(fields()[7].schema(), other.country);
+      if (isValidValue(fields()[7], other.value)) {
+        this.value = data().deepCopy(fields()[7].schema(), other.value);
         fieldSetFlags()[7] = other.fieldSetFlags()[7];
       }
-      if (isValidValue(fields()[8], other.province)) {
-        this.province = data().deepCopy(fields()[8].schema(), other.province);
+      if (isValidValue(fields()[8], other.country)) {
+        this.country = data().deepCopy(fields()[8].schema(), other.country);
         fieldSetFlags()[8] = other.fieldSetFlags()[8];
       }
-      if (isValidValue(fields()[9], other.city)) {
-        this.city = data().deepCopy(fields()[9].schema(), other.city);
+      if (isValidValue(fields()[9], other.province)) {
+        this.province = data().deepCopy(fields()[9].schema(), other.province);
         fieldSetFlags()[9] = other.fieldSetFlags()[9];
       }
-      if (isValidValue(fields()[10], other.oldCountry)) {
-        this.oldCountry = data().deepCopy(fields()[10].schema(), other.oldCountry);
+      if (isValidValue(fields()[10], other.city)) {
+        this.city = data().deepCopy(fields()[10].schema(), other.city);
         fieldSetFlags()[10] = other.fieldSetFlags()[10];
       }
-      if (isValidValue(fields()[11], other.oldProvince)) {
-        this.oldProvince = data().deepCopy(fields()[11].schema(), other.oldProvince);
+      if (isValidValue(fields()[11], other.oldCountry)) {
+        this.oldCountry = data().deepCopy(fields()[11].schema(), other.oldCountry);
         fieldSetFlags()[11] = other.fieldSetFlags()[11];
       }
-      if (isValidValue(fields()[12], other.oldCity)) {
-        this.oldCity = data().deepCopy(fields()[12].schema(), other.oldCity);
+      if (isValidValue(fields()[12], other.oldProvince)) {
+        this.oldProvince = data().deepCopy(fields()[12].schema(), other.oldProvince);
         fieldSetFlags()[12] = other.fieldSetFlags()[12];
+      }
+      if (isValidValue(fields()[13], other.oldCity)) {
+        this.oldCity = data().deepCopy(fields()[13].schema(), other.oldCity);
+        fieldSetFlags()[13] = other.fieldSetFlags()[13];
       }
     }
 
@@ -578,41 +608,45 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
         this.userId = data().deepCopy(fields()[3].schema(), other.userId);
         fieldSetFlags()[3] = true;
       }
-      if (isValidValue(fields()[4], other.language)) {
-        this.language = data().deepCopy(fields()[4].schema(), other.language);
+      if (isValidValue(fields()[4], other.entityId)) {
+        this.entityId = data().deepCopy(fields()[4].schema(), other.entityId);
         fieldSetFlags()[4] = true;
       }
-      if (isValidValue(fields()[5], other.value)) {
-        this.value = data().deepCopy(fields()[5].schema(), other.value);
+      if (isValidValue(fields()[5], other.userType)) {
+        this.userType = data().deepCopy(fields()[5].schema(), other.userType);
         fieldSetFlags()[5] = true;
       }
-      if (isValidValue(fields()[6], other.taijiWallet)) {
-        this.taijiWallet = data().deepCopy(fields()[6].schema(), other.taijiWallet);
+      if (isValidValue(fields()[6], other.language)) {
+        this.language = data().deepCopy(fields()[6].schema(), other.language);
         fieldSetFlags()[6] = true;
       }
-      if (isValidValue(fields()[7], other.country)) {
-        this.country = data().deepCopy(fields()[7].schema(), other.country);
+      if (isValidValue(fields()[7], other.value)) {
+        this.value = data().deepCopy(fields()[7].schema(), other.value);
         fieldSetFlags()[7] = true;
       }
-      if (isValidValue(fields()[8], other.province)) {
-        this.province = data().deepCopy(fields()[8].schema(), other.province);
+      if (isValidValue(fields()[8], other.country)) {
+        this.country = data().deepCopy(fields()[8].schema(), other.country);
         fieldSetFlags()[8] = true;
       }
-      if (isValidValue(fields()[9], other.city)) {
-        this.city = data().deepCopy(fields()[9].schema(), other.city);
+      if (isValidValue(fields()[9], other.province)) {
+        this.province = data().deepCopy(fields()[9].schema(), other.province);
         fieldSetFlags()[9] = true;
       }
-      if (isValidValue(fields()[10], other.oldCountry)) {
-        this.oldCountry = data().deepCopy(fields()[10].schema(), other.oldCountry);
+      if (isValidValue(fields()[10], other.city)) {
+        this.city = data().deepCopy(fields()[10].schema(), other.city);
         fieldSetFlags()[10] = true;
       }
-      if (isValidValue(fields()[11], other.oldProvince)) {
-        this.oldProvince = data().deepCopy(fields()[11].schema(), other.oldProvince);
+      if (isValidValue(fields()[11], other.oldCountry)) {
+        this.oldCountry = data().deepCopy(fields()[11].schema(), other.oldCountry);
         fieldSetFlags()[11] = true;
       }
-      if (isValidValue(fields()[12], other.oldCity)) {
-        this.oldCity = data().deepCopy(fields()[12].schema(), other.oldCity);
+      if (isValidValue(fields()[12], other.oldProvince)) {
+        this.oldProvince = data().deepCopy(fields()[12].schema(), other.oldProvince);
         fieldSetFlags()[12] = true;
+      }
+      if (isValidValue(fields()[13], other.oldCity)) {
+        this.oldCity = data().deepCopy(fields()[13].schema(), other.oldCity);
+        fieldSetFlags()[13] = true;
       }
     }
 
@@ -825,6 +859,94 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
     }
 
     /**
+      * Gets the value of the 'entityId' field.
+      * a unique user id for customer or employee
+      * @return The value.
+      */
+    public java.lang.String getEntityId() {
+      return entityId;
+    }
+
+
+    /**
+      * Sets the value of the 'entityId' field.
+      * a unique user id for customer or employee
+      * @param value The value of 'entityId'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.user.UserUpdatedEvent.Builder setEntityId(java.lang.String value) {
+      validate(fields()[4], value);
+      this.entityId = value;
+      fieldSetFlags()[4] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'entityId' field has been set.
+      * a unique user id for customer or employee
+      * @return True if the 'entityId' field has been set, false otherwise.
+      */
+    public boolean hasEntityId() {
+      return fieldSetFlags()[4];
+    }
+
+
+    /**
+      * Clears the value of the 'entityId' field.
+      * a unique user id for customer or employee
+      * @return This builder.
+      */
+    public net.lightapi.portal.user.UserUpdatedEvent.Builder clearEntityId() {
+      entityId = null;
+      fieldSetFlags()[4] = false;
+      return this;
+    }
+
+    /**
+      * Gets the value of the 'userType' field.
+      * user type C or E
+      * @return The value.
+      */
+    public java.lang.String getUserType() {
+      return userType;
+    }
+
+
+    /**
+      * Sets the value of the 'userType' field.
+      * user type C or E
+      * @param value The value of 'userType'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.user.UserUpdatedEvent.Builder setUserType(java.lang.String value) {
+      validate(fields()[5], value);
+      this.userType = value;
+      fieldSetFlags()[5] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'userType' field has been set.
+      * user type C or E
+      * @return True if the 'userType' field has been set, false otherwise.
+      */
+    public boolean hasUserType() {
+      return fieldSetFlags()[5];
+    }
+
+
+    /**
+      * Clears the value of the 'userType' field.
+      * user type C or E
+      * @return This builder.
+      */
+    public net.lightapi.portal.user.UserUpdatedEvent.Builder clearUserType() {
+      userType = null;
+      fieldSetFlags()[5] = false;
+      return this;
+    }
+
+    /**
       * Gets the value of the 'language' field.
       * the preferred language of the user
       * @return The value.
@@ -841,9 +963,9 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.user.UserUpdatedEvent.Builder setLanguage(java.lang.String value) {
-      validate(fields()[4], value);
+      validate(fields()[6], value);
       this.language = value;
-      fieldSetFlags()[4] = true;
+      fieldSetFlags()[6] = true;
       return this;
     }
 
@@ -853,7 +975,7 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return True if the 'language' field has been set, false otherwise.
       */
     public boolean hasLanguage() {
-      return fieldSetFlags()[4];
+      return fieldSetFlags()[6];
     }
 
 
@@ -864,13 +986,13 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
       */
     public net.lightapi.portal.user.UserUpdatedEvent.Builder clearLanguage() {
       language = null;
-      fieldSetFlags()[4] = false;
+      fieldSetFlags()[6] = false;
       return this;
     }
 
     /**
       * Gets the value of the 'value' field.
-      * user detail in JSON, include firstName, lastName, gender, birthday, postCode, address
+      * user detail in JSON, include referralId, managerId, firstName, lastName, phoneNumber, gender, birthday, postCode, address
       * @return The value.
       */
     public java.lang.String getValue() {
@@ -880,79 +1002,35 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
 
     /**
       * Sets the value of the 'value' field.
-      * user detail in JSON, include firstName, lastName, gender, birthday, postCode, address
+      * user detail in JSON, include referralId, managerId, firstName, lastName, phoneNumber, gender, birthday, postCode, address
       * @param value The value of 'value'.
       * @return This builder.
       */
     public net.lightapi.portal.user.UserUpdatedEvent.Builder setValue(java.lang.String value) {
-      validate(fields()[5], value);
+      validate(fields()[7], value);
       this.value = value;
-      fieldSetFlags()[5] = true;
+      fieldSetFlags()[7] = true;
       return this;
     }
 
     /**
       * Checks whether the 'value' field has been set.
-      * user detail in JSON, include firstName, lastName, gender, birthday, postCode, address
+      * user detail in JSON, include referralId, managerId, firstName, lastName, phoneNumber, gender, birthday, postCode, address
       * @return True if the 'value' field has been set, false otherwise.
       */
     public boolean hasValue() {
-      return fieldSetFlags()[5];
+      return fieldSetFlags()[7];
     }
 
 
     /**
       * Clears the value of the 'value' field.
-      * user detail in JSON, include firstName, lastName, gender, birthday, postCode, address
+      * user detail in JSON, include referralId, managerId, firstName, lastName, phoneNumber, gender, birthday, postCode, address
       * @return This builder.
       */
     public net.lightapi.portal.user.UserUpdatedEvent.Builder clearValue() {
       value = null;
-      fieldSetFlags()[5] = false;
-      return this;
-    }
-
-    /**
-      * Gets the value of the 'taijiWallet' field.
-      * taiji blockchain address of the user
-      * @return The value.
-      */
-    public java.lang.String getTaijiWallet() {
-      return taijiWallet;
-    }
-
-
-    /**
-      * Sets the value of the 'taijiWallet' field.
-      * taiji blockchain address of the user
-      * @param value The value of 'taijiWallet'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.user.UserUpdatedEvent.Builder setTaijiWallet(java.lang.String value) {
-      validate(fields()[6], value);
-      this.taijiWallet = value;
-      fieldSetFlags()[6] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'taijiWallet' field has been set.
-      * taiji blockchain address of the user
-      * @return True if the 'taijiWallet' field has been set, false otherwise.
-      */
-    public boolean hasTaijiWallet() {
-      return fieldSetFlags()[6];
-    }
-
-
-    /**
-      * Clears the value of the 'taijiWallet' field.
-      * taiji blockchain address of the user
-      * @return This builder.
-      */
-    public net.lightapi.portal.user.UserUpdatedEvent.Builder clearTaijiWallet() {
-      taijiWallet = null;
-      fieldSetFlags()[6] = false;
+      fieldSetFlags()[7] = false;
       return this;
     }
 
@@ -973,9 +1051,9 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.user.UserUpdatedEvent.Builder setCountry(java.lang.String value) {
-      validate(fields()[7], value);
+      validate(fields()[8], value);
       this.country = value;
-      fieldSetFlags()[7] = true;
+      fieldSetFlags()[8] = true;
       return this;
     }
 
@@ -985,7 +1063,7 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return True if the 'country' field has been set, false otherwise.
       */
     public boolean hasCountry() {
-      return fieldSetFlags()[7];
+      return fieldSetFlags()[8];
     }
 
 
@@ -996,7 +1074,7 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
       */
     public net.lightapi.portal.user.UserUpdatedEvent.Builder clearCountry() {
       country = null;
-      fieldSetFlags()[7] = false;
+      fieldSetFlags()[8] = false;
       return this;
     }
 
@@ -1017,9 +1095,9 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.user.UserUpdatedEvent.Builder setProvince(java.lang.String value) {
-      validate(fields()[8], value);
+      validate(fields()[9], value);
       this.province = value;
-      fieldSetFlags()[8] = true;
+      fieldSetFlags()[9] = true;
       return this;
     }
 
@@ -1029,7 +1107,7 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return True if the 'province' field has been set, false otherwise.
       */
     public boolean hasProvince() {
-      return fieldSetFlags()[8];
+      return fieldSetFlags()[9];
     }
 
 
@@ -1040,7 +1118,7 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
       */
     public net.lightapi.portal.user.UserUpdatedEvent.Builder clearProvince() {
       province = null;
-      fieldSetFlags()[8] = false;
+      fieldSetFlags()[9] = false;
       return this;
     }
 
@@ -1061,9 +1139,9 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.user.UserUpdatedEvent.Builder setCity(java.lang.String value) {
-      validate(fields()[9], value);
+      validate(fields()[10], value);
       this.city = value;
-      fieldSetFlags()[9] = true;
+      fieldSetFlags()[10] = true;
       return this;
     }
 
@@ -1073,7 +1151,7 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return True if the 'city' field has been set, false otherwise.
       */
     public boolean hasCity() {
-      return fieldSetFlags()[9];
+      return fieldSetFlags()[10];
     }
 
 
@@ -1084,7 +1162,7 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
       */
     public net.lightapi.portal.user.UserUpdatedEvent.Builder clearCity() {
       city = null;
-      fieldSetFlags()[9] = false;
+      fieldSetFlags()[10] = false;
       return this;
     }
 
@@ -1105,9 +1183,9 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.user.UserUpdatedEvent.Builder setOldCountry(java.lang.String value) {
-      validate(fields()[10], value);
+      validate(fields()[11], value);
       this.oldCountry = value;
-      fieldSetFlags()[10] = true;
+      fieldSetFlags()[11] = true;
       return this;
     }
 
@@ -1117,7 +1195,7 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return True if the 'oldCountry' field has been set, false otherwise.
       */
     public boolean hasOldCountry() {
-      return fieldSetFlags()[10];
+      return fieldSetFlags()[11];
     }
 
 
@@ -1128,7 +1206,7 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
       */
     public net.lightapi.portal.user.UserUpdatedEvent.Builder clearOldCountry() {
       oldCountry = null;
-      fieldSetFlags()[10] = false;
+      fieldSetFlags()[11] = false;
       return this;
     }
 
@@ -1149,9 +1227,9 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.user.UserUpdatedEvent.Builder setOldProvince(java.lang.String value) {
-      validate(fields()[11], value);
+      validate(fields()[12], value);
       this.oldProvince = value;
-      fieldSetFlags()[11] = true;
+      fieldSetFlags()[12] = true;
       return this;
     }
 
@@ -1161,7 +1239,7 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return True if the 'oldProvince' field has been set, false otherwise.
       */
     public boolean hasOldProvince() {
-      return fieldSetFlags()[11];
+      return fieldSetFlags()[12];
     }
 
 
@@ -1172,7 +1250,7 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
       */
     public net.lightapi.portal.user.UserUpdatedEvent.Builder clearOldProvince() {
       oldProvince = null;
-      fieldSetFlags()[11] = false;
+      fieldSetFlags()[12] = false;
       return this;
     }
 
@@ -1193,9 +1271,9 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return This builder.
       */
     public net.lightapi.portal.user.UserUpdatedEvent.Builder setOldCity(java.lang.String value) {
-      validate(fields()[12], value);
+      validate(fields()[13], value);
       this.oldCity = value;
-      fieldSetFlags()[12] = true;
+      fieldSetFlags()[13] = true;
       return this;
     }
 
@@ -1205,7 +1283,7 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @return True if the 'oldCity' field has been set, false otherwise.
       */
     public boolean hasOldCity() {
-      return fieldSetFlags()[12];
+      return fieldSetFlags()[13];
     }
 
 
@@ -1216,7 +1294,7 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
       */
     public net.lightapi.portal.user.UserUpdatedEvent.Builder clearOldCity() {
       oldCity = null;
-      fieldSetFlags()[12] = false;
+      fieldSetFlags()[13] = false;
       return this;
     }
 
@@ -1238,15 +1316,16 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
         record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
         record.email = fieldSetFlags()[2] ? this.email : (java.lang.String) defaultValue(fields()[2]);
         record.userId = fieldSetFlags()[3] ? this.userId : (java.lang.String) defaultValue(fields()[3]);
-        record.language = fieldSetFlags()[4] ? this.language : (java.lang.String) defaultValue(fields()[4]);
-        record.value = fieldSetFlags()[5] ? this.value : (java.lang.String) defaultValue(fields()[5]);
-        record.taijiWallet = fieldSetFlags()[6] ? this.taijiWallet : (java.lang.String) defaultValue(fields()[6]);
-        record.country = fieldSetFlags()[7] ? this.country : (java.lang.String) defaultValue(fields()[7]);
-        record.province = fieldSetFlags()[8] ? this.province : (java.lang.String) defaultValue(fields()[8]);
-        record.city = fieldSetFlags()[9] ? this.city : (java.lang.String) defaultValue(fields()[9]);
-        record.oldCountry = fieldSetFlags()[10] ? this.oldCountry : (java.lang.String) defaultValue(fields()[10]);
-        record.oldProvince = fieldSetFlags()[11] ? this.oldProvince : (java.lang.String) defaultValue(fields()[11]);
-        record.oldCity = fieldSetFlags()[12] ? this.oldCity : (java.lang.String) defaultValue(fields()[12]);
+        record.entityId = fieldSetFlags()[4] ? this.entityId : (java.lang.String) defaultValue(fields()[4]);
+        record.userType = fieldSetFlags()[5] ? this.userType : (java.lang.String) defaultValue(fields()[5]);
+        record.language = fieldSetFlags()[6] ? this.language : (java.lang.String) defaultValue(fields()[6]);
+        record.value = fieldSetFlags()[7] ? this.value : (java.lang.String) defaultValue(fields()[7]);
+        record.country = fieldSetFlags()[8] ? this.country : (java.lang.String) defaultValue(fields()[8]);
+        record.province = fieldSetFlags()[9] ? this.province : (java.lang.String) defaultValue(fields()[9]);
+        record.city = fieldSetFlags()[10] ? this.city : (java.lang.String) defaultValue(fields()[10]);
+        record.oldCountry = fieldSetFlags()[11] ? this.oldCountry : (java.lang.String) defaultValue(fields()[11]);
+        record.oldProvince = fieldSetFlags()[12] ? this.oldProvince : (java.lang.String) defaultValue(fields()[12]);
+        record.oldCity = fieldSetFlags()[13] ? this.oldCity : (java.lang.String) defaultValue(fields()[13]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -1287,6 +1366,10 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
 
     out.writeString(this.userId);
 
+    out.writeString(this.entityId);
+
+    out.writeString(this.userType);
+
     out.writeString(this.language);
 
     if (this.value == null) {
@@ -1295,14 +1378,6 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
     } else {
       out.writeIndex(1);
       out.writeString(this.value);
-    }
-
-    if (this.taijiWallet == null) {
-      out.writeIndex(0);
-      out.writeNull();
-    } else {
-      out.writeIndex(1);
-      out.writeString(this.taijiWallet);
     }
 
     if (this.country == null) {
@@ -1371,6 +1446,10 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
 
       this.userId = in.readString();
 
+      this.entityId = in.readString();
+
+      this.userType = in.readString();
+
       this.language = in.readString();
 
       if (in.readIndex() != 1) {
@@ -1378,13 +1457,6 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
         this.value = null;
       } else {
         this.value = in.readString();
-      }
-
-      if (in.readIndex() != 1) {
-        in.readNull();
-        this.taijiWallet = null;
-      } else {
-        this.taijiWallet = in.readString();
       }
 
       if (in.readIndex() != 1) {
@@ -1430,7 +1502,7 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
       }
 
     } else {
-      for (int i = 0; i < 13; i++) {
+      for (int i = 0; i < 14; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -1452,10 +1524,18 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
           break;
 
         case 4:
-          this.language = in.readString();
+          this.entityId = in.readString();
           break;
 
         case 5:
+          this.userType = in.readString();
+          break;
+
+        case 6:
+          this.language = in.readString();
+          break;
+
+        case 7:
           if (in.readIndex() != 1) {
             in.readNull();
             this.value = null;
@@ -1464,16 +1544,7 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
           }
           break;
 
-        case 6:
-          if (in.readIndex() != 1) {
-            in.readNull();
-            this.taijiWallet = null;
-          } else {
-            this.taijiWallet = in.readString();
-          }
-          break;
-
-        case 7:
+        case 8:
           if (in.readIndex() != 1) {
             in.readNull();
             this.country = null;
@@ -1482,7 +1553,7 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
           }
           break;
 
-        case 8:
+        case 9:
           if (in.readIndex() != 1) {
             in.readNull();
             this.province = null;
@@ -1491,7 +1562,7 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
           }
           break;
 
-        case 9:
+        case 10:
           if (in.readIndex() != 1) {
             in.readNull();
             this.city = null;
@@ -1500,7 +1571,7 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
           }
           break;
 
-        case 10:
+        case 11:
           if (in.readIndex() != 1) {
             in.readNull();
             this.oldCountry = null;
@@ -1509,7 +1580,7 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
           }
           break;
 
-        case 11:
+        case 12:
           if (in.readIndex() != 1) {
             in.readNull();
             this.oldProvince = null;
@@ -1518,7 +1589,7 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
           }
           break;
 
-        case 12:
+        case 13:
           if (in.readIndex() != 1) {
             in.readNull();
             this.oldCity = null;
@@ -1534,13 +1605,3 @@ public class UserUpdatedEvent extends org.apache.avro.specific.SpecificRecordBas
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
