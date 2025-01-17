@@ -2712,24 +2712,60 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> queryServiceEndpoint(String hostId, String apiId, String apiVersion) {
+    public Result<String> queryServiceEndpoint(int offset, int limit, String hostId, String apiId, String apiVersion, String endpoint, String method, String path, String desc) {
         Result<String> result = null;
-        String sql = "SELECT host_id, api_id, api_version, endpoint, http_method,\n" +
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
+                "host_id, api_id, api_version, endpoint, http_method,\n" +
                 "endpoint_path, endpoint_desc\n" +
                 "FROM api_endpoint_t\n" +
-                "WHERE host_id = ? AND api_id = ? AND api_version = ?\n" +
-                "ORDER BY endpoint";
+                "WHERE host_id = ? AND api_id = ? AND api_version = ?\n");
 
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(hostId);
+        parameters.add(apiId);
+        parameters.add(apiVersion);
+
+        StringBuilder whereClause = new StringBuilder();
+        addCondition(whereClause, parameters, "endpoint", endpoint);
+        addCondition(whereClause, parameters, "http_method", method);
+        addCondition(whereClause, parameters, "endpoint_path", path);
+        addCondition(whereClause, parameters, "endpoint_desc", desc);
+
+        if(whereClause.length() > 0) {
+            sqlBuilder.append(" AND ").append(whereClause);
+        }
+
+
+        sqlBuilder.append(" ORDER BY endpoint\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
         List<Map<String, Object>> endpoints = new ArrayList<>();
+
 
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, hostId);
-            preparedStatement.setString(2, apiId);
-            preparedStatement.setString(3, apiVersion);
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+            boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
+
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+
+
                     map.put("hostId", resultSet.getString("host_id"));
                     map.put("apiId", resultSet.getString("api_id"));
                     map.put("apiVersion", resultSet.getString("api_version"));
@@ -2740,7 +2776,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     endpoints.add(map);
                 }
             }
-            result = Success.of(JsonMapper.toJson(endpoints));
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("endpoints", endpoints);
+            result = Success.of(JsonMapper.toJson(resultMap));
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
@@ -2749,7 +2789,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
         return result;
-
     }
 
     @Override
