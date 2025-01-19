@@ -1,7 +1,7 @@
 {
   "type": "record",
   "name": "ServiceVersionCreatedEvent",
-  "namespace": "net.lightapi.portal.market",
+  "namespace": "net.lightapi.portal.service",
   "fields": [
     {
       "name": "EventId",

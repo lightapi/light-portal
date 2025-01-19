@@ -5,6 +5,12 @@ import com.networknt.monad.Result;
 import net.lightapi.portal.market.*;
 import net.lightapi.portal.user.*;
 import net.lightapi.portal.attribute.*;
+import net.lightapi.portal.group.*;
+import net.lightapi.portal.position.*;
+import net.lightapi.portal.role.*;
+import net.lightapi.portal.service.*;
+import net.lightapi.portal.rule.*;
+
 
 import java.util.List;
 import java.util.Map;
@@ -114,8 +120,6 @@ public interface PortalDbProvider extends DbProvider {
                              String ruleBody, String ruleOwner, String common);
     Result<Map<String, Object>> queryRuleById(String ruleId);
     Result<String> queryRuleByHostType(String hostId, String ruleType);
-    Result<String> createApiRule(ApiRuleCreatedEvent event);
-    Result<String> deleteApiRule(ApiRuleDeletedEvent event);
     Result<List<Map<String, Object>>> queryRuleByHostApiId(String hostId, String apiId, String apiVersion);
 
     Result<String> createRole(RoleCreatedEvent event);

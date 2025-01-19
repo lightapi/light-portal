@@ -1,7 +1,7 @@
 {
   "type": "record",
   "name": "GroupUpdatedEvent",
-  "namespace": "net.lightapi.portal.market",
+  "namespace": "net.lightapi.portal.group",
   "fields": [
     {
       "name": "EventId",

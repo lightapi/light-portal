@@ -1,7 +1,7 @@
 {
   "type": "record",
   "name": "RoleUserCreatedEvent",
-  "namespace": "net.lightapi.portal.market",
+  "namespace": "net.lightapi.portal.role",
   "fields": [
     {
       "name": "EventId",

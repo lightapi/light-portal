@@ -12,6 +12,12 @@ import com.networknt.utility.HashUtil;
 import net.lightapi.portal.market.*;
 import net.lightapi.portal.user.*;
 import net.lightapi.portal.attribute.*;
+import net.lightapi.portal.group.*;
+import net.lightapi.portal.position.*;
+import net.lightapi.portal.role.*;
+import net.lightapi.portal.rule.*;
+import net.lightapi.portal.service.*;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -4591,100 +4597,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
-        }
-        return result;
-    }
-
-    @Override
-    public Result<String> createApiRule(ApiRuleCreatedEvent event) {
-        final String insertApiRule = "INSERT INTO api_rule_t (api_id, rule_id, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?)";
-        Result<String> result = null;
-        List<String> ruleIds = event.getRuleIds();
-        String apiId = event.getApiId();
-        Timestamp ts = new Timestamp(System.currentTimeMillis());
-
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            // no duplicate record, insert the user into database and write a success notification.
-            try (PreparedStatement statement = conn.prepareStatement(insertApiRule)) {
-                int i = 0;
-                for (String ruleId : ruleIds) {
-                    statement.setString(1, apiId);
-                    statement.setString(2, ruleId);
-                    statement.setString(3, event.getEventId().getId());
-                    statement.setTimestamp(4, ts);
-                    statement.addBatch();
-                    i++;
-                    if (i % 1000 == 0 || i == ruleIds.size()) {
-                        statement.executeBatch();
-                    }
-                }
-                if (ruleIds.isEmpty()) {
-                    throw new SQLException("failed to insert the Api rule " + event.getApiId());
-                }
-                conn.commit();
-                result = Success.of(event.getApiId());
-                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
-            }
-        } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-        }
-        return result;
-    }
-
-    @Override
-    public Result<String> deleteApiRule(ApiRuleDeletedEvent event) {
-        final String deleteApiRule = "DELETE FROM api_rule_t WHERE api_id = ? AND rule_id = ?";
-        Result<String> result = null;
-        List<String> ruleIds = event.getRuleIds();
-        String apiId = event.getApiId();
-
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            // no duplicate record, insert the user into database and write a success notification.
-            try (PreparedStatement statement = conn.prepareStatement(deleteApiRule)) {
-                int i = 0;
-                for (String ruleId : ruleIds) {
-                    statement.setString(1, apiId);
-                    statement.setString(2, ruleId);
-                    statement.addBatch();
-                    i++;
-                    if (i % 1000 == 0 || i == ruleIds.size()) {
-                        statement.executeBatch();
-                    }
-                }
-                if (ruleIds.isEmpty()) {
-                    throw new SQLException("failed to delete the Api rule " + event.getApiId());
-                }
-                conn.commit();
-                result = Success.of(event.getApiId());
-                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
-            }
-        } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
         }
         return result;
     }
