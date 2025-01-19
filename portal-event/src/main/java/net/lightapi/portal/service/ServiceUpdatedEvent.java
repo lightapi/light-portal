@@ -3,7 +3,7 @@
  *
  * DO NOT EDIT DIRECTLY
  */
-package net.lightapi.portal.market;
+package net.lightapi.portal.service;
 
 import org.apache.avro.specific.SpecificData;
 import org.apache.avro.util.Utf8;
@@ -12,26 +12,26 @@ import org.apache.avro.message.BinaryMessageDecoder;
 import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
-public class MarketServiceCreatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -2964378158041534144L;
+public class ServiceUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
+  private static final long serialVersionUID = 1338328935971125764L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"MarketServiceCreatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"apiId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api id\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service detail in JSON\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ServiceUpdatedEvent\",\"namespace\":\"net.lightapi.portal.service\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"apiId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api id\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service detail in JSON\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
 
-  private static final BinaryMessageEncoder<MarketServiceCreatedEvent> ENCODER =
+  private static final BinaryMessageEncoder<ServiceUpdatedEvent> ENCODER =
       new BinaryMessageEncoder<>(MODEL$, SCHEMA$);
 
-  private static final BinaryMessageDecoder<MarketServiceCreatedEvent> DECODER =
+  private static final BinaryMessageDecoder<ServiceUpdatedEvent> DECODER =
       new BinaryMessageDecoder<>(MODEL$, SCHEMA$);
 
   /**
    * Return the BinaryMessageEncoder instance used by this class.
    * @return the message encoder used by this class
    */
-  public static BinaryMessageEncoder<MarketServiceCreatedEvent> getEncoder() {
+  public static BinaryMessageEncoder<ServiceUpdatedEvent> getEncoder() {
     return ENCODER;
   }
 
@@ -39,7 +39,7 @@ public class MarketServiceCreatedEvent extends org.apache.avro.specific.Specific
    * Return the BinaryMessageDecoder instance used by this class.
    * @return the message decoder used by this class
    */
-  public static BinaryMessageDecoder<MarketServiceCreatedEvent> getDecoder() {
+  public static BinaryMessageDecoder<ServiceUpdatedEvent> getDecoder() {
     return DECODER;
   }
 
@@ -48,12 +48,12 @@ public class MarketServiceCreatedEvent extends org.apache.avro.specific.Specific
    * @param resolver a {@link SchemaStore} used to find schemas by fingerprint
    * @return a BinaryMessageDecoder instance for this class backed by the given SchemaStore
    */
-  public static BinaryMessageDecoder<MarketServiceCreatedEvent> createDecoder(SchemaStore resolver) {
+  public static BinaryMessageDecoder<ServiceUpdatedEvent> createDecoder(SchemaStore resolver) {
     return new BinaryMessageDecoder<>(MODEL$, SCHEMA$, resolver);
   }
 
   /**
-   * Serializes this MarketServiceCreatedEvent to a ByteBuffer.
+   * Serializes this ServiceUpdatedEvent to a ByteBuffer.
    * @return a buffer holding the serialized data for this instance
    * @throws java.io.IOException if this instance could not be serialized
    */
@@ -62,12 +62,12 @@ public class MarketServiceCreatedEvent extends org.apache.avro.specific.Specific
   }
 
   /**
-   * Deserializes a MarketServiceCreatedEvent from a ByteBuffer.
+   * Deserializes a ServiceUpdatedEvent from a ByteBuffer.
    * @param b a byte buffer holding serialized data for an instance of this class
-   * @return a MarketServiceCreatedEvent instance decoded from the given buffer
+   * @return a ServiceUpdatedEvent instance decoded from the given buffer
    * @throws java.io.IOException if the given bytes could not be deserialized into an instance of this class
    */
-  public static MarketServiceCreatedEvent fromByteBuffer(
+  public static ServiceUpdatedEvent fromByteBuffer(
       java.nio.ByteBuffer b) throws java.io.IOException {
     return DECODER.decode(b);
   }
@@ -85,7 +85,7 @@ public class MarketServiceCreatedEvent extends org.apache.avro.specific.Specific
    * to their default values from the schema.  If that is desired then
    * one should use <code>newBuilder()</code>.
    */
-  public MarketServiceCreatedEvent() {}
+  public ServiceUpdatedEvent() {}
 
   /**
    * All-args constructor.
@@ -94,7 +94,7 @@ public class MarketServiceCreatedEvent extends org.apache.avro.specific.Specific
    * @param apiId api id
    * @param value service detail in JSON
    */
-  public MarketServiceCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String apiId, java.lang.String value) {
+  public ServiceUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String apiId, java.lang.String value) {
     this.EventId = EventId;
     this.hostId = hostId;
     this.apiId = apiId;
@@ -204,45 +204,45 @@ public class MarketServiceCreatedEvent extends org.apache.avro.specific.Specific
   }
 
   /**
-   * Creates a new MarketServiceCreatedEvent RecordBuilder.
-   * @return A new MarketServiceCreatedEvent RecordBuilder
+   * Creates a new ServiceUpdatedEvent RecordBuilder.
+   * @return A new ServiceUpdatedEvent RecordBuilder
    */
-  public static net.lightapi.portal.market.MarketServiceCreatedEvent.Builder newBuilder() {
-    return new net.lightapi.portal.market.MarketServiceCreatedEvent.Builder();
+  public static net.lightapi.portal.service.ServiceUpdatedEvent.Builder newBuilder() {
+    return new net.lightapi.portal.service.ServiceUpdatedEvent.Builder();
   }
 
   /**
-   * Creates a new MarketServiceCreatedEvent RecordBuilder by copying an existing Builder.
+   * Creates a new ServiceUpdatedEvent RecordBuilder by copying an existing Builder.
    * @param other The existing builder to copy.
-   * @return A new MarketServiceCreatedEvent RecordBuilder
+   * @return A new ServiceUpdatedEvent RecordBuilder
    */
-  public static net.lightapi.portal.market.MarketServiceCreatedEvent.Builder newBuilder(net.lightapi.portal.market.MarketServiceCreatedEvent.Builder other) {
+  public static net.lightapi.portal.service.ServiceUpdatedEvent.Builder newBuilder(net.lightapi.portal.service.ServiceUpdatedEvent.Builder other) {
     if (other == null) {
-      return new net.lightapi.portal.market.MarketServiceCreatedEvent.Builder();
+      return new net.lightapi.portal.service.ServiceUpdatedEvent.Builder();
     } else {
-      return new net.lightapi.portal.market.MarketServiceCreatedEvent.Builder(other);
+      return new net.lightapi.portal.service.ServiceUpdatedEvent.Builder(other);
     }
   }
 
   /**
-   * Creates a new MarketServiceCreatedEvent RecordBuilder by copying an existing MarketServiceCreatedEvent instance.
+   * Creates a new ServiceUpdatedEvent RecordBuilder by copying an existing ServiceUpdatedEvent instance.
    * @param other The existing instance to copy.
-   * @return A new MarketServiceCreatedEvent RecordBuilder
+   * @return A new ServiceUpdatedEvent RecordBuilder
    */
-  public static net.lightapi.portal.market.MarketServiceCreatedEvent.Builder newBuilder(net.lightapi.portal.market.MarketServiceCreatedEvent other) {
+  public static net.lightapi.portal.service.ServiceUpdatedEvent.Builder newBuilder(net.lightapi.portal.service.ServiceUpdatedEvent other) {
     if (other == null) {
-      return new net.lightapi.portal.market.MarketServiceCreatedEvent.Builder();
+      return new net.lightapi.portal.service.ServiceUpdatedEvent.Builder();
     } else {
-      return new net.lightapi.portal.market.MarketServiceCreatedEvent.Builder(other);
+      return new net.lightapi.portal.service.ServiceUpdatedEvent.Builder(other);
     }
   }
 
   /**
-   * RecordBuilder for MarketServiceCreatedEvent instances.
+   * RecordBuilder for ServiceUpdatedEvent instances.
    */
   @org.apache.avro.specific.AvroGenerated
-  public static class Builder extends org.apache.avro.specific.SpecificRecordBuilderBase<MarketServiceCreatedEvent>
-    implements org.apache.avro.data.RecordBuilder<MarketServiceCreatedEvent> {
+  public static class Builder extends org.apache.avro.specific.SpecificRecordBuilderBase<ServiceUpdatedEvent>
+    implements org.apache.avro.data.RecordBuilder<ServiceUpdatedEvent> {
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
@@ -262,7 +262,7 @@ public class MarketServiceCreatedEvent extends org.apache.avro.specific.Specific
      * Creates a Builder by copying an existing Builder.
      * @param other The existing Builder to copy.
      */
-    private Builder(net.lightapi.portal.market.MarketServiceCreatedEvent.Builder other) {
+    private Builder(net.lightapi.portal.service.ServiceUpdatedEvent.Builder other) {
       super(other);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
@@ -286,10 +286,10 @@ public class MarketServiceCreatedEvent extends org.apache.avro.specific.Specific
     }
 
     /**
-     * Creates a Builder by copying an existing MarketServiceCreatedEvent instance
+     * Creates a Builder by copying an existing ServiceUpdatedEvent instance
      * @param other The existing instance to copy.
      */
-    private Builder(net.lightapi.portal.market.MarketServiceCreatedEvent other) {
+    private Builder(net.lightapi.portal.service.ServiceUpdatedEvent other) {
       super(SCHEMA$, MODEL$);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
@@ -324,7 +324,7 @@ public class MarketServiceCreatedEvent extends org.apache.avro.specific.Specific
       * @param value The value of 'EventId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketServiceCreatedEvent.Builder setEventId(com.networknt.kafka.common.EventId value) {
+    public net.lightapi.portal.service.ServiceUpdatedEvent.Builder setEventId(com.networknt.kafka.common.EventId value) {
       validate(fields()[0], value);
       this.EventIdBuilder = null;
       this.EventId = value;
@@ -361,7 +361,7 @@ public class MarketServiceCreatedEvent extends org.apache.avro.specific.Specific
      * @return This builder.
      */
 
-    public net.lightapi.portal.market.MarketServiceCreatedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
+    public net.lightapi.portal.service.ServiceUpdatedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
       clearEventId();
       EventIdBuilder = value;
       return this;
@@ -379,7 +379,7 @@ public class MarketServiceCreatedEvent extends org.apache.avro.specific.Specific
       * Clears the value of the 'EventId' field.
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketServiceCreatedEvent.Builder clearEventId() {
+    public net.lightapi.portal.service.ServiceUpdatedEvent.Builder clearEventId() {
       EventId = null;
       EventIdBuilder = null;
       fieldSetFlags()[0] = false;
@@ -402,7 +402,7 @@ public class MarketServiceCreatedEvent extends org.apache.avro.specific.Specific
       * @param value The value of 'hostId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketServiceCreatedEvent.Builder setHostId(java.lang.String value) {
+    public net.lightapi.portal.service.ServiceUpdatedEvent.Builder setHostId(java.lang.String value) {
       validate(fields()[1], value);
       this.hostId = value;
       fieldSetFlags()[1] = true;
@@ -424,7 +424,7 @@ public class MarketServiceCreatedEvent extends org.apache.avro.specific.Specific
       * host id
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketServiceCreatedEvent.Builder clearHostId() {
+    public net.lightapi.portal.service.ServiceUpdatedEvent.Builder clearHostId() {
       hostId = null;
       fieldSetFlags()[1] = false;
       return this;
@@ -446,7 +446,7 @@ public class MarketServiceCreatedEvent extends org.apache.avro.specific.Specific
       * @param value The value of 'apiId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketServiceCreatedEvent.Builder setApiId(java.lang.String value) {
+    public net.lightapi.portal.service.ServiceUpdatedEvent.Builder setApiId(java.lang.String value) {
       validate(fields()[2], value);
       this.apiId = value;
       fieldSetFlags()[2] = true;
@@ -468,7 +468,7 @@ public class MarketServiceCreatedEvent extends org.apache.avro.specific.Specific
       * api id
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketServiceCreatedEvent.Builder clearApiId() {
+    public net.lightapi.portal.service.ServiceUpdatedEvent.Builder clearApiId() {
       apiId = null;
       fieldSetFlags()[2] = false;
       return this;
@@ -490,7 +490,7 @@ public class MarketServiceCreatedEvent extends org.apache.avro.specific.Specific
       * @param value The value of 'value'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketServiceCreatedEvent.Builder setValue(java.lang.String value) {
+    public net.lightapi.portal.service.ServiceUpdatedEvent.Builder setValue(java.lang.String value) {
       validate(fields()[3], value);
       this.value = value;
       fieldSetFlags()[3] = true;
@@ -512,7 +512,7 @@ public class MarketServiceCreatedEvent extends org.apache.avro.specific.Specific
       * service detail in JSON
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketServiceCreatedEvent.Builder clearValue() {
+    public net.lightapi.portal.service.ServiceUpdatedEvent.Builder clearValue() {
       value = null;
       fieldSetFlags()[3] = false;
       return this;
@@ -520,9 +520,9 @@ public class MarketServiceCreatedEvent extends org.apache.avro.specific.Specific
 
     @Override
     @SuppressWarnings("unchecked")
-    public MarketServiceCreatedEvent build() {
+    public ServiceUpdatedEvent build() {
       try {
-        MarketServiceCreatedEvent record = new MarketServiceCreatedEvent();
+        ServiceUpdatedEvent record = new ServiceUpdatedEvent();
         if (EventIdBuilder != null) {
           try {
             record.EventId = this.EventIdBuilder.build();
@@ -546,8 +546,8 @@ public class MarketServiceCreatedEvent extends org.apache.avro.specific.Specific
   }
 
   @SuppressWarnings("unchecked")
-  private static final org.apache.avro.io.DatumWriter<MarketServiceCreatedEvent>
-    WRITER$ = (org.apache.avro.io.DatumWriter<MarketServiceCreatedEvent>)MODEL$.createDatumWriter(SCHEMA$);
+  private static final org.apache.avro.io.DatumWriter<ServiceUpdatedEvent>
+    WRITER$ = (org.apache.avro.io.DatumWriter<ServiceUpdatedEvent>)MODEL$.createDatumWriter(SCHEMA$);
 
   @Override public void writeExternal(java.io.ObjectOutput out)
     throws java.io.IOException {
@@ -555,8 +555,8 @@ public class MarketServiceCreatedEvent extends org.apache.avro.specific.Specific
   }
 
   @SuppressWarnings("unchecked")
-  private static final org.apache.avro.io.DatumReader<MarketServiceCreatedEvent>
-    READER$ = (org.apache.avro.io.DatumReader<MarketServiceCreatedEvent>)MODEL$.createDatumReader(SCHEMA$);
+  private static final org.apache.avro.io.DatumReader<ServiceUpdatedEvent>
+    READER$ = (org.apache.avro.io.DatumReader<ServiceUpdatedEvent>)MODEL$.createDatumReader(SCHEMA$);
 
   @Override public void readExternal(java.io.ObjectInput in)
     throws java.io.IOException {
@@ -623,13 +623,3 @@ public class MarketServiceCreatedEvent extends org.apache.avro.specific.Specific
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

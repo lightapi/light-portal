@@ -66,9 +66,9 @@ public interface PortalDbProvider extends DbProvider {
     Result<Map<String, Object>> queryClientByClientId(String clientId);
     Result<Map<String, Object>> queryClientByHostAppId(String host, String applicationId);
 
-    Result<String> createService(MarketServiceCreatedEvent event);
-    Result<String> updateService(MarketServiceUpdatedEvent event);
-    Result<String> deleteService(MarketServiceDeletedEvent event);
+    Result<String> createService(ServiceCreatedEvent event);
+    Result<String> updateService(ServiceUpdatedEvent event);
+    Result<String> deleteService(ServiceDeletedEvent event);
     Result<String> queryService(int offset, int limit, String hostId, String apiId, String apiName,
                                 String apiDesc, String operationOwner, String deliveryOwner, String region, String businessGroup,
                                 String lob, String platform, String capability, String gitRepo, String apiTags, String apiStatus);

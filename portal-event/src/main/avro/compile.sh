@@ -46,10 +46,11 @@ java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema OrderDel
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema MarketClientCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema MarketClientUpdatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema MarketClientDeletedEvent.avsc .
-java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema MarketServiceCreatedEvent.avsc .
-java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema MarketServiceUpdatedEvent.avsc .
-java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema MarketServiceDeletedEvent.avsc .
 
+
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ServiceCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ServiceUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ServiceDeletedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ServiceSpecUpdatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ServiceVersionCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ServiceVersionUpdatedEvent.avsc .
@@ -224,10 +225,10 @@ mv net/lightapi/portal/user/HostDeletedEvent.java ../java/net/lightapi/portal/us
 mv net/lightapi/portal/market/MarketClientCreatedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/MarketClientUpdatedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/MarketClientDeletedEvent.java ../java/net/lightapi/portal/market
-mv net/lightapi/portal/market/MarketServiceCreatedEvent.java ../java/net/lightapi/portal/market
-mv net/lightapi/portal/market/MarketServiceUpdatedEvent.java ../java/net/lightapi/portal/market
-mv net/lightapi/portal/market/MarketServiceDeletedEvent.java ../java/net/lightapi/portal/market
 
+mv net/lightapi/portal/service/ServiceCreatedEvent.java ../java/net/lightapi/portal/service
+mv net/lightapi/portal/service/ServiceUpdatedEvent.java ../java/net/lightapi/portal/service
+mv net/lightapi/portal/service/ServiceDeletedEvent.java ../java/net/lightapi/portal/service
 mv net/lightapi/portal/service/ServiceSpecUpdatedEvent.java ../java/net/lightapi/portal/service
 mv net/lightapi/portal/service/ServiceVersionCreatedEvent.java ../java/net/lightapi/portal/service
 mv net/lightapi/portal/service/ServiceVersionUpdatedEvent.java ../java/net/lightapi/portal/service

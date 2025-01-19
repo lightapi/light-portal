@@ -1,7 +1,7 @@
 {
   "type": "record",
-  "name": "MarketServiceUpdatedEvent",
-  "namespace": "net.lightapi.portal.market",
+  "name": "ServiceCreatedEvent",
+  "namespace": "net.lightapi.portal.service",
   "fields": [
     {
       "name": "EventId",

@@ -1947,7 +1947,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> createService(MarketServiceCreatedEvent event) {
+    public Result<String> createService(ServiceCreatedEvent event) {
         final String insertUser = "INSERT INTO api_t (host_id, api_id, api_name, " +
                 "api_desc, operation_owner, delivery_owner, region, business_group, " +
                 "lob, platform, capability, git_repo, api_tags, " +
@@ -2044,7 +2044,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> updateService(MarketServiceUpdatedEvent event) {
+    public Result<String> updateService(ServiceUpdatedEvent event) {
         final String updateApi = "UPDATE api_t SET api_name = ?, api_desc = ? " +
                 "operation_owner = ?, delivery_owner = ?, region = ?, business_group = ?, lob = ?, platform = ?, " +
                 "capability = ?, git_repo = ?, api_tags = ?, api_status = ?,  update_user = ?, update_ts = ? " +
@@ -2154,7 +2154,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> deleteService(MarketServiceDeletedEvent event) {
+    public Result<String> deleteService(ServiceDeletedEvent event) {
         final String deleteApplication = "DELETE from api_t WHERE host_id = ? AND api_id = ?";
         Result<String> result;
         try (Connection conn = ds.getConnection()) {
