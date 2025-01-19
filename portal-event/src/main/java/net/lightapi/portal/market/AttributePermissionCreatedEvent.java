@@ -3,7 +3,7 @@
  *
  * DO NOT EDIT DIRECTLY
  */
-package net.lightapi.portal.market;
+package net.lightapi.portal.attribute;
 
 import org.apache.avro.specific.SpecificData;
 import org.apache.avro.util.Utf8;
@@ -13,10 +13,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class AttributePermissionCreatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 3550276056981382214L;
+  private static final long serialVersionUID = -545982984594856315L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"AttributePermissionCreatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"attributeId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"attribute id\"},{\"name\":\"attributeValue\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"attribute value\"},{\"name\":\"apiId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api id\"},{\"name\":\"apiVersion\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api version\"},{\"name\":\"endpoint\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"endpoint\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"AttributePermissionCreatedEvent\",\"namespace\":\"net.lightapi.portal.attribute\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"attributeId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"attribute id\"},{\"name\":\"attributeValue\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"attribute value\"},{\"name\":\"apiId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api id\"},{\"name\":\"apiVersion\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api version\"},{\"name\":\"endpoint\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"endpoint\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -279,8 +279,8 @@ public class AttributePermissionCreatedEvent extends org.apache.avro.specific.Sp
    * Creates a new AttributePermissionCreatedEvent RecordBuilder.
    * @return A new AttributePermissionCreatedEvent RecordBuilder
    */
-  public static net.lightapi.portal.market.AttributePermissionCreatedEvent.Builder newBuilder() {
-    return new net.lightapi.portal.market.AttributePermissionCreatedEvent.Builder();
+  public static net.lightapi.portal.attribute.AttributePermissionCreatedEvent.Builder newBuilder() {
+    return new net.lightapi.portal.attribute.AttributePermissionCreatedEvent.Builder();
   }
 
   /**
@@ -288,11 +288,11 @@ public class AttributePermissionCreatedEvent extends org.apache.avro.specific.Sp
    * @param other The existing builder to copy.
    * @return A new AttributePermissionCreatedEvent RecordBuilder
    */
-  public static net.lightapi.portal.market.AttributePermissionCreatedEvent.Builder newBuilder(net.lightapi.portal.market.AttributePermissionCreatedEvent.Builder other) {
+  public static net.lightapi.portal.attribute.AttributePermissionCreatedEvent.Builder newBuilder(net.lightapi.portal.attribute.AttributePermissionCreatedEvent.Builder other) {
     if (other == null) {
-      return new net.lightapi.portal.market.AttributePermissionCreatedEvent.Builder();
+      return new net.lightapi.portal.attribute.AttributePermissionCreatedEvent.Builder();
     } else {
-      return new net.lightapi.portal.market.AttributePermissionCreatedEvent.Builder(other);
+      return new net.lightapi.portal.attribute.AttributePermissionCreatedEvent.Builder(other);
     }
   }
 
@@ -301,11 +301,11 @@ public class AttributePermissionCreatedEvent extends org.apache.avro.specific.Sp
    * @param other The existing instance to copy.
    * @return A new AttributePermissionCreatedEvent RecordBuilder
    */
-  public static net.lightapi.portal.market.AttributePermissionCreatedEvent.Builder newBuilder(net.lightapi.portal.market.AttributePermissionCreatedEvent other) {
+  public static net.lightapi.portal.attribute.AttributePermissionCreatedEvent.Builder newBuilder(net.lightapi.portal.attribute.AttributePermissionCreatedEvent other) {
     if (other == null) {
-      return new net.lightapi.portal.market.AttributePermissionCreatedEvent.Builder();
+      return new net.lightapi.portal.attribute.AttributePermissionCreatedEvent.Builder();
     } else {
-      return new net.lightapi.portal.market.AttributePermissionCreatedEvent.Builder(other);
+      return new net.lightapi.portal.attribute.AttributePermissionCreatedEvent.Builder(other);
     }
   }
 
@@ -340,7 +340,7 @@ public class AttributePermissionCreatedEvent extends org.apache.avro.specific.Sp
      * Creates a Builder by copying an existing Builder.
      * @param other The existing Builder to copy.
      */
-    private Builder(net.lightapi.portal.market.AttributePermissionCreatedEvent.Builder other) {
+    private Builder(net.lightapi.portal.attribute.AttributePermissionCreatedEvent.Builder other) {
       super(other);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
@@ -379,7 +379,7 @@ public class AttributePermissionCreatedEvent extends org.apache.avro.specific.Sp
      * Creates a Builder by copying an existing AttributePermissionCreatedEvent instance
      * @param other The existing instance to copy.
      */
-    private Builder(net.lightapi.portal.market.AttributePermissionCreatedEvent other) {
+    private Builder(net.lightapi.portal.attribute.AttributePermissionCreatedEvent other) {
       super(SCHEMA$, MODEL$);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
@@ -426,7 +426,7 @@ public class AttributePermissionCreatedEvent extends org.apache.avro.specific.Sp
       * @param value The value of 'EventId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributePermissionCreatedEvent.Builder setEventId(com.networknt.kafka.common.EventId value) {
+    public net.lightapi.portal.attribute.AttributePermissionCreatedEvent.Builder setEventId(com.networknt.kafka.common.EventId value) {
       validate(fields()[0], value);
       this.EventIdBuilder = null;
       this.EventId = value;
@@ -463,7 +463,7 @@ public class AttributePermissionCreatedEvent extends org.apache.avro.specific.Sp
      * @return This builder.
      */
 
-    public net.lightapi.portal.market.AttributePermissionCreatedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
+    public net.lightapi.portal.attribute.AttributePermissionCreatedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
       clearEventId();
       EventIdBuilder = value;
       return this;
@@ -481,7 +481,7 @@ public class AttributePermissionCreatedEvent extends org.apache.avro.specific.Sp
       * Clears the value of the 'EventId' field.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributePermissionCreatedEvent.Builder clearEventId() {
+    public net.lightapi.portal.attribute.AttributePermissionCreatedEvent.Builder clearEventId() {
       EventId = null;
       EventIdBuilder = null;
       fieldSetFlags()[0] = false;
@@ -504,7 +504,7 @@ public class AttributePermissionCreatedEvent extends org.apache.avro.specific.Sp
       * @param value The value of 'hostId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributePermissionCreatedEvent.Builder setHostId(java.lang.String value) {
+    public net.lightapi.portal.attribute.AttributePermissionCreatedEvent.Builder setHostId(java.lang.String value) {
       validate(fields()[1], value);
       this.hostId = value;
       fieldSetFlags()[1] = true;
@@ -526,7 +526,7 @@ public class AttributePermissionCreatedEvent extends org.apache.avro.specific.Sp
       * host id
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributePermissionCreatedEvent.Builder clearHostId() {
+    public net.lightapi.portal.attribute.AttributePermissionCreatedEvent.Builder clearHostId() {
       hostId = null;
       fieldSetFlags()[1] = false;
       return this;
@@ -548,7 +548,7 @@ public class AttributePermissionCreatedEvent extends org.apache.avro.specific.Sp
       * @param value The value of 'attributeId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributePermissionCreatedEvent.Builder setAttributeId(java.lang.String value) {
+    public net.lightapi.portal.attribute.AttributePermissionCreatedEvent.Builder setAttributeId(java.lang.String value) {
       validate(fields()[2], value);
       this.attributeId = value;
       fieldSetFlags()[2] = true;
@@ -570,7 +570,7 @@ public class AttributePermissionCreatedEvent extends org.apache.avro.specific.Sp
       * attribute id
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributePermissionCreatedEvent.Builder clearAttributeId() {
+    public net.lightapi.portal.attribute.AttributePermissionCreatedEvent.Builder clearAttributeId() {
       attributeId = null;
       fieldSetFlags()[2] = false;
       return this;
@@ -592,7 +592,7 @@ public class AttributePermissionCreatedEvent extends org.apache.avro.specific.Sp
       * @param value The value of 'attributeValue'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributePermissionCreatedEvent.Builder setAttributeValue(java.lang.String value) {
+    public net.lightapi.portal.attribute.AttributePermissionCreatedEvent.Builder setAttributeValue(java.lang.String value) {
       validate(fields()[3], value);
       this.attributeValue = value;
       fieldSetFlags()[3] = true;
@@ -614,7 +614,7 @@ public class AttributePermissionCreatedEvent extends org.apache.avro.specific.Sp
       * attribute value
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributePermissionCreatedEvent.Builder clearAttributeValue() {
+    public net.lightapi.portal.attribute.AttributePermissionCreatedEvent.Builder clearAttributeValue() {
       attributeValue = null;
       fieldSetFlags()[3] = false;
       return this;
@@ -636,7 +636,7 @@ public class AttributePermissionCreatedEvent extends org.apache.avro.specific.Sp
       * @param value The value of 'apiId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributePermissionCreatedEvent.Builder setApiId(java.lang.String value) {
+    public net.lightapi.portal.attribute.AttributePermissionCreatedEvent.Builder setApiId(java.lang.String value) {
       validate(fields()[4], value);
       this.apiId = value;
       fieldSetFlags()[4] = true;
@@ -658,7 +658,7 @@ public class AttributePermissionCreatedEvent extends org.apache.avro.specific.Sp
       * api id
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributePermissionCreatedEvent.Builder clearApiId() {
+    public net.lightapi.portal.attribute.AttributePermissionCreatedEvent.Builder clearApiId() {
       apiId = null;
       fieldSetFlags()[4] = false;
       return this;
@@ -680,7 +680,7 @@ public class AttributePermissionCreatedEvent extends org.apache.avro.specific.Sp
       * @param value The value of 'apiVersion'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributePermissionCreatedEvent.Builder setApiVersion(java.lang.String value) {
+    public net.lightapi.portal.attribute.AttributePermissionCreatedEvent.Builder setApiVersion(java.lang.String value) {
       validate(fields()[5], value);
       this.apiVersion = value;
       fieldSetFlags()[5] = true;
@@ -702,7 +702,7 @@ public class AttributePermissionCreatedEvent extends org.apache.avro.specific.Sp
       * api version
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributePermissionCreatedEvent.Builder clearApiVersion() {
+    public net.lightapi.portal.attribute.AttributePermissionCreatedEvent.Builder clearApiVersion() {
       apiVersion = null;
       fieldSetFlags()[5] = false;
       return this;
@@ -724,7 +724,7 @@ public class AttributePermissionCreatedEvent extends org.apache.avro.specific.Sp
       * @param value The value of 'endpoint'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributePermissionCreatedEvent.Builder setEndpoint(java.lang.String value) {
+    public net.lightapi.portal.attribute.AttributePermissionCreatedEvent.Builder setEndpoint(java.lang.String value) {
       validate(fields()[6], value);
       this.endpoint = value;
       fieldSetFlags()[6] = true;
@@ -746,7 +746,7 @@ public class AttributePermissionCreatedEvent extends org.apache.avro.specific.Sp
       * endpoint
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributePermissionCreatedEvent.Builder clearEndpoint() {
+    public net.lightapi.portal.attribute.AttributePermissionCreatedEvent.Builder clearEndpoint() {
       endpoint = null;
       fieldSetFlags()[6] = false;
       return this;
@@ -884,13 +884,3 @@ public class AttributePermissionCreatedEvent extends org.apache.avro.specific.Sp
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

@@ -314,21 +314,21 @@ mv net/lightapi/portal/market/GroupColFilterUpdatedEvent.java ../java/net/lighta
 mv net/lightapi/portal/market/GroupColFilterDeletedEvent.java ../java/net/lightapi/portal/market
 
 
-mv net/lightapi/portal/market/AttributeCreatedEvent.java ../java/net/lightapi/portal/market
-mv net/lightapi/portal/market/AttributeUpdatedEvent.java ../java/net/lightapi/portal/market
-mv net/lightapi/portal/market/AttributeDeletedEvent.java ../java/net/lightapi/portal/market
-mv net/lightapi/portal/market/AttributePermissionCreatedEvent.java ../java/net/lightapi/portal/market
-mv net/lightapi/portal/market/AttributePermissionDeletedEvent.java ../java/net/lightapi/portal/market
-mv net/lightapi/portal/market/AttributePermissionUpdatedEvent.java ../java/net/lightapi/portal/market
-mv net/lightapi/portal/market/AttributeUserCreatedEvent.java ../java/net/lightapi/portal/market
-mv net/lightapi/portal/market/AttributeUserDeletedEvent.java ../java/net/lightapi/portal/market
-mv net/lightapi/portal/market/AttributeUserUpdatedEvent.java ../java/net/lightapi/portal/market
-mv net/lightapi/portal/market/AttributeRowFilterCreatedEvent.java ../java/net/lightapi/portal/market
-mv net/lightapi/portal/market/AttributeRowFilterUpdatedEvent.java ../java/net/lightapi/portal/market
-mv net/lightapi/portal/market/AttributeRowFilterDeletedEvent.java ../java/net/lightapi/portal/market
-mv net/lightapi/portal/market/AttributeColFilterCreatedEvent.java ../java/net/lightapi/portal/market
-mv net/lightapi/portal/market/AttributeColFilterUpdatedEvent.java ../java/net/lightapi/portal/market
-mv net/lightapi/portal/market/AttributeColFilterDeletedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/attribute/AttributeCreatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/attribute/AttributeUpdatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/attribute/AttributeDeletedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/attribute/AttributePermissionCreatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/attribute/AttributePermissionDeletedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/attribute/AttributePermissionUpdatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/attribute/AttributeUserCreatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/attribute/AttributeUserDeletedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/attribute/AttributeUserUpdatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/attribute/AttributeRowFilterCreatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/attribute/AttributeRowFilterUpdatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/attribute/AttributeRowFilterDeletedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/attribute/AttributeColFilterCreatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/attribute/AttributeColFilterUpdatedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/attribute/AttributeColFilterDeletedEvent.java ../java/net/lightapi/portal/market
 
 
 mv net/lightapi/portal/market/PositionCreatedEvent.java ../java/net/lightapi/portal/market

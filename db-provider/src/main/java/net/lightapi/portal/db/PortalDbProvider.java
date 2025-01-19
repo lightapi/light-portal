@@ -4,6 +4,7 @@ import com.networknt.db.provider.DbProvider;
 import com.networknt.monad.Result;
 import net.lightapi.portal.market.*;
 import net.lightapi.portal.user.*;
+import net.lightapi.portal.attribute.*;
 
 import java.util.List;
 import java.util.Map;

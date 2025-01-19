@@ -3,7 +3,7 @@
  *
  * DO NOT EDIT DIRECTLY
  */
-package net.lightapi.portal.market;
+package net.lightapi.portal.attribute;
 
 import org.apache.avro.specific.SpecificData;
 import org.apache.avro.util.Utf8;
@@ -13,10 +13,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class AttributeUserCreatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 697744668636069582L;
+  private static final long serialVersionUID = -9104840774386847097L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"AttributeUserCreatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"attributeId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"attribute id\"},{\"name\":\"attributeValue\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"attribute value\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"user id\"},{\"name\":\"startTs\",\"type\":[\"null\",{\"type\":\"long\",\"logicalType\":\"timestamp-millis\"}],\"doc\":\"start timestamp UTC milliseconds since the epoch (nullable).\",\"default\":null},{\"name\":\"startTz\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"start time zone. (e.g., 'America/New_York') (nullable).\",\"default\":null},{\"name\":\"endTs\",\"type\":[\"null\",{\"type\":\"long\",\"logicalType\":\"timestamp-millis\"}],\"doc\":\"end timestamp UTC milliseconds since the epoch (nullable).\",\"default\":null},{\"name\":\"endTz\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"end time zone. (e.g., 'America/New_York') (nullable).\",\"default\":null}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"AttributeUserCreatedEvent\",\"namespace\":\"net.lightapi.portal.attribute\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"attributeId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"attribute id\"},{\"name\":\"attributeValue\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"attribute value\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"user id\"},{\"name\":\"startTs\",\"type\":[\"null\",{\"type\":\"long\",\"logicalType\":\"timestamp-millis\"}],\"doc\":\"start timestamp UTC milliseconds since the epoch (nullable).\",\"default\":null},{\"name\":\"startTz\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"start time zone. (e.g., 'America/New_York') (nullable).\",\"default\":null},{\"name\":\"endTs\",\"type\":[\"null\",{\"type\":\"long\",\"logicalType\":\"timestamp-millis\"}],\"doc\":\"end timestamp UTC milliseconds since the epoch (nullable).\",\"default\":null},{\"name\":\"endTz\",\"type\":[\"null\",{\"type\":\"string\",\"avro.java.string\":\"String\"}],\"doc\":\"end time zone. (e.g., 'America/New_York') (nullable).\",\"default\":null}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -330,8 +330,8 @@ public class AttributeUserCreatedEvent extends org.apache.avro.specific.Specific
    * Creates a new AttributeUserCreatedEvent RecordBuilder.
    * @return A new AttributeUserCreatedEvent RecordBuilder
    */
-  public static net.lightapi.portal.market.AttributeUserCreatedEvent.Builder newBuilder() {
-    return new net.lightapi.portal.market.AttributeUserCreatedEvent.Builder();
+  public static net.lightapi.portal.attribute.AttributeUserCreatedEvent.Builder newBuilder() {
+    return new net.lightapi.portal.attribute.AttributeUserCreatedEvent.Builder();
   }
 
   /**
@@ -339,11 +339,11 @@ public class AttributeUserCreatedEvent extends org.apache.avro.specific.Specific
    * @param other The existing builder to copy.
    * @return A new AttributeUserCreatedEvent RecordBuilder
    */
-  public static net.lightapi.portal.market.AttributeUserCreatedEvent.Builder newBuilder(net.lightapi.portal.market.AttributeUserCreatedEvent.Builder other) {
+  public static net.lightapi.portal.attribute.AttributeUserCreatedEvent.Builder newBuilder(net.lightapi.portal.attribute.AttributeUserCreatedEvent.Builder other) {
     if (other == null) {
-      return new net.lightapi.portal.market.AttributeUserCreatedEvent.Builder();
+      return new net.lightapi.portal.attribute.AttributeUserCreatedEvent.Builder();
     } else {
-      return new net.lightapi.portal.market.AttributeUserCreatedEvent.Builder(other);
+      return new net.lightapi.portal.attribute.AttributeUserCreatedEvent.Builder(other);
     }
   }
 
@@ -352,11 +352,11 @@ public class AttributeUserCreatedEvent extends org.apache.avro.specific.Specific
    * @param other The existing instance to copy.
    * @return A new AttributeUserCreatedEvent RecordBuilder
    */
-  public static net.lightapi.portal.market.AttributeUserCreatedEvent.Builder newBuilder(net.lightapi.portal.market.AttributeUserCreatedEvent other) {
+  public static net.lightapi.portal.attribute.AttributeUserCreatedEvent.Builder newBuilder(net.lightapi.portal.attribute.AttributeUserCreatedEvent other) {
     if (other == null) {
-      return new net.lightapi.portal.market.AttributeUserCreatedEvent.Builder();
+      return new net.lightapi.portal.attribute.AttributeUserCreatedEvent.Builder();
     } else {
-      return new net.lightapi.portal.market.AttributeUserCreatedEvent.Builder(other);
+      return new net.lightapi.portal.attribute.AttributeUserCreatedEvent.Builder(other);
     }
   }
 
@@ -395,7 +395,7 @@ public class AttributeUserCreatedEvent extends org.apache.avro.specific.Specific
      * Creates a Builder by copying an existing Builder.
      * @param other The existing Builder to copy.
      */
-    private Builder(net.lightapi.portal.market.AttributeUserCreatedEvent.Builder other) {
+    private Builder(net.lightapi.portal.attribute.AttributeUserCreatedEvent.Builder other) {
       super(other);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
@@ -442,7 +442,7 @@ public class AttributeUserCreatedEvent extends org.apache.avro.specific.Specific
      * Creates a Builder by copying an existing AttributeUserCreatedEvent instance
      * @param other The existing instance to copy.
      */
-    private Builder(net.lightapi.portal.market.AttributeUserCreatedEvent other) {
+    private Builder(net.lightapi.portal.attribute.AttributeUserCreatedEvent other) {
       super(SCHEMA$, MODEL$);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
@@ -497,7 +497,7 @@ public class AttributeUserCreatedEvent extends org.apache.avro.specific.Specific
       * @param value The value of 'EventId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeUserCreatedEvent.Builder setEventId(com.networknt.kafka.common.EventId value) {
+    public net.lightapi.portal.attribute.AttributeUserCreatedEvent.Builder setEventId(com.networknt.kafka.common.EventId value) {
       validate(fields()[0], value);
       this.EventIdBuilder = null;
       this.EventId = value;
@@ -534,7 +534,7 @@ public class AttributeUserCreatedEvent extends org.apache.avro.specific.Specific
      * @return This builder.
      */
 
-    public net.lightapi.portal.market.AttributeUserCreatedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
+    public net.lightapi.portal.attribute.AttributeUserCreatedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
       clearEventId();
       EventIdBuilder = value;
       return this;
@@ -552,7 +552,7 @@ public class AttributeUserCreatedEvent extends org.apache.avro.specific.Specific
       * Clears the value of the 'EventId' field.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeUserCreatedEvent.Builder clearEventId() {
+    public net.lightapi.portal.attribute.AttributeUserCreatedEvent.Builder clearEventId() {
       EventId = null;
       EventIdBuilder = null;
       fieldSetFlags()[0] = false;
@@ -575,7 +575,7 @@ public class AttributeUserCreatedEvent extends org.apache.avro.specific.Specific
       * @param value The value of 'hostId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeUserCreatedEvent.Builder setHostId(java.lang.String value) {
+    public net.lightapi.portal.attribute.AttributeUserCreatedEvent.Builder setHostId(java.lang.String value) {
       validate(fields()[1], value);
       this.hostId = value;
       fieldSetFlags()[1] = true;
@@ -597,7 +597,7 @@ public class AttributeUserCreatedEvent extends org.apache.avro.specific.Specific
       * host id
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeUserCreatedEvent.Builder clearHostId() {
+    public net.lightapi.portal.attribute.AttributeUserCreatedEvent.Builder clearHostId() {
       hostId = null;
       fieldSetFlags()[1] = false;
       return this;
@@ -619,7 +619,7 @@ public class AttributeUserCreatedEvent extends org.apache.avro.specific.Specific
       * @param value The value of 'attributeId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeUserCreatedEvent.Builder setAttributeId(java.lang.String value) {
+    public net.lightapi.portal.attribute.AttributeUserCreatedEvent.Builder setAttributeId(java.lang.String value) {
       validate(fields()[2], value);
       this.attributeId = value;
       fieldSetFlags()[2] = true;
@@ -641,7 +641,7 @@ public class AttributeUserCreatedEvent extends org.apache.avro.specific.Specific
       * attribute id
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeUserCreatedEvent.Builder clearAttributeId() {
+    public net.lightapi.portal.attribute.AttributeUserCreatedEvent.Builder clearAttributeId() {
       attributeId = null;
       fieldSetFlags()[2] = false;
       return this;
@@ -663,7 +663,7 @@ public class AttributeUserCreatedEvent extends org.apache.avro.specific.Specific
       * @param value The value of 'attributeValue'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeUserCreatedEvent.Builder setAttributeValue(java.lang.String value) {
+    public net.lightapi.portal.attribute.AttributeUserCreatedEvent.Builder setAttributeValue(java.lang.String value) {
       validate(fields()[3], value);
       this.attributeValue = value;
       fieldSetFlags()[3] = true;
@@ -685,7 +685,7 @@ public class AttributeUserCreatedEvent extends org.apache.avro.specific.Specific
       * attribute value
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeUserCreatedEvent.Builder clearAttributeValue() {
+    public net.lightapi.portal.attribute.AttributeUserCreatedEvent.Builder clearAttributeValue() {
       attributeValue = null;
       fieldSetFlags()[3] = false;
       return this;
@@ -707,7 +707,7 @@ public class AttributeUserCreatedEvent extends org.apache.avro.specific.Specific
       * @param value The value of 'userId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeUserCreatedEvent.Builder setUserId(java.lang.String value) {
+    public net.lightapi.portal.attribute.AttributeUserCreatedEvent.Builder setUserId(java.lang.String value) {
       validate(fields()[4], value);
       this.userId = value;
       fieldSetFlags()[4] = true;
@@ -729,7 +729,7 @@ public class AttributeUserCreatedEvent extends org.apache.avro.specific.Specific
       * user id
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeUserCreatedEvent.Builder clearUserId() {
+    public net.lightapi.portal.attribute.AttributeUserCreatedEvent.Builder clearUserId() {
       userId = null;
       fieldSetFlags()[4] = false;
       return this;
@@ -751,7 +751,7 @@ public class AttributeUserCreatedEvent extends org.apache.avro.specific.Specific
       * @param value The value of 'startTs'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeUserCreatedEvent.Builder setStartTs(java.time.Instant value) {
+    public net.lightapi.portal.attribute.AttributeUserCreatedEvent.Builder setStartTs(java.time.Instant value) {
       validate(fields()[5], value);
       this.startTs = value;
       fieldSetFlags()[5] = true;
@@ -773,7 +773,7 @@ public class AttributeUserCreatedEvent extends org.apache.avro.specific.Specific
       * start timestamp UTC milliseconds since the epoch (nullable).
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeUserCreatedEvent.Builder clearStartTs() {
+    public net.lightapi.portal.attribute.AttributeUserCreatedEvent.Builder clearStartTs() {
       startTs = null;
       fieldSetFlags()[5] = false;
       return this;
@@ -795,7 +795,7 @@ public class AttributeUserCreatedEvent extends org.apache.avro.specific.Specific
       * @param value The value of 'startTz'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeUserCreatedEvent.Builder setStartTz(java.lang.String value) {
+    public net.lightapi.portal.attribute.AttributeUserCreatedEvent.Builder setStartTz(java.lang.String value) {
       validate(fields()[6], value);
       this.startTz = value;
       fieldSetFlags()[6] = true;
@@ -817,7 +817,7 @@ public class AttributeUserCreatedEvent extends org.apache.avro.specific.Specific
       * start time zone. (e.g., 'America/New_York') (nullable).
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeUserCreatedEvent.Builder clearStartTz() {
+    public net.lightapi.portal.attribute.AttributeUserCreatedEvent.Builder clearStartTz() {
       startTz = null;
       fieldSetFlags()[6] = false;
       return this;
@@ -839,7 +839,7 @@ public class AttributeUserCreatedEvent extends org.apache.avro.specific.Specific
       * @param value The value of 'endTs'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeUserCreatedEvent.Builder setEndTs(java.time.Instant value) {
+    public net.lightapi.portal.attribute.AttributeUserCreatedEvent.Builder setEndTs(java.time.Instant value) {
       validate(fields()[7], value);
       this.endTs = value;
       fieldSetFlags()[7] = true;
@@ -861,7 +861,7 @@ public class AttributeUserCreatedEvent extends org.apache.avro.specific.Specific
       * end timestamp UTC milliseconds since the epoch (nullable).
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeUserCreatedEvent.Builder clearEndTs() {
+    public net.lightapi.portal.attribute.AttributeUserCreatedEvent.Builder clearEndTs() {
       endTs = null;
       fieldSetFlags()[7] = false;
       return this;
@@ -883,7 +883,7 @@ public class AttributeUserCreatedEvent extends org.apache.avro.specific.Specific
       * @param value The value of 'endTz'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeUserCreatedEvent.Builder setEndTz(java.lang.String value) {
+    public net.lightapi.portal.attribute.AttributeUserCreatedEvent.Builder setEndTz(java.lang.String value) {
       validate(fields()[8], value);
       this.endTz = value;
       fieldSetFlags()[8] = true;
@@ -905,7 +905,7 @@ public class AttributeUserCreatedEvent extends org.apache.avro.specific.Specific
       * end time zone. (e.g., 'America/New_York') (nullable).
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeUserCreatedEvent.Builder clearEndTz() {
+    public net.lightapi.portal.attribute.AttributeUserCreatedEvent.Builder clearEndTz() {
       endTz = null;
       fieldSetFlags()[8] = false;
       return this;
@@ -962,13 +962,3 @@ public class AttributeUserCreatedEvent extends org.apache.avro.specific.Specific
   }
 
 }
-
-
-
-
-
-
-
-
-
-

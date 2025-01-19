@@ -3,7 +3,7 @@
  *
  * DO NOT EDIT DIRECTLY
  */
-package net.lightapi.portal.market;
+package net.lightapi.portal.attribute;
 
 import org.apache.avro.specific.SpecificData;
 import org.apache.avro.util.Utf8;
@@ -13,10 +13,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class AttributeDeletedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -6002604749310234600L;
+  private static final long serialVersionUID = -5482261136060818214L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"AttributeDeletedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"attributeId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"attribute id\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"AttributeDeletedEvent\",\"namespace\":\"net.lightapi.portal.attribute\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"attributeId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"attribute id\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -183,8 +183,8 @@ public class AttributeDeletedEvent extends org.apache.avro.specific.SpecificReco
    * Creates a new AttributeDeletedEvent RecordBuilder.
    * @return A new AttributeDeletedEvent RecordBuilder
    */
-  public static net.lightapi.portal.market.AttributeDeletedEvent.Builder newBuilder() {
-    return new net.lightapi.portal.market.AttributeDeletedEvent.Builder();
+  public static net.lightapi.portal.attribute.AttributeDeletedEvent.Builder newBuilder() {
+    return new net.lightapi.portal.attribute.AttributeDeletedEvent.Builder();
   }
 
   /**
@@ -192,11 +192,11 @@ public class AttributeDeletedEvent extends org.apache.avro.specific.SpecificReco
    * @param other The existing builder to copy.
    * @return A new AttributeDeletedEvent RecordBuilder
    */
-  public static net.lightapi.portal.market.AttributeDeletedEvent.Builder newBuilder(net.lightapi.portal.market.AttributeDeletedEvent.Builder other) {
+  public static net.lightapi.portal.attribute.AttributeDeletedEvent.Builder newBuilder(net.lightapi.portal.attribute.AttributeDeletedEvent.Builder other) {
     if (other == null) {
-      return new net.lightapi.portal.market.AttributeDeletedEvent.Builder();
+      return new net.lightapi.portal.attribute.AttributeDeletedEvent.Builder();
     } else {
-      return new net.lightapi.portal.market.AttributeDeletedEvent.Builder(other);
+      return new net.lightapi.portal.attribute.AttributeDeletedEvent.Builder(other);
     }
   }
 
@@ -205,11 +205,11 @@ public class AttributeDeletedEvent extends org.apache.avro.specific.SpecificReco
    * @param other The existing instance to copy.
    * @return A new AttributeDeletedEvent RecordBuilder
    */
-  public static net.lightapi.portal.market.AttributeDeletedEvent.Builder newBuilder(net.lightapi.portal.market.AttributeDeletedEvent other) {
+  public static net.lightapi.portal.attribute.AttributeDeletedEvent.Builder newBuilder(net.lightapi.portal.attribute.AttributeDeletedEvent other) {
     if (other == null) {
-      return new net.lightapi.portal.market.AttributeDeletedEvent.Builder();
+      return new net.lightapi.portal.attribute.AttributeDeletedEvent.Builder();
     } else {
-      return new net.lightapi.portal.market.AttributeDeletedEvent.Builder(other);
+      return new net.lightapi.portal.attribute.AttributeDeletedEvent.Builder(other);
     }
   }
 
@@ -236,7 +236,7 @@ public class AttributeDeletedEvent extends org.apache.avro.specific.SpecificReco
      * Creates a Builder by copying an existing Builder.
      * @param other The existing Builder to copy.
      */
-    private Builder(net.lightapi.portal.market.AttributeDeletedEvent.Builder other) {
+    private Builder(net.lightapi.portal.attribute.AttributeDeletedEvent.Builder other) {
       super(other);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
@@ -259,7 +259,7 @@ public class AttributeDeletedEvent extends org.apache.avro.specific.SpecificReco
      * Creates a Builder by copying an existing AttributeDeletedEvent instance
      * @param other The existing instance to copy.
      */
-    private Builder(net.lightapi.portal.market.AttributeDeletedEvent other) {
+    private Builder(net.lightapi.portal.attribute.AttributeDeletedEvent other) {
       super(SCHEMA$, MODEL$);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
@@ -290,7 +290,7 @@ public class AttributeDeletedEvent extends org.apache.avro.specific.SpecificReco
       * @param value The value of 'EventId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeDeletedEvent.Builder setEventId(com.networknt.kafka.common.EventId value) {
+    public net.lightapi.portal.attribute.AttributeDeletedEvent.Builder setEventId(com.networknt.kafka.common.EventId value) {
       validate(fields()[0], value);
       this.EventIdBuilder = null;
       this.EventId = value;
@@ -327,7 +327,7 @@ public class AttributeDeletedEvent extends org.apache.avro.specific.SpecificReco
      * @return This builder.
      */
 
-    public net.lightapi.portal.market.AttributeDeletedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
+    public net.lightapi.portal.attribute.AttributeDeletedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
       clearEventId();
       EventIdBuilder = value;
       return this;
@@ -345,7 +345,7 @@ public class AttributeDeletedEvent extends org.apache.avro.specific.SpecificReco
       * Clears the value of the 'EventId' field.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeDeletedEvent.Builder clearEventId() {
+    public net.lightapi.portal.attribute.AttributeDeletedEvent.Builder clearEventId() {
       EventId = null;
       EventIdBuilder = null;
       fieldSetFlags()[0] = false;
@@ -368,7 +368,7 @@ public class AttributeDeletedEvent extends org.apache.avro.specific.SpecificReco
       * @param value The value of 'hostId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeDeletedEvent.Builder setHostId(java.lang.String value) {
+    public net.lightapi.portal.attribute.AttributeDeletedEvent.Builder setHostId(java.lang.String value) {
       validate(fields()[1], value);
       this.hostId = value;
       fieldSetFlags()[1] = true;
@@ -390,7 +390,7 @@ public class AttributeDeletedEvent extends org.apache.avro.specific.SpecificReco
       * host id
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeDeletedEvent.Builder clearHostId() {
+    public net.lightapi.portal.attribute.AttributeDeletedEvent.Builder clearHostId() {
       hostId = null;
       fieldSetFlags()[1] = false;
       return this;
@@ -412,7 +412,7 @@ public class AttributeDeletedEvent extends org.apache.avro.specific.SpecificReco
       * @param value The value of 'attributeId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeDeletedEvent.Builder setAttributeId(java.lang.String value) {
+    public net.lightapi.portal.attribute.AttributeDeletedEvent.Builder setAttributeId(java.lang.String value) {
       validate(fields()[2], value);
       this.attributeId = value;
       fieldSetFlags()[2] = true;
@@ -434,7 +434,7 @@ public class AttributeDeletedEvent extends org.apache.avro.specific.SpecificReco
       * attribute id
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeDeletedEvent.Builder clearAttributeId() {
+    public net.lightapi.portal.attribute.AttributeDeletedEvent.Builder clearAttributeId() {
       attributeId = null;
       fieldSetFlags()[2] = false;
       return this;
@@ -536,13 +536,3 @@ public class AttributeDeletedEvent extends org.apache.avro.specific.SpecificReco
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

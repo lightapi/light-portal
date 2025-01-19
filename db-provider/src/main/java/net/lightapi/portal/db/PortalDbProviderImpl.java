@@ -11,6 +11,7 @@ import com.networknt.status.Status;
 import com.networknt.utility.HashUtil;
 import net.lightapi.portal.market.*;
 import net.lightapi.portal.user.*;
+import net.lightapi.portal.attribute.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

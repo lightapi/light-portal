@@ -3,7 +3,7 @@
  *
  * DO NOT EDIT DIRECTLY
  */
-package net.lightapi.portal.market;
+package net.lightapi.portal.attribute;
 
 import org.apache.avro.specific.SpecificData;
 import org.apache.avro.util.Utf8;
@@ -13,10 +13,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class AttributeColFilterDeletedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 8357417323015067626L;
+  private static final long serialVersionUID = 3200843963049062208L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"AttributeColFilterDeletedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"attributeId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"attribute id\"},{\"name\":\"apiId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api id\"},{\"name\":\"apiVersion\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api version\"},{\"name\":\"endpoint\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"endpoint\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"AttributeColFilterDeletedEvent\",\"namespace\":\"net.lightapi.portal.attribute\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"attributeId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"attribute id\"},{\"name\":\"apiId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api id\"},{\"name\":\"apiVersion\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api version\"},{\"name\":\"endpoint\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"endpoint\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -255,8 +255,8 @@ public class AttributeColFilterDeletedEvent extends org.apache.avro.specific.Spe
    * Creates a new AttributeColFilterDeletedEvent RecordBuilder.
    * @return A new AttributeColFilterDeletedEvent RecordBuilder
    */
-  public static net.lightapi.portal.market.AttributeColFilterDeletedEvent.Builder newBuilder() {
-    return new net.lightapi.portal.market.AttributeColFilterDeletedEvent.Builder();
+  public static net.lightapi.portal.attribute.AttributeColFilterDeletedEvent.Builder newBuilder() {
+    return new net.lightapi.portal.attribute.AttributeColFilterDeletedEvent.Builder();
   }
 
   /**
@@ -264,11 +264,11 @@ public class AttributeColFilterDeletedEvent extends org.apache.avro.specific.Spe
    * @param other The existing builder to copy.
    * @return A new AttributeColFilterDeletedEvent RecordBuilder
    */
-  public static net.lightapi.portal.market.AttributeColFilterDeletedEvent.Builder newBuilder(net.lightapi.portal.market.AttributeColFilterDeletedEvent.Builder other) {
+  public static net.lightapi.portal.attribute.AttributeColFilterDeletedEvent.Builder newBuilder(net.lightapi.portal.attribute.AttributeColFilterDeletedEvent.Builder other) {
     if (other == null) {
-      return new net.lightapi.portal.market.AttributeColFilterDeletedEvent.Builder();
+      return new net.lightapi.portal.attribute.AttributeColFilterDeletedEvent.Builder();
     } else {
-      return new net.lightapi.portal.market.AttributeColFilterDeletedEvent.Builder(other);
+      return new net.lightapi.portal.attribute.AttributeColFilterDeletedEvent.Builder(other);
     }
   }
 
@@ -277,11 +277,11 @@ public class AttributeColFilterDeletedEvent extends org.apache.avro.specific.Spe
    * @param other The existing instance to copy.
    * @return A new AttributeColFilterDeletedEvent RecordBuilder
    */
-  public static net.lightapi.portal.market.AttributeColFilterDeletedEvent.Builder newBuilder(net.lightapi.portal.market.AttributeColFilterDeletedEvent other) {
+  public static net.lightapi.portal.attribute.AttributeColFilterDeletedEvent.Builder newBuilder(net.lightapi.portal.attribute.AttributeColFilterDeletedEvent other) {
     if (other == null) {
-      return new net.lightapi.portal.market.AttributeColFilterDeletedEvent.Builder();
+      return new net.lightapi.portal.attribute.AttributeColFilterDeletedEvent.Builder();
     } else {
-      return new net.lightapi.portal.market.AttributeColFilterDeletedEvent.Builder(other);
+      return new net.lightapi.portal.attribute.AttributeColFilterDeletedEvent.Builder(other);
     }
   }
 
@@ -314,7 +314,7 @@ public class AttributeColFilterDeletedEvent extends org.apache.avro.specific.Spe
      * Creates a Builder by copying an existing Builder.
      * @param other The existing Builder to copy.
      */
-    private Builder(net.lightapi.portal.market.AttributeColFilterDeletedEvent.Builder other) {
+    private Builder(net.lightapi.portal.attribute.AttributeColFilterDeletedEvent.Builder other) {
       super(other);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
@@ -349,7 +349,7 @@ public class AttributeColFilterDeletedEvent extends org.apache.avro.specific.Spe
      * Creates a Builder by copying an existing AttributeColFilterDeletedEvent instance
      * @param other The existing instance to copy.
      */
-    private Builder(net.lightapi.portal.market.AttributeColFilterDeletedEvent other) {
+    private Builder(net.lightapi.portal.attribute.AttributeColFilterDeletedEvent other) {
       super(SCHEMA$, MODEL$);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
@@ -392,7 +392,7 @@ public class AttributeColFilterDeletedEvent extends org.apache.avro.specific.Spe
       * @param value The value of 'EventId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeColFilterDeletedEvent.Builder setEventId(com.networknt.kafka.common.EventId value) {
+    public net.lightapi.portal.attribute.AttributeColFilterDeletedEvent.Builder setEventId(com.networknt.kafka.common.EventId value) {
       validate(fields()[0], value);
       this.EventIdBuilder = null;
       this.EventId = value;
@@ -429,7 +429,7 @@ public class AttributeColFilterDeletedEvent extends org.apache.avro.specific.Spe
      * @return This builder.
      */
 
-    public net.lightapi.portal.market.AttributeColFilterDeletedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
+    public net.lightapi.portal.attribute.AttributeColFilterDeletedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
       clearEventId();
       EventIdBuilder = value;
       return this;
@@ -447,7 +447,7 @@ public class AttributeColFilterDeletedEvent extends org.apache.avro.specific.Spe
       * Clears the value of the 'EventId' field.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeColFilterDeletedEvent.Builder clearEventId() {
+    public net.lightapi.portal.attribute.AttributeColFilterDeletedEvent.Builder clearEventId() {
       EventId = null;
       EventIdBuilder = null;
       fieldSetFlags()[0] = false;
@@ -470,7 +470,7 @@ public class AttributeColFilterDeletedEvent extends org.apache.avro.specific.Spe
       * @param value The value of 'hostId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeColFilterDeletedEvent.Builder setHostId(java.lang.String value) {
+    public net.lightapi.portal.attribute.AttributeColFilterDeletedEvent.Builder setHostId(java.lang.String value) {
       validate(fields()[1], value);
       this.hostId = value;
       fieldSetFlags()[1] = true;
@@ -492,7 +492,7 @@ public class AttributeColFilterDeletedEvent extends org.apache.avro.specific.Spe
       * host id
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeColFilterDeletedEvent.Builder clearHostId() {
+    public net.lightapi.portal.attribute.AttributeColFilterDeletedEvent.Builder clearHostId() {
       hostId = null;
       fieldSetFlags()[1] = false;
       return this;
@@ -514,7 +514,7 @@ public class AttributeColFilterDeletedEvent extends org.apache.avro.specific.Spe
       * @param value The value of 'attributeId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeColFilterDeletedEvent.Builder setAttributeId(java.lang.String value) {
+    public net.lightapi.portal.attribute.AttributeColFilterDeletedEvent.Builder setAttributeId(java.lang.String value) {
       validate(fields()[2], value);
       this.attributeId = value;
       fieldSetFlags()[2] = true;
@@ -536,7 +536,7 @@ public class AttributeColFilterDeletedEvent extends org.apache.avro.specific.Spe
       * attribute id
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeColFilterDeletedEvent.Builder clearAttributeId() {
+    public net.lightapi.portal.attribute.AttributeColFilterDeletedEvent.Builder clearAttributeId() {
       attributeId = null;
       fieldSetFlags()[2] = false;
       return this;
@@ -558,7 +558,7 @@ public class AttributeColFilterDeletedEvent extends org.apache.avro.specific.Spe
       * @param value The value of 'apiId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeColFilterDeletedEvent.Builder setApiId(java.lang.String value) {
+    public net.lightapi.portal.attribute.AttributeColFilterDeletedEvent.Builder setApiId(java.lang.String value) {
       validate(fields()[3], value);
       this.apiId = value;
       fieldSetFlags()[3] = true;
@@ -580,7 +580,7 @@ public class AttributeColFilterDeletedEvent extends org.apache.avro.specific.Spe
       * api id
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeColFilterDeletedEvent.Builder clearApiId() {
+    public net.lightapi.portal.attribute.AttributeColFilterDeletedEvent.Builder clearApiId() {
       apiId = null;
       fieldSetFlags()[3] = false;
       return this;
@@ -602,7 +602,7 @@ public class AttributeColFilterDeletedEvent extends org.apache.avro.specific.Spe
       * @param value The value of 'apiVersion'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeColFilterDeletedEvent.Builder setApiVersion(java.lang.String value) {
+    public net.lightapi.portal.attribute.AttributeColFilterDeletedEvent.Builder setApiVersion(java.lang.String value) {
       validate(fields()[4], value);
       this.apiVersion = value;
       fieldSetFlags()[4] = true;
@@ -624,7 +624,7 @@ public class AttributeColFilterDeletedEvent extends org.apache.avro.specific.Spe
       * api version
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeColFilterDeletedEvent.Builder clearApiVersion() {
+    public net.lightapi.portal.attribute.AttributeColFilterDeletedEvent.Builder clearApiVersion() {
       apiVersion = null;
       fieldSetFlags()[4] = false;
       return this;
@@ -646,7 +646,7 @@ public class AttributeColFilterDeletedEvent extends org.apache.avro.specific.Spe
       * @param value The value of 'endpoint'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeColFilterDeletedEvent.Builder setEndpoint(java.lang.String value) {
+    public net.lightapi.portal.attribute.AttributeColFilterDeletedEvent.Builder setEndpoint(java.lang.String value) {
       validate(fields()[5], value);
       this.endpoint = value;
       fieldSetFlags()[5] = true;
@@ -668,7 +668,7 @@ public class AttributeColFilterDeletedEvent extends org.apache.avro.specific.Spe
       * endpoint
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeColFilterDeletedEvent.Builder clearEndpoint() {
+    public net.lightapi.portal.attribute.AttributeColFilterDeletedEvent.Builder clearEndpoint() {
       endpoint = null;
       fieldSetFlags()[5] = false;
       return this;
@@ -797,13 +797,3 @@ public class AttributeColFilterDeletedEvent extends org.apache.avro.specific.Spe
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

@@ -3,7 +3,7 @@
  *
  * DO NOT EDIT DIRECTLY
  */
-package net.lightapi.portal.market;
+package net.lightapi.portal.attribute;
 
 import org.apache.avro.specific.SpecificData;
 import org.apache.avro.util.Utf8;
@@ -13,10 +13,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class AttributeUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -7490006416822981740L;
+  private static final long serialVersionUID = 4597663746886409738L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"AttributeUpdatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"attributeId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"attribute id\"},{\"name\":\"attributeType\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"attribute type\"},{\"name\":\"attributeDesc\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"attribute desc\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"AttributeUpdatedEvent\",\"namespace\":\"net.lightapi.portal.attribute\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"attributeId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"attribute id\"},{\"name\":\"attributeType\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"attribute type\"},{\"name\":\"attributeDesc\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"attribute desc\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -231,8 +231,8 @@ public class AttributeUpdatedEvent extends org.apache.avro.specific.SpecificReco
    * Creates a new AttributeUpdatedEvent RecordBuilder.
    * @return A new AttributeUpdatedEvent RecordBuilder
    */
-  public static net.lightapi.portal.market.AttributeUpdatedEvent.Builder newBuilder() {
-    return new net.lightapi.portal.market.AttributeUpdatedEvent.Builder();
+  public static net.lightapi.portal.attribute.AttributeUpdatedEvent.Builder newBuilder() {
+    return new net.lightapi.portal.attribute.AttributeUpdatedEvent.Builder();
   }
 
   /**
@@ -240,11 +240,11 @@ public class AttributeUpdatedEvent extends org.apache.avro.specific.SpecificReco
    * @param other The existing builder to copy.
    * @return A new AttributeUpdatedEvent RecordBuilder
    */
-  public static net.lightapi.portal.market.AttributeUpdatedEvent.Builder newBuilder(net.lightapi.portal.market.AttributeUpdatedEvent.Builder other) {
+  public static net.lightapi.portal.attribute.AttributeUpdatedEvent.Builder newBuilder(net.lightapi.portal.attribute.AttributeUpdatedEvent.Builder other) {
     if (other == null) {
-      return new net.lightapi.portal.market.AttributeUpdatedEvent.Builder();
+      return new net.lightapi.portal.attribute.AttributeUpdatedEvent.Builder();
     } else {
-      return new net.lightapi.portal.market.AttributeUpdatedEvent.Builder(other);
+      return new net.lightapi.portal.attribute.AttributeUpdatedEvent.Builder(other);
     }
   }
 
@@ -253,11 +253,11 @@ public class AttributeUpdatedEvent extends org.apache.avro.specific.SpecificReco
    * @param other The existing instance to copy.
    * @return A new AttributeUpdatedEvent RecordBuilder
    */
-  public static net.lightapi.portal.market.AttributeUpdatedEvent.Builder newBuilder(net.lightapi.portal.market.AttributeUpdatedEvent other) {
+  public static net.lightapi.portal.attribute.AttributeUpdatedEvent.Builder newBuilder(net.lightapi.portal.attribute.AttributeUpdatedEvent other) {
     if (other == null) {
-      return new net.lightapi.portal.market.AttributeUpdatedEvent.Builder();
+      return new net.lightapi.portal.attribute.AttributeUpdatedEvent.Builder();
     } else {
-      return new net.lightapi.portal.market.AttributeUpdatedEvent.Builder(other);
+      return new net.lightapi.portal.attribute.AttributeUpdatedEvent.Builder(other);
     }
   }
 
@@ -288,7 +288,7 @@ public class AttributeUpdatedEvent extends org.apache.avro.specific.SpecificReco
      * Creates a Builder by copying an existing Builder.
      * @param other The existing Builder to copy.
      */
-    private Builder(net.lightapi.portal.market.AttributeUpdatedEvent.Builder other) {
+    private Builder(net.lightapi.portal.attribute.AttributeUpdatedEvent.Builder other) {
       super(other);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
@@ -319,7 +319,7 @@ public class AttributeUpdatedEvent extends org.apache.avro.specific.SpecificReco
      * Creates a Builder by copying an existing AttributeUpdatedEvent instance
      * @param other The existing instance to copy.
      */
-    private Builder(net.lightapi.portal.market.AttributeUpdatedEvent other) {
+    private Builder(net.lightapi.portal.attribute.AttributeUpdatedEvent other) {
       super(SCHEMA$, MODEL$);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
@@ -358,7 +358,7 @@ public class AttributeUpdatedEvent extends org.apache.avro.specific.SpecificReco
       * @param value The value of 'EventId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeUpdatedEvent.Builder setEventId(com.networknt.kafka.common.EventId value) {
+    public net.lightapi.portal.attribute.AttributeUpdatedEvent.Builder setEventId(com.networknt.kafka.common.EventId value) {
       validate(fields()[0], value);
       this.EventIdBuilder = null;
       this.EventId = value;
@@ -395,7 +395,7 @@ public class AttributeUpdatedEvent extends org.apache.avro.specific.SpecificReco
      * @return This builder.
      */
 
-    public net.lightapi.portal.market.AttributeUpdatedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
+    public net.lightapi.portal.attribute.AttributeUpdatedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
       clearEventId();
       EventIdBuilder = value;
       return this;
@@ -413,7 +413,7 @@ public class AttributeUpdatedEvent extends org.apache.avro.specific.SpecificReco
       * Clears the value of the 'EventId' field.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeUpdatedEvent.Builder clearEventId() {
+    public net.lightapi.portal.attribute.AttributeUpdatedEvent.Builder clearEventId() {
       EventId = null;
       EventIdBuilder = null;
       fieldSetFlags()[0] = false;
@@ -436,7 +436,7 @@ public class AttributeUpdatedEvent extends org.apache.avro.specific.SpecificReco
       * @param value The value of 'hostId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeUpdatedEvent.Builder setHostId(java.lang.String value) {
+    public net.lightapi.portal.attribute.AttributeUpdatedEvent.Builder setHostId(java.lang.String value) {
       validate(fields()[1], value);
       this.hostId = value;
       fieldSetFlags()[1] = true;
@@ -458,7 +458,7 @@ public class AttributeUpdatedEvent extends org.apache.avro.specific.SpecificReco
       * host id
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeUpdatedEvent.Builder clearHostId() {
+    public net.lightapi.portal.attribute.AttributeUpdatedEvent.Builder clearHostId() {
       hostId = null;
       fieldSetFlags()[1] = false;
       return this;
@@ -480,7 +480,7 @@ public class AttributeUpdatedEvent extends org.apache.avro.specific.SpecificReco
       * @param value The value of 'attributeId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeUpdatedEvent.Builder setAttributeId(java.lang.String value) {
+    public net.lightapi.portal.attribute.AttributeUpdatedEvent.Builder setAttributeId(java.lang.String value) {
       validate(fields()[2], value);
       this.attributeId = value;
       fieldSetFlags()[2] = true;
@@ -502,7 +502,7 @@ public class AttributeUpdatedEvent extends org.apache.avro.specific.SpecificReco
       * attribute id
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeUpdatedEvent.Builder clearAttributeId() {
+    public net.lightapi.portal.attribute.AttributeUpdatedEvent.Builder clearAttributeId() {
       attributeId = null;
       fieldSetFlags()[2] = false;
       return this;
@@ -524,7 +524,7 @@ public class AttributeUpdatedEvent extends org.apache.avro.specific.SpecificReco
       * @param value The value of 'attributeType'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeUpdatedEvent.Builder setAttributeType(java.lang.String value) {
+    public net.lightapi.portal.attribute.AttributeUpdatedEvent.Builder setAttributeType(java.lang.String value) {
       validate(fields()[3], value);
       this.attributeType = value;
       fieldSetFlags()[3] = true;
@@ -546,7 +546,7 @@ public class AttributeUpdatedEvent extends org.apache.avro.specific.SpecificReco
       * attribute type
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeUpdatedEvent.Builder clearAttributeType() {
+    public net.lightapi.portal.attribute.AttributeUpdatedEvent.Builder clearAttributeType() {
       attributeType = null;
       fieldSetFlags()[3] = false;
       return this;
@@ -568,7 +568,7 @@ public class AttributeUpdatedEvent extends org.apache.avro.specific.SpecificReco
       * @param value The value of 'attributeDesc'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeUpdatedEvent.Builder setAttributeDesc(java.lang.String value) {
+    public net.lightapi.portal.attribute.AttributeUpdatedEvent.Builder setAttributeDesc(java.lang.String value) {
       validate(fields()[4], value);
       this.attributeDesc = value;
       fieldSetFlags()[4] = true;
@@ -590,7 +590,7 @@ public class AttributeUpdatedEvent extends org.apache.avro.specific.SpecificReco
       * attribute desc
       * @return This builder.
       */
-    public net.lightapi.portal.market.AttributeUpdatedEvent.Builder clearAttributeDesc() {
+    public net.lightapi.portal.attribute.AttributeUpdatedEvent.Builder clearAttributeDesc() {
       attributeDesc = null;
       fieldSetFlags()[4] = false;
       return this;
@@ -710,13 +710,3 @@ public class AttributeUpdatedEvent extends org.apache.avro.specific.SpecificReco
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
