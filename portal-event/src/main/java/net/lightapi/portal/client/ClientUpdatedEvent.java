@@ -3,7 +3,7 @@
  *
  * DO NOT EDIT DIRECTLY
  */
-package net.lightapi.portal.market;
+package net.lightapi.portal.client;
 
 import org.apache.avro.specific.SpecificData;
 import org.apache.avro.util.Utf8;
@@ -12,26 +12,26 @@ import org.apache.avro.message.BinaryMessageDecoder;
 import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
-public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 7948456566272441869L;
+public class ClientUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
+  private static final long serialVersionUID = 1647913371808571544L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"MarketClientDeletedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the id\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"appId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"app id\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ClientUpdatedEvent\",\"namespace\":\"net.lightapi.portal.client\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"appId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"app id\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"app detail in JSON\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
 
-  private static final BinaryMessageEncoder<MarketClientDeletedEvent> ENCODER =
+  private static final BinaryMessageEncoder<ClientUpdatedEvent> ENCODER =
       new BinaryMessageEncoder<>(MODEL$, SCHEMA$);
 
-  private static final BinaryMessageDecoder<MarketClientDeletedEvent> DECODER =
+  private static final BinaryMessageDecoder<ClientUpdatedEvent> DECODER =
       new BinaryMessageDecoder<>(MODEL$, SCHEMA$);
 
   /**
    * Return the BinaryMessageEncoder instance used by this class.
    * @return the message encoder used by this class
    */
-  public static BinaryMessageEncoder<MarketClientDeletedEvent> getEncoder() {
+  public static BinaryMessageEncoder<ClientUpdatedEvent> getEncoder() {
     return ENCODER;
   }
 
@@ -39,7 +39,7 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
    * Return the BinaryMessageDecoder instance used by this class.
    * @return the message decoder used by this class
    */
-  public static BinaryMessageDecoder<MarketClientDeletedEvent> getDecoder() {
+  public static BinaryMessageDecoder<ClientUpdatedEvent> getDecoder() {
     return DECODER;
   }
 
@@ -48,12 +48,12 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
    * @param resolver a {@link SchemaStore} used to find schemas by fingerprint
    * @return a BinaryMessageDecoder instance for this class backed by the given SchemaStore
    */
-  public static BinaryMessageDecoder<MarketClientDeletedEvent> createDecoder(SchemaStore resolver) {
+  public static BinaryMessageDecoder<ClientUpdatedEvent> createDecoder(SchemaStore resolver) {
     return new BinaryMessageDecoder<>(MODEL$, SCHEMA$, resolver);
   }
 
   /**
-   * Serializes this MarketClientDeletedEvent to a ByteBuffer.
+   * Serializes this ClientUpdatedEvent to a ByteBuffer.
    * @return a buffer holding the serialized data for this instance
    * @throws java.io.IOException if this instance could not be serialized
    */
@@ -62,12 +62,12 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
   }
 
   /**
-   * Deserializes a MarketClientDeletedEvent from a ByteBuffer.
+   * Deserializes a ClientUpdatedEvent from a ByteBuffer.
    * @param b a byte buffer holding serialized data for an instance of this class
-   * @return a MarketClientDeletedEvent instance decoded from the given buffer
+   * @return a ClientUpdatedEvent instance decoded from the given buffer
    * @throws java.io.IOException if the given bytes could not be deserialized into an instance of this class
    */
-  public static MarketClientDeletedEvent fromByteBuffer(
+  public static ClientUpdatedEvent fromByteBuffer(
       java.nio.ByteBuffer b) throws java.io.IOException {
     return DECODER.decode(b);
   }
@@ -77,24 +77,28 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
   private java.lang.String hostId;
   /** app id */
   private java.lang.String appId;
+  /** app detail in JSON */
+  private java.lang.String value;
 
   /**
    * Default constructor.  Note that this does not initialize fields
    * to their default values from the schema.  If that is desired then
    * one should use <code>newBuilder()</code>.
    */
-  public MarketClientDeletedEvent() {}
+  public ClientUpdatedEvent() {}
 
   /**
    * All-args constructor.
    * @param EventId The new value for EventId
    * @param hostId host id
    * @param appId app id
+   * @param value app detail in JSON
    */
-  public MarketClientDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String appId) {
+  public ClientUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String appId, java.lang.String value) {
     this.EventId = EventId;
     this.hostId = hostId;
     this.appId = appId;
+    this.value = value;
   }
 
   @Override
@@ -110,6 +114,7 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
     case 0: return EventId;
     case 1: return hostId;
     case 2: return appId;
+    case 3: return value;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -122,6 +127,7 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
     case 1: hostId = value$ != null ? value$.toString() : null; break;
     case 2: appId = value$ != null ? value$.toString() : null; break;
+    case 3: value = value$ != null ? value$.toString() : null; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -180,45 +186,63 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
   }
 
   /**
-   * Creates a new MarketClientDeletedEvent RecordBuilder.
-   * @return A new MarketClientDeletedEvent RecordBuilder
+   * Gets the value of the 'value' field.
+   * @return app detail in JSON
    */
-  public static net.lightapi.portal.market.MarketClientDeletedEvent.Builder newBuilder() {
-    return new net.lightapi.portal.market.MarketClientDeletedEvent.Builder();
+  public java.lang.String getValue() {
+    return value;
+  }
+
+
+  /**
+   * Sets the value of the 'value' field.
+   * app detail in JSON
+   * @param value the value to set.
+   */
+  public void setValue(java.lang.String value) {
+    this.value = value;
   }
 
   /**
-   * Creates a new MarketClientDeletedEvent RecordBuilder by copying an existing Builder.
+   * Creates a new ClientUpdatedEvent RecordBuilder.
+   * @return A new ClientUpdatedEvent RecordBuilder
+   */
+  public static net.lightapi.portal.client.ClientUpdatedEvent.Builder newBuilder() {
+    return new net.lightapi.portal.client.ClientUpdatedEvent.Builder();
+  }
+
+  /**
+   * Creates a new ClientUpdatedEvent RecordBuilder by copying an existing Builder.
    * @param other The existing builder to copy.
-   * @return A new MarketClientDeletedEvent RecordBuilder
+   * @return A new ClientUpdatedEvent RecordBuilder
    */
-  public static net.lightapi.portal.market.MarketClientDeletedEvent.Builder newBuilder(net.lightapi.portal.market.MarketClientDeletedEvent.Builder other) {
+  public static net.lightapi.portal.client.ClientUpdatedEvent.Builder newBuilder(net.lightapi.portal.client.ClientUpdatedEvent.Builder other) {
     if (other == null) {
-      return new net.lightapi.portal.market.MarketClientDeletedEvent.Builder();
+      return new net.lightapi.portal.client.ClientUpdatedEvent.Builder();
     } else {
-      return new net.lightapi.portal.market.MarketClientDeletedEvent.Builder(other);
+      return new net.lightapi.portal.client.ClientUpdatedEvent.Builder(other);
     }
   }
 
   /**
-   * Creates a new MarketClientDeletedEvent RecordBuilder by copying an existing MarketClientDeletedEvent instance.
+   * Creates a new ClientUpdatedEvent RecordBuilder by copying an existing ClientUpdatedEvent instance.
    * @param other The existing instance to copy.
-   * @return A new MarketClientDeletedEvent RecordBuilder
+   * @return A new ClientUpdatedEvent RecordBuilder
    */
-  public static net.lightapi.portal.market.MarketClientDeletedEvent.Builder newBuilder(net.lightapi.portal.market.MarketClientDeletedEvent other) {
+  public static net.lightapi.portal.client.ClientUpdatedEvent.Builder newBuilder(net.lightapi.portal.client.ClientUpdatedEvent other) {
     if (other == null) {
-      return new net.lightapi.portal.market.MarketClientDeletedEvent.Builder();
+      return new net.lightapi.portal.client.ClientUpdatedEvent.Builder();
     } else {
-      return new net.lightapi.portal.market.MarketClientDeletedEvent.Builder(other);
+      return new net.lightapi.portal.client.ClientUpdatedEvent.Builder(other);
     }
   }
 
   /**
-   * RecordBuilder for MarketClientDeletedEvent instances.
+   * RecordBuilder for ClientUpdatedEvent instances.
    */
   @org.apache.avro.specific.AvroGenerated
-  public static class Builder extends org.apache.avro.specific.SpecificRecordBuilderBase<MarketClientDeletedEvent>
-    implements org.apache.avro.data.RecordBuilder<MarketClientDeletedEvent> {
+  public static class Builder extends org.apache.avro.specific.SpecificRecordBuilderBase<ClientUpdatedEvent>
+    implements org.apache.avro.data.RecordBuilder<ClientUpdatedEvent> {
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
@@ -226,6 +250,8 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
     private java.lang.String hostId;
     /** app id */
     private java.lang.String appId;
+    /** app detail in JSON */
+    private java.lang.String value;
 
     /** Creates a new Builder */
     private Builder() {
@@ -236,7 +262,7 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
      * Creates a Builder by copying an existing Builder.
      * @param other The existing Builder to copy.
      */
-    private Builder(net.lightapi.portal.market.MarketClientDeletedEvent.Builder other) {
+    private Builder(net.lightapi.portal.client.ClientUpdatedEvent.Builder other) {
       super(other);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
@@ -253,13 +279,17 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
         this.appId = data().deepCopy(fields()[2].schema(), other.appId);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
+      if (isValidValue(fields()[3], other.value)) {
+        this.value = data().deepCopy(fields()[3].schema(), other.value);
+        fieldSetFlags()[3] = other.fieldSetFlags()[3];
+      }
     }
 
     /**
-     * Creates a Builder by copying an existing MarketClientDeletedEvent instance
+     * Creates a Builder by copying an existing ClientUpdatedEvent instance
      * @param other The existing instance to copy.
      */
-    private Builder(net.lightapi.portal.market.MarketClientDeletedEvent other) {
+    private Builder(net.lightapi.portal.client.ClientUpdatedEvent other) {
       super(SCHEMA$, MODEL$);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
@@ -273,6 +303,10 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
       if (isValidValue(fields()[2], other.appId)) {
         this.appId = data().deepCopy(fields()[2].schema(), other.appId);
         fieldSetFlags()[2] = true;
+      }
+      if (isValidValue(fields()[3], other.value)) {
+        this.value = data().deepCopy(fields()[3].schema(), other.value);
+        fieldSetFlags()[3] = true;
       }
     }
 
@@ -290,7 +324,7 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
       * @param value The value of 'EventId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketClientDeletedEvent.Builder setEventId(com.networknt.kafka.common.EventId value) {
+    public net.lightapi.portal.client.ClientUpdatedEvent.Builder setEventId(com.networknt.kafka.common.EventId value) {
       validate(fields()[0], value);
       this.EventIdBuilder = null;
       this.EventId = value;
@@ -327,7 +361,7 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
      * @return This builder.
      */
 
-    public net.lightapi.portal.market.MarketClientDeletedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
+    public net.lightapi.portal.client.ClientUpdatedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
       clearEventId();
       EventIdBuilder = value;
       return this;
@@ -345,7 +379,7 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
       * Clears the value of the 'EventId' field.
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketClientDeletedEvent.Builder clearEventId() {
+    public net.lightapi.portal.client.ClientUpdatedEvent.Builder clearEventId() {
       EventId = null;
       EventIdBuilder = null;
       fieldSetFlags()[0] = false;
@@ -368,7 +402,7 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
       * @param value The value of 'hostId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketClientDeletedEvent.Builder setHostId(java.lang.String value) {
+    public net.lightapi.portal.client.ClientUpdatedEvent.Builder setHostId(java.lang.String value) {
       validate(fields()[1], value);
       this.hostId = value;
       fieldSetFlags()[1] = true;
@@ -390,7 +424,7 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
       * host id
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketClientDeletedEvent.Builder clearHostId() {
+    public net.lightapi.portal.client.ClientUpdatedEvent.Builder clearHostId() {
       hostId = null;
       fieldSetFlags()[1] = false;
       return this;
@@ -412,7 +446,7 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
       * @param value The value of 'appId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketClientDeletedEvent.Builder setAppId(java.lang.String value) {
+    public net.lightapi.portal.client.ClientUpdatedEvent.Builder setAppId(java.lang.String value) {
       validate(fields()[2], value);
       this.appId = value;
       fieldSetFlags()[2] = true;
@@ -434,17 +468,61 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
       * app id
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketClientDeletedEvent.Builder clearAppId() {
+    public net.lightapi.portal.client.ClientUpdatedEvent.Builder clearAppId() {
       appId = null;
       fieldSetFlags()[2] = false;
       return this;
     }
 
+    /**
+      * Gets the value of the 'value' field.
+      * app detail in JSON
+      * @return The value.
+      */
+    public java.lang.String getValue() {
+      return value;
+    }
+
+
+    /**
+      * Sets the value of the 'value' field.
+      * app detail in JSON
+      * @param value The value of 'value'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.client.ClientUpdatedEvent.Builder setValue(java.lang.String value) {
+      validate(fields()[3], value);
+      this.value = value;
+      fieldSetFlags()[3] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'value' field has been set.
+      * app detail in JSON
+      * @return True if the 'value' field has been set, false otherwise.
+      */
+    public boolean hasValue() {
+      return fieldSetFlags()[3];
+    }
+
+
+    /**
+      * Clears the value of the 'value' field.
+      * app detail in JSON
+      * @return This builder.
+      */
+    public net.lightapi.portal.client.ClientUpdatedEvent.Builder clearValue() {
+      value = null;
+      fieldSetFlags()[3] = false;
+      return this;
+    }
+
     @Override
     @SuppressWarnings("unchecked")
-    public MarketClientDeletedEvent build() {
+    public ClientUpdatedEvent build() {
       try {
-        MarketClientDeletedEvent record = new MarketClientDeletedEvent();
+        ClientUpdatedEvent record = new ClientUpdatedEvent();
         if (EventIdBuilder != null) {
           try {
             record.EventId = this.EventIdBuilder.build();
@@ -457,6 +535,7 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
         }
         record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
         record.appId = fieldSetFlags()[2] ? this.appId : (java.lang.String) defaultValue(fields()[2]);
+        record.value = fieldSetFlags()[3] ? this.value : (java.lang.String) defaultValue(fields()[3]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -467,8 +546,8 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
   }
 
   @SuppressWarnings("unchecked")
-  private static final org.apache.avro.io.DatumWriter<MarketClientDeletedEvent>
-    WRITER$ = (org.apache.avro.io.DatumWriter<MarketClientDeletedEvent>)MODEL$.createDatumWriter(SCHEMA$);
+  private static final org.apache.avro.io.DatumWriter<ClientUpdatedEvent>
+    WRITER$ = (org.apache.avro.io.DatumWriter<ClientUpdatedEvent>)MODEL$.createDatumWriter(SCHEMA$);
 
   @Override public void writeExternal(java.io.ObjectOutput out)
     throws java.io.IOException {
@@ -476,8 +555,8 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
   }
 
   @SuppressWarnings("unchecked")
-  private static final org.apache.avro.io.DatumReader<MarketClientDeletedEvent>
-    READER$ = (org.apache.avro.io.DatumReader<MarketClientDeletedEvent>)MODEL$.createDatumReader(SCHEMA$);
+  private static final org.apache.avro.io.DatumReader<ClientUpdatedEvent>
+    READER$ = (org.apache.avro.io.DatumReader<ClientUpdatedEvent>)MODEL$.createDatumReader(SCHEMA$);
 
   @Override public void readExternal(java.io.ObjectInput in)
     throws java.io.IOException {
@@ -495,6 +574,8 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
 
     out.writeString(this.appId);
 
+    out.writeString(this.value);
+
   }
 
   @Override public void customDecode(org.apache.avro.io.ResolvingDecoder in)
@@ -511,8 +592,10 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
 
       this.appId = in.readString();
 
+      this.value = in.readString();
+
     } else {
-      for (int i = 0; i < 3; i++) {
+      for (int i = 0; i < 4; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -529,6 +612,10 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
           this.appId = in.readString();
           break;
 
+        case 3:
+          this.value = in.readString();
+          break;
+
         default:
           throw new java.io.IOException("Corrupt ResolvingDecoder.");
         }
@@ -536,13 +623,3 @@ public class MarketClientDeletedEvent extends org.apache.avro.specific.SpecificR
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

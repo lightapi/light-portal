@@ -1,7 +1,7 @@
 {
   "type": "record",
-  "name": "MarketClientCreatedEvent",
-  "namespace": "net.lightapi.portal.market",
+  "name": "ClientDeletedEvent",
+  "namespace": "net.lightapi.portal.client",
   "fields": [
     {
       "name": "EventId",
@@ -18,7 +18,7 @@
           {
             "name": "nonce",
             "type": "long",
-            "doc": "the number of the transactions for the user"
+            "doc": "the number of the transactions for the id"
           },
           {
             "name": "timestamp",
@@ -43,12 +43,7 @@
     {
       "name": "appId",
       "type": "string",
-      "doc": "app id is an internal id for the app per host"
-    },
-    {
-      "name": "value",
-      "type": "string",
-      "doc": "app detail in JSON"
+      "doc": "app id"
     }
   ]
 }

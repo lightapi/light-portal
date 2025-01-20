@@ -2,6 +2,9 @@ package net.lightapi.portal.db;
 
 import com.networknt.db.provider.DbProvider;
 import com.networknt.monad.Result;
+import net.lightapi.portal.client.ClientCreatedEvent;
+import net.lightapi.portal.client.ClientDeletedEvent;
+import net.lightapi.portal.client.ClientUpdatedEvent;
 import net.lightapi.portal.market.*;
 import net.lightapi.portal.oauth.AuthCodeCreatedEvent;
 import net.lightapi.portal.oauth.AuthCodeDeletedEvent;
@@ -77,9 +80,9 @@ public interface PortalDbProvider extends DbProvider {
                                        String challengeMethod, String updateUser, Timestamp updateTs);
 
 
-    Result<String> createClient(MarketClientCreatedEvent event);
-    Result<String> updateClient(MarketClientUpdatedEvent event);
-    Result<String> deleteClient(MarketClientDeletedEvent event);
+    Result<String> createClient(ClientCreatedEvent event);
+    Result<String> updateClient(ClientUpdatedEvent event);
+    Result<String> deleteClient(ClientDeletedEvent event);
     Result<Map<String, Object>> queryClientByClientId(String clientId);
     Result<Map<String, Object>> queryClientByHostAppId(String host, String applicationId);
 

@@ -43,9 +43,9 @@ java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema OrderCre
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema OrderCancelledEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema OrderDeliveredEvent.avsc .
 
-java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema MarketClientCreatedEvent.avsc .
-java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema MarketClientUpdatedEvent.avsc .
-java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema MarketClientDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ClientCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ClientUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ClientDeletedEvent.avsc .
 
 
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ServiceCreatedEvent.avsc .
@@ -224,9 +224,9 @@ mv net/lightapi/portal/user/HostCreatedEvent.java ../java/net/lightapi/portal/us
 mv net/lightapi/portal/user/HostUpdatedEvent.java ../java/net/lightapi/portal/user
 mv net/lightapi/portal/user/HostDeletedEvent.java ../java/net/lightapi/portal/user
 
-mv net/lightapi/portal/market/MarketClientCreatedEvent.java ../java/net/lightapi/portal/market
-mv net/lightapi/portal/market/MarketClientUpdatedEvent.java ../java/net/lightapi/portal/market
-mv net/lightapi/portal/market/MarketClientDeletedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/client/ClientCreatedEvent.java ../java/net/lightapi/portal/client
+mv net/lightapi/portal/client/ClientUpdatedEvent.java ../java/net/lightapi/portal/client
+mv net/lightapi/portal/client/ClientDeletedEvent.java ../java/net/lightapi/portal/client
 
 mv net/lightapi/portal/service/ServiceCreatedEvent.java ../java/net/lightapi/portal/service
 mv net/lightapi/portal/service/ServiceUpdatedEvent.java ../java/net/lightapi/portal/service

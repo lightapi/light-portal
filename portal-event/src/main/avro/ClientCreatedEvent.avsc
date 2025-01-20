@@ -1,7 +1,7 @@
 {
   "type": "record",
-  "name": "MarketClientUpdatedEvent",
-  "namespace": "net.lightapi.portal.market",
+  "name": "ClientCreatedEvent",
+  "namespace": "net.lightapi.portal.client",
   "fields": [
     {
       "name": "EventId",
@@ -43,7 +43,7 @@
     {
       "name": "appId",
       "type": "string",
-      "doc": "app id"
+      "doc": "app id is an internal id for the app per host"
     },
     {
       "name": "value",

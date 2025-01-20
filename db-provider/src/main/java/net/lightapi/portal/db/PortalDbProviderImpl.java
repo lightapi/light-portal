@@ -9,6 +9,9 @@ import com.networknt.monad.Success;
 import com.networknt.security.KeyUtil;
 import com.networknt.status.Status;
 import com.networknt.utility.HashUtil;
+import net.lightapi.portal.client.ClientCreatedEvent;
+import net.lightapi.portal.client.ClientDeletedEvent;
+import net.lightapi.portal.client.ClientUpdatedEvent;
 import net.lightapi.portal.market.*;
 import net.lightapi.portal.oauth.AuthCodeCreatedEvent;
 import net.lightapi.portal.oauth.AuthCodeDeletedEvent;
@@ -1995,7 +1998,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> createClient(MarketClientCreatedEvent event) {
+    public Result<String> createClient(ClientCreatedEvent event) {
         final String insertUser = "INSERT INTO app_t (host_id, app_id, app_name, app_desc, " +
                 "is_kafka_app, client_id, client_type, client_profile, client_secret, client_scope, custom_claim, " +
                 "redirect_uri, authenticate_class, deref_client_id, operation_owner, delivery_owner, update_user, update_ts) " +
@@ -2084,7 +2087,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> updateClient(MarketClientUpdatedEvent event) {
+    public Result<String> updateClient(ClientUpdatedEvent event) {
         final String updateApplication = "UPDATE app_t SET app_name = ?, app_desc = ?, is_kafka_app = ?, " +
                 "client_type = ?, client_profile = ?, client_scope = ?, custom_claim = ?, redirect_uri = ?, authenticate_class = ?, " +
                 "deref_client_id = ?, operation_owner = ?, delivery_owner = ?, update_user = ?, update_ts = ? " +
@@ -2186,7 +2189,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> deleteClient(MarketClientDeletedEvent event) {
+    public Result<String> deleteClient(ClientDeletedEvent event) {
         final String deleteApp = "DELETE from app_t WHERE host_id = ? AND app_id = ?";
         // TODO delete all other tables related to this user.
         Result<String> result;
