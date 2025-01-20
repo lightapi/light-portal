@@ -1,7 +1,7 @@
 {
   "type": "record",
-  "name": "MarketTokenDeletedEvent",
-  "namespace": "net.lightapi.portal.market",
+  "name": "AuthRefreshTokenDeletedEvent",
+  "namespace": "net.lightapi.portal.oauth",
   "fields": [
     {
       "name": "EventId",

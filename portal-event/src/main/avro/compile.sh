@@ -58,15 +58,17 @@ java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ServiceV
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema EndpointRuleCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema EndpointRuleDeletedEvent.avsc .
 
-java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema MarketTokenCreatedEvent.avsc .
-java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema MarketTokenDeletedEvent.avsc .
-java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema MarketCodeCreatedEvent.avsc .
-java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema MarketCodeDeletedEvent.avsc .
-java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema MarketRefCreatedEvent.avsc .
-java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema MarketRefDeletedEvent.avsc .
-java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema MarketProviderCreatedEvent.avsc .
-java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema MarketProviderUpdatedEvent.avsc .
-java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema MarketProviderDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema AuthRefreshTokenCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema AuthRefreshTokenDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema AuthCodeCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema AuthCodeDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema AuthRefTokenCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema AuthRefTokenDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema AuthProviderCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema AuthProviderUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema AuthProviderDeletedEvent.avsc .
+
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema CategoryCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema CategoryCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema CategoryUpdatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema CategoryDeletedEvent.avsc .
@@ -236,15 +238,16 @@ mv net/lightapi/portal/service/ServiceVersionDeletedEvent.java ../java/net/light
 mv net/lightapi/portal/service/EndpointRuleCreatedEvent.java ../java/net/lightapi/portal/service
 mv net/lightapi/portal/service/EndpointRuleDeletedEvent.java ../java/net/lightapi/portal/service
 
-mv net/lightapi/portal/market/MarketTokenCreatedEvent.java ../java/net/lightapi/portal/market
-mv net/lightapi/portal/market/MarketTokenDeletedEvent.java ../java/net/lightapi/portal/market
-mv net/lightapi/portal/market/MarketCodeCreatedEvent.java ../java/net/lightapi/portal/market
-mv net/lightapi/portal/market/MarketCodeDeletedEvent.java ../java/net/lightapi/portal/market
-mv net/lightapi/portal/market/MarketRefCreatedEvent.java ../java/net/lightapi/portal/market
-mv net/lightapi/portal/market/MarketRefDeletedEvent.java ../java/net/lightapi/portal/market
-mv net/lightapi/portal/market/MarketProviderCreatedEvent.java ../java/net/lightapi/portal/market
-mv net/lightapi/portal/market/MarketProviderUpdatedEvent.java ../java/net/lightapi/portal/market
-mv net/lightapi/portal/market/MarketProviderDeletedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/oauth/AuthRefreshTokenCreatedEvent.java ../java/net/lightapi/portal/oauth
+mv net/lightapi/portal/oauth/AuthRefreshTokenDeletedEvent.java ../java/net/lightapi/portal/oauth
+mv net/lightapi/portal/oauth/AuthCodeCreatedEvent.java ../java/net/lightapi/portal/oauth
+mv net/lightapi/portal/oauth/AuthCodeDeletedEvent.java ../java/net/lightapi/portal/oauth
+mv net/lightapi/portal/oauth/AuthRefTokenCreatedEvent.java ../java/net/lightapi/portal/oauth
+mv net/lightapi/portal/oauth/AuthRefTokenDeletedEvent.java ../java/net/lightapi/portal/oauth
+mv net/lightapi/portal/oauth/AuthProviderCreatedEvent.java ../java/net/lightapi/portal/oauth
+mv net/lightapi/portal/oauth/AuthProviderUpdatedEvent.java ../java/net/lightapi/portal/oauth
+mv net/lightapi/portal/oauth/AuthProviderDeletedEvent.java ../java/net/lightapi/portal/oauth
+
 mv net/lightapi/portal/market/CategoryCreatedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/CategoryUpdatedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/CategoryDeletedEvent.java ../java/net/lightapi/portal/market

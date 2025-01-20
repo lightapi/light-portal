@@ -1,7 +1,7 @@
 {
   "type": "record",
-  "name": "MarketProviderCreatedEvent",
-  "namespace": "net.lightapi.portal.market",
+  "name": "AuthRefTokenDeletedEvent",
+  "namespace": "net.lightapi.portal.oauth",
   "fields": [
     {
       "name": "EventId",
@@ -41,14 +41,9 @@
       "doc": "host id"
     },
     {
-      "name": "providerId",
+      "name": "refToken",
       "type": "string",
-      "doc": "provider id"
-    },
-    {
-      "name": "value",
-      "type": "string",
-      "doc": "oauth provider detail in JSON"
+      "doc": "reference token"
     }
   ]
 }

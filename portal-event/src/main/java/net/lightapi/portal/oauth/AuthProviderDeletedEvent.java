@@ -3,7 +3,7 @@
  *
  * DO NOT EDIT DIRECTLY
  */
-package net.lightapi.portal.market;
+package net.lightapi.portal.oauth;
 
 import org.apache.avro.specific.SpecificData;
 import org.apache.avro.util.Utf8;
@@ -12,26 +12,26 @@ import org.apache.avro.message.BinaryMessageDecoder;
 import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
-public class MarketProviderCreatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -3837098979853084909L;
+public class AuthProviderDeletedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
+  private static final long serialVersionUID = -6058468535962669127L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"MarketProviderCreatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"providerId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"provider id\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"oauth provider detail in JSON\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"AuthProviderDeletedEvent\",\"namespace\":\"net.lightapi.portal.oauth\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"providerId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"provider id\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
 
-  private static final BinaryMessageEncoder<MarketProviderCreatedEvent> ENCODER =
+  private static final BinaryMessageEncoder<AuthProviderDeletedEvent> ENCODER =
       new BinaryMessageEncoder<>(MODEL$, SCHEMA$);
 
-  private static final BinaryMessageDecoder<MarketProviderCreatedEvent> DECODER =
+  private static final BinaryMessageDecoder<AuthProviderDeletedEvent> DECODER =
       new BinaryMessageDecoder<>(MODEL$, SCHEMA$);
 
   /**
    * Return the BinaryMessageEncoder instance used by this class.
    * @return the message encoder used by this class
    */
-  public static BinaryMessageEncoder<MarketProviderCreatedEvent> getEncoder() {
+  public static BinaryMessageEncoder<AuthProviderDeletedEvent> getEncoder() {
     return ENCODER;
   }
 
@@ -39,7 +39,7 @@ public class MarketProviderCreatedEvent extends org.apache.avro.specific.Specifi
    * Return the BinaryMessageDecoder instance used by this class.
    * @return the message decoder used by this class
    */
-  public static BinaryMessageDecoder<MarketProviderCreatedEvent> getDecoder() {
+  public static BinaryMessageDecoder<AuthProviderDeletedEvent> getDecoder() {
     return DECODER;
   }
 
@@ -48,12 +48,12 @@ public class MarketProviderCreatedEvent extends org.apache.avro.specific.Specifi
    * @param resolver a {@link SchemaStore} used to find schemas by fingerprint
    * @return a BinaryMessageDecoder instance for this class backed by the given SchemaStore
    */
-  public static BinaryMessageDecoder<MarketProviderCreatedEvent> createDecoder(SchemaStore resolver) {
+  public static BinaryMessageDecoder<AuthProviderDeletedEvent> createDecoder(SchemaStore resolver) {
     return new BinaryMessageDecoder<>(MODEL$, SCHEMA$, resolver);
   }
 
   /**
-   * Serializes this MarketProviderCreatedEvent to a ByteBuffer.
+   * Serializes this AuthProviderDeletedEvent to a ByteBuffer.
    * @return a buffer holding the serialized data for this instance
    * @throws java.io.IOException if this instance could not be serialized
    */
@@ -62,12 +62,12 @@ public class MarketProviderCreatedEvent extends org.apache.avro.specific.Specifi
   }
 
   /**
-   * Deserializes a MarketProviderCreatedEvent from a ByteBuffer.
+   * Deserializes a AuthProviderDeletedEvent from a ByteBuffer.
    * @param b a byte buffer holding serialized data for an instance of this class
-   * @return a MarketProviderCreatedEvent instance decoded from the given buffer
+   * @return a AuthProviderDeletedEvent instance decoded from the given buffer
    * @throws java.io.IOException if the given bytes could not be deserialized into an instance of this class
    */
-  public static MarketProviderCreatedEvent fromByteBuffer(
+  public static AuthProviderDeletedEvent fromByteBuffer(
       java.nio.ByteBuffer b) throws java.io.IOException {
     return DECODER.decode(b);
   }
@@ -77,28 +77,24 @@ public class MarketProviderCreatedEvent extends org.apache.avro.specific.Specifi
   private java.lang.String hostId;
   /** provider id */
   private java.lang.String providerId;
-  /** oauth provider detail in JSON */
-  private java.lang.String value;
 
   /**
    * Default constructor.  Note that this does not initialize fields
    * to their default values from the schema.  If that is desired then
    * one should use <code>newBuilder()</code>.
    */
-  public MarketProviderCreatedEvent() {}
+  public AuthProviderDeletedEvent() {}
 
   /**
    * All-args constructor.
    * @param EventId The new value for EventId
    * @param hostId host id
    * @param providerId provider id
-   * @param value oauth provider detail in JSON
    */
-  public MarketProviderCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String providerId, java.lang.String value) {
+  public AuthProviderDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String providerId) {
     this.EventId = EventId;
     this.hostId = hostId;
     this.providerId = providerId;
-    this.value = value;
   }
 
   @Override
@@ -114,7 +110,6 @@ public class MarketProviderCreatedEvent extends org.apache.avro.specific.Specifi
     case 0: return EventId;
     case 1: return hostId;
     case 2: return providerId;
-    case 3: return value;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -127,7 +122,6 @@ public class MarketProviderCreatedEvent extends org.apache.avro.specific.Specifi
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
     case 1: hostId = value$ != null ? value$.toString() : null; break;
     case 2: providerId = value$ != null ? value$.toString() : null; break;
-    case 3: value = value$ != null ? value$.toString() : null; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -186,63 +180,45 @@ public class MarketProviderCreatedEvent extends org.apache.avro.specific.Specifi
   }
 
   /**
-   * Gets the value of the 'value' field.
-   * @return oauth provider detail in JSON
+   * Creates a new AuthProviderDeletedEvent RecordBuilder.
+   * @return A new AuthProviderDeletedEvent RecordBuilder
    */
-  public java.lang.String getValue() {
-    return value;
-  }
-
-
-  /**
-   * Sets the value of the 'value' field.
-   * oauth provider detail in JSON
-   * @param value the value to set.
-   */
-  public void setValue(java.lang.String value) {
-    this.value = value;
+  public static net.lightapi.portal.oauth.AuthProviderDeletedEvent.Builder newBuilder() {
+    return new net.lightapi.portal.oauth.AuthProviderDeletedEvent.Builder();
   }
 
   /**
-   * Creates a new MarketProviderCreatedEvent RecordBuilder.
-   * @return A new MarketProviderCreatedEvent RecordBuilder
-   */
-  public static net.lightapi.portal.market.MarketProviderCreatedEvent.Builder newBuilder() {
-    return new net.lightapi.portal.market.MarketProviderCreatedEvent.Builder();
-  }
-
-  /**
-   * Creates a new MarketProviderCreatedEvent RecordBuilder by copying an existing Builder.
+   * Creates a new AuthProviderDeletedEvent RecordBuilder by copying an existing Builder.
    * @param other The existing builder to copy.
-   * @return A new MarketProviderCreatedEvent RecordBuilder
+   * @return A new AuthProviderDeletedEvent RecordBuilder
    */
-  public static net.lightapi.portal.market.MarketProviderCreatedEvent.Builder newBuilder(net.lightapi.portal.market.MarketProviderCreatedEvent.Builder other) {
+  public static net.lightapi.portal.oauth.AuthProviderDeletedEvent.Builder newBuilder(net.lightapi.portal.oauth.AuthProviderDeletedEvent.Builder other) {
     if (other == null) {
-      return new net.lightapi.portal.market.MarketProviderCreatedEvent.Builder();
+      return new net.lightapi.portal.oauth.AuthProviderDeletedEvent.Builder();
     } else {
-      return new net.lightapi.portal.market.MarketProviderCreatedEvent.Builder(other);
+      return new net.lightapi.portal.oauth.AuthProviderDeletedEvent.Builder(other);
     }
   }
 
   /**
-   * Creates a new MarketProviderCreatedEvent RecordBuilder by copying an existing MarketProviderCreatedEvent instance.
+   * Creates a new AuthProviderDeletedEvent RecordBuilder by copying an existing AuthProviderDeletedEvent instance.
    * @param other The existing instance to copy.
-   * @return A new MarketProviderCreatedEvent RecordBuilder
+   * @return A new AuthProviderDeletedEvent RecordBuilder
    */
-  public static net.lightapi.portal.market.MarketProviderCreatedEvent.Builder newBuilder(net.lightapi.portal.market.MarketProviderCreatedEvent other) {
+  public static net.lightapi.portal.oauth.AuthProviderDeletedEvent.Builder newBuilder(net.lightapi.portal.oauth.AuthProviderDeletedEvent other) {
     if (other == null) {
-      return new net.lightapi.portal.market.MarketProviderCreatedEvent.Builder();
+      return new net.lightapi.portal.oauth.AuthProviderDeletedEvent.Builder();
     } else {
-      return new net.lightapi.portal.market.MarketProviderCreatedEvent.Builder(other);
+      return new net.lightapi.portal.oauth.AuthProviderDeletedEvent.Builder(other);
     }
   }
 
   /**
-   * RecordBuilder for MarketProviderCreatedEvent instances.
+   * RecordBuilder for AuthProviderDeletedEvent instances.
    */
   @org.apache.avro.specific.AvroGenerated
-  public static class Builder extends org.apache.avro.specific.SpecificRecordBuilderBase<MarketProviderCreatedEvent>
-    implements org.apache.avro.data.RecordBuilder<MarketProviderCreatedEvent> {
+  public static class Builder extends org.apache.avro.specific.SpecificRecordBuilderBase<AuthProviderDeletedEvent>
+    implements org.apache.avro.data.RecordBuilder<AuthProviderDeletedEvent> {
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
@@ -250,8 +226,6 @@ public class MarketProviderCreatedEvent extends org.apache.avro.specific.Specifi
     private java.lang.String hostId;
     /** provider id */
     private java.lang.String providerId;
-    /** oauth provider detail in JSON */
-    private java.lang.String value;
 
     /** Creates a new Builder */
     private Builder() {
@@ -262,7 +236,7 @@ public class MarketProviderCreatedEvent extends org.apache.avro.specific.Specifi
      * Creates a Builder by copying an existing Builder.
      * @param other The existing Builder to copy.
      */
-    private Builder(net.lightapi.portal.market.MarketProviderCreatedEvent.Builder other) {
+    private Builder(net.lightapi.portal.oauth.AuthProviderDeletedEvent.Builder other) {
       super(other);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
@@ -279,17 +253,13 @@ public class MarketProviderCreatedEvent extends org.apache.avro.specific.Specifi
         this.providerId = data().deepCopy(fields()[2].schema(), other.providerId);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.value)) {
-        this.value = data().deepCopy(fields()[3].schema(), other.value);
-        fieldSetFlags()[3] = other.fieldSetFlags()[3];
-      }
     }
 
     /**
-     * Creates a Builder by copying an existing MarketProviderCreatedEvent instance
+     * Creates a Builder by copying an existing AuthProviderDeletedEvent instance
      * @param other The existing instance to copy.
      */
-    private Builder(net.lightapi.portal.market.MarketProviderCreatedEvent other) {
+    private Builder(net.lightapi.portal.oauth.AuthProviderDeletedEvent other) {
       super(SCHEMA$, MODEL$);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
@@ -303,10 +273,6 @@ public class MarketProviderCreatedEvent extends org.apache.avro.specific.Specifi
       if (isValidValue(fields()[2], other.providerId)) {
         this.providerId = data().deepCopy(fields()[2].schema(), other.providerId);
         fieldSetFlags()[2] = true;
-      }
-      if (isValidValue(fields()[3], other.value)) {
-        this.value = data().deepCopy(fields()[3].schema(), other.value);
-        fieldSetFlags()[3] = true;
       }
     }
 
@@ -324,7 +290,7 @@ public class MarketProviderCreatedEvent extends org.apache.avro.specific.Specifi
       * @param value The value of 'EventId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketProviderCreatedEvent.Builder setEventId(com.networknt.kafka.common.EventId value) {
+    public net.lightapi.portal.oauth.AuthProviderDeletedEvent.Builder setEventId(com.networknt.kafka.common.EventId value) {
       validate(fields()[0], value);
       this.EventIdBuilder = null;
       this.EventId = value;
@@ -361,7 +327,7 @@ public class MarketProviderCreatedEvent extends org.apache.avro.specific.Specifi
      * @return This builder.
      */
 
-    public net.lightapi.portal.market.MarketProviderCreatedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
+    public net.lightapi.portal.oauth.AuthProviderDeletedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
       clearEventId();
       EventIdBuilder = value;
       return this;
@@ -379,7 +345,7 @@ public class MarketProviderCreatedEvent extends org.apache.avro.specific.Specifi
       * Clears the value of the 'EventId' field.
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketProviderCreatedEvent.Builder clearEventId() {
+    public net.lightapi.portal.oauth.AuthProviderDeletedEvent.Builder clearEventId() {
       EventId = null;
       EventIdBuilder = null;
       fieldSetFlags()[0] = false;
@@ -402,7 +368,7 @@ public class MarketProviderCreatedEvent extends org.apache.avro.specific.Specifi
       * @param value The value of 'hostId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketProviderCreatedEvent.Builder setHostId(java.lang.String value) {
+    public net.lightapi.portal.oauth.AuthProviderDeletedEvent.Builder setHostId(java.lang.String value) {
       validate(fields()[1], value);
       this.hostId = value;
       fieldSetFlags()[1] = true;
@@ -424,7 +390,7 @@ public class MarketProviderCreatedEvent extends org.apache.avro.specific.Specifi
       * host id
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketProviderCreatedEvent.Builder clearHostId() {
+    public net.lightapi.portal.oauth.AuthProviderDeletedEvent.Builder clearHostId() {
       hostId = null;
       fieldSetFlags()[1] = false;
       return this;
@@ -446,7 +412,7 @@ public class MarketProviderCreatedEvent extends org.apache.avro.specific.Specifi
       * @param value The value of 'providerId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketProviderCreatedEvent.Builder setProviderId(java.lang.String value) {
+    public net.lightapi.portal.oauth.AuthProviderDeletedEvent.Builder setProviderId(java.lang.String value) {
       validate(fields()[2], value);
       this.providerId = value;
       fieldSetFlags()[2] = true;
@@ -468,61 +434,17 @@ public class MarketProviderCreatedEvent extends org.apache.avro.specific.Specifi
       * provider id
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketProviderCreatedEvent.Builder clearProviderId() {
+    public net.lightapi.portal.oauth.AuthProviderDeletedEvent.Builder clearProviderId() {
       providerId = null;
       fieldSetFlags()[2] = false;
       return this;
     }
 
-    /**
-      * Gets the value of the 'value' field.
-      * oauth provider detail in JSON
-      * @return The value.
-      */
-    public java.lang.String getValue() {
-      return value;
-    }
-
-
-    /**
-      * Sets the value of the 'value' field.
-      * oauth provider detail in JSON
-      * @param value The value of 'value'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.MarketProviderCreatedEvent.Builder setValue(java.lang.String value) {
-      validate(fields()[3], value);
-      this.value = value;
-      fieldSetFlags()[3] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'value' field has been set.
-      * oauth provider detail in JSON
-      * @return True if the 'value' field has been set, false otherwise.
-      */
-    public boolean hasValue() {
-      return fieldSetFlags()[3];
-    }
-
-
-    /**
-      * Clears the value of the 'value' field.
-      * oauth provider detail in JSON
-      * @return This builder.
-      */
-    public net.lightapi.portal.market.MarketProviderCreatedEvent.Builder clearValue() {
-      value = null;
-      fieldSetFlags()[3] = false;
-      return this;
-    }
-
     @Override
     @SuppressWarnings("unchecked")
-    public MarketProviderCreatedEvent build() {
+    public AuthProviderDeletedEvent build() {
       try {
-        MarketProviderCreatedEvent record = new MarketProviderCreatedEvent();
+        AuthProviderDeletedEvent record = new AuthProviderDeletedEvent();
         if (EventIdBuilder != null) {
           try {
             record.EventId = this.EventIdBuilder.build();
@@ -535,7 +457,6 @@ public class MarketProviderCreatedEvent extends org.apache.avro.specific.Specifi
         }
         record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
         record.providerId = fieldSetFlags()[2] ? this.providerId : (java.lang.String) defaultValue(fields()[2]);
-        record.value = fieldSetFlags()[3] ? this.value : (java.lang.String) defaultValue(fields()[3]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -546,8 +467,8 @@ public class MarketProviderCreatedEvent extends org.apache.avro.specific.Specifi
   }
 
   @SuppressWarnings("unchecked")
-  private static final org.apache.avro.io.DatumWriter<MarketProviderCreatedEvent>
-    WRITER$ = (org.apache.avro.io.DatumWriter<MarketProviderCreatedEvent>)MODEL$.createDatumWriter(SCHEMA$);
+  private static final org.apache.avro.io.DatumWriter<AuthProviderDeletedEvent>
+    WRITER$ = (org.apache.avro.io.DatumWriter<AuthProviderDeletedEvent>)MODEL$.createDatumWriter(SCHEMA$);
 
   @Override public void writeExternal(java.io.ObjectOutput out)
     throws java.io.IOException {
@@ -555,8 +476,8 @@ public class MarketProviderCreatedEvent extends org.apache.avro.specific.Specifi
   }
 
   @SuppressWarnings("unchecked")
-  private static final org.apache.avro.io.DatumReader<MarketProviderCreatedEvent>
-    READER$ = (org.apache.avro.io.DatumReader<MarketProviderCreatedEvent>)MODEL$.createDatumReader(SCHEMA$);
+  private static final org.apache.avro.io.DatumReader<AuthProviderDeletedEvent>
+    READER$ = (org.apache.avro.io.DatumReader<AuthProviderDeletedEvent>)MODEL$.createDatumReader(SCHEMA$);
 
   @Override public void readExternal(java.io.ObjectInput in)
     throws java.io.IOException {
@@ -574,8 +495,6 @@ public class MarketProviderCreatedEvent extends org.apache.avro.specific.Specifi
 
     out.writeString(this.providerId);
 
-    out.writeString(this.value);
-
   }
 
   @Override public void customDecode(org.apache.avro.io.ResolvingDecoder in)
@@ -592,10 +511,8 @@ public class MarketProviderCreatedEvent extends org.apache.avro.specific.Specifi
 
       this.providerId = in.readString();
 
-      this.value = in.readString();
-
     } else {
-      for (int i = 0; i < 4; i++) {
+      for (int i = 0; i < 3; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -612,10 +529,6 @@ public class MarketProviderCreatedEvent extends org.apache.avro.specific.Specifi
           this.providerId = in.readString();
           break;
 
-        case 3:
-          this.value = in.readString();
-          break;
-
         default:
           throw new java.io.IOException("Corrupt ResolvingDecoder.");
         }
@@ -623,13 +536,3 @@ public class MarketProviderCreatedEvent extends org.apache.avro.specific.Specifi
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

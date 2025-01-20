@@ -1,7 +1,7 @@
 {
   "type": "record",
-  "name": "MarketCodeCreatedEvent",
-  "namespace": "net.lightapi.portal.market",
+  "name": "AuthCodeCreatedEvent",
+  "namespace": "net.lightapi.portal.oauth",
   "fields": [
     {
       "name": "EventId",

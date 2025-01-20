@@ -3,7 +3,7 @@
  *
  * DO NOT EDIT DIRECTLY
  */
-package net.lightapi.portal.market;
+package net.lightapi.portal.oauth;
 
 import org.apache.avro.specific.SpecificData;
 import org.apache.avro.util.Utf8;
@@ -12,26 +12,26 @@ import org.apache.avro.message.BinaryMessageDecoder;
 import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
-public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -6464349513528569459L;
+public class AuthProviderCreatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
+  private static final long serialVersionUID = 4072861610889313130L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"MarketTokenDeletedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"user id\"},{\"name\":\"refreshToken\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"refresh token\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"AuthProviderCreatedEvent\",\"namespace\":\"net.lightapi.portal.oauth\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"providerId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"provider id\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"oauth provider detail in JSON\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
 
-  private static final BinaryMessageEncoder<MarketTokenDeletedEvent> ENCODER =
+  private static final BinaryMessageEncoder<AuthProviderCreatedEvent> ENCODER =
       new BinaryMessageEncoder<>(MODEL$, SCHEMA$);
 
-  private static final BinaryMessageDecoder<MarketTokenDeletedEvent> DECODER =
+  private static final BinaryMessageDecoder<AuthProviderCreatedEvent> DECODER =
       new BinaryMessageDecoder<>(MODEL$, SCHEMA$);
 
   /**
    * Return the BinaryMessageEncoder instance used by this class.
    * @return the message encoder used by this class
    */
-  public static BinaryMessageEncoder<MarketTokenDeletedEvent> getEncoder() {
+  public static BinaryMessageEncoder<AuthProviderCreatedEvent> getEncoder() {
     return ENCODER;
   }
 
@@ -39,7 +39,7 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
    * Return the BinaryMessageDecoder instance used by this class.
    * @return the message decoder used by this class
    */
-  public static BinaryMessageDecoder<MarketTokenDeletedEvent> getDecoder() {
+  public static BinaryMessageDecoder<AuthProviderCreatedEvent> getDecoder() {
     return DECODER;
   }
 
@@ -48,12 +48,12 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
    * @param resolver a {@link SchemaStore} used to find schemas by fingerprint
    * @return a BinaryMessageDecoder instance for this class backed by the given SchemaStore
    */
-  public static BinaryMessageDecoder<MarketTokenDeletedEvent> createDecoder(SchemaStore resolver) {
+  public static BinaryMessageDecoder<AuthProviderCreatedEvent> createDecoder(SchemaStore resolver) {
     return new BinaryMessageDecoder<>(MODEL$, SCHEMA$, resolver);
   }
 
   /**
-   * Serializes this MarketTokenDeletedEvent to a ByteBuffer.
+   * Serializes this AuthProviderCreatedEvent to a ByteBuffer.
    * @return a buffer holding the serialized data for this instance
    * @throws java.io.IOException if this instance could not be serialized
    */
@@ -62,12 +62,12 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
   }
 
   /**
-   * Deserializes a MarketTokenDeletedEvent from a ByteBuffer.
+   * Deserializes a AuthProviderCreatedEvent from a ByteBuffer.
    * @param b a byte buffer holding serialized data for an instance of this class
-   * @return a MarketTokenDeletedEvent instance decoded from the given buffer
+   * @return a AuthProviderCreatedEvent instance decoded from the given buffer
    * @throws java.io.IOException if the given bytes could not be deserialized into an instance of this class
    */
-  public static MarketTokenDeletedEvent fromByteBuffer(
+  public static AuthProviderCreatedEvent fromByteBuffer(
       java.nio.ByteBuffer b) throws java.io.IOException {
     return DECODER.decode(b);
   }
@@ -75,30 +75,30 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
   private com.networknt.kafka.common.EventId EventId;
   /** host id */
   private java.lang.String hostId;
-  /** user id */
-  private java.lang.String userId;
-  /** refresh token */
-  private java.lang.String refreshToken;
+  /** provider id */
+  private java.lang.String providerId;
+  /** oauth provider detail in JSON */
+  private java.lang.String value;
 
   /**
    * Default constructor.  Note that this does not initialize fields
    * to their default values from the schema.  If that is desired then
    * one should use <code>newBuilder()</code>.
    */
-  public MarketTokenDeletedEvent() {}
+  public AuthProviderCreatedEvent() {}
 
   /**
    * All-args constructor.
    * @param EventId The new value for EventId
    * @param hostId host id
-   * @param userId user id
-   * @param refreshToken refresh token
+   * @param providerId provider id
+   * @param value oauth provider detail in JSON
    */
-  public MarketTokenDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String userId, java.lang.String refreshToken) {
+  public AuthProviderCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String providerId, java.lang.String value) {
     this.EventId = EventId;
     this.hostId = hostId;
-    this.userId = userId;
-    this.refreshToken = refreshToken;
+    this.providerId = providerId;
+    this.value = value;
   }
 
   @Override
@@ -113,8 +113,8 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
     switch (field$) {
     case 0: return EventId;
     case 1: return hostId;
-    case 2: return userId;
-    case 3: return refreshToken;
+    case 2: return providerId;
+    case 3: return value;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -126,8 +126,8 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
     case 1: hostId = value$ != null ? value$.toString() : null; break;
-    case 2: userId = value$ != null ? value$.toString() : null; break;
-    case 3: refreshToken = value$ != null ? value$.toString() : null; break;
+    case 2: providerId = value$ != null ? value$.toString() : null; break;
+    case 3: value = value$ != null ? value$.toString() : null; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -168,90 +168,90 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
   }
 
   /**
-   * Gets the value of the 'userId' field.
-   * @return user id
+   * Gets the value of the 'providerId' field.
+   * @return provider id
    */
-  public java.lang.String getUserId() {
-    return userId;
+  public java.lang.String getProviderId() {
+    return providerId;
   }
 
 
   /**
-   * Sets the value of the 'userId' field.
-   * user id
+   * Sets the value of the 'providerId' field.
+   * provider id
    * @param value the value to set.
    */
-  public void setUserId(java.lang.String value) {
-    this.userId = value;
+  public void setProviderId(java.lang.String value) {
+    this.providerId = value;
   }
 
   /**
-   * Gets the value of the 'refreshToken' field.
-   * @return refresh token
+   * Gets the value of the 'value' field.
+   * @return oauth provider detail in JSON
    */
-  public java.lang.String getRefreshToken() {
-    return refreshToken;
+  public java.lang.String getValue() {
+    return value;
   }
 
 
   /**
-   * Sets the value of the 'refreshToken' field.
-   * refresh token
+   * Sets the value of the 'value' field.
+   * oauth provider detail in JSON
    * @param value the value to set.
    */
-  public void setRefreshToken(java.lang.String value) {
-    this.refreshToken = value;
+  public void setValue(java.lang.String value) {
+    this.value = value;
   }
 
   /**
-   * Creates a new MarketTokenDeletedEvent RecordBuilder.
-   * @return A new MarketTokenDeletedEvent RecordBuilder
+   * Creates a new AuthProviderCreatedEvent RecordBuilder.
+   * @return A new AuthProviderCreatedEvent RecordBuilder
    */
-  public static net.lightapi.portal.market.MarketTokenDeletedEvent.Builder newBuilder() {
-    return new net.lightapi.portal.market.MarketTokenDeletedEvent.Builder();
+  public static net.lightapi.portal.oauth.AuthProviderCreatedEvent.Builder newBuilder() {
+    return new net.lightapi.portal.oauth.AuthProviderCreatedEvent.Builder();
   }
 
   /**
-   * Creates a new MarketTokenDeletedEvent RecordBuilder by copying an existing Builder.
+   * Creates a new AuthProviderCreatedEvent RecordBuilder by copying an existing Builder.
    * @param other The existing builder to copy.
-   * @return A new MarketTokenDeletedEvent RecordBuilder
+   * @return A new AuthProviderCreatedEvent RecordBuilder
    */
-  public static net.lightapi.portal.market.MarketTokenDeletedEvent.Builder newBuilder(net.lightapi.portal.market.MarketTokenDeletedEvent.Builder other) {
+  public static net.lightapi.portal.oauth.AuthProviderCreatedEvent.Builder newBuilder(net.lightapi.portal.oauth.AuthProviderCreatedEvent.Builder other) {
     if (other == null) {
-      return new net.lightapi.portal.market.MarketTokenDeletedEvent.Builder();
+      return new net.lightapi.portal.oauth.AuthProviderCreatedEvent.Builder();
     } else {
-      return new net.lightapi.portal.market.MarketTokenDeletedEvent.Builder(other);
+      return new net.lightapi.portal.oauth.AuthProviderCreatedEvent.Builder(other);
     }
   }
 
   /**
-   * Creates a new MarketTokenDeletedEvent RecordBuilder by copying an existing MarketTokenDeletedEvent instance.
+   * Creates a new AuthProviderCreatedEvent RecordBuilder by copying an existing AuthProviderCreatedEvent instance.
    * @param other The existing instance to copy.
-   * @return A new MarketTokenDeletedEvent RecordBuilder
+   * @return A new AuthProviderCreatedEvent RecordBuilder
    */
-  public static net.lightapi.portal.market.MarketTokenDeletedEvent.Builder newBuilder(net.lightapi.portal.market.MarketTokenDeletedEvent other) {
+  public static net.lightapi.portal.oauth.AuthProviderCreatedEvent.Builder newBuilder(net.lightapi.portal.oauth.AuthProviderCreatedEvent other) {
     if (other == null) {
-      return new net.lightapi.portal.market.MarketTokenDeletedEvent.Builder();
+      return new net.lightapi.portal.oauth.AuthProviderCreatedEvent.Builder();
     } else {
-      return new net.lightapi.portal.market.MarketTokenDeletedEvent.Builder(other);
+      return new net.lightapi.portal.oauth.AuthProviderCreatedEvent.Builder(other);
     }
   }
 
   /**
-   * RecordBuilder for MarketTokenDeletedEvent instances.
+   * RecordBuilder for AuthProviderCreatedEvent instances.
    */
   @org.apache.avro.specific.AvroGenerated
-  public static class Builder extends org.apache.avro.specific.SpecificRecordBuilderBase<MarketTokenDeletedEvent>
-    implements org.apache.avro.data.RecordBuilder<MarketTokenDeletedEvent> {
+  public static class Builder extends org.apache.avro.specific.SpecificRecordBuilderBase<AuthProviderCreatedEvent>
+    implements org.apache.avro.data.RecordBuilder<AuthProviderCreatedEvent> {
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
     /** host id */
     private java.lang.String hostId;
-    /** user id */
-    private java.lang.String userId;
-    /** refresh token */
-    private java.lang.String refreshToken;
+    /** provider id */
+    private java.lang.String providerId;
+    /** oauth provider detail in JSON */
+    private java.lang.String value;
 
     /** Creates a new Builder */
     private Builder() {
@@ -262,7 +262,7 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
      * Creates a Builder by copying an existing Builder.
      * @param other The existing Builder to copy.
      */
-    private Builder(net.lightapi.portal.market.MarketTokenDeletedEvent.Builder other) {
+    private Builder(net.lightapi.portal.oauth.AuthProviderCreatedEvent.Builder other) {
       super(other);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
@@ -275,21 +275,21 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
         this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
-      if (isValidValue(fields()[2], other.userId)) {
-        this.userId = data().deepCopy(fields()[2].schema(), other.userId);
+      if (isValidValue(fields()[2], other.providerId)) {
+        this.providerId = data().deepCopy(fields()[2].schema(), other.providerId);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.refreshToken)) {
-        this.refreshToken = data().deepCopy(fields()[3].schema(), other.refreshToken);
+      if (isValidValue(fields()[3], other.value)) {
+        this.value = data().deepCopy(fields()[3].schema(), other.value);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
     }
 
     /**
-     * Creates a Builder by copying an existing MarketTokenDeletedEvent instance
+     * Creates a Builder by copying an existing AuthProviderCreatedEvent instance
      * @param other The existing instance to copy.
      */
-    private Builder(net.lightapi.portal.market.MarketTokenDeletedEvent other) {
+    private Builder(net.lightapi.portal.oauth.AuthProviderCreatedEvent other) {
       super(SCHEMA$, MODEL$);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
@@ -300,12 +300,12 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
         this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.userId)) {
-        this.userId = data().deepCopy(fields()[2].schema(), other.userId);
+      if (isValidValue(fields()[2], other.providerId)) {
+        this.providerId = data().deepCopy(fields()[2].schema(), other.providerId);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.refreshToken)) {
-        this.refreshToken = data().deepCopy(fields()[3].schema(), other.refreshToken);
+      if (isValidValue(fields()[3], other.value)) {
+        this.value = data().deepCopy(fields()[3].schema(), other.value);
         fieldSetFlags()[3] = true;
       }
     }
@@ -324,7 +324,7 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
       * @param value The value of 'EventId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketTokenDeletedEvent.Builder setEventId(com.networknt.kafka.common.EventId value) {
+    public net.lightapi.portal.oauth.AuthProviderCreatedEvent.Builder setEventId(com.networknt.kafka.common.EventId value) {
       validate(fields()[0], value);
       this.EventIdBuilder = null;
       this.EventId = value;
@@ -361,7 +361,7 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
      * @return This builder.
      */
 
-    public net.lightapi.portal.market.MarketTokenDeletedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
+    public net.lightapi.portal.oauth.AuthProviderCreatedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
       clearEventId();
       EventIdBuilder = value;
       return this;
@@ -379,7 +379,7 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
       * Clears the value of the 'EventId' field.
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketTokenDeletedEvent.Builder clearEventId() {
+    public net.lightapi.portal.oauth.AuthProviderCreatedEvent.Builder clearEventId() {
       EventId = null;
       EventIdBuilder = null;
       fieldSetFlags()[0] = false;
@@ -402,7 +402,7 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
       * @param value The value of 'hostId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketTokenDeletedEvent.Builder setHostId(java.lang.String value) {
+    public net.lightapi.portal.oauth.AuthProviderCreatedEvent.Builder setHostId(java.lang.String value) {
       validate(fields()[1], value);
       this.hostId = value;
       fieldSetFlags()[1] = true;
@@ -424,105 +424,105 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
       * host id
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketTokenDeletedEvent.Builder clearHostId() {
+    public net.lightapi.portal.oauth.AuthProviderCreatedEvent.Builder clearHostId() {
       hostId = null;
       fieldSetFlags()[1] = false;
       return this;
     }
 
     /**
-      * Gets the value of the 'userId' field.
-      * user id
+      * Gets the value of the 'providerId' field.
+      * provider id
       * @return The value.
       */
-    public java.lang.String getUserId() {
-      return userId;
+    public java.lang.String getProviderId() {
+      return providerId;
     }
 
 
     /**
-      * Sets the value of the 'userId' field.
-      * user id
-      * @param value The value of 'userId'.
+      * Sets the value of the 'providerId' field.
+      * provider id
+      * @param value The value of 'providerId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketTokenDeletedEvent.Builder setUserId(java.lang.String value) {
+    public net.lightapi.portal.oauth.AuthProviderCreatedEvent.Builder setProviderId(java.lang.String value) {
       validate(fields()[2], value);
-      this.userId = value;
+      this.providerId = value;
       fieldSetFlags()[2] = true;
       return this;
     }
 
     /**
-      * Checks whether the 'userId' field has been set.
-      * user id
-      * @return True if the 'userId' field has been set, false otherwise.
+      * Checks whether the 'providerId' field has been set.
+      * provider id
+      * @return True if the 'providerId' field has been set, false otherwise.
       */
-    public boolean hasUserId() {
+    public boolean hasProviderId() {
       return fieldSetFlags()[2];
     }
 
 
     /**
-      * Clears the value of the 'userId' field.
-      * user id
+      * Clears the value of the 'providerId' field.
+      * provider id
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketTokenDeletedEvent.Builder clearUserId() {
-      userId = null;
+    public net.lightapi.portal.oauth.AuthProviderCreatedEvent.Builder clearProviderId() {
+      providerId = null;
       fieldSetFlags()[2] = false;
       return this;
     }
 
     /**
-      * Gets the value of the 'refreshToken' field.
-      * refresh token
+      * Gets the value of the 'value' field.
+      * oauth provider detail in JSON
       * @return The value.
       */
-    public java.lang.String getRefreshToken() {
-      return refreshToken;
+    public java.lang.String getValue() {
+      return value;
     }
 
 
     /**
-      * Sets the value of the 'refreshToken' field.
-      * refresh token
-      * @param value The value of 'refreshToken'.
+      * Sets the value of the 'value' field.
+      * oauth provider detail in JSON
+      * @param value The value of 'value'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketTokenDeletedEvent.Builder setRefreshToken(java.lang.String value) {
+    public net.lightapi.portal.oauth.AuthProviderCreatedEvent.Builder setValue(java.lang.String value) {
       validate(fields()[3], value);
-      this.refreshToken = value;
+      this.value = value;
       fieldSetFlags()[3] = true;
       return this;
     }
 
     /**
-      * Checks whether the 'refreshToken' field has been set.
-      * refresh token
-      * @return True if the 'refreshToken' field has been set, false otherwise.
+      * Checks whether the 'value' field has been set.
+      * oauth provider detail in JSON
+      * @return True if the 'value' field has been set, false otherwise.
       */
-    public boolean hasRefreshToken() {
+    public boolean hasValue() {
       return fieldSetFlags()[3];
     }
 
 
     /**
-      * Clears the value of the 'refreshToken' field.
-      * refresh token
+      * Clears the value of the 'value' field.
+      * oauth provider detail in JSON
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketTokenDeletedEvent.Builder clearRefreshToken() {
-      refreshToken = null;
+    public net.lightapi.portal.oauth.AuthProviderCreatedEvent.Builder clearValue() {
+      value = null;
       fieldSetFlags()[3] = false;
       return this;
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public MarketTokenDeletedEvent build() {
+    public AuthProviderCreatedEvent build() {
       try {
-        MarketTokenDeletedEvent record = new MarketTokenDeletedEvent();
+        AuthProviderCreatedEvent record = new AuthProviderCreatedEvent();
         if (EventIdBuilder != null) {
           try {
             record.EventId = this.EventIdBuilder.build();
@@ -534,8 +534,8 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
         record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
-        record.userId = fieldSetFlags()[2] ? this.userId : (java.lang.String) defaultValue(fields()[2]);
-        record.refreshToken = fieldSetFlags()[3] ? this.refreshToken : (java.lang.String) defaultValue(fields()[3]);
+        record.providerId = fieldSetFlags()[2] ? this.providerId : (java.lang.String) defaultValue(fields()[2]);
+        record.value = fieldSetFlags()[3] ? this.value : (java.lang.String) defaultValue(fields()[3]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -546,8 +546,8 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
   }
 
   @SuppressWarnings("unchecked")
-  private static final org.apache.avro.io.DatumWriter<MarketTokenDeletedEvent>
-    WRITER$ = (org.apache.avro.io.DatumWriter<MarketTokenDeletedEvent>)MODEL$.createDatumWriter(SCHEMA$);
+  private static final org.apache.avro.io.DatumWriter<AuthProviderCreatedEvent>
+    WRITER$ = (org.apache.avro.io.DatumWriter<AuthProviderCreatedEvent>)MODEL$.createDatumWriter(SCHEMA$);
 
   @Override public void writeExternal(java.io.ObjectOutput out)
     throws java.io.IOException {
@@ -555,8 +555,8 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
   }
 
   @SuppressWarnings("unchecked")
-  private static final org.apache.avro.io.DatumReader<MarketTokenDeletedEvent>
-    READER$ = (org.apache.avro.io.DatumReader<MarketTokenDeletedEvent>)MODEL$.createDatumReader(SCHEMA$);
+  private static final org.apache.avro.io.DatumReader<AuthProviderCreatedEvent>
+    READER$ = (org.apache.avro.io.DatumReader<AuthProviderCreatedEvent>)MODEL$.createDatumReader(SCHEMA$);
 
   @Override public void readExternal(java.io.ObjectInput in)
     throws java.io.IOException {
@@ -572,9 +572,9 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
 
     out.writeString(this.hostId);
 
-    out.writeString(this.userId);
+    out.writeString(this.providerId);
 
-    out.writeString(this.refreshToken);
+    out.writeString(this.value);
 
   }
 
@@ -590,9 +590,9 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
 
       this.hostId = in.readString();
 
-      this.userId = in.readString();
+      this.providerId = in.readString();
 
-      this.refreshToken = in.readString();
+      this.value = in.readString();
 
     } else {
       for (int i = 0; i < 4; i++) {
@@ -609,11 +609,11 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
           break;
 
         case 2:
-          this.userId = in.readString();
+          this.providerId = in.readString();
           break;
 
         case 3:
-          this.refreshToken = in.readString();
+          this.value = in.readString();
           break;
 
         default:
@@ -623,13 +623,3 @@ public class MarketTokenDeletedEvent extends org.apache.avro.specific.SpecificRe
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

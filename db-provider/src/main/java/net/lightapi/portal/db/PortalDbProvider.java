@@ -3,6 +3,10 @@ package net.lightapi.portal.db;
 import com.networknt.db.provider.DbProvider;
 import com.networknt.monad.Result;
 import net.lightapi.portal.market.*;
+import net.lightapi.portal.oauth.AuthCodeCreatedEvent;
+import net.lightapi.portal.oauth.AuthCodeDeletedEvent;
+import net.lightapi.portal.oauth.AuthRefreshTokenCreatedEvent;
+import net.lightapi.portal.oauth.AuthRefreshTokenDeletedEvent;
 import net.lightapi.portal.user.*;
 import net.lightapi.portal.attribute.*;
 import net.lightapi.portal.group.*;
@@ -12,6 +16,7 @@ import net.lightapi.portal.service.*;
 import net.lightapi.portal.rule.*;
 
 
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
 
@@ -56,9 +61,21 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> sendPrivateMessage(PrivateMessageSentEvent event);
     Result<String> queryUserLabel(String hostId);
 
-    Result<String> createRefreshToken(MarketTokenCreatedEvent event);
+    Result<String> createRefreshToken(AuthRefreshTokenCreatedEvent event);
     Result<String> queryRefreshToken(String refreshToken);
-    Result<String> deleteRefreshToken(MarketTokenDeletedEvent event);
+    Result<String> deleteRefreshToken(AuthRefreshTokenDeletedEvent event);
+    Result<String> listRefreshToken(int offset, int limit, String refreshToken, String hostId, String userId, String entityId,
+                                    String email, String firstName, String lastName, String clientId, String appId,
+                                    String appName, String scope, String userType, String roles, String csrf,
+                                    String customClaim, String updateUser, Timestamp updateTs);
+    Result<String> createAuthCode(AuthCodeCreatedEvent event);
+    Result<String> deleteAuthCode(AuthCodeDeletedEvent event);
+    Result<String> queryAuthCode(String hostId, String authCode);
+    Result<String> listAuthCode(int offset, int limit, String hostId, String authCode, String userId,
+                                       String entityId, String userType, String email, String roles,
+                                       String redirectUri, String scope, String remember, String codeChallenge,
+                                       String challengeMethod, String updateUser, Timestamp updateTs);
+
 
     Result<String> createClient(MarketClientCreatedEvent event);
     Result<String> updateClient(MarketClientUpdatedEvent event);
@@ -90,9 +107,6 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> queryServicePermission(String hostId, String apiId, String apiVersion);
     Result<List<String>> queryServiceFilter(String hostId, String apiId, String apiVersion);
 
-    Result<String> createMarketCode(MarketCodeCreatedEvent event);
-    Result<String> deleteMarketCode(MarketCodeDeletedEvent event);
-    Result<String> queryMarketCode(String hostId, String authCode);
 
     Result<String> createHost(HostCreatedEvent event);
     Result<String> updateHost(HostUpdatedEvent event);

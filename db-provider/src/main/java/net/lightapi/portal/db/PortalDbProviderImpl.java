@@ -10,6 +10,10 @@ import com.networknt.security.KeyUtil;
 import com.networknt.status.Status;
 import com.networknt.utility.HashUtil;
 import net.lightapi.portal.market.*;
+import net.lightapi.portal.oauth.AuthCodeCreatedEvent;
+import net.lightapi.portal.oauth.AuthCodeDeletedEvent;
+import net.lightapi.portal.oauth.AuthRefreshTokenCreatedEvent;
+import net.lightapi.portal.oauth.AuthRefreshTokenDeletedEvent;
 import net.lightapi.portal.user.*;
 import net.lightapi.portal.attribute.*;
 import net.lightapi.portal.group.*;
@@ -1476,7 +1480,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> createRefreshToken(MarketTokenCreatedEvent event) {
+    public Result<String> createRefreshToken(AuthRefreshTokenCreatedEvent event) {
         final String insertUser = "INSERT INTO refresh_token_t (refresh_token, host_id, user_id, client_id, scope, " +
                 "user_type, roles, csrf, custom_claim) " +
                 "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?)";
@@ -1546,7 +1550,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> deleteRefreshToken(MarketTokenDeletedEvent event) {
+    public Result<String> deleteRefreshToken(AuthRefreshTokenDeletedEvent event) {
         final String deleteApp = "DELETE from refresh_token_t WHERE refresh_token = ? AND host_id = ? AND user_id = ?";
         Result<String> result;
         try (Connection conn = ds.getConnection()) {
@@ -1582,6 +1586,111 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
+    public Result<String> listRefreshToken(int offset, int limit, String refreshToken, String hostId, String userId, String entityId,
+                                           String email, String firstName, String lastName, String clientId, String appId,
+                                           String appName, String scope, String userType, String roles, String csrf,
+                                           String customClaim, String updateUser, Timestamp updateTs) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
+                "r.host_id, r.refresh_token, r.user_id, r.user_type, u.entity_id, u.email, u.first_name, u.last_name, \n" +
+                "r.client_id, a.app_id, a.app_name, r.scope, r.roles, r.csrf, r.custom_claim, r.update_user, r.update_ts \n" +
+                "FROM refresh_token_t r, user_t u, app_t a\n" +
+                "WHERE r.user_id = u.user_id AND r.client_id = a.client_id\n" +
+                "AND r.host_id = ?\n");
+
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(hostId);
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "r.refresh_token", refreshToken);
+        addCondition(whereClause, parameters, "r.user_id", userId);
+        addCondition(whereClause, parameters, "r.user_type", userType);
+        addCondition(whereClause, parameters, "u.entity_id", entityId);
+        addCondition(whereClause, parameters, "u.email", email);
+        addCondition(whereClause, parameters, "r.first_name", firstName);
+        addCondition(whereClause, parameters, "r.last_name", lastName);
+        addCondition(whereClause, parameters, "r.client_id", clientId);
+        addCondition(whereClause, parameters, "a.app_id", appId);
+        addCondition(whereClause, parameters, "a.app_name", appName);
+        addCondition(whereClause, parameters, "r.scope", scope);
+        addCondition(whereClause, parameters, "r.roles", roles);
+        addCondition(whereClause, parameters, "r.csrf", csrf);
+        addCondition(whereClause, parameters, "r.custom_claim", customClaim);
+        addCondition(whereClause, parameters, "r.update_user", updateUser);
+        addCondition(whereClause, parameters, "r.update_ts", updateTs);
+
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append(" ORDER BY r.user_id\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> tokens = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("refreshToken", resultSet.getString("refresh_token"));
+                    map.put("userId", resultSet.getString("user_id"));
+                    map.put("userType", resultSet.getString("user_type"));
+                    map.put("entityId", resultSet.getString("entity_id"));
+                    map.put("email", resultSet.getString("email"));
+                    map.put("firstName", resultSet.getString("first_name"));
+                    map.put("lastName", resultSet.getString("last_name"));
+                    map.put("clientId", resultSet.getString("client_id"));
+                    map.put("appId", resultSet.getString("app_id"));
+                    map.put("appName", resultSet.getString("app_name"));
+                    map.put("scope", resultSet.getString("scope"));
+                    map.put("roles", resultSet.getString("roles"));
+                    map.put("csrf", resultSet.getString("csrf"));
+                    map.put("customClaim", resultSet.getString("custom_claim"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getTimestamp("update_ts"));
+                    tokens.add(map);
+                }
+            }
+
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("tokens", tokens);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
     public Result<String> queryRefreshToken(String refreshToken) {
         Result<String> result = null;
         String sql =
@@ -1610,6 +1719,271 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 result = Failure.of(new Status(OBJECT_NOT_FOUND, "refresh token", refreshToken));
             else
                 result = Success.of(JsonMapper.toJson(map));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> createAuthCode(AuthCodeCreatedEvent event) {
+
+        final String sql = "INSERT INTO auth_code_t(host_id, auth_code, user_id, entity_id, user_type, email, roles," +
+                "redirect_uri, scope, remember, code_challenge, challenge_method, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?, ?, ?)";
+        Result<String> result;
+        String value = event.getValue();
+        Map<String, Object> map = JsonMapper.string2Map(value);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            // no duplicate record, insert the user into database and write a success notification.
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getAuthCode());
+                if(map.containsKey("userId")) {
+                    statement.setString(3, (String) map.get("userId"));
+                } else {
+                    statement.setNull(3, Types.VARCHAR);
+                }
+                if(map.containsKey("entityId")) {
+                    statement.setString(4, (String) map.get("entityId"));
+                } else {
+                    statement.setNull(4, Types.VARCHAR);
+                }
+                if(map.containsKey("userType")) {
+                    statement.setString(5, (String) map.get("userType"));
+                } else {
+                    statement.setNull(5, Types.VARCHAR);
+                }
+                if(map.containsKey("email")) {
+                    statement.setString(6, (String) map.get("email"));
+                } else {
+                    statement.setNull(6, Types.VARCHAR);
+                }
+                if(map.containsKey("roles")) {
+                    statement.setString(7, (String) map.get("roles"));
+                } else {
+                    statement.setNull(7, Types.VARCHAR);
+                }
+                if(map.containsKey("redirectUri")) {
+                    statement.setString(8, (String) map.get("redirectUri"));
+                } else {
+                    statement.setNull(8, Types.VARCHAR);
+                }
+                if(map.containsKey("scope")) {
+                    statement.setString(9, (String) map.get("scope"));
+                } else {
+                    statement.setNull(9, Types.VARCHAR);
+                }
+                if(map.containsKey("remember")) {
+                    statement.setBoolean(10, (Boolean) map.get("remember"));
+                } else {
+                    statement.setBoolean(10, false);
+                }
+                if(map.containsKey("codeChallenge")) {
+                    statement.setString(11, (String) map.get("codeChallenge"));
+                } else {
+                    statement.setNull(11, Types.VARCHAR);
+                }
+                if(map.containsKey("challengeMethod")) {
+                    statement.setString(12, (String) map.get("challengeMethod"));
+                } else {
+                    statement.setNull(12, Types.VARCHAR);
+                }
+                statement.setString(13, event.getEventId().getId());
+                statement.setTimestamp(14, new Timestamp(event.getEventId().getTimestamp()));
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert the auth code with id " + event.getAuthCode());
+                }
+                conn.commit();
+                result = Success.of(event.getAuthCode());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deleteAuthCode(AuthCodeDeletedEvent event) {
+        final String sql = "DELETE FROM auth_code_t WHERE host_id = ? AND auth_code = ?";
+        Result<String> result;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getAuthCode());
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    // no record is deleted, write an error notification.
+                    throw new SQLException(String.format("no record is deleted for auth code " + "hostId " + event.getHostId() + " authCode " + event.getAuthCode()));
+                }
+                conn.commit();
+                result = Success.of(event.getEventId().getId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> queryAuthCode(String hostId, String authCode) {
+        final String sql = "SELECT host_id, auth_code, user_id, entity_id, user_type, email, roles," +
+                "redirect_uri, scope, remember, code_challenge, challenge_method " +
+                "FROM auth_code_t WHERE host_id = ? AND auth_code = ?";
+        Result<String> result;
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, hostId);
+            preparedStatement.setString(2, authCode);
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("authCode", resultSet.getString("auth_code"));
+                    map.put("userId", resultSet.getString("user_id"));
+                    map.put("entityId", resultSet.getString("entity_id"));
+                    map.put("userType", resultSet.getString("user_type"));
+                    map.put("email", resultSet.getString("email"));
+                    map.put("roles", resultSet.getString("roles"));
+                    map.put("redirectUri", resultSet.getString("redirect_uri"));
+                    map.put("scope", resultSet.getString("scope"));
+                    map.put("remember", resultSet.getBoolean("remember"));
+                    map.put("codeChallenge", resultSet.getString("code_challenge"));
+                    map.put("challengeMethod", resultSet.getString("challenge_method"));
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "auth code", authCode));
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> listAuthCode(int offset, int limit, String hostId, String authCode, String userId,
+                                       String entityId, String userType, String email, String roles,
+                                       String redirectUri, String scope, String remember, String codeChallenge,
+                                       String challengeMethod, String updateUser, Timestamp updateTs) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
+                "host_id, auth_code, user_id, entity_id, user_type, email, roles, redirect_uri, scope, remember, " +
+                "code_challenge, challenge_method, update_user, update_ts\n" +
+                "FROM auth_code_t\n" +
+                "WHERE host_id = ?\n");
+
+
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(hostId);
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "auth_code", authCode);
+        addCondition(whereClause, parameters, "user_id", userId);
+        addCondition(whereClause, parameters, "entity_id", entityId);
+        addCondition(whereClause, parameters, "user_type", userType);
+        addCondition(whereClause, parameters, "email", email);
+        addCondition(whereClause, parameters, "roles", roles);
+        addCondition(whereClause, parameters, "redirect_uri", redirectUri);
+        addCondition(whereClause, parameters, "scope", scope);
+        addCondition(whereClause, parameters, "remember", remember);
+        addCondition(whereClause, parameters, "code_challenge", codeChallenge);
+        addCondition(whereClause, parameters, "challenge_method", challengeMethod);
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append(" ORDER BY update_ts\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> authCodes = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("authCode", resultSet.getString("auth_code"));
+                    map.put("userId", resultSet.getString("user_id"));
+                    map.put("entityId", resultSet.getString("entity_id"));
+                    map.put("userType", resultSet.getString("user_type"));
+                    map.put("email", resultSet.getString("email"));
+                    map.put("roles", resultSet.getString("roles"));
+                    map.put("redirectUri", resultSet.getString("redirect_uri"));
+                    map.put("scope", resultSet.getString("scope"));
+                    map.put("remember", resultSet.getString("remember"));
+                    map.put("codeChallenge", resultSet.getString("code_challenge"));
+                    map.put("challengeMethod", resultSet.getString("challenge_method"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getTimestamp("update_ts") != null ? resultSet.getTimestamp("update_ts").toString() : null);
+
+                    authCodes.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("codes", authCodes);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
@@ -3414,47 +3788,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         return result;
     }
 
-    public Result<String> createMarketCode(MarketCodeCreatedEvent event) {
-        // cache key is based on the hostId and authCode.
-        String hostId = event.getHostId();
-        String authCode = event.getAuthCode();
-        String key = hostId + "|" + authCode;
-        if (logger.isTraceEnabled())
-            logger.trace("insert into the cache auth_code with key {} value {}", key, event.getValue());
-        if (logger.isTraceEnabled())
-            logger.trace("estimate the size of the cache auth_code before is " + cacheManager.getSize(AUTH_CODE_CACHE));
-        cacheManager.put(AUTH_CODE_CACHE, key, event.getValue());
-        if (logger.isTraceEnabled())
-            logger.trace("estimate the size of the cache auth_code after is " + cacheManager.getSize(AUTH_CODE_CACHE));
-        return Success.of(event.getAuthCode());
-    }
-
-    public Result<String> deleteMarketCode(MarketCodeDeletedEvent event) {
-        String hostId = event.getHostId();
-        String authCode = event.getAuthCode();
-        String key = hostId + "|" + authCode;
-        if (logger.isTraceEnabled()) logger.trace("insert into the cache auth_code with key {}", key);
-        if (logger.isTraceEnabled())
-            logger.trace("estimate the size of the cache auth_code before is " + cacheManager.getSize(AUTH_CODE_CACHE));
-        cacheManager.delete(AUTH_CODE_CACHE, key);
-        if (logger.isTraceEnabled())
-            logger.trace("estimate the size of the cache auth_code after is " + cacheManager.getSize(AUTH_CODE_CACHE));
-        return Success.of(event.getAuthCode());
-    }
-
-    public Result<String> queryMarketCode(String hostId, String authCode) {
-        // cache key is based on the hostId and authCode.
-        String key = hostId + "|" + authCode;
-        if (logger.isTraceEnabled())
-            logger.trace("key = {} and estimate the size of the cache auth_code is {}", key, cacheManager.getSize(AUTH_CODE_CACHE));
-        String value = (String) cacheManager.get(AUTH_CODE_CACHE, key);
-        if (logger.isTraceEnabled()) logger.trace("retrieve cache auth_code with key {} value {}", key, value);
-        if (value != null) {
-            return Success.of(value);
-        } else {
-            return Failure.of(new Status(OBJECT_NOT_FOUND, "auth code not found"));
-        }
-    }
 
     @Override
     public Result<String> createHost(HostCreatedEvent event) {

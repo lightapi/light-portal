@@ -3,7 +3,7 @@
  *
  * DO NOT EDIT DIRECTLY
  */
-package net.lightapi.portal.market;
+package net.lightapi.portal.oauth;
 
 import org.apache.avro.specific.SpecificData;
 import org.apache.avro.util.Utf8;
@@ -12,26 +12,26 @@ import org.apache.avro.message.BinaryMessageDecoder;
 import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
-public class MarketRefCreatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 3719462206214105956L;
+public class AuthCodeCreatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
+  private static final long serialVersionUID = -4160074974976396363L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"MarketRefCreatedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"refToken\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"reference token\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"reference token detail in JSON\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"AuthCodeCreatedEvent\",\"namespace\":\"net.lightapi.portal.oauth\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"authCode\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"authorization code\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"code detail in JSON\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
 
-  private static final BinaryMessageEncoder<MarketRefCreatedEvent> ENCODER =
+  private static final BinaryMessageEncoder<AuthCodeCreatedEvent> ENCODER =
       new BinaryMessageEncoder<>(MODEL$, SCHEMA$);
 
-  private static final BinaryMessageDecoder<MarketRefCreatedEvent> DECODER =
+  private static final BinaryMessageDecoder<AuthCodeCreatedEvent> DECODER =
       new BinaryMessageDecoder<>(MODEL$, SCHEMA$);
 
   /**
    * Return the BinaryMessageEncoder instance used by this class.
    * @return the message encoder used by this class
    */
-  public static BinaryMessageEncoder<MarketRefCreatedEvent> getEncoder() {
+  public static BinaryMessageEncoder<AuthCodeCreatedEvent> getEncoder() {
     return ENCODER;
   }
 
@@ -39,7 +39,7 @@ public class MarketRefCreatedEvent extends org.apache.avro.specific.SpecificReco
    * Return the BinaryMessageDecoder instance used by this class.
    * @return the message decoder used by this class
    */
-  public static BinaryMessageDecoder<MarketRefCreatedEvent> getDecoder() {
+  public static BinaryMessageDecoder<AuthCodeCreatedEvent> getDecoder() {
     return DECODER;
   }
 
@@ -48,12 +48,12 @@ public class MarketRefCreatedEvent extends org.apache.avro.specific.SpecificReco
    * @param resolver a {@link SchemaStore} used to find schemas by fingerprint
    * @return a BinaryMessageDecoder instance for this class backed by the given SchemaStore
    */
-  public static BinaryMessageDecoder<MarketRefCreatedEvent> createDecoder(SchemaStore resolver) {
+  public static BinaryMessageDecoder<AuthCodeCreatedEvent> createDecoder(SchemaStore resolver) {
     return new BinaryMessageDecoder<>(MODEL$, SCHEMA$, resolver);
   }
 
   /**
-   * Serializes this MarketRefCreatedEvent to a ByteBuffer.
+   * Serializes this AuthCodeCreatedEvent to a ByteBuffer.
    * @return a buffer holding the serialized data for this instance
    * @throws java.io.IOException if this instance could not be serialized
    */
@@ -62,12 +62,12 @@ public class MarketRefCreatedEvent extends org.apache.avro.specific.SpecificReco
   }
 
   /**
-   * Deserializes a MarketRefCreatedEvent from a ByteBuffer.
+   * Deserializes a AuthCodeCreatedEvent from a ByteBuffer.
    * @param b a byte buffer holding serialized data for an instance of this class
-   * @return a MarketRefCreatedEvent instance decoded from the given buffer
+   * @return a AuthCodeCreatedEvent instance decoded from the given buffer
    * @throws java.io.IOException if the given bytes could not be deserialized into an instance of this class
    */
-  public static MarketRefCreatedEvent fromByteBuffer(
+  public static AuthCodeCreatedEvent fromByteBuffer(
       java.nio.ByteBuffer b) throws java.io.IOException {
     return DECODER.decode(b);
   }
@@ -75,9 +75,9 @@ public class MarketRefCreatedEvent extends org.apache.avro.specific.SpecificReco
   private com.networknt.kafka.common.EventId EventId;
   /** host id */
   private java.lang.String hostId;
-  /** reference token */
-  private java.lang.String refToken;
-  /** reference token detail in JSON */
+  /** authorization code */
+  private java.lang.String authCode;
+  /** code detail in JSON */
   private java.lang.String value;
 
   /**
@@ -85,19 +85,19 @@ public class MarketRefCreatedEvent extends org.apache.avro.specific.SpecificReco
    * to their default values from the schema.  If that is desired then
    * one should use <code>newBuilder()</code>.
    */
-  public MarketRefCreatedEvent() {}
+  public AuthCodeCreatedEvent() {}
 
   /**
    * All-args constructor.
    * @param EventId The new value for EventId
    * @param hostId host id
-   * @param refToken reference token
-   * @param value reference token detail in JSON
+   * @param authCode authorization code
+   * @param value code detail in JSON
    */
-  public MarketRefCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String refToken, java.lang.String value) {
+  public AuthCodeCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String authCode, java.lang.String value) {
     this.EventId = EventId;
     this.hostId = hostId;
-    this.refToken = refToken;
+    this.authCode = authCode;
     this.value = value;
   }
 
@@ -113,7 +113,7 @@ public class MarketRefCreatedEvent extends org.apache.avro.specific.SpecificReco
     switch (field$) {
     case 0: return EventId;
     case 1: return hostId;
-    case 2: return refToken;
+    case 2: return authCode;
     case 3: return value;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
@@ -126,7 +126,7 @@ public class MarketRefCreatedEvent extends org.apache.avro.specific.SpecificReco
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
     case 1: hostId = value$ != null ? value$.toString() : null; break;
-    case 2: refToken = value$ != null ? value$.toString() : null; break;
+    case 2: authCode = value$ != null ? value$.toString() : null; break;
     case 3: value = value$ != null ? value$.toString() : null; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
@@ -168,26 +168,26 @@ public class MarketRefCreatedEvent extends org.apache.avro.specific.SpecificReco
   }
 
   /**
-   * Gets the value of the 'refToken' field.
-   * @return reference token
+   * Gets the value of the 'authCode' field.
+   * @return authorization code
    */
-  public java.lang.String getRefToken() {
-    return refToken;
+  public java.lang.String getAuthCode() {
+    return authCode;
   }
 
 
   /**
-   * Sets the value of the 'refToken' field.
-   * reference token
+   * Sets the value of the 'authCode' field.
+   * authorization code
    * @param value the value to set.
    */
-  public void setRefToken(java.lang.String value) {
-    this.refToken = value;
+  public void setAuthCode(java.lang.String value) {
+    this.authCode = value;
   }
 
   /**
    * Gets the value of the 'value' field.
-   * @return reference token detail in JSON
+   * @return code detail in JSON
    */
   public java.lang.String getValue() {
     return value;
@@ -196,7 +196,7 @@ public class MarketRefCreatedEvent extends org.apache.avro.specific.SpecificReco
 
   /**
    * Sets the value of the 'value' field.
-   * reference token detail in JSON
+   * code detail in JSON
    * @param value the value to set.
    */
   public void setValue(java.lang.String value) {
@@ -204,53 +204,53 @@ public class MarketRefCreatedEvent extends org.apache.avro.specific.SpecificReco
   }
 
   /**
-   * Creates a new MarketRefCreatedEvent RecordBuilder.
-   * @return A new MarketRefCreatedEvent RecordBuilder
+   * Creates a new AuthCodeCreatedEvent RecordBuilder.
+   * @return A new AuthCodeCreatedEvent RecordBuilder
    */
-  public static net.lightapi.portal.market.MarketRefCreatedEvent.Builder newBuilder() {
-    return new net.lightapi.portal.market.MarketRefCreatedEvent.Builder();
+  public static net.lightapi.portal.oauth.AuthCodeCreatedEvent.Builder newBuilder() {
+    return new net.lightapi.portal.oauth.AuthCodeCreatedEvent.Builder();
   }
 
   /**
-   * Creates a new MarketRefCreatedEvent RecordBuilder by copying an existing Builder.
+   * Creates a new AuthCodeCreatedEvent RecordBuilder by copying an existing Builder.
    * @param other The existing builder to copy.
-   * @return A new MarketRefCreatedEvent RecordBuilder
+   * @return A new AuthCodeCreatedEvent RecordBuilder
    */
-  public static net.lightapi.portal.market.MarketRefCreatedEvent.Builder newBuilder(net.lightapi.portal.market.MarketRefCreatedEvent.Builder other) {
+  public static net.lightapi.portal.oauth.AuthCodeCreatedEvent.Builder newBuilder(net.lightapi.portal.oauth.AuthCodeCreatedEvent.Builder other) {
     if (other == null) {
-      return new net.lightapi.portal.market.MarketRefCreatedEvent.Builder();
+      return new net.lightapi.portal.oauth.AuthCodeCreatedEvent.Builder();
     } else {
-      return new net.lightapi.portal.market.MarketRefCreatedEvent.Builder(other);
+      return new net.lightapi.portal.oauth.AuthCodeCreatedEvent.Builder(other);
     }
   }
 
   /**
-   * Creates a new MarketRefCreatedEvent RecordBuilder by copying an existing MarketRefCreatedEvent instance.
+   * Creates a new AuthCodeCreatedEvent RecordBuilder by copying an existing AuthCodeCreatedEvent instance.
    * @param other The existing instance to copy.
-   * @return A new MarketRefCreatedEvent RecordBuilder
+   * @return A new AuthCodeCreatedEvent RecordBuilder
    */
-  public static net.lightapi.portal.market.MarketRefCreatedEvent.Builder newBuilder(net.lightapi.portal.market.MarketRefCreatedEvent other) {
+  public static net.lightapi.portal.oauth.AuthCodeCreatedEvent.Builder newBuilder(net.lightapi.portal.oauth.AuthCodeCreatedEvent other) {
     if (other == null) {
-      return new net.lightapi.portal.market.MarketRefCreatedEvent.Builder();
+      return new net.lightapi.portal.oauth.AuthCodeCreatedEvent.Builder();
     } else {
-      return new net.lightapi.portal.market.MarketRefCreatedEvent.Builder(other);
+      return new net.lightapi.portal.oauth.AuthCodeCreatedEvent.Builder(other);
     }
   }
 
   /**
-   * RecordBuilder for MarketRefCreatedEvent instances.
+   * RecordBuilder for AuthCodeCreatedEvent instances.
    */
   @org.apache.avro.specific.AvroGenerated
-  public static class Builder extends org.apache.avro.specific.SpecificRecordBuilderBase<MarketRefCreatedEvent>
-    implements org.apache.avro.data.RecordBuilder<MarketRefCreatedEvent> {
+  public static class Builder extends org.apache.avro.specific.SpecificRecordBuilderBase<AuthCodeCreatedEvent>
+    implements org.apache.avro.data.RecordBuilder<AuthCodeCreatedEvent> {
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
     /** host id */
     private java.lang.String hostId;
-    /** reference token */
-    private java.lang.String refToken;
-    /** reference token detail in JSON */
+    /** authorization code */
+    private java.lang.String authCode;
+    /** code detail in JSON */
     private java.lang.String value;
 
     /** Creates a new Builder */
@@ -262,7 +262,7 @@ public class MarketRefCreatedEvent extends org.apache.avro.specific.SpecificReco
      * Creates a Builder by copying an existing Builder.
      * @param other The existing Builder to copy.
      */
-    private Builder(net.lightapi.portal.market.MarketRefCreatedEvent.Builder other) {
+    private Builder(net.lightapi.portal.oauth.AuthCodeCreatedEvent.Builder other) {
       super(other);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
@@ -275,8 +275,8 @@ public class MarketRefCreatedEvent extends org.apache.avro.specific.SpecificReco
         this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
-      if (isValidValue(fields()[2], other.refToken)) {
-        this.refToken = data().deepCopy(fields()[2].schema(), other.refToken);
+      if (isValidValue(fields()[2], other.authCode)) {
+        this.authCode = data().deepCopy(fields()[2].schema(), other.authCode);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
       if (isValidValue(fields()[3], other.value)) {
@@ -286,10 +286,10 @@ public class MarketRefCreatedEvent extends org.apache.avro.specific.SpecificReco
     }
 
     /**
-     * Creates a Builder by copying an existing MarketRefCreatedEvent instance
+     * Creates a Builder by copying an existing AuthCodeCreatedEvent instance
      * @param other The existing instance to copy.
      */
-    private Builder(net.lightapi.portal.market.MarketRefCreatedEvent other) {
+    private Builder(net.lightapi.portal.oauth.AuthCodeCreatedEvent other) {
       super(SCHEMA$, MODEL$);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
@@ -300,8 +300,8 @@ public class MarketRefCreatedEvent extends org.apache.avro.specific.SpecificReco
         this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.refToken)) {
-        this.refToken = data().deepCopy(fields()[2].schema(), other.refToken);
+      if (isValidValue(fields()[2], other.authCode)) {
+        this.authCode = data().deepCopy(fields()[2].schema(), other.authCode);
         fieldSetFlags()[2] = true;
       }
       if (isValidValue(fields()[3], other.value)) {
@@ -324,7 +324,7 @@ public class MarketRefCreatedEvent extends org.apache.avro.specific.SpecificReco
       * @param value The value of 'EventId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketRefCreatedEvent.Builder setEventId(com.networknt.kafka.common.EventId value) {
+    public net.lightapi.portal.oauth.AuthCodeCreatedEvent.Builder setEventId(com.networknt.kafka.common.EventId value) {
       validate(fields()[0], value);
       this.EventIdBuilder = null;
       this.EventId = value;
@@ -361,7 +361,7 @@ public class MarketRefCreatedEvent extends org.apache.avro.specific.SpecificReco
      * @return This builder.
      */
 
-    public net.lightapi.portal.market.MarketRefCreatedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
+    public net.lightapi.portal.oauth.AuthCodeCreatedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
       clearEventId();
       EventIdBuilder = value;
       return this;
@@ -379,7 +379,7 @@ public class MarketRefCreatedEvent extends org.apache.avro.specific.SpecificReco
       * Clears the value of the 'EventId' field.
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketRefCreatedEvent.Builder clearEventId() {
+    public net.lightapi.portal.oauth.AuthCodeCreatedEvent.Builder clearEventId() {
       EventId = null;
       EventIdBuilder = null;
       fieldSetFlags()[0] = false;
@@ -402,7 +402,7 @@ public class MarketRefCreatedEvent extends org.apache.avro.specific.SpecificReco
       * @param value The value of 'hostId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketRefCreatedEvent.Builder setHostId(java.lang.String value) {
+    public net.lightapi.portal.oauth.AuthCodeCreatedEvent.Builder setHostId(java.lang.String value) {
       validate(fields()[1], value);
       this.hostId = value;
       fieldSetFlags()[1] = true;
@@ -424,59 +424,59 @@ public class MarketRefCreatedEvent extends org.apache.avro.specific.SpecificReco
       * host id
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketRefCreatedEvent.Builder clearHostId() {
+    public net.lightapi.portal.oauth.AuthCodeCreatedEvent.Builder clearHostId() {
       hostId = null;
       fieldSetFlags()[1] = false;
       return this;
     }
 
     /**
-      * Gets the value of the 'refToken' field.
-      * reference token
+      * Gets the value of the 'authCode' field.
+      * authorization code
       * @return The value.
       */
-    public java.lang.String getRefToken() {
-      return refToken;
+    public java.lang.String getAuthCode() {
+      return authCode;
     }
 
 
     /**
-      * Sets the value of the 'refToken' field.
-      * reference token
-      * @param value The value of 'refToken'.
+      * Sets the value of the 'authCode' field.
+      * authorization code
+      * @param value The value of 'authCode'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketRefCreatedEvent.Builder setRefToken(java.lang.String value) {
+    public net.lightapi.portal.oauth.AuthCodeCreatedEvent.Builder setAuthCode(java.lang.String value) {
       validate(fields()[2], value);
-      this.refToken = value;
+      this.authCode = value;
       fieldSetFlags()[2] = true;
       return this;
     }
 
     /**
-      * Checks whether the 'refToken' field has been set.
-      * reference token
-      * @return True if the 'refToken' field has been set, false otherwise.
+      * Checks whether the 'authCode' field has been set.
+      * authorization code
+      * @return True if the 'authCode' field has been set, false otherwise.
       */
-    public boolean hasRefToken() {
+    public boolean hasAuthCode() {
       return fieldSetFlags()[2];
     }
 
 
     /**
-      * Clears the value of the 'refToken' field.
-      * reference token
+      * Clears the value of the 'authCode' field.
+      * authorization code
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketRefCreatedEvent.Builder clearRefToken() {
-      refToken = null;
+    public net.lightapi.portal.oauth.AuthCodeCreatedEvent.Builder clearAuthCode() {
+      authCode = null;
       fieldSetFlags()[2] = false;
       return this;
     }
 
     /**
       * Gets the value of the 'value' field.
-      * reference token detail in JSON
+      * code detail in JSON
       * @return The value.
       */
     public java.lang.String getValue() {
@@ -486,11 +486,11 @@ public class MarketRefCreatedEvent extends org.apache.avro.specific.SpecificReco
 
     /**
       * Sets the value of the 'value' field.
-      * reference token detail in JSON
+      * code detail in JSON
       * @param value The value of 'value'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketRefCreatedEvent.Builder setValue(java.lang.String value) {
+    public net.lightapi.portal.oauth.AuthCodeCreatedEvent.Builder setValue(java.lang.String value) {
       validate(fields()[3], value);
       this.value = value;
       fieldSetFlags()[3] = true;
@@ -499,7 +499,7 @@ public class MarketRefCreatedEvent extends org.apache.avro.specific.SpecificReco
 
     /**
       * Checks whether the 'value' field has been set.
-      * reference token detail in JSON
+      * code detail in JSON
       * @return True if the 'value' field has been set, false otherwise.
       */
     public boolean hasValue() {
@@ -509,10 +509,10 @@ public class MarketRefCreatedEvent extends org.apache.avro.specific.SpecificReco
 
     /**
       * Clears the value of the 'value' field.
-      * reference token detail in JSON
+      * code detail in JSON
       * @return This builder.
       */
-    public net.lightapi.portal.market.MarketRefCreatedEvent.Builder clearValue() {
+    public net.lightapi.portal.oauth.AuthCodeCreatedEvent.Builder clearValue() {
       value = null;
       fieldSetFlags()[3] = false;
       return this;
@@ -520,9 +520,9 @@ public class MarketRefCreatedEvent extends org.apache.avro.specific.SpecificReco
 
     @Override
     @SuppressWarnings("unchecked")
-    public MarketRefCreatedEvent build() {
+    public AuthCodeCreatedEvent build() {
       try {
-        MarketRefCreatedEvent record = new MarketRefCreatedEvent();
+        AuthCodeCreatedEvent record = new AuthCodeCreatedEvent();
         if (EventIdBuilder != null) {
           try {
             record.EventId = this.EventIdBuilder.build();
@@ -534,7 +534,7 @@ public class MarketRefCreatedEvent extends org.apache.avro.specific.SpecificReco
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
         record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
-        record.refToken = fieldSetFlags()[2] ? this.refToken : (java.lang.String) defaultValue(fields()[2]);
+        record.authCode = fieldSetFlags()[2] ? this.authCode : (java.lang.String) defaultValue(fields()[2]);
         record.value = fieldSetFlags()[3] ? this.value : (java.lang.String) defaultValue(fields()[3]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
@@ -546,8 +546,8 @@ public class MarketRefCreatedEvent extends org.apache.avro.specific.SpecificReco
   }
 
   @SuppressWarnings("unchecked")
-  private static final org.apache.avro.io.DatumWriter<MarketRefCreatedEvent>
-    WRITER$ = (org.apache.avro.io.DatumWriter<MarketRefCreatedEvent>)MODEL$.createDatumWriter(SCHEMA$);
+  private static final org.apache.avro.io.DatumWriter<AuthCodeCreatedEvent>
+    WRITER$ = (org.apache.avro.io.DatumWriter<AuthCodeCreatedEvent>)MODEL$.createDatumWriter(SCHEMA$);
 
   @Override public void writeExternal(java.io.ObjectOutput out)
     throws java.io.IOException {
@@ -555,8 +555,8 @@ public class MarketRefCreatedEvent extends org.apache.avro.specific.SpecificReco
   }
 
   @SuppressWarnings("unchecked")
-  private static final org.apache.avro.io.DatumReader<MarketRefCreatedEvent>
-    READER$ = (org.apache.avro.io.DatumReader<MarketRefCreatedEvent>)MODEL$.createDatumReader(SCHEMA$);
+  private static final org.apache.avro.io.DatumReader<AuthCodeCreatedEvent>
+    READER$ = (org.apache.avro.io.DatumReader<AuthCodeCreatedEvent>)MODEL$.createDatumReader(SCHEMA$);
 
   @Override public void readExternal(java.io.ObjectInput in)
     throws java.io.IOException {
@@ -572,7 +572,7 @@ public class MarketRefCreatedEvent extends org.apache.avro.specific.SpecificReco
 
     out.writeString(this.hostId);
 
-    out.writeString(this.refToken);
+    out.writeString(this.authCode);
 
     out.writeString(this.value);
 
@@ -590,7 +590,7 @@ public class MarketRefCreatedEvent extends org.apache.avro.specific.SpecificReco
 
       this.hostId = in.readString();
 
-      this.refToken = in.readString();
+      this.authCode = in.readString();
 
       this.value = in.readString();
 
@@ -609,7 +609,7 @@ public class MarketRefCreatedEvent extends org.apache.avro.specific.SpecificReco
           break;
 
         case 2:
-          this.refToken = in.readString();
+          this.authCode = in.readString();
           break;
 
         case 3:
@@ -623,13 +623,3 @@ public class MarketRefCreatedEvent extends org.apache.avro.specific.SpecificReco
     }
   }
 }
-
-
-
-
-
-
-
-
-
-

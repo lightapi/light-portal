@@ -1,7 +1,7 @@
 {
   "type": "record",
-  "name": "MarketProviderUpdatedEvent",
-  "namespace": "net.lightapi.portal.market",
+  "name": "AuthRefreshTokenCreatedEvent",
+  "namespace": "net.lightapi.portal.oauth",
   "fields": [
     {
       "name": "EventId",
@@ -41,14 +41,19 @@
       "doc": "host id"
     },
     {
-      "name": "providerId",
+      "name": "userId",
       "type": "string",
-      "doc": "provider id"
+      "doc": "user id"
+    },
+    {
+      "name": "refreshToken",
+      "type": "string",
+      "doc": "refresh token"
     },
     {
       "name": "value",
       "type": "string",
-      "doc": "oauth provider detail in JSON"
+      "doc": "token detail in JSON"
     }
   ]
 }
