@@ -638,7 +638,7 @@ public class HybridQueryClient {
      * @return Result of client object in JSON
      */
     public static Result<String> getClientById(HttpServerExchange exchange, String url, String clientId) {
-        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getClientById\",\"version\":\"0.1.0\",\"data\":{\"clientId\":\"%s\"}}", clientId);
+        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"client\",\"action\":\"getClientById\",\"version\":\"0.1.0\",\"data\":{\"clientId\":\"%s\"}}", clientId);
         return callQueryExchangeUrl(command, exchange, url);
     }
 
@@ -651,7 +651,7 @@ public class HybridQueryClient {
      * @return Result of client object in JSON
      */
     public static Result<String> getClientById(String token, String url, String clientId) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getClientById\",\"version\":\"0.1.0\",\"data\":{\"clientId\":\"%s\"}}", clientId);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"client\",\"action\":\"getClientById\",\"version\":\"0.1.0\",\"data\":{\"clientId\":\"%s\"}}", clientId);
         return callQueryTokenUrl(s, token, url);
     }
 
@@ -665,7 +665,7 @@ public class HybridQueryClient {
      * @return Result of client
      */
     public static Result<String> getClientById(String token, String clientId) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getClientById\",\"version\":\"0.1.0\",\"data\":{\"clientId\":\"%s\"}}", clientId);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"client\",\"action\":\"getClientById\",\"version\":\"0.1.0\",\"data\":{\"clientId\":\"%s\"}}", clientId);
         if (config.isPortalByServiceUrl()) {
             return callQueryTokenUrl(s, token, config.getPortalQueryServiceUrl());
         } else {
@@ -684,7 +684,7 @@ public class HybridQueryClient {
      * @return Result list of client in JSON
      */
     public static Result<String> getClient(HttpServerExchange exchange, String url, String host, int offset, int limit) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getClient\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"client\",\"action\":\"getClient\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
         return callQueryExchangeUrl(s, exchange, url);
     }
 
@@ -702,9 +702,9 @@ public class HybridQueryClient {
     public static Result<String> getService(HttpServerExchange exchange, String url, String host, String style, int offset, int limit) {
         String s;
         if(style != null) {
-            s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getService\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"style\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, style, offset, limit);
+            s = String.format("{\"host\":\"lightapi.net\",\"service\":\"service\",\"action\":\"getService\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"style\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, style, offset, limit);
         } else {
-            s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getService\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
+            s = String.format("{\"host\":\"lightapi.net\",\"service\":\"service\",\"action\":\"getService\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
         }
         return callQueryExchangeUrl(s, exchange, url);
     }
@@ -718,7 +718,7 @@ public class HybridQueryClient {
      * @return Result of client object in JSON
      */
     public static Result<String> getServiceById(HttpServerExchange exchange, String url, String serviceId) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getServiceById\",\"version\":\"0.1.0\",\"data\":{\"serviceId\":\"%s\"}}", serviceId);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"service\",\"action\":\"getServiceById\",\"version\":\"0.1.0\",\"data\":{\"serviceId\":\"%s\"}}", serviceId);
         return callQueryExchangeUrl(s, exchange, url);
     }
 
@@ -731,7 +731,7 @@ public class HybridQueryClient {
      * @return Result of role/role map in JSON
      */
     public static Result<String> getServiceRoleById(HttpServerExchange exchange, String url, String serviceId) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getServiceRoleById\",\"version\":\"0.1.0\",\"data\":{\"serviceId\":\"%s\"}}", serviceId);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"service\",\"action\":\"getServiceRoleById\",\"version\":\"0.1.0\",\"data\":{\"serviceId\":\"%s\"}}", serviceId);
         return callQueryExchangeUrl(s, exchange, url);
     }
 
@@ -744,7 +744,7 @@ public class HybridQueryClient {
      * @return Result of refreshToken object in JSON
      */
     public static Result<String> getRefreshTokenDetail(HttpServerExchange exchange, String url, String refreshToken) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getRefreshTokenDetail\",\"version\":\"0.1.0\",\"data\":{\"refreshToken\":\"%s\"}}", refreshToken);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"oauth\",\"action\":\"getRefreshTokenDetail\",\"version\":\"0.1.0\",\"data\":{\"refreshToken\":\"%s\"}}", refreshToken);
         return callQueryExchangeUrl(s, exchange, url);
     }
 
@@ -759,7 +759,7 @@ public class HybridQueryClient {
      * @return Result list of refresh tokens in JSON
      */
     public static Result<String> getRefreshToken(HttpServerExchange exchange, String url, String host, int offset, int limit) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getRefreshToken\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"oauth\",\"action\":\"getRefreshToken\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
         return callQueryExchangeUrl(s, exchange, url);
     }
 
@@ -773,7 +773,7 @@ public class HybridQueryClient {
      * @return Result of authCode object in JSON
      */
     public static Result<String> getAuthCodeDetail(HttpServerExchange exchange, String url, String hostId, String authCode, boolean derived) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getAuthCodeDetail\",\"version\":\"0.1.0\",\"data\":{\"hostId\":\"%s\",\"authCode\":\"%s\",\"derived\":%b}}", hostId, authCode, derived);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"oauth\",\"action\":\"getAuthCodeDetail\",\"version\":\"0.1.0\",\"data\":{\"hostId\":\"%s\",\"authCode\":\"%s\",\"derived\":%b}}", hostId, authCode, derived);
         return callQueryExchangeUrl(s, exchange, url);
     }
 
@@ -788,7 +788,7 @@ public class HybridQueryClient {
      * @return Result of authCode
      */
     public static Result<String> getAuthCodeDetail(String authCode, String token, boolean derive) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getAuthCodeDetail\",\"version\":\"0.1.0\",\"data\":{\"authCode\":\"%s\",\"derived\":%b}}", authCode, derive);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"oauth\",\"action\":\"getAuthCodeDetail\",\"version\":\"0.1.0\",\"data\":{\"authCode\":\"%s\",\"derived\":%b}}", authCode, derive);
         if (config.isPortalByServiceUrl()) {
             return callQueryTokenUrl(s, token, config.getPortalQueryServiceUrl());
         } else {
@@ -806,7 +806,7 @@ public class HybridQueryClient {
      * @return Result list of authCode object in JSON
      */
     public static Result<String> getAuthCode(HttpServerExchange exchange, String host, int offset, int limit) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getAuthCode\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"oauth\",\"action\":\"getAuthCode\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
         if (config.isPortalByServiceUrl()) {
             return callQueryExchangeUrl(s, exchange, config.getPortalQueryServiceUrl());
         } else {
@@ -825,7 +825,7 @@ public class HybridQueryClient {
      * @return Result list of authCode object in JSON
      */
     public static Result<String> getAuthCode(HttpServerExchange exchange, String url, String host, int offset, int limit) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getAuthCode\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"oauth\",\"action\":\"getAuthCode\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
         return callQueryExchangeUrl(s, exchange, url);
     }
 
@@ -838,7 +838,7 @@ public class HybridQueryClient {
      * @return Result of refToken object in JSON
      */
     public static Result<String> getRefTokenDetail(HttpServerExchange exchange, String url, String refToken) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getRefTokenDetail\",\"version\":\"0.1.0\",\"data\":{\"refToken\":\"%s\"}}", refToken);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"oauth\",\"action\":\"getRefTokenDetail\",\"version\":\"0.1.0\",\"data\":{\"refToken\":\"%s\"}}", refToken);
         return callQueryExchangeUrl(s, exchange, url);
     }
 
@@ -852,7 +852,7 @@ public class HybridQueryClient {
      * @return Result of refToken
      */
     public static Result<String> getRefTokenDetail(String refToken, String token) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getRefTokenDetail\",\"version\":\"0.1.0\",\"data\":{\"refToken\":\"%s\"}}", refToken);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"oauth\",\"action\":\"getRefTokenDetail\",\"version\":\"0.1.0\",\"data\":{\"refToken\":\"%s\"}}", refToken);
         if (config.isPortalByServiceUrl()) {
             return callQueryTokenUrl(s, token, config.getPortalQueryServiceUrl());
         } else {
@@ -871,7 +871,7 @@ public class HybridQueryClient {
      * @return Result list of reference tokens in JSON
      */
     public static Result<String> getRefToken(HttpServerExchange exchange, String url, String host, int offset, int limit) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getRefToken\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"oauth\",\"action\":\"getRefToken\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
         return callQueryExchangeUrl(s, exchange, url);
     }
 
@@ -884,7 +884,7 @@ public class HybridQueryClient {
      * @return Result of provider object in JSON
      */
     public static Result<String> getProviderDetail(HttpServerExchange exchange, String url, String providerId) {
-        String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getProviderDetail\",\"version\":\"0.1.0\",\"data\":{\"providerId\":\"%s\"}}", providerId);
+        String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"oauth\",\"action\":\"getProviderDetail\",\"version\":\"0.1.0\",\"data\":{\"providerId\":\"%s\"}}", providerId);
         return callQueryExchangeUrl(command, exchange, url);
     }
 
@@ -899,7 +899,7 @@ public class HybridQueryClient {
      * @return Result list of provider object in JSON
      */
     public static Result<String> getProvider(HttpServerExchange exchange, String url, String host, int offset, int limit) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getProvider\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"oauth\",\"action\":\"getProvider\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
         return callQueryExchangeUrl(s, exchange, url);
     }
 
@@ -951,7 +951,7 @@ public class HybridQueryClient {
      * @return Result map of entities in JSON
      */
     public static Result<String> getHost(HttpServerExchange exchange, String url, String host) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getHost\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\"}}", host);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"host\",\"action\":\"getHost\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\"}}", host);
         return callQueryExchangeUrl(s, exchange, url);
     }
 
@@ -964,7 +964,7 @@ public class HybridQueryClient {
      * @return Result map of entities in JSON
      */
     public static Result<String> getHost(HttpServerExchange exchange, String host) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getHost\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\"}}", host);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"host\",\"action\":\"getHost\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\"}}", host);
         if (config.isPortalByServiceUrl()) {
             return callQueryExchangeUrl(s, exchange, config.getPortalQueryServiceUrl());
         } else {
@@ -982,7 +982,7 @@ public class HybridQueryClient {
      * @return Result map of entities in JSON
      */
     public static Result<String> getHostDomainById(HttpServerExchange exchange, String url, String hostId) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getHostDomainById\",\"version\":\"0.1.0\",\"data\":{\"hostId\":\"%s\"}}", hostId);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"host\",\"action\":\"getHostDomainById\",\"version\":\"0.1.0\",\"data\":{\"hostId\":\"%s\"}}", hostId);
         return callQueryExchangeUrl(s, exchange, url);
     }
 
@@ -995,7 +995,7 @@ public class HybridQueryClient {
      * @return Result map of entities in JSON
      */
     public static Result<String> getHostDomainById(HttpServerExchange exchange, String hostId) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getHostDomainById\",\"version\":\"0.1.0\",\"data\":{\"hostId\":\"%s\"}}", hostId);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"host\",\"action\":\"getHostDomainById\",\"version\":\"0.1.0\",\"data\":{\"hostId\":\"%s\"}}", hostId);
         if (config.isPortalByServiceUrl()) {
             return callQueryExchangeUrl(s, exchange, config.getPortalQueryServiceUrl());
         } else {
@@ -1013,7 +1013,7 @@ public class HybridQueryClient {
      * @return Result list of category objects in JSON
      */
     public static Result<String> getCategoryByName(HttpServerExchange exchange, String url, String host, String name) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getCategoryByName\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"name\":\"%s\"}}", host, name);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"category\",\"action\":\"getCategoryByName\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"name\":\"%s\"}}", host, name);
         return callQueryExchangeUrl(s, exchange, url);
     }
 
@@ -1026,7 +1026,7 @@ public class HybridQueryClient {
      * @return Result list of category objects in JSON
      */
     public static Result<String> getCategory(HttpServerExchange exchange, String url, String host) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getCategory\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\"}}", host);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"category\",\"action\":\"getCategory\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\"}}", host);
         return callQueryExchangeUrl(s, exchange, url);
     }
 
@@ -1040,7 +1040,7 @@ public class HybridQueryClient {
      * @return Result the blog object in JSON
      */
     public static Result<String> getBlogById(HttpServerExchange exchange, String url, String host, String id) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getBlogById\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"id\":\"%s\"}}", host, id);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"blog\",\"action\":\"getBlogById\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"id\":\"%s\"}}", host, id);
         return callQueryExchangeUrl(s, exchange, url);
     }
 
@@ -1053,7 +1053,7 @@ public class HybridQueryClient {
      * @return Result the blog object in JSON
      */
     public static Result<String> getBlogById(HttpServerExchange exchange, String host, String id) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getBlogById\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"id\":\"%s\"}}", host, id);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"blog\",\"action\":\"getBlogById\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"id\":\"%s\"}}", host, id);
         return callQueryExchange(s, exchange);
     }
 
@@ -1072,7 +1072,7 @@ public class HybridQueryClient {
     public static Result<String> getBlogList(HttpServerExchange exchange, String url, String host, int offset, int limit, List<String> categories, List<String> tags) {
         Map<String, Object> map = new HashMap<>();
         map.put("host", "lightapi.net");
-        map.put("service", "market");
+        map.put("service", "blog");
         map.put("action", "getBlogList");
         map.put("version", "0.1.0");
         Map<String, Object> dataMap = new HashMap<>();
@@ -1096,7 +1096,7 @@ public class HybridQueryClient {
      * @return Result list of blog objects in JSON
      */
     public static Result<String> getBlog(HttpServerExchange exchange, String url, String host, int offset, int limit) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getBlog\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"blog\",\"action\":\"getBlog\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
         return callQueryExchangeUrl(s, exchange, url);
     }
 
@@ -1110,7 +1110,7 @@ public class HybridQueryClient {
      * @return Result the document object in JSON
      */
     public static Result<String> getDocumentById(HttpServerExchange exchange, String url, String host, String id) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getDocumentById\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"id\":\"%s\"}}", host, id);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"document\",\"action\":\"getDocumentById\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"id\":\"%s\"}}", host, id);
         return callQueryExchangeUrl(s, exchange, url);
     }
 
@@ -1125,7 +1125,7 @@ public class HybridQueryClient {
      * @return Result list of document objects in JSON
      */
     public static Result<String> getDocument(HttpServerExchange exchange, String url, String host, int offset, int limit) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getDocument\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"document\",\"action\":\"getDocument\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
         return callQueryExchangeUrl(s, exchange, url);
     }
 
@@ -1139,7 +1139,7 @@ public class HybridQueryClient {
      * @return Result the news object in JSON
      */
     public static Result<String> getNewsById(HttpServerExchange exchange, String url, String host, String id) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getNewsById\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"id\":\"%s\"}}", host, id);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"news\",\"action\":\"getNewsById\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"id\":\"%s\"}}", host, id);
         return callQueryExchangeUrl(s, exchange, url);
     }
 
@@ -1154,7 +1154,7 @@ public class HybridQueryClient {
      * @return Result list of news objects in JSON
      */
     public static Result<String> getNews(HttpServerExchange exchange, String url, String host, int offset, int limit) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getNews\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"news\",\"action\":\"getNews\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
         return callQueryExchangeUrl(s, exchange, url);
     }
 
@@ -1168,7 +1168,7 @@ public class HybridQueryClient {
      * @return Result the page object in JSON
      */
     public static Result<String> getPageById(HttpServerExchange exchange, String url, String host, String id) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getPageById\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"id\":\"%s\"}}", host, id);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"page\",\"action\":\"getPageById\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"id\":\"%s\"}}", host, id);
         return callQueryExchangeUrl(s, exchange, url);
     }
 
@@ -1183,7 +1183,7 @@ public class HybridQueryClient {
      * @return Result list of page objects in JSON
      */
     public static Result<String> getPage(HttpServerExchange exchange, String url, String host, int offset, int limit) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getPage\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"page\",\"action\":\"getPage\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
         return callQueryExchangeUrl(s, exchange, url);
     }
 
@@ -1197,7 +1197,7 @@ public class HybridQueryClient {
      * @return Result the template object in JSON
      */
     public static Result<String> getTemplateById(HttpServerExchange exchange, String url, String host, String id) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getTemplateById\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"id\":\"%s\"}}", host, id);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"template\",\"action\":\"getTemplateById\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"id\":\"%s\"}}", host, id);
         return callQueryExchangeUrl(s, exchange, url);
     }
 
@@ -1212,7 +1212,7 @@ public class HybridQueryClient {
      * @return Result list of template objects in JSON
      */
     public static Result<String> getTemplate(HttpServerExchange exchange, String url, String host, int offset, int limit) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getTemplate\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"template\",\"action\":\"getTemplate\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
         return callQueryExchangeUrl(s, exchange, url);
     }
 
@@ -1225,7 +1225,7 @@ public class HybridQueryClient {
      * @return Result list of tags objects in JSON
      */
     public static Result<String> getTags(String url, String host, String app) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getTags\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"app\":\"%s\",\"local\":true}}", host, app);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"tag\",\"action\":\"getTags\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"app\":\"%s\",\"local\":true}}", host, app);
         return callQueryUrl(s, url);
     }
 
@@ -1240,7 +1240,7 @@ public class HybridQueryClient {
      * @return Result list of error objects in JSON
      */
     public static Result<String> getError(HttpServerExchange exchange, String url, String host, int offset, int limit) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getError\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"error\",\"action\":\"getError\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
         return callQueryExchangeUrl(s, exchange, url);
     }
 
@@ -1254,7 +1254,7 @@ public class HybridQueryClient {
      * @return Result the error object in JSON
      */
     public static Result<String> getErrorByCode(HttpServerExchange exchange, String url, String host, String errorCode) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getErrorByCode\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"errorCode\":\"%s\"}}", host, errorCode);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"error\",\"action\":\"getErrorByCode\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"errorCode\":\"%s\"}}", host, errorCode);
         return callQueryExchangeUrl(s, exchange, url);
     }
 
@@ -1269,7 +1269,7 @@ public class HybridQueryClient {
      * @return Result list of schema objects in JSON
      */
     public static Result<String> getJsonSchema(HttpServerExchange exchange, String url, String host, int offset, int limit) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getJsonSchema\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"schema\",\"action\":\"getJsonSchema\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
         return callQueryExchangeUrl(s, exchange, url);
     }
 
@@ -1283,7 +1283,7 @@ public class HybridQueryClient {
      * @return Result the schema object in JSON
      */
     public static Result<String> getJsonSchemaById(HttpServerExchange exchange, String url, String host, String id) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getJsonSchemaById\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"id\":\"%s\"}}", host, id);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"schema\",\"action\":\"getJsonSchemaById\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"id\":\"%s\"}}", host, id);
         return callQueryExchangeUrl(s, exchange, url);
     }
 
@@ -1296,7 +1296,7 @@ public class HybridQueryClient {
      * @return Result the schema object in JSON
      */
     public static Result<String> getJsonSchemaById(HttpServerExchange exchange, String host, String id) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getJsonSchemaById\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"id\":\"%s\"}}", host, id);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"schema\",\"action\":\"getJsonSchemaById\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"id\":\"%s\"}}", host, id);
         if (config.isPortalByServiceUrl()) {
             return callQueryExchangeUrl(s, exchange, config.getPortalQueryServiceUrl());
         } else {
@@ -1319,7 +1319,7 @@ public class HybridQueryClient {
     public static Result<String> getJsonSchemaList(HttpServerExchange exchange, String url, String host, int offset, int limit, List<String> categories, List<String> tags) {
         Map<String, Object> map = new HashMap<>();
         map.put("host", "lightapi.net");
-        map.put("service", "market");
+        map.put("service", "schema");
         map.put("action", "getJsonSchemaList");
         map.put("version", "0.1.0");
         Map<String, Object> dataMap = new HashMap<>();
@@ -1342,7 +1342,7 @@ public class HybridQueryClient {
      * @return Result the rule object in JSON
      */
     public static Result<String> getRuleById(HttpServerExchange exchange, String url, String host, String ruleId) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getRuleById\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"ruleId\":\"%s\"}}", host, ruleId);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"rule\",\"action\":\"getRuleById\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"ruleId\":\"%s\"}}", host, ruleId);
         return callQueryExchangeUrl(s, exchange, url);
     }
 
@@ -1357,7 +1357,7 @@ public class HybridQueryClient {
      * @return Result list of rule objects in JSON
      */
     public static Result<String> getRuleByHost(HttpServerExchange exchange, String url, String host, int offset, int limit) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getRuleByHost\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"rule\",\"action\":\"getRuleByHost\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"offset\":%s,\"limit\":%s}}", host, offset, limit);
         return callQueryExchangeUrl(s, exchange, url);
     }
 
@@ -1371,7 +1371,7 @@ public class HybridQueryClient {
      * @return Result list of rule objects in JSON
      */
     public static Result<String> getRuleByType(HttpServerExchange exchange, String url, String host, String ruleType) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getRuleByType\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"ruleType\":\"%s\"}}", host, ruleType);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"rule\",\"action\":\"getRuleByType\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"ruleType\":\"%s\"}}", host, ruleType);
         return callQueryExchangeUrl(s, exchange, url);
     }
 
@@ -1385,7 +1385,7 @@ public class HybridQueryClient {
      * @return Result list of rule objects in JSON
      */
     public static Result<String> getRuleByGroup(HttpServerExchange exchange, String url, String host, String groupId) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"getRuleByGroup\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"groupId\":\"%s\"}}", host, groupId);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"rule\",\"action\":\"getRuleByGroup\",\"version\":\"0.1.0\",\"data\":{\"host\":\"%s\",\"groupId\":\"%s\"}}", host, groupId);
         return callQueryExchangeUrl(s, exchange, url);
     }
 

@@ -132,7 +132,7 @@ public class HybridCommandClient {
     public static Result<String> createRefreshToken(Map<String, Object> refreshTokenMap, String token) {
         Map<String, Object> commandMap = new HashMap<>();
         commandMap.put("host", "lightapi.net");
-        commandMap.put("service", "market");
+        commandMap.put("service", "oauth");
         commandMap.put("action", "createRefreshToken");
         commandMap.put("version", "0.1.0");
         commandMap.put("data", refreshTokenMap);
@@ -154,7 +154,7 @@ public class HybridCommandClient {
     public static Result<String> createAuthCode(Map<String, Object> codeMap, String token) {
         Map<String, Object> commandMap = new HashMap<>();
         commandMap.put("host", "lightapi.net");
-        commandMap.put("service", "market");
+        commandMap.put("service", "oauth");
         commandMap.put("action", "createAuthCode");
         commandMap.put("version", "0.1.0");
         commandMap.put("data", codeMap);
@@ -173,7 +173,7 @@ public class HybridCommandClient {
      * @return Result of authCode
      */
     public static Result<String> deleteAuthCode(String hostId, String authCode, String token) {
-        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"market\",\"action\":\"deleteAuthCode\",\"version\":\"0.1.0\",\"data\":{\"hostId\":\"%s\",\"authCode\":\"%s\"}}", hostId, authCode);
+        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"oauth\",\"action\":\"deleteAuthCode\",\"version\":\"0.1.0\",\"data\":{\"hostId\":\"%s\",\"authCode\":\"%s\"}}", hostId, authCode);
         if (config.isPortalByServiceUrl()) {
             return callCommandWithToken(command, token, config.getPortalCommandServiceUrl());
         } else {
@@ -192,7 +192,7 @@ public class HybridCommandClient {
     public static Result<String> createRefToken(Map<String, Object> refTokenMap, String token) {
         Map<String, Object> commandMap = new HashMap<>();
         commandMap.put("host", "lightapi.net");
-        commandMap.put("service", "market");
+        commandMap.put("service", "oauth");
         commandMap.put("action", "createRefToken");
         commandMap.put("version", "0.1.0");
         commandMap.put("data", refTokenMap);
