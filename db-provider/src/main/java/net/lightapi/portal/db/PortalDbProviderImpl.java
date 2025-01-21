@@ -1783,9 +1783,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     statement.setNull(9, Types.VARCHAR);
                 }
                 if(map.containsKey("remember")) {
-                    statement.setBoolean(10, (Boolean) map.get("remember"));
+                    statement.setString(10, (String) map.get("remember"));
                 } else {
-                    statement.setBoolean(10, false);
+                    statement.setNull(10, Types.CHAR);
                 }
                 if(map.containsKey("codeChallenge")) {
                     statement.setString(11, (String) map.get("codeChallenge"));
@@ -1882,7 +1882,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("roles", resultSet.getString("roles"));
                     map.put("redirectUri", resultSet.getString("redirect_uri"));
                     map.put("scope", resultSet.getString("scope"));
-                    map.put("remember", resultSet.getBoolean("remember"));
+                    map.put("remember", resultSet.getString("remember"));
                     map.put("codeChallenge", resultSet.getString("code_challenge"));
                     map.put("challengeMethod", resultSet.getString("challenge_method"));
                     result = Success.of(JsonMapper.toJson(map));
