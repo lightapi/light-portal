@@ -1998,6 +1998,168 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
+    public Result<String> queryApp(int offset, int limit, String hostId, String appId, String appName, String appDesc, Boolean isKafkaApp, String operationOwner, String deliveryOwner) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
+                "host_id, app_id, app_name, app_desc, is_kafka_app, operation_owner, delivery_owner\n" +
+                "FROM app_t\n" +
+                "WHERE host_id = ?\n");
+
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(hostId);
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "app_id", appId);
+        addCondition(whereClause, parameters, "app_name", appName);
+        addCondition(whereClause, parameters, "app_desc", appDesc);
+        addCondition(whereClause, parameters, "is_kafka_app", isKafkaApp);
+        addCondition(whereClause, parameters, "operation_owner", operationOwner);
+        addCondition(whereClause, parameters, "delivery_owner", deliveryOwner);
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append("ORDER BY app_id\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> apps = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("appId", resultSet.getString("app_id"));
+                    map.put("appName", resultSet.getString("app_name"));
+                    map.put("appDesc", resultSet.getString("app_desc"));
+                    map.put("isKafkaApp", resultSet.getBoolean("is_kafka_app"));
+                    map.put("operationOwner", resultSet.getString("operation_owner"));
+                    map.put("deliveryOwner", resultSet.getString("delivery_owner"));
+                    apps.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("apps", apps);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> queryClient(int offset, int limit, String hostId, String appId, String clientId, String clientType, String clientProfile, String clientScope, String customClaim, String redirectUri, String authenticateClass, String deRefClientId) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
+                "client_id, host_id, lob, client_type, client_profile, client_name, client_desc, scope, custom_claim, redirect_uri, authenticate_class, deref_client_id, service_id\n" +
+                "FROM client_t\n" +
+                "WHERE host_id = ?\n");
+
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(hostId);
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "client_id", clientId);
+        addCondition(whereClause, parameters, "client_type", clientType);
+        addCondition(whereClause, parameters, "client_profile", clientProfile);
+        addCondition(whereClause, parameters, "scope", clientScope);
+        addCondition(whereClause, parameters, "custom_claim", customClaim);
+        addCondition(whereClause, parameters, "redirect_uri", redirectUri);
+        addCondition(whereClause, parameters, "authenticate_class", authenticateClass);
+        addCondition(whereClause, parameters, "deref_client_id", deRefClientId);
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append("ORDER BY client_id\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> clients = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("clientId", resultSet.getString("client_id"));
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("lob", resultSet.getString("lob"));
+                    map.put("clientType", resultSet.getString("client_type"));
+                    map.put("clientProfile", resultSet.getString("client_profile"));
+                    map.put("clientName", resultSet.getString("client_name"));
+                    map.put("clientDesc", resultSet.getString("client_desc"));
+                    map.put("scope", resultSet.getString("scope"));
+                    map.put("customClaim", resultSet.getString("custom_claim"));
+                    map.put("redirectUri", resultSet.getString("redirect_uri"));
+                    map.put("authenticateClass", resultSet.getString("authenticate_class"));
+                    map.put("deRefClientId", resultSet.getString("deref_client_id"));
+                    map.put("serviceId", resultSet.getString("service_id"));
+                    clients.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("clients", clients);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
     public Result<String> createClient(ClientCreatedEvent event) {
         final String insertUser = "INSERT INTO app_t (host_id, app_id, app_name, app_desc, " +
                 "is_kafka_app, client_id, client_type, client_profile, client_secret, client_scope, custom_claim, " +
