@@ -69,14 +69,15 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> deleteRefreshToken(AuthRefreshTokenDeletedEvent event);
     Result<String> listRefreshToken(int offset, int limit, String refreshToken, String hostId, String userId, String entityId,
                                     String email, String firstName, String lastName, String clientId, String appId,
-                                    String appName, String scope, String userType, String roles, String csrf,
-                                    String customClaim, String updateUser, Timestamp updateTs);
+                                    String appName, String scope, String userType, String roles, String groups, String positions,
+                                    String attributes, String csrf, String customClaim, String updateUser, Timestamp updateTs);
+
     Result<String> createAuthCode(AuthCodeCreatedEvent event);
     Result<String> deleteAuthCode(AuthCodeDeletedEvent event);
     Result<String> queryAuthCode(String hostId, String authCode);
     Result<String> listAuthCode(int offset, int limit, String hostId, String authCode, String userId,
-                                       String entityId, String userType, String email, String roles,
-                                       String redirectUri, String scope, String remember, String codeChallenge,
+                                       String entityId, String userType, String email, String roles, String groups, String positions,
+                                       String attributes, String redirectUri, String scope, String remember, String codeChallenge,
                                        String challengeMethod, String updateUser, Timestamp updateTs);
 
 

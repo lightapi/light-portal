@@ -1484,9 +1484,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createRefreshToken(AuthRefreshTokenCreatedEvent event) {
-        final String insertUser = "INSERT INTO refresh_token_t (refresh_token, host_id, user_id, client_id, scope, " +
-                "user_type, roles, csrf, custom_claim) " +
-                "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?)";
+        final String insertUser = "INSERT INTO auth_refresh_token_t (refresh_token, host_id, user_id, entity_id, user_type, " +
+                "email, roles, groups, positions, attributes, client_id, scope, csrf, custom_claim, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?, ?, ?)";
         Result<String> result = null;
         Map<String, Object> map = JsonMapper.string2Map(event.getValue());
         try (Connection conn = ds.getConnection()) {
@@ -1496,40 +1496,56 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, event.getRefreshToken());
                 statement.setString(2, event.getHostId());
                 statement.setString(3, event.getUserId());
-                if (map.get("clientId") != null)
-                    statement.setString(4, (String) map.get("clientId"));
-                else
-                    statement.setNull(4, NULL);
-
-                if (map.get("scope") != null)
-                    statement.setString(5, (String) map.get("scope"));
-                else
-                    statement.setNull(5, NULL);
-
-                if (map.get("userType") != null)
-                    statement.setString(6, (String) map.get("userType"));
-                else
-                    statement.setNull(6, NULL);
+                statement.setString(4, (String) map.get("entityId"));
+                statement.setString(5, (String) map.get("userType"));
+                statement.setString(6, (String) map.get("email"));
 
                 if (map.get("roles") != null)
                     statement.setString(7, (String) map.get("roles"));
                 else
                     statement.setNull(7, NULL);
 
-                if (map.get("csrf") != null)
-                    statement.setString(8, (String) map.get("csrf"));
+                if (map.get("groups") != null)
+                    statement.setString(8, (String) map.get("groups"));
                 else
                     statement.setNull(8, NULL);
 
-                if (map.get("customClaim") != null)
-                    statement.setString(9, (String) map.get("customClaim"));
+                if (map.get("positions") != null)
+                    statement.setString(9, (String) map.get("positions"));
                 else
                     statement.setNull(9, NULL);
+
+                if (map.get("attributes") != null)
+                    statement.setString(10, (String) map.get("attributes"));
+                else
+                    statement.setNull(10, NULL);
+
+                if (map.get("clientId") != null)
+                    statement.setString(11, (String) map.get("clientId"));
+                else
+                    statement.setNull(11, NULL);
+
+                if (map.get("scope") != null)
+                    statement.setString(12, (String) map.get("scope"));
+                else
+                    statement.setNull(12, NULL);
+
+                if (map.get("csrf") != null)
+                    statement.setString(13, (String) map.get("csrf"));
+                else
+                    statement.setNull(13, NULL);
+
+                if (map.get("customClaim") != null)
+                    statement.setString(14, (String) map.get("customClaim"));
+                else
+                    statement.setNull(14, NULL);
+
+                statement.setString(15, event.getEventId().getId());
+                statement.setTimestamp(16, new java.sql.Timestamp(event.getEventId().getTimestamp()));
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     // no record is inserted, write an error notification.
                     throw new SQLException(String.format("no record is inserted for refresh token %s", event.getRefreshToken()));
-                } else {
                 }
                 conn.commit();
                 result = Success.of(event.getRefreshToken());
@@ -1554,7 +1570,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> deleteRefreshToken(AuthRefreshTokenDeletedEvent event) {
-        final String deleteApp = "DELETE from refresh_token_t WHERE refresh_token = ? AND host_id = ? AND user_id = ?";
+        final String deleteApp = "DELETE from auth_refresh_token_t WHERE refresh_token = ? AND host_id = ? AND user_id = ?";
         Result<String> result;
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
@@ -1591,15 +1607,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> listRefreshToken(int offset, int limit, String refreshToken, String hostId, String userId, String entityId,
                                            String email, String firstName, String lastName, String clientId, String appId,
-                                           String appName, String scope, String userType, String roles, String csrf,
-                                           String customClaim, String updateUser, Timestamp updateTs) {
+                                           String appName, String scope, String userType, String roles, String groups, String positions,
+                                           String attributes, String csrf, String customClaim, String updateUser, Timestamp updateTs) {
         Result<String> result = null;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "r.host_id, r.refresh_token, r.user_id, r.user_type, u.entity_id, u.email, u.first_name, u.last_name, \n" +
-                "r.client_id, a.app_id, a.app_name, r.scope, r.roles, r.csrf, r.custom_claim, r.update_user, r.update_ts \n" +
-                "FROM refresh_token_t r, user_t u, app_t a\n" +
-                "WHERE r.user_id = u.user_id AND r.client_id = a.client_id\n" +
+                "r.host_id, r.refresh_token, r.user_id, r.user_type, r.entity_id, r.email, u.first_name, u.last_name, \n" +
+                "r.client_id, a.app_id, a.app_name, r.scope, r.roles, r.groups, r.positions, r.attributes, r.csrf, " +
+                "r.custom_claim, r.update_user, r.update_ts \n" +
+                "FROM auth_refresh_token_t r, user_t u, app_t a, client_t c\n" +
+                "WHERE r.user_id = u.user_id AND r.client_id = c.client_id AND a.app_id = c.app_id\n" +
                 "AND r.host_id = ?\n");
 
         List<Object> parameters = new ArrayList<>();
@@ -1619,6 +1636,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         addCondition(whereClause, parameters, "a.app_name", appName);
         addCondition(whereClause, parameters, "r.scope", scope);
         addCondition(whereClause, parameters, "r.roles", roles);
+        addCondition(whereClause, parameters, "r.groups", groups);
+        addCondition(whereClause, parameters, "r.positions", positions);
+        addCondition(whereClause, parameters, "r.attributes", attributes);
         addCondition(whereClause, parameters, "r.csrf", csrf);
         addCondition(whereClause, parameters, "r.custom_claim", customClaim);
         addCondition(whereClause, parameters, "r.update_user", updateUser);
@@ -1669,6 +1689,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("appName", resultSet.getString("app_name"));
                     map.put("scope", resultSet.getString("scope"));
                     map.put("roles", resultSet.getString("roles"));
+                    map.put("groups", resultSet.getString("groups"));
+                    map.put("positions", resultSet.getString("positions"));
+                    map.put("attributes", resultSet.getString("attributes"));
                     map.put("csrf", resultSet.getString("csrf"));
                     map.put("customClaim", resultSet.getString("custom_claim"));
                     map.put("updateUser", resultSet.getString("update_user"));
@@ -1697,8 +1720,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> queryRefreshToken(String refreshToken) {
         Result<String> result = null;
         String sql =
-                "SELECT refresh_token, host_id, user_id, client_id, scope, user_type, roles, csrf, custom_claim\n" +
-                        "FROM refresh_token_t\n" +
+                "SELECT refresh_token, host_id, user_id, entity_id, user_type, email, roles, groups, positions, attributes, " +
+                        "client_id, scope, csrf, custom_claim\n" +
+                        "FROM auth_refresh_token_t\n" +
                         "WHERE refresh_token = ?\n";
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
@@ -1709,10 +1733,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("refreshToken", resultSet.getString("refresh_token"));
                         map.put("hostId", resultSet.getString("host_id"));
                         map.put("userId", resultSet.getString("user_id"));
+                        map.put("entityId", resultSet.getString("entity_id"));
+                        map.put("userType", resultSet.getString("user_type"));
+                        map.put("email", resultSet.getString("email"));
+                        map.put("roles", resultSet.getString("roles"));
+                        map.put("groups", resultSet.getString("groups"));
+                        map.put("positions", resultSet.getString("positions"));
+                        map.put("attributes", resultSet.getString("attributes"));
                         map.put("clientId", resultSet.getString("client_id"));
                         map.put("scope", resultSet.getString("scope"));
-                        map.put("userType", resultSet.getString("user_type"));
-                        map.put("roles", resultSet.getString("roles"));
                         map.put("csrf", resultSet.getString("csrf"));
                         map.put("customClaim", resultSet.getString("custom_claim"));
                     }
@@ -1902,8 +1931,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> listAuthCode(int offset, int limit, String hostId, String authCode, String userId,
-                                       String entityId, String userType, String email, String roles,
-                                       String redirectUri, String scope, String remember, String codeChallenge,
+                                       String entityId, String userType, String email, String roles, String groups, String positions,
+                                       String attributes, String redirectUri, String scope, String remember, String codeChallenge,
                                        String challengeMethod, String updateUser, Timestamp updateTs) {
         Result<String> result = null;
         StringBuilder sqlBuilder = new StringBuilder();
@@ -2390,10 +2419,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<Map<String, Object>> queryClientByClientId(String clientId) {
         Result<Map<String, Object>> result;
         String sql =
-                "SELECT host_id, app_id, app_name, app_desc, is_kafka_app, client_id, " +
-                        "client_type, client_profile, client_secret, client_scope, custom_claim, redirect_uri, authenticate_class, " +
-                        "deref_client_id, operation_owner, delivery_owner, update_user, update_ts " +
-                        "FROM app_t WHERE client_id = ?";
+                "SELECT host_id, app_id, client_id, client_type, client_profile, client_secret, client_scope, custom_claim,\n" +
+                        "redirect_uri, authenticate_class, deref_client_id, update_user, update_ts\n" +
+                        "FROM client_t \n" +
+                        "WHERE client_id = ?";
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
@@ -2402,8 +2431,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     if (resultSet.next()) {
                         map.put("hostId", resultSet.getString("host_id"));
                         map.put("appId", resultSet.getString("app_id"));
-                        map.put("appDesc", resultSet.getString("app_desc"));
-                        map.put("isKafkaApp", resultSet.getBoolean("is_kafka_app"));
                         map.put("clientId", resultSet.getString("client_id"));
                         map.put("clientType", resultSet.getString("client_type"));
                         map.put("clientProfile", resultSet.getString("client_profile"));
@@ -2413,8 +2440,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("redirectUri", resultSet.getString("redirect_uri"));
                         map.put("authenticateClass", resultSet.getString("authenticate_class"));
                         map.put("derefClientId", resultSet.getString("deref_client_id"));
-                        map.put("operationOwner", resultSet.getString("operation_owner"));
-                        map.put("deliveryOwner", resultSet.getString("delivery_owner"));
                         map.put("updateUser", resultSet.getString("update_user"));
                         map.put("updateTs", resultSet.getTimestamp("update_ts"));
                     }
@@ -2436,42 +2461,37 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<Map<String, Object>> queryClientByHostAppId(String host_id, String applicationId) {
+    public Result<Map<String, Object>> queryClientByHostAppId(String host_id, String appId) {
         Result<Map<String, Object>> result;
         String sql =
-                "SELECT host_id, app_id, app_name, app_desc, is_kafka_app, client_id, " +
-                        "client_type, client_profile, client_secret, client_scope, custom_claim, redirect_uri, authenticate_class, " +
-                        "deref_client_id, operation_owner, delivery_owner, update_user, update_ts " +
-                        "FROM app_t WHERE host = ? AND app_id = ?";
+                "SELECT host_id, app_id, client_id, client_type, client_profile, client_scope, custom_claim, \n" +
+                        "redirect_uri, authenticate_class, deref_client_id, update_user, update_ts \n" +
+                        "FROM client_t c\n" +
+                        "WHERE host_id = ? AND app_id = ?";
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, host_id);
-                statement.setString(2, applicationId);
+                statement.setString(2, appId);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
                         map.put("hostId", resultSet.getString("host_id"));
                         map.put("appId", resultSet.getString("app_id"));
-                        map.put("appDesc", resultSet.getString("app_desc"));
-                        map.put("isKafkaApp", resultSet.getBoolean("is_kafka_app"));
                         map.put("clientId", resultSet.getString("client_id"));
                         map.put("clientType", resultSet.getString("client_type"));
                         map.put("clientProfile", resultSet.getString("client_profile"));
-                        map.put("clientSecret", resultSet.getString("client_secret"));
                         map.put("clientScope", resultSet.getString("client_scope"));
                         map.put("customClaim", resultSet.getString("custom_claim"));
                         map.put("redirectUri", resultSet.getString("redirect_uri"));
                         map.put("authenticateClass", resultSet.getString("authenticate_class"));
-                        map.put("derefClientId", resultSet.getString("deref_client_id"));
-                        map.put("operationOwner", resultSet.getString("operation_owner"));
-                        map.put("deliveryOwner", resultSet.getString("delivery_owner"));
+                        map.put("deRefClientId", resultSet.getString("deref_client_id"));
                         map.put("updateUser", resultSet.getString("update_user"));
                         map.put("updateTs", resultSet.getTimestamp("update_ts"));
                     }
                 }
             }
             if (map.size() == 0)
-                result = Failure.of(new Status(OBJECT_NOT_FOUND, "application with applicationId ", applicationId));
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "client with appId ", appId));
             else
                 result = Success.of(map);
         } catch (SQLException e) {
