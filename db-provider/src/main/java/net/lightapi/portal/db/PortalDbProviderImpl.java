@@ -2439,7 +2439,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("customClaim", resultSet.getString("custom_claim"));
                         map.put("redirectUri", resultSet.getString("redirect_uri"));
                         map.put("authenticateClass", resultSet.getString("authenticate_class"));
-                        map.put("derefClientId", resultSet.getString("deref_client_id"));
+                        map.put("deRefClientId", resultSet.getString("deref_client_id"));
                         map.put("updateUser", resultSet.getString("update_user"));
                         map.put("updateTs", resultSet.getTimestamp("update_ts"));
                     }
