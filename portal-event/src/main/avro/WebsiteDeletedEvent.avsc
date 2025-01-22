@@ -1,7 +1,7 @@
 {
   "type": "record",
-  "name": "CovidMapMovedEvent",
-  "namespace": "net.lightapi.portal.covid",
+  "name": "WebsiteDeletedEvent",
+  "namespace": "net.lightapi.portal.website",
   "fields": [
     {
       "name": "EventId",
@@ -13,7 +13,17 @@
           {
             "name": "id",
             "type": "string",
-            "doc": "a unique identifier"
+            "doc": "a unique identifier for the event"
+          },
+          {
+            "name": "userId",
+            "type": "string",
+            "doc": "the user who creates the event"
+          },
+          {
+            "name": "hostId",
+            "type": "string",
+            "doc": "the host which is the event is created"
           },
           {
             "name": "nonce",
@@ -29,7 +39,7 @@
           {
             "name": "derived",
             "type": "boolean",
-            "default": true,
+            "default": false,
             "doc": "indicate if the event is derived from event processor"
           }
         ]
@@ -41,19 +51,9 @@
       "doc": "host id"
     },
     {
-      "name": "location",
-      "type": "string",
-      "doc": "country, province and city combination"
-    },
-    {
       "name": "userId",
       "type": "string",
-      "doc": "the unique user id"
-    },
-    {
-      "name": "point",
-      "type": "string",
-      "doc": "point in JSON"
+      "doc": "the userId of the user"
     }
   ]
 }

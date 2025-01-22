@@ -1,7 +1,7 @@
 {
   "type": "record",
   "name": "PeerStatusUpdatedEvent",
-  "namespace": "net.lightapi.portal.covid",
+  "namespace": "net.lightapi.portal.status",
   "fields": [
     {
       "name": "EventId",
@@ -13,12 +13,22 @@
           {
             "name": "id",
             "type": "string",
-            "doc": "a unique identifier"
+            "doc": "a unique identifier for the event"
+          },
+          {
+            "name": "userId",
+            "type": "string",
+            "doc": "the user who creates the event"
+          },
+          {
+            "name": "hostId",
+            "type": "string",
+            "doc": "the host which is the event is created"
           },
           {
             "name": "nonce",
             "type": "long",
-            "doc": "the number of the transactions for the id"
+            "doc": "the number of the transactions for the user"
           },
           {
             "name": "timestamp",

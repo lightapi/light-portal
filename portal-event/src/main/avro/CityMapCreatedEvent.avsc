@@ -1,7 +1,7 @@
 {
   "type": "record",
   "name": "CityMapCreatedEvent",
-  "namespace": "net.lightapi.portal.covid",
+  "namespace": "net.lightapi.portal.map",
   "fields": [
     {
       "name": "EventId",
@@ -13,7 +13,17 @@
           {
             "name": "id",
             "type": "string",
-            "doc": "a unique identifier"
+            "doc": "a unique identifier for the event"
+          },
+          {
+            "name": "userId",
+            "type": "string",
+            "doc": "the user who creates the event"
+          },
+          {
+            "name": "hostId",
+            "type": "string",
+            "doc": "the host which is the event is created"
           },
           {
             "name": "nonce",

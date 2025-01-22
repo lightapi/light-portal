@@ -1,7 +1,7 @@
 {
   "type": "record",
-  "name": "CovidStatusDeletedEvent",
-  "namespace": "net.lightapi.portal.covid",
+  "name": "EntityDeletedEvent",
+  "namespace": "net.lightapi.portal.entity",
   "fields": [
     {
       "name": "EventId",
@@ -13,12 +13,22 @@
           {
             "name": "id",
             "type": "string",
-            "doc": "a unique identifier"
+            "doc": "a unique identifier for the event"
+          },
+          {
+            "name": "userId",
+            "type": "string",
+            "doc": "the user who creates the event"
+          },
+          {
+            "name": "hostId",
+            "type": "string",
+            "doc": "the host which is the event is created"
           },
           {
             "name": "nonce",
             "type": "long",
-            "doc": "the number of the transactions for the id"
+            "doc": "the number of the transactions for the user"
           },
           {
             "name": "timestamp",
@@ -41,9 +51,14 @@
       "doc": "host id"
     },
     {
+      "name": "key",
+      "type": "string",
+      "doc": "country, province and city combination"
+    },
+    {
       "name": "userId",
       "type": "string",
-      "doc": "the userId of the user"
+      "doc": "the unique user id"
     }
   ]
 }

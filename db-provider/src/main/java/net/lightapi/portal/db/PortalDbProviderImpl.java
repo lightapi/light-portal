@@ -46,8 +46,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public static final String GENERIC_EXCEPTION = "ERR10014";
     public static final String OBJECT_NOT_FOUND = "ERR11637";
 
-    public static final String INSERT_NOTIFICATION = "INSERT INTO notification_t (user_id, nonce, event_class, event_json, process_time, " +
-            "process_flag, error) VALUES (?, ?, ?, ?, ?,  ?, ?)";
+    public static final String INSERT_NOTIFICATION = "INSERT INTO notification_t (id, host_id, user_id, nonce, event_class, event_json, process_time, " +
+            "process_flag, error) VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?)";
 
     @Override
     public Result<String> queryRefTable(int offset, int limit, String hostId, String tableName, String tableDesc, String active, String editable, String common) {
@@ -621,15 +621,17 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection();
             PreparedStatement statement = conn.prepareStatement(INSERT_NOTIFICATION)) {
             statement.setString(1, eventId.getId());
-            statement.setLong(2, eventId.getNonce());
-            statement.setString(3, eventClass);
-            statement.setString(4, json);
-            statement.setTimestamp(5, new Timestamp(eventId.getTimestamp()));
-            statement.setBoolean(6, flag);
+            statement.setString(2, eventId.getHostId());
+            statement.setString(3, eventId.getUserId());
+            statement.setLong(4, eventId.getNonce());
+            statement.setString(5, eventClass);
+            statement.setString(6, json);
+            statement.setTimestamp(7, new Timestamp(eventId.getTimestamp()));
+            statement.setBoolean(8, flag);
             if (error != null) {
-                statement.setString(7, error);
+                statement.setString(9, error);
             } else {
-                statement.setNull(7, NULL);
+                statement.setNull(9, NULL);
             }
             statement.executeUpdate();
         } catch (SQLException e) {

@@ -1,7 +1,7 @@
 {
   "type": "record",
-  "name": "CovidEntityCreatedEvent",
-  "namespace": "net.lightapi.portal.covid",
+  "name": "StatusUpdatedEvent",
+  "namespace": "net.lightapi.portal.status",
   "fields": [
     {
       "name": "EventId",
@@ -13,7 +13,17 @@
           {
             "name": "id",
             "type": "string",
-            "doc": "a unique identifier"
+            "doc": "a unique identifier for the event"
+          },
+          {
+            "name": "userId",
+            "type": "string",
+            "doc": "the user who creates the event"
+          },
+          {
+            "name": "hostId",
+            "type": "string",
+            "doc": "the host which is the event is created"
           },
           {
             "name": "nonce",
@@ -41,39 +51,32 @@
       "doc": "host id"
     },
     {
-      "name": "key",
+      "name": "status",
       "type": "string",
-      "doc": "country, province and city combination"
+      "doc": "status in string format"
     },
     {
       "name": "userId",
       "type": "string",
-      "doc": "the unique user id"
+      "doc": "the unique user id to update map store"
     },
     {
-      "name": "category",
-      "type": "string",
-      "doc": "category"
+      "name": "country",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "country of the user to update map store"
     },
     {
-      "name": "subcategory",
-      "type": "string",
-      "doc": "subcategory"
+      "name": "province",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "province of the user to update map store"
     },
     {
-      "name": "latitude",
-      "type": "double",
-      "doc": "latitude"
-    },
-    {
-      "name": "longitude",
-      "type": "double",
-      "doc": "city longitude"
-    },
-    {
-      "name": "introduction",
-      "type": "string",
-      "doc": "introduction"
+      "name": "city",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "city of the user to update map store"
     }
   ]
 }

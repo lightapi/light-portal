@@ -1,7 +1,7 @@
 {
   "type": "record",
-  "name": "CovidWebsiteUpdatedEvent",
-  "namespace": "net.lightapi.portal.covid",
+  "name": "MapMovedEvent",
+  "namespace": "net.lightapi.portal.map",
   "fields": [
     {
       "name": "EventId",
@@ -13,12 +13,22 @@
           {
             "name": "id",
             "type": "string",
-            "doc": "a unique identifier"
+            "doc": "a unique identifier for the event"
+          },
+          {
+            "name": "userId",
+            "type": "string",
+            "doc": "the user who creates the event"
+          },
+          {
+            "name": "hostId",
+            "type": "string",
+            "doc": "the host which is the event is created"
           },
           {
             "name": "nonce",
             "type": "long",
-            "doc": "the number of the transactions for the id"
+            "doc": "the number of the transactions for the user"
           },
           {
             "name": "timestamp",
@@ -41,32 +51,19 @@
       "doc": "host id"
     },
     {
-      "name": "website",
+      "name": "location",
       "type": "string",
-      "doc": "website in string format"
+      "doc": "country, province and city combination"
     },
     {
       "name": "userId",
       "type": "string",
-      "doc": "the unique user id to update map store"
+      "doc": "the unique user id"
     },
     {
-      "name": "country",
-      "type": ["null", "string"],
-      "default": null,
-      "doc": "country of the user to update map store"
-    },
-    {
-      "name": "province",
-      "type": ["null", "string"],
-      "default": null,
-      "doc": "province of the user to update map store"
-    },
-    {
-      "name": "city",
-      "type": ["null", "string"],
-      "default": null,
-      "doc": "city of the user to update map store"
+      "name": "point",
+      "type": "string",
+      "doc": "point in JSON"
     }
   ]
 }

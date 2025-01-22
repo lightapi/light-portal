@@ -26,16 +26,16 @@ java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema CityMapC
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema CityMapUpdatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema CityMapDeletedEvent.avsc .
 
-java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema CovidEntityCreatedEvent.avsc .
-java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema CovidEntityUpdatedEvent.avsc .
-java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema CovidEntityDeletedEvent.avsc .
-java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema CovidMapMovedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema EntityCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema EntityUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema EntityDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema MapMovedEvent.avsc .
 
-java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema CovidStatusUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema StatusUpdatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema PeerStatusUpdatedEvent.avsc .
-java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema CovidWebsiteUpdatedEvent.avsc .
-java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema CovidWebsiteDeletedEvent.avsc .
-java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema CovidStatusDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema WebsiteUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema WebsiteDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema StatusDeletedEvent.avsc .
 
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema PaymentUpdatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema PaymentDeletedEvent.avsc .
@@ -201,18 +201,18 @@ mv net/lightapi/portal/user/ReferenceDeletedEvent.java ../java/net/lightapi/port
 mv net/lightapi/portal/user/RefRelaCreatedEvent.java ../java/net/lightapi/portal/user
 mv net/lightapi/portal/user/RefRelaDeletedEvent.java ../java/net/lightapi/portal/user
 
-mv net/lightapi/portal/covid/CityMapCreatedEvent.java ../java/net/lightapi/portal/covid
-mv net/lightapi/portal/covid/CityMapUpdatedEvent.java ../java/net/lightapi/portal/covid
-mv net/lightapi/portal/covid/CityMapDeletedEvent.java ../java/net/lightapi/portal/covid
-mv net/lightapi/portal/covid/CovidEntityCreatedEvent.java ../java/net/lightapi/portal/covid
-mv net/lightapi/portal/covid/CovidEntityUpdatedEvent.java ../java/net/lightapi/portal/covid
-mv net/lightapi/portal/covid/CovidEntityDeletedEvent.java ../java/net/lightapi/portal/covid
-mv net/lightapi/portal/covid/CovidMapMovedEvent.java ../java/net/lightapi/portal/covid
-mv net/lightapi/portal/covid/CovidStatusUpdatedEvent.java ../java/net/lightapi/portal/covid
-mv net/lightapi/portal/covid/PeerStatusUpdatedEvent.java ../java/net/lightapi/portal/covid
-mv net/lightapi/portal/covid/CovidWebsiteUpdatedEvent.java ../java/net/lightapi/portal/covid
-mv net/lightapi/portal/covid/CovidWebsiteDeletedEvent.java ../java/net/lightapi/portal/covid
-mv net/lightapi/portal/covid/CovidStatusDeletedEvent.java ../java/net/lightapi/portal/covid
+mv net/lightapi/portal/map/CityMapCreatedEvent.java ../java/net/lightapi/portal/map
+mv net/lightapi/portal/map/CityMapUpdatedEvent.java ../java/net/lightapi/portal/map
+mv net/lightapi/portal/map/CityMapDeletedEvent.java ../java/net/lightapi/portal/map
+mv net/lightapi/portal/entity/EntityCreatedEvent.java ../java/net/lightapi/portal/entity
+mv net/lightapi/portal/entity/EntityUpdatedEvent.java ../java/net/lightapi/portal/entity
+mv net/lightapi/portal/entity/EntityDeletedEvent.java ../java/net/lightapi/portal/entity
+mv net/lightapi/portal/map/MapMovedEvent.java ../java/net/lightapi/portal/map
+mv net/lightapi/portal/status/StatusUpdatedEvent.java ../java/net/lightapi/portal/status
+mv net/lightapi/portal/status/PeerStatusUpdatedEvent.java ../java/net/lightapi/portal/status
+mv net/lightapi/portal/website/WebsiteUpdatedEvent.java ../java/net/lightapi/portal/website
+mv net/lightapi/portal/website/WebsiteDeletedEvent.java ../java/net/lightapi/portal/website
+mv net/lightapi/portal/status/StatusDeletedEvent.java ../java/net/lightapi/portal/status
 
 mv net/lightapi/portal/user/PaymentUpdatedEvent.java ../java/net/lightapi/portal/user
 mv net/lightapi/portal/user/PaymentDeletedEvent.java ../java/net/lightapi/portal/user
