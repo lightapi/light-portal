@@ -41,7 +41,6 @@ import static java.sql.Types.NULL;
 
 public class PortalDbProviderImpl implements PortalDbProvider {
     public static final Logger logger = LoggerFactory.getLogger(PortalDbProviderImpl.class);
-    public static final String AUTH_CODE_CACHE = "auth_code";
     public static final String SQL_EXCEPTION = "ERR10017";
     public static final String GENERIC_EXCEPTION = "ERR10014";
     public static final String OBJECT_NOT_FOUND = "ERR11637";
