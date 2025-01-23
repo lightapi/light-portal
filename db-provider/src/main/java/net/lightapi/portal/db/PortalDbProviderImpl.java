@@ -45,7 +45,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public static final String GENERIC_EXCEPTION = "ERR10014";
     public static final String OBJECT_NOT_FOUND = "ERR11637";
 
-    public static final String INSERT_NOTIFICATION = "INSERT INTO notification_t (id, host_id, user_id, nonce, event_class, event_json, process_time, " +
+    public static final String INSERT_NOTIFICATION = "INSERT INTO notification_t (id, host_id, user_id, nonce, event_class, event_json, process_ts, " +
             "process_flag, error) VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?)";
 
     @Override
@@ -570,6 +570,88 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
 
+        return result;
+    }
+
+    @Override
+    public Result<String> queryNotification(int offset, int limit, String hostId, String userId, Long nonce, String eventClass, Boolean successFlag,
+                                            Timestamp processTs, String eventJson, String error) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
+                "host_id, user_id, nonce, event_class, process_flag, process_ts, event_json, error\n" +
+                "FROM notification_t\n" +
+                "WHERE host_id = ?\n");
+
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(hostId);
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "user_id", userId);
+        addCondition(whereClause, parameters, "nonce", nonce);
+        addCondition(whereClause, parameters, "event_class", eventClass);
+        addCondition(whereClause, parameters, "process_flag", successFlag);
+        addCondition(whereClause, parameters, "event_json", eventJson);
+        addCondition(whereClause, parameters, "error", error);
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append(" ORDER BY process_ts DESC\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> notifications = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("userId", resultSet.getString("user_id"));
+                    map.put("nonce", resultSet.getLong("nonce"));
+                    map.put("eventClass", resultSet.getString("event_class"));
+                    map.put("processFlag", resultSet.getBoolean("process_flag"));
+                    // handling date properly
+                    map.put("processTs", resultSet.getTimestamp("process_ts") != null ? resultSet.getTimestamp("process_ts").toString() : null);
+                    map.put("eventJson", resultSet.getString("event_json"));
+                    map.put("error", resultSet.getString("error"));
+                    notifications.add(map);
+                }
+            }
+
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("notifications", notifications);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
         return result;
     }
 

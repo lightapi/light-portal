@@ -45,6 +45,9 @@ public interface PortalDbProvider extends DbProvider {
                                      String entityId, String referralId, String managerId, String firstName, String lastName,
                                      String phoneNumber, String gender, String birthday, String country, String province, String city,
                                      String address, String postCode, Boolean verified, Boolean locked);
+    Result<String> queryNotification(int offset, int limit, String hostId, String userId, Long nonce, String eventClass, Boolean successFlag,
+                                     Timestamp processTs, String eventJson, String error);
+
     Result<String> createUser(UserCreatedEvent event);
     Result<String> confirmUser(UserConfirmedEvent event);
     Result<String> verifyUser(UserVerifiedEvent event);
