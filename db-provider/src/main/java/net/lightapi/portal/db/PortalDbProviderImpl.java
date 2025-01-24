@@ -2134,7 +2134,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append("ORDER BY app_id\n" +
+        sqlBuilder.append(" ORDER BY app_id\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -4628,8 +4628,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<Map<String, Object>> queryCurrentHostKey(String hostId) {
-        final String queryConfigById = "SELECT * from host_key_t WHERE host_id = ? AND key_type = 'C'";
+    public Result<Map<String, Object>> queryCurrentProviderKey(String hostId) {
+        final String queryConfigById = "SELECT host_id, provider_id, kid, public_key, " +
+                "private_key, key_type, update_user, update_ts " +
+                "FROM auth_provider_key_t WHERE host_id = ? AND key_type = 'C'";
         Result<Map<String, Object>> result;
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
@@ -4638,6 +4640,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
                         map.put("hostId", resultSet.getString("host_id"));
+                        map.put("providerId", resultSet.getString("provider_id"));
                         map.put("kid", resultSet.getString("kid"));
                         map.put("publicKey", resultSet.getString("public_key"));
                         map.put("privateKey", resultSet.getString("private_key"));
@@ -4662,8 +4665,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<Map<String, Object>> queryLongLiveHostKey(String hostId) {
-        final String queryConfigById = "SELECT * from host_key_t WHERE host_id = ? AND key_type = 'L'";
+    public Result<Map<String, Object>> queryLongLiveProviderKey(String hostId) {
+        final String queryConfigById = "SELECT host_id, provider_id, kid, public_key, " +
+                "private_key, key_type, update_user, update_ts " +
+                "FROM auth_provider_key_t WHERE host_id = ? AND key_type = 'L'";
         Result<Map<String, Object>> result;
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
@@ -4672,6 +4677,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
                         map.put("hostId", resultSet.getString("host_id"));
+                        map.put("providerId", resultSet.getString("provider_id"));
                         map.put("kid", resultSet.getString("kid"));
                         map.put("publicKey", resultSet.getString("public_key"));
                         map.put("privateKey", resultSet.getString("private_key"));

@@ -131,8 +131,8 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> deleteConfig(ConfigDeletedEvent event);
     Result<Map<String, Object>> queryConfig();
     Result<Map<String, Object>> queryConfigById(String configId);
-    Result<Map<String, Object>> queryCurrentHostKey(String hostId);
-    Result<Map<String, Object>> queryLongLiveHostKey(String hostId);
+    Result<Map<String, Object>> queryCurrentProviderKey(String hostId);
+    Result<Map<String, Object>> queryLongLiveProviderKey(String hostId);
 
     Result<String> createRule(RuleCreatedEvent event);
     Result<String> updateRule(RuleUpdatedEvent event);
