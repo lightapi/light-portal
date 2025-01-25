@@ -2146,6 +2146,86 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
+    public Result<String> queryProvider(int offset, int limit, String hostId, String providerId, String providerName, String providerDesc,
+                                        String operationOwner, String deliveryOwner, String jwk, String updateUser, Timestamp updateTs) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
+                "host_id, provider_id, provider_name, provider_desc, operation_owner, delivery_owner, jwk, update_user, update_ts\n" +
+                "FROM auth_provider_t\n" +
+                "WHERE host_id = ?\n");
+
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(hostId);
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "provider_id", providerId);
+        addCondition(whereClause, parameters, "provider_name", providerName);
+        addCondition(whereClause, parameters, "provider_desc", providerDesc);
+        addCondition(whereClause, parameters, "operation_owner", operationOwner);
+        addCondition(whereClause, parameters, "delivery_owner", deliveryOwner);
+        addCondition(whereClause, parameters, "jwk", jwk);
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append(" ORDER BY provider_id\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> providers = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("providerId", resultSet.getString("provider_id"));
+                    map.put("providerName", resultSet.getString("provider_name"));
+                    map.put("providerDesc", resultSet.getString("provider_desc"));
+                    map.put("operationOwner", resultSet.getString("operation_owner"));
+                    map.put("deliveryOwner", resultSet.getString("delivery_owner"));
+                    map.put("jwk", resultSet.getString("jwk"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    // handling date properly
+                    map.put("updateTs", resultSet.getTimestamp("update_ts") != null ? resultSet.getTimestamp("update_ts").toString() : null);
+                    providers.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("providers", providers);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
     public Result<String> queryApp(int offset, int limit, String hostId, String appId, String appName, String appDesc, Boolean isKafkaApp, String operationOwner, String deliveryOwner) {
         Result<String> result = null;
         StringBuilder sqlBuilder = new StringBuilder();
