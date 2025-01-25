@@ -6,10 +6,7 @@ import net.lightapi.portal.client.ClientCreatedEvent;
 import net.lightapi.portal.client.ClientDeletedEvent;
 import net.lightapi.portal.client.ClientUpdatedEvent;
 import net.lightapi.portal.market.*;
-import net.lightapi.portal.oauth.AuthCodeCreatedEvent;
-import net.lightapi.portal.oauth.AuthCodeDeletedEvent;
-import net.lightapi.portal.oauth.AuthRefreshTokenCreatedEvent;
-import net.lightapi.portal.oauth.AuthRefreshTokenDeletedEvent;
+import net.lightapi.portal.oauth.*;
 import net.lightapi.portal.user.*;
 import net.lightapi.portal.attribute.*;
 import net.lightapi.portal.group.*;
@@ -84,6 +81,9 @@ public interface PortalDbProvider extends DbProvider {
                                        String challengeMethod, String updateUser, Timestamp updateTs);
     Result<Map<String, Object>> queryProviderById(String providerId);
     Result<String> queryProvider(int offset, int limit, String hostId, String providerId, String providerName, String providerDesc, String operationOwner, String deliveryOwner, String jwk, String updateUser, Timestamp updateTs);
+    Result<String> createAuthProvider(AuthProviderCreatedEvent event);
+    Result<String> updateAuthProvider(AuthProviderUpdatedEvent event);
+    Result<String> deleteAuthProvider(AuthProviderDeletedEvent event);
 
     Result<String> queryApp(int offset, int limit, String hostId, String appId, String appName, String appDesc, Boolean isKafkaApp, String operationOwner, String deliveryOwner);
     Result<String> queryClient(int offset, int limit, String hostId, String appId, String clientId, String clientType, String clientProfile, String clientScope, String customClaim, String redirectUri, String authenticateClass, String deRefClientId);

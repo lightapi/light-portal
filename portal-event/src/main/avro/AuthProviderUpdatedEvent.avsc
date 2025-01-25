@@ -56,6 +56,11 @@
       "doc": "provider id"
     },
     {
+      "name": "providerName",
+      "type": "string",
+      "doc": "provider name"
+    },
+    {
       "name": "value",
       "type": "string",
       "doc": "oauth provider detail in JSON"

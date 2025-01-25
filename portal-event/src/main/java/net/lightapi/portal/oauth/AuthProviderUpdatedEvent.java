@@ -13,10 +13,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class AuthProviderUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -3278578198931995249L;
+  private static final long serialVersionUID = -8401071838547319126L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"AuthProviderUpdatedEvent\",\"namespace\":\"net.lightapi.portal.oauth\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"providerId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"provider id\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"oauth provider detail in JSON\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"AuthProviderUpdatedEvent\",\"namespace\":\"net.lightapi.portal.oauth\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"providerId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"provider id\"},{\"name\":\"providerName\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"provider name\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"oauth provider detail in JSON\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -77,6 +77,8 @@ public class AuthProviderUpdatedEvent extends org.apache.avro.specific.SpecificR
   private java.lang.String hostId;
   /** provider id */
   private java.lang.String providerId;
+  /** provider name */
+  private java.lang.String providerName;
   /** oauth provider detail in JSON */
   private java.lang.String value;
 
@@ -92,12 +94,14 @@ public class AuthProviderUpdatedEvent extends org.apache.avro.specific.SpecificR
    * @param EventId The new value for EventId
    * @param hostId host id
    * @param providerId provider id
+   * @param providerName provider name
    * @param value oauth provider detail in JSON
    */
-  public AuthProviderUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String providerId, java.lang.String value) {
+  public AuthProviderUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String providerId, java.lang.String providerName, java.lang.String value) {
     this.EventId = EventId;
     this.hostId = hostId;
     this.providerId = providerId;
+    this.providerName = providerName;
     this.value = value;
   }
 
@@ -114,7 +118,8 @@ public class AuthProviderUpdatedEvent extends org.apache.avro.specific.SpecificR
     case 0: return EventId;
     case 1: return hostId;
     case 2: return providerId;
-    case 3: return value;
+    case 3: return providerName;
+    case 4: return value;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -127,7 +132,8 @@ public class AuthProviderUpdatedEvent extends org.apache.avro.specific.SpecificR
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
     case 1: hostId = value$ != null ? value$.toString() : null; break;
     case 2: providerId = value$ != null ? value$.toString() : null; break;
-    case 3: value = value$ != null ? value$.toString() : null; break;
+    case 3: providerName = value$ != null ? value$.toString() : null; break;
+    case 4: value = value$ != null ? value$.toString() : null; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -183,6 +189,24 @@ public class AuthProviderUpdatedEvent extends org.apache.avro.specific.SpecificR
    */
   public void setProviderId(java.lang.String value) {
     this.providerId = value;
+  }
+
+  /**
+   * Gets the value of the 'providerName' field.
+   * @return provider name
+   */
+  public java.lang.String getProviderName() {
+    return providerName;
+  }
+
+
+  /**
+   * Sets the value of the 'providerName' field.
+   * provider name
+   * @param value the value to set.
+   */
+  public void setProviderName(java.lang.String value) {
+    this.providerName = value;
   }
 
   /**
@@ -250,6 +274,8 @@ public class AuthProviderUpdatedEvent extends org.apache.avro.specific.SpecificR
     private java.lang.String hostId;
     /** provider id */
     private java.lang.String providerId;
+    /** provider name */
+    private java.lang.String providerName;
     /** oauth provider detail in JSON */
     private java.lang.String value;
 
@@ -279,9 +305,13 @@ public class AuthProviderUpdatedEvent extends org.apache.avro.specific.SpecificR
         this.providerId = data().deepCopy(fields()[2].schema(), other.providerId);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.value)) {
-        this.value = data().deepCopy(fields()[3].schema(), other.value);
+      if (isValidValue(fields()[3], other.providerName)) {
+        this.providerName = data().deepCopy(fields()[3].schema(), other.providerName);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
+      }
+      if (isValidValue(fields()[4], other.value)) {
+        this.value = data().deepCopy(fields()[4].schema(), other.value);
+        fieldSetFlags()[4] = other.fieldSetFlags()[4];
       }
     }
 
@@ -304,9 +334,13 @@ public class AuthProviderUpdatedEvent extends org.apache.avro.specific.SpecificR
         this.providerId = data().deepCopy(fields()[2].schema(), other.providerId);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.value)) {
-        this.value = data().deepCopy(fields()[3].schema(), other.value);
+      if (isValidValue(fields()[3], other.providerName)) {
+        this.providerName = data().deepCopy(fields()[3].schema(), other.providerName);
         fieldSetFlags()[3] = true;
+      }
+      if (isValidValue(fields()[4], other.value)) {
+        this.value = data().deepCopy(fields()[4].schema(), other.value);
+        fieldSetFlags()[4] = true;
       }
     }
 
@@ -475,6 +509,50 @@ public class AuthProviderUpdatedEvent extends org.apache.avro.specific.SpecificR
     }
 
     /**
+      * Gets the value of the 'providerName' field.
+      * provider name
+      * @return The value.
+      */
+    public java.lang.String getProviderName() {
+      return providerName;
+    }
+
+
+    /**
+      * Sets the value of the 'providerName' field.
+      * provider name
+      * @param value The value of 'providerName'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.oauth.AuthProviderUpdatedEvent.Builder setProviderName(java.lang.String value) {
+      validate(fields()[3], value);
+      this.providerName = value;
+      fieldSetFlags()[3] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'providerName' field has been set.
+      * provider name
+      * @return True if the 'providerName' field has been set, false otherwise.
+      */
+    public boolean hasProviderName() {
+      return fieldSetFlags()[3];
+    }
+
+
+    /**
+      * Clears the value of the 'providerName' field.
+      * provider name
+      * @return This builder.
+      */
+    public net.lightapi.portal.oauth.AuthProviderUpdatedEvent.Builder clearProviderName() {
+      providerName = null;
+      fieldSetFlags()[3] = false;
+      return this;
+    }
+
+    /**
       * Gets the value of the 'value' field.
       * oauth provider detail in JSON
       * @return The value.
@@ -491,9 +569,9 @@ public class AuthProviderUpdatedEvent extends org.apache.avro.specific.SpecificR
       * @return This builder.
       */
     public net.lightapi.portal.oauth.AuthProviderUpdatedEvent.Builder setValue(java.lang.String value) {
-      validate(fields()[3], value);
+      validate(fields()[4], value);
       this.value = value;
-      fieldSetFlags()[3] = true;
+      fieldSetFlags()[4] = true;
       return this;
     }
 
@@ -503,7 +581,7 @@ public class AuthProviderUpdatedEvent extends org.apache.avro.specific.SpecificR
       * @return True if the 'value' field has been set, false otherwise.
       */
     public boolean hasValue() {
-      return fieldSetFlags()[3];
+      return fieldSetFlags()[4];
     }
 
 
@@ -514,7 +592,7 @@ public class AuthProviderUpdatedEvent extends org.apache.avro.specific.SpecificR
       */
     public net.lightapi.portal.oauth.AuthProviderUpdatedEvent.Builder clearValue() {
       value = null;
-      fieldSetFlags()[3] = false;
+      fieldSetFlags()[4] = false;
       return this;
     }
 
@@ -535,7 +613,8 @@ public class AuthProviderUpdatedEvent extends org.apache.avro.specific.SpecificR
         }
         record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
         record.providerId = fieldSetFlags()[2] ? this.providerId : (java.lang.String) defaultValue(fields()[2]);
-        record.value = fieldSetFlags()[3] ? this.value : (java.lang.String) defaultValue(fields()[3]);
+        record.providerName = fieldSetFlags()[3] ? this.providerName : (java.lang.String) defaultValue(fields()[3]);
+        record.value = fieldSetFlags()[4] ? this.value : (java.lang.String) defaultValue(fields()[4]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -574,6 +653,8 @@ public class AuthProviderUpdatedEvent extends org.apache.avro.specific.SpecificR
 
     out.writeString(this.providerId);
 
+    out.writeString(this.providerName);
+
     out.writeString(this.value);
 
   }
@@ -592,10 +673,12 @@ public class AuthProviderUpdatedEvent extends org.apache.avro.specific.SpecificR
 
       this.providerId = in.readString();
 
+      this.providerName = in.readString();
+
       this.value = in.readString();
 
     } else {
-      for (int i = 0; i < 4; i++) {
+      for (int i = 0; i < 5; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -613,6 +696,10 @@ public class AuthProviderUpdatedEvent extends org.apache.avro.specific.SpecificR
           break;
 
         case 3:
+          this.providerName = in.readString();
+          break;
+
+        case 4:
           this.value = in.readString();
           break;
 

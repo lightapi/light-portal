@@ -13,10 +13,7 @@ import net.lightapi.portal.client.ClientCreatedEvent;
 import net.lightapi.portal.client.ClientDeletedEvent;
 import net.lightapi.portal.client.ClientUpdatedEvent;
 import net.lightapi.portal.market.*;
-import net.lightapi.portal.oauth.AuthCodeCreatedEvent;
-import net.lightapi.portal.oauth.AuthCodeDeletedEvent;
-import net.lightapi.portal.oauth.AuthRefreshTokenCreatedEvent;
-import net.lightapi.portal.oauth.AuthRefreshTokenDeletedEvent;
+import net.lightapi.portal.oauth.*;
 import net.lightapi.portal.user.*;
 import net.lightapi.portal.attribute.*;
 import net.lightapi.portal.group.*;
@@ -2221,6 +2218,162 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> createAuthProvider(AuthProviderCreatedEvent event) {
+        final String sql = "INSERT INTO auth_provider_t(host_id, provider_id, provider_name, provider_desc, " +
+                "operation_owner, delivery_owner, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        Result<String> result;
+        String value = event.getValue();
+        Map<String, Object> map = JsonMapper.string2Map(value);
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getProviderId());
+                statement.setString(3, event.getProviderName());
+
+                if(map.containsKey("providerDesc")) {
+                    statement.setString(4, (String)map.get("providerDesc"));
+                } else {
+                    statement.setNull(4, Types.VARCHAR);
+                }
+                if(map.containsKey("operationOwner")) {
+                    statement.setString(5, (String)map.get("operationOwner"));
+                } else {
+                    statement.setNull(5, Types.VARCHAR);
+                }
+                if(map.containsKey("deliveryOwner")) {
+                    statement.setString(6, (String)map.get("deliveryOwner"));
+                } else {
+                    statement.setNull(6, Types.VARCHAR);
+                }
+
+                statement.setString(7, event.getEventId().getId());
+                statement.setTimestamp(8, new Timestamp(event.getEventId().getTimestamp()));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert the auth provider with id " + event.getProviderId());
+                }
+                conn.commit();
+                result = Success.of(event.getProviderId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> updateAuthProvider(AuthProviderUpdatedEvent event) {
+        final String sql = "UPDATE auth_provider_t SET provider_name = ?, provider_desc = ?, " +
+                "operation_owner = ?, delivery_owner = ?, update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? and provider_id = ?";
+        Result<String> result;
+        String value = event.getValue();
+        Map<String, Object> map = JsonMapper.string2Map(value);
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, event.getProviderName());
+                if(map.containsKey("providerDesc")) {
+                    statement.setString(2, (String)map.get("providerDesc"));
+                } else {
+                    statement.setNull(2, Types.VARCHAR);
+                }
+                if(map.containsKey("operationOwner")) {
+                    statement.setString(3, (String)map.get("operationOwner"));
+                } else {
+                    statement.setNull(3, Types.VARCHAR);
+                }
+                if(map.containsKey("deliveryOwner")) {
+                    statement.setString(4, (String)map.get("deliveryOwner"));
+                } else {
+                    statement.setNull(4, Types.VARCHAR);
+                }
+                statement.setString(5, event.getEventId().getId());
+                statement.setTimestamp(6, new Timestamp(event.getEventId().getTimestamp()));
+                statement.setString(7, event.getHostId());
+                statement.setString(8, event.getProviderId());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to update the auth provider with id " + event.getProviderId());
+                }
+                conn.commit();
+                result = Success.of(event.getProviderId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deleteAuthProvider(AuthProviderDeletedEvent event) {
+        final String sql = "DELETE FROM auth_provider_t WHERE host_id = ? and provider_id = ?";
+        Result<String> result;
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getProviderId());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to delete the auth provider with id " + event.getProviderId());
+                }
+                conn.commit();
+                result = Success.of(event.getProviderId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
         }
         return result;
     }
