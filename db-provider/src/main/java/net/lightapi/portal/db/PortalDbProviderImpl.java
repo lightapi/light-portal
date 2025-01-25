@@ -2379,6 +2379,216 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
+    public Result<String> queryProviderKey(int offset, int limit, String hostId, String providerId,
+                                           String kid, String key_type, String updateUser, Timestamp updateTs) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
+                "host_id, provider_id, kid, public_key, private_key, key_type, update_user, update_ts\n" +
+                "FROM auth_provider_key_t\n" +
+                "WHERE host_id = ? AND provider_id = ?\n");
+
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(hostId);
+        parameters.add(providerId);
+
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "kid", kid);
+        addCondition(whereClause, parameters, "key_type", key_type);
+        addCondition(whereClause, parameters, "update_user", updateUser);
+        addCondition(whereClause, parameters, "update_ts", updateTs);
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append(" ORDER BY kid\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> providerKeys = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("providerId", resultSet.getString("provider_id"));
+                    map.put("kid", resultSet.getString("kid"));
+                    map.put("publicKey", resultSet.getString("public_key"));
+                    map.put("privateKey", resultSet.getString("private_key"));
+                    map.put("keyType", resultSet.getString("key_type"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    // handling date properly
+                    map.put("updateTs", resultSet.getTimestamp("update_ts") != null ? resultSet.getTimestamp("update_ts").toString() : null);
+                    providerKeys.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("providerKeys", providerKeys);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+
+    @Override
+    public Result<String> createProviderKey(ProviderKeyCreatedEvent event) {
+        final String sql = "INSERT INTO auth_provider_key_t(host_id, provider_id, kid, public_key, private_key, key_type, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        Result<String> result;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getProviderId());
+                statement.setString(3, event.getKid());
+                statement.setString(4, event.getPublicKey());
+                statement.setString(5, event.getPrivateKey());
+                statement.setString(6, event.getKeyType());
+                statement.setString(7, event.getEventId().getId());
+                statement.setTimestamp(8, new Timestamp(event.getEventId().getTimestamp()));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert the auth provider key with id " + event.getKid());
+                }
+                conn.commit();
+                result = Success.of(event.getKid());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+
+
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+
+
+    @Override
+    public Result<String> updateProviderKey(ProviderKeyUpdatedEvent event) {
+        final String sql = "UPDATE auth_provider_key_t SET public_key = ?, private_key = ?, key_type = ?, update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? AND provider_id = ? AND kid = ?";
+        Result<String> result;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, event.getPublicKey());
+                statement.setString(2, event.getPrivateKey());
+                statement.setString(3, event.getKeyType());
+                statement.setString(4, event.getEventId().getId());
+                statement.setTimestamp(5, new Timestamp(event.getEventId().getTimestamp()));
+                statement.setString(6, event.getHostId());
+                statement.setString(7, event.getProviderId());
+                statement.setString(8, event.getKid());
+
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to update the auth provider key with id " + event.getKid());
+                }
+                conn.commit();
+                result = Success.of(event.getKid());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deleteProviderKey(ProviderKeyDeletedEvent event) {
+        final String sql = "DELETE FROM auth_provider_key_t WHERE host_id = ? AND provider_id = ? AND kid = ?";
+        Result<String> result;
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getProviderId());
+                statement.setString(3, event.getKid());
+
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to delete the auth provider key with id " + event.getKid());
+                }
+                conn.commit();
+                result = Success.of(event.getKid());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+
+    @Override
     public Result<String> queryApp(int offset, int limit, String hostId, String appId, String appName, String appDesc, Boolean isKafkaApp, String operationOwner, String deliveryOwner) {
         Result<String> result = null;
         StringBuilder sqlBuilder = new StringBuilder();

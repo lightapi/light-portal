@@ -85,6 +85,12 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> updateAuthProvider(AuthProviderUpdatedEvent event);
     Result<String> deleteAuthProvider(AuthProviderDeletedEvent event);
 
+    Result<String> queryProviderKey(int offset, int limit, String hostId, String providerId, String kid,
+                                    String key_type, String updateUser, Timestamp updateTs);
+    Result<String> createProviderKey(ProviderKeyCreatedEvent event);
+    Result<String> updateProviderKey(ProviderKeyUpdatedEvent event);
+    Result<String> deleteProviderKey(ProviderKeyDeletedEvent event);
+
     Result<String> queryApp(int offset, int limit, String hostId, String appId, String appName, String appDesc, Boolean isKafkaApp, String operationOwner, String deliveryOwner);
     Result<String> queryClient(int offset, int limit, String hostId, String appId, String clientId, String clientType, String clientProfile, String clientScope, String customClaim, String redirectUri, String authenticateClass, String deRefClientId);
     Result<String> createClient(ClientCreatedEvent event);

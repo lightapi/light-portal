@@ -67,6 +67,9 @@ java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema AuthRefT
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema AuthProviderCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema AuthProviderUpdatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema AuthProviderDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ProviderKeyCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ProviderKeyUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ProviderKeyDeletedEvent.avsc .
 
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema CategoryCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema CategoryCreatedEvent.avsc .
@@ -247,6 +250,10 @@ mv net/lightapi/portal/oauth/AuthRefTokenDeletedEvent.java ../java/net/lightapi/
 mv net/lightapi/portal/oauth/AuthProviderCreatedEvent.java ../java/net/lightapi/portal/oauth
 mv net/lightapi/portal/oauth/AuthProviderUpdatedEvent.java ../java/net/lightapi/portal/oauth
 mv net/lightapi/portal/oauth/AuthProviderDeletedEvent.java ../java/net/lightapi/portal/oauth
+
+mv net/lightapi/portal/oauth/ProviderKeyCreatedEvent.java ../java/net/lightapi/portal/oauth
+mv net/lightapi/portal/oauth/ProviderKeyUpdatedEvent.java ../java/net/lightapi/portal/oauth
+mv net/lightapi/portal/oauth/ProviderKeyDeletedEvent.java ../java/net/lightapi/portal/oauth
 
 mv net/lightapi/portal/market/CategoryCreatedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/CategoryUpdatedEvent.java ../java/net/lightapi/portal/market
