@@ -51,6 +51,11 @@
       "doc": "host id"
     },
     {
+      "name": "providerId",
+      "type": "string",
+      "doc": "provider id"
+    },
+    {
       "name": "authCode",
       "type": "string",
       "doc": "authorization code"

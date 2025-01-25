@@ -13,10 +13,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class AuthCodeCreatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -7691403121129055197L;
+  private static final long serialVersionUID = 1078861581139169941L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"AuthCodeCreatedEvent\",\"namespace\":\"net.lightapi.portal.oauth\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"authCode\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"authorization code\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"code detail in JSON\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"AuthCodeCreatedEvent\",\"namespace\":\"net.lightapi.portal.oauth\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"providerId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"provider id\"},{\"name\":\"authCode\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"authorization code\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"code detail in JSON\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -75,6 +75,8 @@ public class AuthCodeCreatedEvent extends org.apache.avro.specific.SpecificRecor
   private com.networknt.kafka.common.EventId EventId;
   /** host id */
   private java.lang.String hostId;
+  /** provider id */
+  private java.lang.String providerId;
   /** authorization code */
   private java.lang.String authCode;
   /** code detail in JSON */
@@ -91,12 +93,14 @@ public class AuthCodeCreatedEvent extends org.apache.avro.specific.SpecificRecor
    * All-args constructor.
    * @param EventId The new value for EventId
    * @param hostId host id
+   * @param providerId provider id
    * @param authCode authorization code
    * @param value code detail in JSON
    */
-  public AuthCodeCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String authCode, java.lang.String value) {
+  public AuthCodeCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String providerId, java.lang.String authCode, java.lang.String value) {
     this.EventId = EventId;
     this.hostId = hostId;
+    this.providerId = providerId;
     this.authCode = authCode;
     this.value = value;
   }
@@ -113,8 +117,9 @@ public class AuthCodeCreatedEvent extends org.apache.avro.specific.SpecificRecor
     switch (field$) {
     case 0: return EventId;
     case 1: return hostId;
-    case 2: return authCode;
-    case 3: return value;
+    case 2: return providerId;
+    case 3: return authCode;
+    case 4: return value;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -126,8 +131,9 @@ public class AuthCodeCreatedEvent extends org.apache.avro.specific.SpecificRecor
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
     case 1: hostId = value$ != null ? value$.toString() : null; break;
-    case 2: authCode = value$ != null ? value$.toString() : null; break;
-    case 3: value = value$ != null ? value$.toString() : null; break;
+    case 2: providerId = value$ != null ? value$.toString() : null; break;
+    case 3: authCode = value$ != null ? value$.toString() : null; break;
+    case 4: value = value$ != null ? value$.toString() : null; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -165,6 +171,24 @@ public class AuthCodeCreatedEvent extends org.apache.avro.specific.SpecificRecor
    */
   public void setHostId(java.lang.String value) {
     this.hostId = value;
+  }
+
+  /**
+   * Gets the value of the 'providerId' field.
+   * @return provider id
+   */
+  public java.lang.String getProviderId() {
+    return providerId;
+  }
+
+
+  /**
+   * Sets the value of the 'providerId' field.
+   * provider id
+   * @param value the value to set.
+   */
+  public void setProviderId(java.lang.String value) {
+    this.providerId = value;
   }
 
   /**
@@ -248,6 +272,8 @@ public class AuthCodeCreatedEvent extends org.apache.avro.specific.SpecificRecor
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
     /** host id */
     private java.lang.String hostId;
+    /** provider id */
+    private java.lang.String providerId;
     /** authorization code */
     private java.lang.String authCode;
     /** code detail in JSON */
@@ -275,13 +301,17 @@ public class AuthCodeCreatedEvent extends org.apache.avro.specific.SpecificRecor
         this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
-      if (isValidValue(fields()[2], other.authCode)) {
-        this.authCode = data().deepCopy(fields()[2].schema(), other.authCode);
+      if (isValidValue(fields()[2], other.providerId)) {
+        this.providerId = data().deepCopy(fields()[2].schema(), other.providerId);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.value)) {
-        this.value = data().deepCopy(fields()[3].schema(), other.value);
+      if (isValidValue(fields()[3], other.authCode)) {
+        this.authCode = data().deepCopy(fields()[3].schema(), other.authCode);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
+      }
+      if (isValidValue(fields()[4], other.value)) {
+        this.value = data().deepCopy(fields()[4].schema(), other.value);
+        fieldSetFlags()[4] = other.fieldSetFlags()[4];
       }
     }
 
@@ -300,13 +330,17 @@ public class AuthCodeCreatedEvent extends org.apache.avro.specific.SpecificRecor
         this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.authCode)) {
-        this.authCode = data().deepCopy(fields()[2].schema(), other.authCode);
+      if (isValidValue(fields()[2], other.providerId)) {
+        this.providerId = data().deepCopy(fields()[2].schema(), other.providerId);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.value)) {
-        this.value = data().deepCopy(fields()[3].schema(), other.value);
+      if (isValidValue(fields()[3], other.authCode)) {
+        this.authCode = data().deepCopy(fields()[3].schema(), other.authCode);
         fieldSetFlags()[3] = true;
+      }
+      if (isValidValue(fields()[4], other.value)) {
+        this.value = data().deepCopy(fields()[4].schema(), other.value);
+        fieldSetFlags()[4] = true;
       }
     }
 
@@ -431,6 +465,50 @@ public class AuthCodeCreatedEvent extends org.apache.avro.specific.SpecificRecor
     }
 
     /**
+      * Gets the value of the 'providerId' field.
+      * provider id
+      * @return The value.
+      */
+    public java.lang.String getProviderId() {
+      return providerId;
+    }
+
+
+    /**
+      * Sets the value of the 'providerId' field.
+      * provider id
+      * @param value The value of 'providerId'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.oauth.AuthCodeCreatedEvent.Builder setProviderId(java.lang.String value) {
+      validate(fields()[2], value);
+      this.providerId = value;
+      fieldSetFlags()[2] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'providerId' field has been set.
+      * provider id
+      * @return True if the 'providerId' field has been set, false otherwise.
+      */
+    public boolean hasProviderId() {
+      return fieldSetFlags()[2];
+    }
+
+
+    /**
+      * Clears the value of the 'providerId' field.
+      * provider id
+      * @return This builder.
+      */
+    public net.lightapi.portal.oauth.AuthCodeCreatedEvent.Builder clearProviderId() {
+      providerId = null;
+      fieldSetFlags()[2] = false;
+      return this;
+    }
+
+    /**
       * Gets the value of the 'authCode' field.
       * authorization code
       * @return The value.
@@ -447,9 +525,9 @@ public class AuthCodeCreatedEvent extends org.apache.avro.specific.SpecificRecor
       * @return This builder.
       */
     public net.lightapi.portal.oauth.AuthCodeCreatedEvent.Builder setAuthCode(java.lang.String value) {
-      validate(fields()[2], value);
+      validate(fields()[3], value);
       this.authCode = value;
-      fieldSetFlags()[2] = true;
+      fieldSetFlags()[3] = true;
       return this;
     }
 
@@ -459,7 +537,7 @@ public class AuthCodeCreatedEvent extends org.apache.avro.specific.SpecificRecor
       * @return True if the 'authCode' field has been set, false otherwise.
       */
     public boolean hasAuthCode() {
-      return fieldSetFlags()[2];
+      return fieldSetFlags()[3];
     }
 
 
@@ -470,7 +548,7 @@ public class AuthCodeCreatedEvent extends org.apache.avro.specific.SpecificRecor
       */
     public net.lightapi.portal.oauth.AuthCodeCreatedEvent.Builder clearAuthCode() {
       authCode = null;
-      fieldSetFlags()[2] = false;
+      fieldSetFlags()[3] = false;
       return this;
     }
 
@@ -491,9 +569,9 @@ public class AuthCodeCreatedEvent extends org.apache.avro.specific.SpecificRecor
       * @return This builder.
       */
     public net.lightapi.portal.oauth.AuthCodeCreatedEvent.Builder setValue(java.lang.String value) {
-      validate(fields()[3], value);
+      validate(fields()[4], value);
       this.value = value;
-      fieldSetFlags()[3] = true;
+      fieldSetFlags()[4] = true;
       return this;
     }
 
@@ -503,7 +581,7 @@ public class AuthCodeCreatedEvent extends org.apache.avro.specific.SpecificRecor
       * @return True if the 'value' field has been set, false otherwise.
       */
     public boolean hasValue() {
-      return fieldSetFlags()[3];
+      return fieldSetFlags()[4];
     }
 
 
@@ -514,7 +592,7 @@ public class AuthCodeCreatedEvent extends org.apache.avro.specific.SpecificRecor
       */
     public net.lightapi.portal.oauth.AuthCodeCreatedEvent.Builder clearValue() {
       value = null;
-      fieldSetFlags()[3] = false;
+      fieldSetFlags()[4] = false;
       return this;
     }
 
@@ -534,8 +612,9 @@ public class AuthCodeCreatedEvent extends org.apache.avro.specific.SpecificRecor
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
         record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
-        record.authCode = fieldSetFlags()[2] ? this.authCode : (java.lang.String) defaultValue(fields()[2]);
-        record.value = fieldSetFlags()[3] ? this.value : (java.lang.String) defaultValue(fields()[3]);
+        record.providerId = fieldSetFlags()[2] ? this.providerId : (java.lang.String) defaultValue(fields()[2]);
+        record.authCode = fieldSetFlags()[3] ? this.authCode : (java.lang.String) defaultValue(fields()[3]);
+        record.value = fieldSetFlags()[4] ? this.value : (java.lang.String) defaultValue(fields()[4]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -572,6 +651,8 @@ public class AuthCodeCreatedEvent extends org.apache.avro.specific.SpecificRecor
 
     out.writeString(this.hostId);
 
+    out.writeString(this.providerId);
+
     out.writeString(this.authCode);
 
     out.writeString(this.value);
@@ -590,12 +671,14 @@ public class AuthCodeCreatedEvent extends org.apache.avro.specific.SpecificRecor
 
       this.hostId = in.readString();
 
+      this.providerId = in.readString();
+
       this.authCode = in.readString();
 
       this.value = in.readString();
 
     } else {
-      for (int i = 0; i < 4; i++) {
+      for (int i = 0; i < 5; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -609,10 +692,14 @@ public class AuthCodeCreatedEvent extends org.apache.avro.specific.SpecificRecor
           break;
 
         case 2:
-          this.authCode = in.readString();
+          this.providerId = in.readString();
           break;
 
         case 3:
+          this.authCode = in.readString();
+          break;
+
+        case 4:
           this.value = in.readString();
           break;
 

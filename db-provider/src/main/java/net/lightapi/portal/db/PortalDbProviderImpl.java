@@ -1567,9 +1567,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createRefreshToken(AuthRefreshTokenCreatedEvent event) {
-        final String insertUser = "INSERT INTO auth_refresh_token_t (refresh_token, host_id, user_id, entity_id, user_type, " +
+        final String insertUser = "INSERT INTO auth_refresh_token_t (refresh_token, host_id, provider_id, user_id, entity_id, user_type, " +
                 "email, roles, groups, positions, attributes, client_id, scope, csrf, custom_claim, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?, ?, ?)";
+                "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?, ?, ?, ?)";
         Result<String> result = null;
         Map<String, Object> map = JsonMapper.string2Map(event.getValue());
         try (Connection conn = ds.getConnection()) {
@@ -1578,53 +1578,54 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
                 statement.setString(1, event.getRefreshToken());
                 statement.setString(2, event.getHostId());
-                statement.setString(3, event.getUserId());
-                statement.setString(4, (String) map.get("entityId"));
-                statement.setString(5, (String) map.get("userType"));
-                statement.setString(6, (String) map.get("email"));
+                statement.setString(3, event.getProviderId());
+                statement.setString(4, event.getUserId());
+                statement.setString(5, (String) map.get("entityId"));
+                statement.setString(6, (String) map.get("userType"));
+                statement.setString(7, (String) map.get("email"));
 
                 if (map.get("roles") != null)
-                    statement.setString(7, (String) map.get("roles"));
-                else
-                    statement.setNull(7, NULL);
-
-                if (map.get("groups") != null)
-                    statement.setString(8, (String) map.get("groups"));
+                    statement.setString(8, (String) map.get("roles"));
                 else
                     statement.setNull(8, NULL);
 
-                if (map.get("positions") != null)
-                    statement.setString(9, (String) map.get("positions"));
+                if (map.get("groups") != null)
+                    statement.setString(9, (String) map.get("groups"));
                 else
                     statement.setNull(9, NULL);
 
-                if (map.get("attributes") != null)
-                    statement.setString(10, (String) map.get("attributes"));
+                if (map.get("positions") != null)
+                    statement.setString(10, (String) map.get("positions"));
                 else
                     statement.setNull(10, NULL);
 
-                if (map.get("clientId") != null)
-                    statement.setString(11, (String) map.get("clientId"));
+                if (map.get("attributes") != null)
+                    statement.setString(11, (String) map.get("attributes"));
                 else
                     statement.setNull(11, NULL);
 
-                if (map.get("scope") != null)
-                    statement.setString(12, (String) map.get("scope"));
+                if (map.get("clientId") != null)
+                    statement.setString(12, (String) map.get("clientId"));
                 else
                     statement.setNull(12, NULL);
 
-                if (map.get("csrf") != null)
-                    statement.setString(13, (String) map.get("csrf"));
+                if (map.get("scope") != null)
+                    statement.setString(13, (String) map.get("scope"));
                 else
                     statement.setNull(13, NULL);
 
-                if (map.get("customClaim") != null)
-                    statement.setString(14, (String) map.get("customClaim"));
+                if (map.get("csrf") != null)
+                    statement.setString(14, (String) map.get("csrf"));
                 else
                     statement.setNull(14, NULL);
 
-                statement.setString(15, event.getEventId().getId());
-                statement.setTimestamp(16, new java.sql.Timestamp(event.getEventId().getTimestamp()));
+                if (map.get("customClaim") != null)
+                    statement.setString(15, (String) map.get("customClaim"));
+                else
+                    statement.setNull(15, NULL);
+
+                statement.setString(16, event.getEventId().getId());
+                statement.setTimestamp(17, new java.sql.Timestamp(event.getEventId().getTimestamp()));
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     // no record is inserted, write an error notification.
@@ -1803,8 +1804,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> queryRefreshToken(String refreshToken) {
         Result<String> result = null;
         String sql =
-                "SELECT refresh_token, host_id, user_id, entity_id, user_type, email, roles, groups, positions, attributes, " +
-                        "client_id, scope, csrf, custom_claim\n" +
+                "SELECT refresh_token, host_id, provider_id, user_id, entity_id, user_type, email, roles, groups, " +
+                        "positions, attributes, client_id, scope, csrf, custom_claim\n" +
                         "FROM auth_refresh_token_t\n" +
                         "WHERE refresh_token = ?\n";
         try (final Connection conn = ds.getConnection()) {
@@ -1815,6 +1816,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     if (resultSet.next()) {
                         map.put("refreshToken", resultSet.getString("refresh_token"));
                         map.put("hostId", resultSet.getString("host_id"));
+                        map.put("providerId", resultSet.getString("provider_id"));
                         map.put("userId", resultSet.getString("user_id"));
                         map.put("entityId", resultSet.getString("entity_id"));
                         map.put("userType", resultSet.getString("user_type"));
@@ -1847,9 +1849,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> createAuthCode(AuthCodeCreatedEvent event) {
 
-        final String sql = "INSERT INTO auth_code_t(host_id, auth_code, user_id, entity_id, user_type, email, roles," +
+        final String sql = "INSERT INTO auth_code_t(host_id, provider_id, auth_code, user_id, entity_id, user_type, email, roles," +
                 "redirect_uri, scope, remember, code_challenge, challenge_method, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?, ?, ?)";
+                "VALUES (?, ?, ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?, ?, ?, ?)";
         Result<String> result;
         String value = event.getValue();
         Map<String, Object> map = JsonMapper.string2Map(value);
@@ -1858,59 +1860,60 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, event.getHostId());
-                statement.setString(2, event.getAuthCode());
+                statement.setString(2, event.getProviderId());
+                statement.setString(3, event.getAuthCode());
                 if(map.containsKey("userId")) {
-                    statement.setString(3, (String) map.get("userId"));
-                } else {
-                    statement.setNull(3, Types.VARCHAR);
-                }
-                if(map.containsKey("entityId")) {
-                    statement.setString(4, (String) map.get("entityId"));
+                    statement.setString(4, (String) map.get("userId"));
                 } else {
                     statement.setNull(4, Types.VARCHAR);
                 }
-                if(map.containsKey("userType")) {
-                    statement.setString(5, (String) map.get("userType"));
+                if(map.containsKey("entityId")) {
+                    statement.setString(5, (String) map.get("entityId"));
                 } else {
                     statement.setNull(5, Types.VARCHAR);
                 }
-                if(map.containsKey("email")) {
-                    statement.setString(6, (String) map.get("email"));
+                if(map.containsKey("userType")) {
+                    statement.setString(6, (String) map.get("userType"));
                 } else {
                     statement.setNull(6, Types.VARCHAR);
                 }
-                if(map.containsKey("roles")) {
-                    statement.setString(7, (String) map.get("roles"));
+                if(map.containsKey("email")) {
+                    statement.setString(7, (String) map.get("email"));
                 } else {
                     statement.setNull(7, Types.VARCHAR);
                 }
-                if(map.containsKey("redirectUri")) {
-                    statement.setString(8, (String) map.get("redirectUri"));
+                if(map.containsKey("roles")) {
+                    statement.setString(8, (String) map.get("roles"));
                 } else {
                     statement.setNull(8, Types.VARCHAR);
                 }
-                if(map.containsKey("scope")) {
-                    statement.setString(9, (String) map.get("scope"));
+                if(map.containsKey("redirectUri")) {
+                    statement.setString(9, (String) map.get("redirectUri"));
                 } else {
                     statement.setNull(9, Types.VARCHAR);
                 }
-                if(map.containsKey("remember")) {
-                    statement.setString(10, (String) map.get("remember"));
+                if(map.containsKey("scope")) {
+                    statement.setString(10, (String) map.get("scope"));
                 } else {
-                    statement.setNull(10, Types.CHAR);
+                    statement.setNull(10, Types.VARCHAR);
+                }
+                if(map.containsKey("remember")) {
+                    statement.setString(11, (String) map.get("remember"));
+                } else {
+                    statement.setNull(11, Types.CHAR);
                 }
                 if(map.containsKey("codeChallenge")) {
-                    statement.setString(11, (String) map.get("codeChallenge"));
-                } else {
-                    statement.setNull(11, Types.VARCHAR);
-                }
-                if(map.containsKey("challengeMethod")) {
-                    statement.setString(12, (String) map.get("challengeMethod"));
+                    statement.setString(12, (String) map.get("codeChallenge"));
                 } else {
                     statement.setNull(12, Types.VARCHAR);
                 }
-                statement.setString(13, event.getEventId().getId());
-                statement.setTimestamp(14, new Timestamp(event.getEventId().getTimestamp()));
+                if(map.containsKey("challengeMethod")) {
+                    statement.setString(13, (String) map.get("challengeMethod"));
+                } else {
+                    statement.setNull(13, Types.VARCHAR);
+                }
+                statement.setString(14, event.getEventId().getId());
+                statement.setTimestamp(15, new Timestamp(event.getEventId().getTimestamp()));
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("failed to insert the auth code with id " + event.getAuthCode());
@@ -1974,8 +1977,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> queryAuthCode(String hostId, String authCode) {
-        final String sql = "SELECT host_id, auth_code, user_id, entity_id, user_type, email, roles," +
-                "redirect_uri, scope, remember, code_challenge, challenge_method " +
+        final String sql = "SELECT host_id, provider_id, auth_code, user_id, entity_id, user_type, email, " +
+                "roles, redirect_uri, scope, remember, code_challenge, challenge_method " +
                 "FROM auth_code_t WHERE host_id = ? AND auth_code = ?";
         Result<String> result;
         try (Connection connection = ds.getConnection();
@@ -1986,6 +1989,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 if (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
                     map.put("hostId", resultSet.getString("host_id"));
+                    map.put("providerId", resultSet.getString("provider_id"));
                     map.put("authCode", resultSet.getString("auth_code"));
                     map.put("userId", resultSet.getString("user_id"));
                     map.put("entityId", resultSet.getString("entity_id"));
@@ -2099,6 +2103,38 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             resultMap.put("codes", authCodes);
             result = Success.of(JsonMapper.toJson(resultMap));
 
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<Map<String, Object>> queryProviderById(String providerId) {
+        final String sql = "SELECT host_id, provider_id, provider_name, jwk " +
+                "from auth_provider_t WHERE provider_id = ?";
+        Result<Map<String, Object>> result;
+        try (final Connection conn = ds.getConnection()) {
+            Map<String, Object> map = new HashMap<>();
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, providerId);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        map.put("hostId", resultSet.getString("host_id"));
+                        map.put("providerId", resultSet.getString("provider_id"));
+                        map.put("providerName", resultSet.getString("provider_name"));
+                        map.put("jwk", resultSet.getString("jwk"));
+                    }
+                }
+            }
+            if (map.isEmpty())
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "auth provider", providerId));
+            else
+                result = Success.of(map);
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
@@ -2541,6 +2577,52 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         }
         return result;
 
+    }
+
+    @Override
+    public Result<String> queryClientByProviderClientId(String providerId, String clientId) {
+        Result<String> result;
+        String sql =
+                "SELECT a.host_id, a.provider_id, a.client_id, c.client_type, c.client_profile, c.client_secret, \n" +
+                        "c.client_scope, c.custom_claim, c.redirect_uri, c.authenticate_class, c.deref_client_id\n" +
+                        "FROM client_t c, auth_provider_client_t a\n" +
+                        "WHERE c.client_id = a.client_id\n" +
+                        "AND a.provider_id = ?\n" +
+                        "AND a.client_id = ?\n";
+        try (final Connection conn = ds.getConnection()) {
+            Map<String, Object> map = new HashMap<>();
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, providerId);
+                statement.setString(2, clientId);
+
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        map.put("hostId", resultSet.getString("host_id"));
+                        map.put("providerId", resultSet.getString("provider_id"));
+                        map.put("clientId", resultSet.getString("client_id"));
+                        map.put("clientType", resultSet.getString("client_type"));
+                        map.put("clientProfile", resultSet.getString("client_profile"));
+                        map.put("clientSecret", resultSet.getString("client_secret"));
+                        map.put("clientScope", resultSet.getString("client_scope"));
+                        map.put("customClaim", resultSet.getString("custom_claim"));
+                        map.put("redirectUri", resultSet.getString("redirect_uri"));
+                        map.put("authenticateClass", resultSet.getString("authenticate_class"));
+                        map.put("deRefClientId", resultSet.getString("deref_client_id"));
+                    }
+                }
+            }
+            if (map.isEmpty())
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "client", "providerId " +  providerId + "clientId " + clientId));
+            else
+                result = Success.of(JsonMapper.toJson(map));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
     }
 
     @Override

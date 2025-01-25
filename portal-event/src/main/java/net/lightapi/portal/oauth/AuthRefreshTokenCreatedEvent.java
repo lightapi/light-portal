@@ -13,10 +13,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class AuthRefreshTokenCreatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 7922005077290316410L;
+  private static final long serialVersionUID = 163470965273248670L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"AuthRefreshTokenCreatedEvent\",\"namespace\":\"net.lightapi.portal.oauth\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"user id\"},{\"name\":\"refreshToken\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"refresh token\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"token detail in JSON\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"AuthRefreshTokenCreatedEvent\",\"namespace\":\"net.lightapi.portal.oauth\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"providerId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"provider id\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"user id\"},{\"name\":\"refreshToken\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"refresh token\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"token detail in JSON\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -75,6 +75,8 @@ public class AuthRefreshTokenCreatedEvent extends org.apache.avro.specific.Speci
   private com.networknt.kafka.common.EventId EventId;
   /** host id */
   private java.lang.String hostId;
+  /** provider id */
+  private java.lang.String providerId;
   /** user id */
   private java.lang.String userId;
   /** refresh token */
@@ -93,13 +95,15 @@ public class AuthRefreshTokenCreatedEvent extends org.apache.avro.specific.Speci
    * All-args constructor.
    * @param EventId The new value for EventId
    * @param hostId host id
+   * @param providerId provider id
    * @param userId user id
    * @param refreshToken refresh token
    * @param value token detail in JSON
    */
-  public AuthRefreshTokenCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String userId, java.lang.String refreshToken, java.lang.String value) {
+  public AuthRefreshTokenCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String providerId, java.lang.String userId, java.lang.String refreshToken, java.lang.String value) {
     this.EventId = EventId;
     this.hostId = hostId;
+    this.providerId = providerId;
     this.userId = userId;
     this.refreshToken = refreshToken;
     this.value = value;
@@ -117,9 +121,10 @@ public class AuthRefreshTokenCreatedEvent extends org.apache.avro.specific.Speci
     switch (field$) {
     case 0: return EventId;
     case 1: return hostId;
-    case 2: return userId;
-    case 3: return refreshToken;
-    case 4: return value;
+    case 2: return providerId;
+    case 3: return userId;
+    case 4: return refreshToken;
+    case 5: return value;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -131,9 +136,10 @@ public class AuthRefreshTokenCreatedEvent extends org.apache.avro.specific.Speci
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
     case 1: hostId = value$ != null ? value$.toString() : null; break;
-    case 2: userId = value$ != null ? value$.toString() : null; break;
-    case 3: refreshToken = value$ != null ? value$.toString() : null; break;
-    case 4: value = value$ != null ? value$.toString() : null; break;
+    case 2: providerId = value$ != null ? value$.toString() : null; break;
+    case 3: userId = value$ != null ? value$.toString() : null; break;
+    case 4: refreshToken = value$ != null ? value$.toString() : null; break;
+    case 5: value = value$ != null ? value$.toString() : null; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -171,6 +177,24 @@ public class AuthRefreshTokenCreatedEvent extends org.apache.avro.specific.Speci
    */
   public void setHostId(java.lang.String value) {
     this.hostId = value;
+  }
+
+  /**
+   * Gets the value of the 'providerId' field.
+   * @return provider id
+   */
+  public java.lang.String getProviderId() {
+    return providerId;
+  }
+
+
+  /**
+   * Sets the value of the 'providerId' field.
+   * provider id
+   * @param value the value to set.
+   */
+  public void setProviderId(java.lang.String value) {
+    this.providerId = value;
   }
 
   /**
@@ -272,6 +296,8 @@ public class AuthRefreshTokenCreatedEvent extends org.apache.avro.specific.Speci
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
     /** host id */
     private java.lang.String hostId;
+    /** provider id */
+    private java.lang.String providerId;
     /** user id */
     private java.lang.String userId;
     /** refresh token */
@@ -301,17 +327,21 @@ public class AuthRefreshTokenCreatedEvent extends org.apache.avro.specific.Speci
         this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
-      if (isValidValue(fields()[2], other.userId)) {
-        this.userId = data().deepCopy(fields()[2].schema(), other.userId);
+      if (isValidValue(fields()[2], other.providerId)) {
+        this.providerId = data().deepCopy(fields()[2].schema(), other.providerId);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.refreshToken)) {
-        this.refreshToken = data().deepCopy(fields()[3].schema(), other.refreshToken);
+      if (isValidValue(fields()[3], other.userId)) {
+        this.userId = data().deepCopy(fields()[3].schema(), other.userId);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
-      if (isValidValue(fields()[4], other.value)) {
-        this.value = data().deepCopy(fields()[4].schema(), other.value);
+      if (isValidValue(fields()[4], other.refreshToken)) {
+        this.refreshToken = data().deepCopy(fields()[4].schema(), other.refreshToken);
         fieldSetFlags()[4] = other.fieldSetFlags()[4];
+      }
+      if (isValidValue(fields()[5], other.value)) {
+        this.value = data().deepCopy(fields()[5].schema(), other.value);
+        fieldSetFlags()[5] = other.fieldSetFlags()[5];
       }
     }
 
@@ -330,17 +360,21 @@ public class AuthRefreshTokenCreatedEvent extends org.apache.avro.specific.Speci
         this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.userId)) {
-        this.userId = data().deepCopy(fields()[2].schema(), other.userId);
+      if (isValidValue(fields()[2], other.providerId)) {
+        this.providerId = data().deepCopy(fields()[2].schema(), other.providerId);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.refreshToken)) {
-        this.refreshToken = data().deepCopy(fields()[3].schema(), other.refreshToken);
+      if (isValidValue(fields()[3], other.userId)) {
+        this.userId = data().deepCopy(fields()[3].schema(), other.userId);
         fieldSetFlags()[3] = true;
       }
-      if (isValidValue(fields()[4], other.value)) {
-        this.value = data().deepCopy(fields()[4].schema(), other.value);
+      if (isValidValue(fields()[4], other.refreshToken)) {
+        this.refreshToken = data().deepCopy(fields()[4].schema(), other.refreshToken);
         fieldSetFlags()[4] = true;
+      }
+      if (isValidValue(fields()[5], other.value)) {
+        this.value = data().deepCopy(fields()[5].schema(), other.value);
+        fieldSetFlags()[5] = true;
       }
     }
 
@@ -465,6 +499,50 @@ public class AuthRefreshTokenCreatedEvent extends org.apache.avro.specific.Speci
     }
 
     /**
+      * Gets the value of the 'providerId' field.
+      * provider id
+      * @return The value.
+      */
+    public java.lang.String getProviderId() {
+      return providerId;
+    }
+
+
+    /**
+      * Sets the value of the 'providerId' field.
+      * provider id
+      * @param value The value of 'providerId'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.oauth.AuthRefreshTokenCreatedEvent.Builder setProviderId(java.lang.String value) {
+      validate(fields()[2], value);
+      this.providerId = value;
+      fieldSetFlags()[2] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'providerId' field has been set.
+      * provider id
+      * @return True if the 'providerId' field has been set, false otherwise.
+      */
+    public boolean hasProviderId() {
+      return fieldSetFlags()[2];
+    }
+
+
+    /**
+      * Clears the value of the 'providerId' field.
+      * provider id
+      * @return This builder.
+      */
+    public net.lightapi.portal.oauth.AuthRefreshTokenCreatedEvent.Builder clearProviderId() {
+      providerId = null;
+      fieldSetFlags()[2] = false;
+      return this;
+    }
+
+    /**
       * Gets the value of the 'userId' field.
       * user id
       * @return The value.
@@ -481,9 +559,9 @@ public class AuthRefreshTokenCreatedEvent extends org.apache.avro.specific.Speci
       * @return This builder.
       */
     public net.lightapi.portal.oauth.AuthRefreshTokenCreatedEvent.Builder setUserId(java.lang.String value) {
-      validate(fields()[2], value);
+      validate(fields()[3], value);
       this.userId = value;
-      fieldSetFlags()[2] = true;
+      fieldSetFlags()[3] = true;
       return this;
     }
 
@@ -493,7 +571,7 @@ public class AuthRefreshTokenCreatedEvent extends org.apache.avro.specific.Speci
       * @return True if the 'userId' field has been set, false otherwise.
       */
     public boolean hasUserId() {
-      return fieldSetFlags()[2];
+      return fieldSetFlags()[3];
     }
 
 
@@ -504,7 +582,7 @@ public class AuthRefreshTokenCreatedEvent extends org.apache.avro.specific.Speci
       */
     public net.lightapi.portal.oauth.AuthRefreshTokenCreatedEvent.Builder clearUserId() {
       userId = null;
-      fieldSetFlags()[2] = false;
+      fieldSetFlags()[3] = false;
       return this;
     }
 
@@ -525,9 +603,9 @@ public class AuthRefreshTokenCreatedEvent extends org.apache.avro.specific.Speci
       * @return This builder.
       */
     public net.lightapi.portal.oauth.AuthRefreshTokenCreatedEvent.Builder setRefreshToken(java.lang.String value) {
-      validate(fields()[3], value);
+      validate(fields()[4], value);
       this.refreshToken = value;
-      fieldSetFlags()[3] = true;
+      fieldSetFlags()[4] = true;
       return this;
     }
 
@@ -537,7 +615,7 @@ public class AuthRefreshTokenCreatedEvent extends org.apache.avro.specific.Speci
       * @return True if the 'refreshToken' field has been set, false otherwise.
       */
     public boolean hasRefreshToken() {
-      return fieldSetFlags()[3];
+      return fieldSetFlags()[4];
     }
 
 
@@ -548,7 +626,7 @@ public class AuthRefreshTokenCreatedEvent extends org.apache.avro.specific.Speci
       */
     public net.lightapi.portal.oauth.AuthRefreshTokenCreatedEvent.Builder clearRefreshToken() {
       refreshToken = null;
-      fieldSetFlags()[3] = false;
+      fieldSetFlags()[4] = false;
       return this;
     }
 
@@ -569,9 +647,9 @@ public class AuthRefreshTokenCreatedEvent extends org.apache.avro.specific.Speci
       * @return This builder.
       */
     public net.lightapi.portal.oauth.AuthRefreshTokenCreatedEvent.Builder setValue(java.lang.String value) {
-      validate(fields()[4], value);
+      validate(fields()[5], value);
       this.value = value;
-      fieldSetFlags()[4] = true;
+      fieldSetFlags()[5] = true;
       return this;
     }
 
@@ -581,7 +659,7 @@ public class AuthRefreshTokenCreatedEvent extends org.apache.avro.specific.Speci
       * @return True if the 'value' field has been set, false otherwise.
       */
     public boolean hasValue() {
-      return fieldSetFlags()[4];
+      return fieldSetFlags()[5];
     }
 
 
@@ -592,7 +670,7 @@ public class AuthRefreshTokenCreatedEvent extends org.apache.avro.specific.Speci
       */
     public net.lightapi.portal.oauth.AuthRefreshTokenCreatedEvent.Builder clearValue() {
       value = null;
-      fieldSetFlags()[4] = false;
+      fieldSetFlags()[5] = false;
       return this;
     }
 
@@ -612,9 +690,10 @@ public class AuthRefreshTokenCreatedEvent extends org.apache.avro.specific.Speci
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
         record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
-        record.userId = fieldSetFlags()[2] ? this.userId : (java.lang.String) defaultValue(fields()[2]);
-        record.refreshToken = fieldSetFlags()[3] ? this.refreshToken : (java.lang.String) defaultValue(fields()[3]);
-        record.value = fieldSetFlags()[4] ? this.value : (java.lang.String) defaultValue(fields()[4]);
+        record.providerId = fieldSetFlags()[2] ? this.providerId : (java.lang.String) defaultValue(fields()[2]);
+        record.userId = fieldSetFlags()[3] ? this.userId : (java.lang.String) defaultValue(fields()[3]);
+        record.refreshToken = fieldSetFlags()[4] ? this.refreshToken : (java.lang.String) defaultValue(fields()[4]);
+        record.value = fieldSetFlags()[5] ? this.value : (java.lang.String) defaultValue(fields()[5]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -651,6 +730,8 @@ public class AuthRefreshTokenCreatedEvent extends org.apache.avro.specific.Speci
 
     out.writeString(this.hostId);
 
+    out.writeString(this.providerId);
+
     out.writeString(this.userId);
 
     out.writeString(this.refreshToken);
@@ -671,6 +752,8 @@ public class AuthRefreshTokenCreatedEvent extends org.apache.avro.specific.Speci
 
       this.hostId = in.readString();
 
+      this.providerId = in.readString();
+
       this.userId = in.readString();
 
       this.refreshToken = in.readString();
@@ -678,7 +761,7 @@ public class AuthRefreshTokenCreatedEvent extends org.apache.avro.specific.Speci
       this.value = in.readString();
 
     } else {
-      for (int i = 0; i < 5; i++) {
+      for (int i = 0; i < 6; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -692,14 +775,18 @@ public class AuthRefreshTokenCreatedEvent extends org.apache.avro.specific.Speci
           break;
 
         case 2:
-          this.userId = in.readString();
+          this.providerId = in.readString();
           break;
 
         case 3:
-          this.refreshToken = in.readString();
+          this.userId = in.readString();
           break;
 
         case 4:
+          this.refreshToken = in.readString();
+          break;
+
+        case 5:
           this.value = in.readString();
           break;
 

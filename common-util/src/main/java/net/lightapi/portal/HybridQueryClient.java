@@ -674,6 +674,25 @@ public class HybridQueryClient {
     }
 
     /**
+     * Get client by providerId and clientId with client credentials token from oauth-kafka. The token will be a client credential
+     * token so that there is no user_id in the JWT to bypass the match verification. This is an internal method that is called
+     * between oauth-kafka and portal services and a client credential token must be provided.
+     *
+     * @param providerId provider id
+     * @param clientId client id
+     * @param token a client credential JWT token
+     * @return Result of client
+     */
+    public static Result<String> getClientByProviderClientId(String token, String providerId, String clientId) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"oauth\",\"action\":\"getClientByProviderClientId\",\"version\":\"0.1.0\",\"data\":{\"providerId\":\"%s\",\"clientId\":\"%s\"}}", providerId, clientId);
+        if (config.isPortalByServiceUrl()) {
+            return callQueryTokenUrl(s, token, config.getPortalQueryServiceUrl());
+        } else {
+            return callQueryWithToken(s, token);
+        }
+    }
+
+    /**
      * Get client for host with exchange and url. The result contains a list of client.
      *
      * @param exchange HttpServerExchange

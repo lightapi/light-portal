@@ -82,6 +82,7 @@ public interface PortalDbProvider extends DbProvider {
                                        String entityId, String userType, String email, String roles, String groups, String positions,
                                        String attributes, String redirectUri, String scope, String remember, String codeChallenge,
                                        String challengeMethod, String updateUser, Timestamp updateTs);
+    Result<Map<String, Object>> queryProviderById(String providerId);
 
 
     Result<String> queryApp(int offset, int limit, String hostId, String appId, String appName, String appDesc, Boolean isKafkaApp, String operationOwner, String deliveryOwner);
@@ -90,6 +91,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> updateClient(ClientUpdatedEvent event);
     Result<String> deleteClient(ClientDeletedEvent event);
     Result<Map<String, Object>> queryClientByClientId(String clientId);
+    Result<String> queryClientByProviderClientId(String providerId, String clientId);
     Result<Map<String, Object>> queryClientByHostAppId(String host, String applicationId);
 
     Result<String> createService(ServiceCreatedEvent event);
