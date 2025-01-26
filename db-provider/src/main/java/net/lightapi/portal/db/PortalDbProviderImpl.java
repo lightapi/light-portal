@@ -2225,9 +2225,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> createAuthProvider(AuthProviderCreatedEvent event) {
         final String sql = "INSERT INTO auth_provider_t(host_id, provider_id, provider_name, provider_desc, " +
-                "operation_owner, delivery_owner, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                "operation_owner, delivery_owner, jwk, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         Result<String> result;
+        Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
         String value = event.getValue();
         Map<String, Object> map = JsonMapper.string2Map(value);
 
@@ -2253,13 +2254,71 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 } else {
                     statement.setNull(6, Types.VARCHAR);
                 }
-
-                statement.setString(7, event.getEventId().getId());
-                statement.setTimestamp(8, new Timestamp(event.getEventId().getTimestamp()));
+                if(map.containsKey("jwk")) {
+                    statement.setString(7, (String)map.get("jwk"));
+                } else {
+                    statement.setNull(7, Types.VARCHAR);
+                }
+                statement.setString(8, event.getEventId().getId());
+                statement.setTimestamp(9, timestamp);
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("failed to insert the auth provider with id " + event.getProviderId());
+                }
+
+                // Insert keys into auth_provider_key_t
+                String keySql = "INSERT INTO auth_provider_key_t(host_id, provider_id, kid, public_key, private_key, key_type, update_user, update_ts) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+
+                try (PreparedStatement keyStatement = conn.prepareStatement(keySql)) {
+                    Map<String, Object> keys = (Map<String, Object>) map.get("keys");
+
+                    keyStatement.setString(1, event.getHostId());
+                    keyStatement.setString(2, event.getProviderId());
+
+                    Map<String, Object> lcMap = (Map<String, Object>) keys.get("LC");
+                    // add long live current key
+                    keyStatement.setString(3, (String)lcMap.get("kid"));
+                    keyStatement.setString(4, (String)lcMap.get("publicKey"));
+                    keyStatement.setString(5, (String)lcMap.get("privateKey"));
+                    keyStatement.setString(6, "LC");
+                    keyStatement.setString(7, event.getEventId().getId());
+                    keyStatement.setTimestamp(8, timestamp);
+                    keyStatement.executeUpdate();
+
+                    // add long live previous key
+                    Map<String, Object> lpMap = (Map<String, Object>) keys.get("LP");
+                    keyStatement.setString(3, (String)lpMap.get("kid"));
+                    keyStatement.setString(4, (String)lpMap.get("publicKey"));
+                    keyStatement.setString(5, (String)lpMap.get("privateKey"));
+                    keyStatement.setString(6, "LP");
+                    keyStatement.setString(7, event.getEventId().getId());
+                    keyStatement.setTimestamp(8, timestamp);
+                    keyStatement.executeUpdate();
+
+                    // add token current key
+                    Map<String, Object> tcMap = (Map<String, Object>) keys.get("TC");
+                    keyStatement.setString(3, (String)tcMap.get("kid"));
+                    keyStatement.setString(4, (String)tcMap.get("publicKey"));
+                    keyStatement.setString(5, (String)tcMap.get("privateKey"));
+                    keyStatement.setString(6, "TC");
+                    keyStatement.setString(7, event.getEventId().getId());
+                    keyStatement.setTimestamp(8, timestamp);
+                    keyStatement.executeUpdate();
+
+                    // add token previous key
+                    Map<String, Object> tpMap = (Map<String, Object>) keys.get("TP");
+                    keyStatement.setString(3, (String)tpMap.get("kid"));
+                    keyStatement.setString(4, (String)tpMap.get("publicKey"));
+                    keyStatement.setString(5, (String)tpMap.get("privateKey"));
+                    keyStatement.setString(6, "TP");
+                    keyStatement.setString(7, event.getEventId().getId());
+                    keyStatement.setTimestamp(8, new Timestamp(event.getEventId().getTimestamp()));
+                    keyStatement.executeUpdate();
+
+                } catch(SQLException ex) {
+                    throw new SQLException("failed to insert the auth provider key with provider id " + event.getProviderId());
                 }
                 conn.commit();
                 result = Success.of(event.getProviderId());
@@ -2280,6 +2339,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
         }
         return result;
+    }
+
+    @Override
+    public Result<String> rotateAuthProvider(AuthProviderRotatedEvent event) {
+        final String sqlUpdateJwk = "UPDATE auth_provider_t SET jwk = ? " +
+                "WHERE host_id = ? and provider_id = ?";
+        return null;
     }
 
     @Override
@@ -2458,135 +2524,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         }
         return result;
     }
-
-
-    @Override
-    public Result<String> createProviderKey(ProviderKeyCreatedEvent event) {
-        final String sql = "INSERT INTO auth_provider_key_t(host_id, provider_id, kid, public_key, private_key, key_type, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        Result<String> result;
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, event.getHostId());
-                statement.setString(2, event.getProviderId());
-                statement.setString(3, event.getKid());
-                statement.setString(4, event.getPublicKey());
-                statement.setString(5, event.getPrivateKey());
-                statement.setString(6, event.getKeyType());
-                statement.setString(7, event.getEventId().getId());
-                statement.setTimestamp(8, new Timestamp(event.getEventId().getTimestamp()));
-
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert the auth provider key with id " + event.getKid());
-                }
-                conn.commit();
-                result = Success.of(event.getKid());
-                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
-
-
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
-            }
-        } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-        }
-        return result;
-    }
-
-
-
-    @Override
-    public Result<String> updateProviderKey(ProviderKeyUpdatedEvent event) {
-        final String sql = "UPDATE auth_provider_key_t SET public_key = ?, private_key = ?, key_type = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? AND provider_id = ? AND kid = ?";
-        Result<String> result;
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, event.getPublicKey());
-                statement.setString(2, event.getPrivateKey());
-                statement.setString(3, event.getKeyType());
-                statement.setString(4, event.getEventId().getId());
-                statement.setTimestamp(5, new Timestamp(event.getEventId().getTimestamp()));
-                statement.setString(6, event.getHostId());
-                statement.setString(7, event.getProviderId());
-                statement.setString(8, event.getKid());
-
-
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to update the auth provider key with id " + event.getKid());
-                }
-                conn.commit();
-                result = Success.of(event.getKid());
-                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
-            }
-        } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-        }
-        return result;
-    }
-
-    @Override
-    public Result<String> deleteProviderKey(ProviderKeyDeletedEvent event) {
-        final String sql = "DELETE FROM auth_provider_key_t WHERE host_id = ? AND provider_id = ? AND kid = ?";
-        Result<String> result;
-
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, event.getHostId());
-                statement.setString(2, event.getProviderId());
-                statement.setString(3, event.getKid());
-
-
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to delete the auth provider key with id " + event.getKid());
-                }
-                conn.commit();
-                result = Success.of(event.getKid());
-                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
-            }
-        } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-        }
-        return result;
-    }
-
 
     @Override
     public Result<String> queryApp(int offset, int limit, String hostId, String appId, String appName, String appDesc, Boolean isKafkaApp, String operationOwner, String deliveryOwner) {

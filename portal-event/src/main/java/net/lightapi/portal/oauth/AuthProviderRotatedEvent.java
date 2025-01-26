@@ -12,26 +12,26 @@ import org.apache.avro.message.BinaryMessageDecoder;
 import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
-public class ProviderKeyDeletedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 6885767623723291675L;
+public class AuthProviderRotatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
+  private static final long serialVersionUID = 4570791241813804268L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ProviderKeyDeletedEvent\",\"namespace\":\"net.lightapi.portal.oauth\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"providerId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"provider id\"},{\"name\":\"kid\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"key id\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"AuthProviderRotatedEvent\",\"namespace\":\"net.lightapi.portal.oauth\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"providerId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"provider id\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"oauth provider detail in JSON\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
 
-  private static final BinaryMessageEncoder<ProviderKeyDeletedEvent> ENCODER =
+  private static final BinaryMessageEncoder<AuthProviderRotatedEvent> ENCODER =
       new BinaryMessageEncoder<>(MODEL$, SCHEMA$);
 
-  private static final BinaryMessageDecoder<ProviderKeyDeletedEvent> DECODER =
+  private static final BinaryMessageDecoder<AuthProviderRotatedEvent> DECODER =
       new BinaryMessageDecoder<>(MODEL$, SCHEMA$);
 
   /**
    * Return the BinaryMessageEncoder instance used by this class.
    * @return the message encoder used by this class
    */
-  public static BinaryMessageEncoder<ProviderKeyDeletedEvent> getEncoder() {
+  public static BinaryMessageEncoder<AuthProviderRotatedEvent> getEncoder() {
     return ENCODER;
   }
 
@@ -39,7 +39,7 @@ public class ProviderKeyDeletedEvent extends org.apache.avro.specific.SpecificRe
    * Return the BinaryMessageDecoder instance used by this class.
    * @return the message decoder used by this class
    */
-  public static BinaryMessageDecoder<ProviderKeyDeletedEvent> getDecoder() {
+  public static BinaryMessageDecoder<AuthProviderRotatedEvent> getDecoder() {
     return DECODER;
   }
 
@@ -48,12 +48,12 @@ public class ProviderKeyDeletedEvent extends org.apache.avro.specific.SpecificRe
    * @param resolver a {@link SchemaStore} used to find schemas by fingerprint
    * @return a BinaryMessageDecoder instance for this class backed by the given SchemaStore
    */
-  public static BinaryMessageDecoder<ProviderKeyDeletedEvent> createDecoder(SchemaStore resolver) {
+  public static BinaryMessageDecoder<AuthProviderRotatedEvent> createDecoder(SchemaStore resolver) {
     return new BinaryMessageDecoder<>(MODEL$, SCHEMA$, resolver);
   }
 
   /**
-   * Serializes this ProviderKeyDeletedEvent to a ByteBuffer.
+   * Serializes this AuthProviderRotatedEvent to a ByteBuffer.
    * @return a buffer holding the serialized data for this instance
    * @throws java.io.IOException if this instance could not be serialized
    */
@@ -62,12 +62,12 @@ public class ProviderKeyDeletedEvent extends org.apache.avro.specific.SpecificRe
   }
 
   /**
-   * Deserializes a ProviderKeyDeletedEvent from a ByteBuffer.
+   * Deserializes a AuthProviderRotatedEvent from a ByteBuffer.
    * @param b a byte buffer holding serialized data for an instance of this class
-   * @return a ProviderKeyDeletedEvent instance decoded from the given buffer
+   * @return a AuthProviderRotatedEvent instance decoded from the given buffer
    * @throws java.io.IOException if the given bytes could not be deserialized into an instance of this class
    */
-  public static ProviderKeyDeletedEvent fromByteBuffer(
+  public static AuthProviderRotatedEvent fromByteBuffer(
       java.nio.ByteBuffer b) throws java.io.IOException {
     return DECODER.decode(b);
   }
@@ -77,28 +77,28 @@ public class ProviderKeyDeletedEvent extends org.apache.avro.specific.SpecificRe
   private java.lang.String hostId;
   /** provider id */
   private java.lang.String providerId;
-  /** key id */
-  private java.lang.String kid;
+  /** oauth provider detail in JSON */
+  private java.lang.String value;
 
   /**
    * Default constructor.  Note that this does not initialize fields
    * to their default values from the schema.  If that is desired then
    * one should use <code>newBuilder()</code>.
    */
-  public ProviderKeyDeletedEvent() {}
+  public AuthProviderRotatedEvent() {}
 
   /**
    * All-args constructor.
    * @param EventId The new value for EventId
    * @param hostId host id
    * @param providerId provider id
-   * @param kid key id
+   * @param value oauth provider detail in JSON
    */
-  public ProviderKeyDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String providerId, java.lang.String kid) {
+  public AuthProviderRotatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String providerId, java.lang.String value) {
     this.EventId = EventId;
     this.hostId = hostId;
     this.providerId = providerId;
-    this.kid = kid;
+    this.value = value;
   }
 
   @Override
@@ -114,7 +114,7 @@ public class ProviderKeyDeletedEvent extends org.apache.avro.specific.SpecificRe
     case 0: return EventId;
     case 1: return hostId;
     case 2: return providerId;
-    case 3: return kid;
+    case 3: return value;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -127,7 +127,7 @@ public class ProviderKeyDeletedEvent extends org.apache.avro.specific.SpecificRe
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
     case 1: hostId = value$ != null ? value$.toString() : null; break;
     case 2: providerId = value$ != null ? value$.toString() : null; break;
-    case 3: kid = value$ != null ? value$.toString() : null; break;
+    case 3: value = value$ != null ? value$.toString() : null; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -186,63 +186,63 @@ public class ProviderKeyDeletedEvent extends org.apache.avro.specific.SpecificRe
   }
 
   /**
-   * Gets the value of the 'kid' field.
-   * @return key id
+   * Gets the value of the 'value' field.
+   * @return oauth provider detail in JSON
    */
-  public java.lang.String getKid() {
-    return kid;
+  public java.lang.String getValue() {
+    return value;
   }
 
 
   /**
-   * Sets the value of the 'kid' field.
-   * key id
+   * Sets the value of the 'value' field.
+   * oauth provider detail in JSON
    * @param value the value to set.
    */
-  public void setKid(java.lang.String value) {
-    this.kid = value;
+  public void setValue(java.lang.String value) {
+    this.value = value;
   }
 
   /**
-   * Creates a new ProviderKeyDeletedEvent RecordBuilder.
-   * @return A new ProviderKeyDeletedEvent RecordBuilder
+   * Creates a new AuthProviderRotatedEvent RecordBuilder.
+   * @return A new AuthProviderRotatedEvent RecordBuilder
    */
-  public static net.lightapi.portal.oauth.ProviderKeyDeletedEvent.Builder newBuilder() {
-    return new net.lightapi.portal.oauth.ProviderKeyDeletedEvent.Builder();
+  public static net.lightapi.portal.oauth.AuthProviderRotatedEvent.Builder newBuilder() {
+    return new net.lightapi.portal.oauth.AuthProviderRotatedEvent.Builder();
   }
 
   /**
-   * Creates a new ProviderKeyDeletedEvent RecordBuilder by copying an existing Builder.
+   * Creates a new AuthProviderRotatedEvent RecordBuilder by copying an existing Builder.
    * @param other The existing builder to copy.
-   * @return A new ProviderKeyDeletedEvent RecordBuilder
+   * @return A new AuthProviderRotatedEvent RecordBuilder
    */
-  public static net.lightapi.portal.oauth.ProviderKeyDeletedEvent.Builder newBuilder(net.lightapi.portal.oauth.ProviderKeyDeletedEvent.Builder other) {
+  public static net.lightapi.portal.oauth.AuthProviderRotatedEvent.Builder newBuilder(net.lightapi.portal.oauth.AuthProviderRotatedEvent.Builder other) {
     if (other == null) {
-      return new net.lightapi.portal.oauth.ProviderKeyDeletedEvent.Builder();
+      return new net.lightapi.portal.oauth.AuthProviderRotatedEvent.Builder();
     } else {
-      return new net.lightapi.portal.oauth.ProviderKeyDeletedEvent.Builder(other);
+      return new net.lightapi.portal.oauth.AuthProviderRotatedEvent.Builder(other);
     }
   }
 
   /**
-   * Creates a new ProviderKeyDeletedEvent RecordBuilder by copying an existing ProviderKeyDeletedEvent instance.
+   * Creates a new AuthProviderRotatedEvent RecordBuilder by copying an existing AuthProviderRotatedEvent instance.
    * @param other The existing instance to copy.
-   * @return A new ProviderKeyDeletedEvent RecordBuilder
+   * @return A new AuthProviderRotatedEvent RecordBuilder
    */
-  public static net.lightapi.portal.oauth.ProviderKeyDeletedEvent.Builder newBuilder(net.lightapi.portal.oauth.ProviderKeyDeletedEvent other) {
+  public static net.lightapi.portal.oauth.AuthProviderRotatedEvent.Builder newBuilder(net.lightapi.portal.oauth.AuthProviderRotatedEvent other) {
     if (other == null) {
-      return new net.lightapi.portal.oauth.ProviderKeyDeletedEvent.Builder();
+      return new net.lightapi.portal.oauth.AuthProviderRotatedEvent.Builder();
     } else {
-      return new net.lightapi.portal.oauth.ProviderKeyDeletedEvent.Builder(other);
+      return new net.lightapi.portal.oauth.AuthProviderRotatedEvent.Builder(other);
     }
   }
 
   /**
-   * RecordBuilder for ProviderKeyDeletedEvent instances.
+   * RecordBuilder for AuthProviderRotatedEvent instances.
    */
   @org.apache.avro.specific.AvroGenerated
-  public static class Builder extends org.apache.avro.specific.SpecificRecordBuilderBase<ProviderKeyDeletedEvent>
-    implements org.apache.avro.data.RecordBuilder<ProviderKeyDeletedEvent> {
+  public static class Builder extends org.apache.avro.specific.SpecificRecordBuilderBase<AuthProviderRotatedEvent>
+    implements org.apache.avro.data.RecordBuilder<AuthProviderRotatedEvent> {
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
@@ -250,8 +250,8 @@ public class ProviderKeyDeletedEvent extends org.apache.avro.specific.SpecificRe
     private java.lang.String hostId;
     /** provider id */
     private java.lang.String providerId;
-    /** key id */
-    private java.lang.String kid;
+    /** oauth provider detail in JSON */
+    private java.lang.String value;
 
     /** Creates a new Builder */
     private Builder() {
@@ -262,7 +262,7 @@ public class ProviderKeyDeletedEvent extends org.apache.avro.specific.SpecificRe
      * Creates a Builder by copying an existing Builder.
      * @param other The existing Builder to copy.
      */
-    private Builder(net.lightapi.portal.oauth.ProviderKeyDeletedEvent.Builder other) {
+    private Builder(net.lightapi.portal.oauth.AuthProviderRotatedEvent.Builder other) {
       super(other);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
@@ -279,17 +279,17 @@ public class ProviderKeyDeletedEvent extends org.apache.avro.specific.SpecificRe
         this.providerId = data().deepCopy(fields()[2].schema(), other.providerId);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.kid)) {
-        this.kid = data().deepCopy(fields()[3].schema(), other.kid);
+      if (isValidValue(fields()[3], other.value)) {
+        this.value = data().deepCopy(fields()[3].schema(), other.value);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
     }
 
     /**
-     * Creates a Builder by copying an existing ProviderKeyDeletedEvent instance
+     * Creates a Builder by copying an existing AuthProviderRotatedEvent instance
      * @param other The existing instance to copy.
      */
-    private Builder(net.lightapi.portal.oauth.ProviderKeyDeletedEvent other) {
+    private Builder(net.lightapi.portal.oauth.AuthProviderRotatedEvent other) {
       super(SCHEMA$, MODEL$);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
@@ -304,8 +304,8 @@ public class ProviderKeyDeletedEvent extends org.apache.avro.specific.SpecificRe
         this.providerId = data().deepCopy(fields()[2].schema(), other.providerId);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.kid)) {
-        this.kid = data().deepCopy(fields()[3].schema(), other.kid);
+      if (isValidValue(fields()[3], other.value)) {
+        this.value = data().deepCopy(fields()[3].schema(), other.value);
         fieldSetFlags()[3] = true;
       }
     }
@@ -324,7 +324,7 @@ public class ProviderKeyDeletedEvent extends org.apache.avro.specific.SpecificRe
       * @param value The value of 'EventId'.
       * @return This builder.
       */
-    public net.lightapi.portal.oauth.ProviderKeyDeletedEvent.Builder setEventId(com.networknt.kafka.common.EventId value) {
+    public net.lightapi.portal.oauth.AuthProviderRotatedEvent.Builder setEventId(com.networknt.kafka.common.EventId value) {
       validate(fields()[0], value);
       this.EventIdBuilder = null;
       this.EventId = value;
@@ -361,7 +361,7 @@ public class ProviderKeyDeletedEvent extends org.apache.avro.specific.SpecificRe
      * @return This builder.
      */
 
-    public net.lightapi.portal.oauth.ProviderKeyDeletedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
+    public net.lightapi.portal.oauth.AuthProviderRotatedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
       clearEventId();
       EventIdBuilder = value;
       return this;
@@ -379,7 +379,7 @@ public class ProviderKeyDeletedEvent extends org.apache.avro.specific.SpecificRe
       * Clears the value of the 'EventId' field.
       * @return This builder.
       */
-    public net.lightapi.portal.oauth.ProviderKeyDeletedEvent.Builder clearEventId() {
+    public net.lightapi.portal.oauth.AuthProviderRotatedEvent.Builder clearEventId() {
       EventId = null;
       EventIdBuilder = null;
       fieldSetFlags()[0] = false;
@@ -402,7 +402,7 @@ public class ProviderKeyDeletedEvent extends org.apache.avro.specific.SpecificRe
       * @param value The value of 'hostId'.
       * @return This builder.
       */
-    public net.lightapi.portal.oauth.ProviderKeyDeletedEvent.Builder setHostId(java.lang.String value) {
+    public net.lightapi.portal.oauth.AuthProviderRotatedEvent.Builder setHostId(java.lang.String value) {
       validate(fields()[1], value);
       this.hostId = value;
       fieldSetFlags()[1] = true;
@@ -424,7 +424,7 @@ public class ProviderKeyDeletedEvent extends org.apache.avro.specific.SpecificRe
       * host id
       * @return This builder.
       */
-    public net.lightapi.portal.oauth.ProviderKeyDeletedEvent.Builder clearHostId() {
+    public net.lightapi.portal.oauth.AuthProviderRotatedEvent.Builder clearHostId() {
       hostId = null;
       fieldSetFlags()[1] = false;
       return this;
@@ -446,7 +446,7 @@ public class ProviderKeyDeletedEvent extends org.apache.avro.specific.SpecificRe
       * @param value The value of 'providerId'.
       * @return This builder.
       */
-    public net.lightapi.portal.oauth.ProviderKeyDeletedEvent.Builder setProviderId(java.lang.String value) {
+    public net.lightapi.portal.oauth.AuthProviderRotatedEvent.Builder setProviderId(java.lang.String value) {
       validate(fields()[2], value);
       this.providerId = value;
       fieldSetFlags()[2] = true;
@@ -468,61 +468,61 @@ public class ProviderKeyDeletedEvent extends org.apache.avro.specific.SpecificRe
       * provider id
       * @return This builder.
       */
-    public net.lightapi.portal.oauth.ProviderKeyDeletedEvent.Builder clearProviderId() {
+    public net.lightapi.portal.oauth.AuthProviderRotatedEvent.Builder clearProviderId() {
       providerId = null;
       fieldSetFlags()[2] = false;
       return this;
     }
 
     /**
-      * Gets the value of the 'kid' field.
-      * key id
+      * Gets the value of the 'value' field.
+      * oauth provider detail in JSON
       * @return The value.
       */
-    public java.lang.String getKid() {
-      return kid;
+    public java.lang.String getValue() {
+      return value;
     }
 
 
     /**
-      * Sets the value of the 'kid' field.
-      * key id
-      * @param value The value of 'kid'.
+      * Sets the value of the 'value' field.
+      * oauth provider detail in JSON
+      * @param value The value of 'value'.
       * @return This builder.
       */
-    public net.lightapi.portal.oauth.ProviderKeyDeletedEvent.Builder setKid(java.lang.String value) {
+    public net.lightapi.portal.oauth.AuthProviderRotatedEvent.Builder setValue(java.lang.String value) {
       validate(fields()[3], value);
-      this.kid = value;
+      this.value = value;
       fieldSetFlags()[3] = true;
       return this;
     }
 
     /**
-      * Checks whether the 'kid' field has been set.
-      * key id
-      * @return True if the 'kid' field has been set, false otherwise.
+      * Checks whether the 'value' field has been set.
+      * oauth provider detail in JSON
+      * @return True if the 'value' field has been set, false otherwise.
       */
-    public boolean hasKid() {
+    public boolean hasValue() {
       return fieldSetFlags()[3];
     }
 
 
     /**
-      * Clears the value of the 'kid' field.
-      * key id
+      * Clears the value of the 'value' field.
+      * oauth provider detail in JSON
       * @return This builder.
       */
-    public net.lightapi.portal.oauth.ProviderKeyDeletedEvent.Builder clearKid() {
-      kid = null;
+    public net.lightapi.portal.oauth.AuthProviderRotatedEvent.Builder clearValue() {
+      value = null;
       fieldSetFlags()[3] = false;
       return this;
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public ProviderKeyDeletedEvent build() {
+    public AuthProviderRotatedEvent build() {
       try {
-        ProviderKeyDeletedEvent record = new ProviderKeyDeletedEvent();
+        AuthProviderRotatedEvent record = new AuthProviderRotatedEvent();
         if (EventIdBuilder != null) {
           try {
             record.EventId = this.EventIdBuilder.build();
@@ -535,7 +535,7 @@ public class ProviderKeyDeletedEvent extends org.apache.avro.specific.SpecificRe
         }
         record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
         record.providerId = fieldSetFlags()[2] ? this.providerId : (java.lang.String) defaultValue(fields()[2]);
-        record.kid = fieldSetFlags()[3] ? this.kid : (java.lang.String) defaultValue(fields()[3]);
+        record.value = fieldSetFlags()[3] ? this.value : (java.lang.String) defaultValue(fields()[3]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -546,8 +546,8 @@ public class ProviderKeyDeletedEvent extends org.apache.avro.specific.SpecificRe
   }
 
   @SuppressWarnings("unchecked")
-  private static final org.apache.avro.io.DatumWriter<ProviderKeyDeletedEvent>
-    WRITER$ = (org.apache.avro.io.DatumWriter<ProviderKeyDeletedEvent>)MODEL$.createDatumWriter(SCHEMA$);
+  private static final org.apache.avro.io.DatumWriter<AuthProviderRotatedEvent>
+    WRITER$ = (org.apache.avro.io.DatumWriter<AuthProviderRotatedEvent>)MODEL$.createDatumWriter(SCHEMA$);
 
   @Override public void writeExternal(java.io.ObjectOutput out)
     throws java.io.IOException {
@@ -555,8 +555,8 @@ public class ProviderKeyDeletedEvent extends org.apache.avro.specific.SpecificRe
   }
 
   @SuppressWarnings("unchecked")
-  private static final org.apache.avro.io.DatumReader<ProviderKeyDeletedEvent>
-    READER$ = (org.apache.avro.io.DatumReader<ProviderKeyDeletedEvent>)MODEL$.createDatumReader(SCHEMA$);
+  private static final org.apache.avro.io.DatumReader<AuthProviderRotatedEvent>
+    READER$ = (org.apache.avro.io.DatumReader<AuthProviderRotatedEvent>)MODEL$.createDatumReader(SCHEMA$);
 
   @Override public void readExternal(java.io.ObjectInput in)
     throws java.io.IOException {
@@ -574,7 +574,7 @@ public class ProviderKeyDeletedEvent extends org.apache.avro.specific.SpecificRe
 
     out.writeString(this.providerId);
 
-    out.writeString(this.kid);
+    out.writeString(this.value);
 
   }
 
@@ -592,7 +592,7 @@ public class ProviderKeyDeletedEvent extends org.apache.avro.specific.SpecificRe
 
       this.providerId = in.readString();
 
-      this.kid = in.readString();
+      this.value = in.readString();
 
     } else {
       for (int i = 0; i < 4; i++) {
@@ -613,7 +613,7 @@ public class ProviderKeyDeletedEvent extends org.apache.avro.specific.SpecificRe
           break;
 
         case 3:
-          this.kid = in.readString();
+          this.value = in.readString();
           break;
 
         default:

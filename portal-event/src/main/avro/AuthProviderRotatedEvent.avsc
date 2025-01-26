@@ -1,6 +1,6 @@
 {
   "type": "record",
-  "name": "ProviderKeyDeletedEvent",
+  "name": "AuthProviderRotatedEvent",
   "namespace": "net.lightapi.portal.oauth",
   "fields": [
     {
@@ -56,9 +56,9 @@
       "doc": "provider id"
     },
     {
-      "name": "kid",
+      "name": "value",
       "type": "string",
-      "doc": "key id"
+      "doc": "oauth provider detail in JSON"
     }
   ]
 }
