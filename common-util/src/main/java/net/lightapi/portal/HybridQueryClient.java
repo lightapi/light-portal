@@ -923,6 +923,24 @@ public class HybridQueryClient {
     }
 
     /**
+     * Get provider key for hostId and providerId with exchange and url. The result contains a list of provider keys.
+     *
+     * @param exchange HttpServerExchange
+     * @param hostId host id
+     * @param providerId  provider id
+     * @return Result list of provider key object in JSON
+     */
+    public static Result<String> getProviderKey(HttpServerExchange exchange, String hostId, String providerId) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"oauth\",\"action\":\"getProviderKey\",\"version\":\"0.1.0\",\"data\":{\"hostId\":\"%s\",\"providerId\":\"%s\"}}", hostId, providerId);
+        if (config.isPortalByServiceUrl()) {
+            return callQueryExchangeUrl(s, exchange, config.getPortalQueryServiceUrl());
+        } else {
+            return callQueryExchange(s, exchange);
+        }
+    }
+
+
+    /**
      * Get a list of hosts from reference api for host dropdowns in the UI.
      *
      * @return Result of list of host object in JSON
