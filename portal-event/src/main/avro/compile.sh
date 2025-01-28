@@ -102,6 +102,9 @@ java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema RuleCrea
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema RuleUpdatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema RuleDeletedEvent.avsc .
 
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema OrgCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema OrgUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema OrgDeletedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema HostCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema HostUpdatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema HostDeletedEvent.avsc .
@@ -221,9 +224,12 @@ mv net/lightapi/portal/user/OrderCreatedEvent.java ../java/net/lightapi/portal/u
 mv net/lightapi/portal/user/OrderCancelledEvent.java ../java/net/lightapi/portal/user
 mv net/lightapi/portal/user/OrderDeliveredEvent.java ../java/net/lightapi/portal/user
 
-mv net/lightapi/portal/user/HostCreatedEvent.java ../java/net/lightapi/portal/user
-mv net/lightapi/portal/user/HostUpdatedEvent.java ../java/net/lightapi/portal/user
-mv net/lightapi/portal/user/HostDeletedEvent.java ../java/net/lightapi/portal/user
+mv net/lightapi/portal/host/OrgCreatedEvent.java ../java/net/lightapi/portal/host
+mv net/lightapi/portal/host/OrgUpdatedEvent.java ../java/net/lightapi/portal/host
+mv net/lightapi/portal/host/OrgDeletedEvent.java ../java/net/lightapi/portal/host
+mv net/lightapi/portal/host/HostCreatedEvent.java ../java/net/lightapi/portal/host
+mv net/lightapi/portal/host/HostUpdatedEvent.java ../java/net/lightapi/portal/host
+mv net/lightapi/portal/host/HostDeletedEvent.java ../java/net/lightapi/portal/host
 
 mv net/lightapi/portal/client/ClientCreatedEvent.java ../java/net/lightapi/portal/client
 mv net/lightapi/portal/client/ClientUpdatedEvent.java ../java/net/lightapi/portal/client

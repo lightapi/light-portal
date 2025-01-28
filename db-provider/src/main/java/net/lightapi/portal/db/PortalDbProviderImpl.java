@@ -6,12 +6,8 @@ import com.networknt.kafka.common.EventId;
 import com.networknt.monad.Failure;
 import com.networknt.monad.Result;
 import com.networknt.monad.Success;
-import com.networknt.security.KeyUtil;
 import com.networknt.status.Status;
-import com.networknt.utility.HashUtil;
-import net.lightapi.portal.client.ClientCreatedEvent;
-import net.lightapi.portal.client.ClientDeletedEvent;
-import net.lightapi.portal.client.ClientUpdatedEvent;
+import net.lightapi.portal.client.*;
 import net.lightapi.portal.market.*;
 import net.lightapi.portal.oauth.*;
 import net.lightapi.portal.user.*;
@@ -20,19 +16,18 @@ import net.lightapi.portal.group.*;
 import net.lightapi.portal.position.*;
 import net.lightapi.portal.role.*;
 import net.lightapi.portal.rule.*;
+import net.lightapi.portal.host.*;
 import net.lightapi.portal.service.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.security.KeyPair;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.networknt.db.provider.SqlDbStartupHook.cacheManager;
 import static com.networknt.db.provider.SqlDbStartupHook.ds;
 import static java.sql.Types.NULL;
 
@@ -4560,71 +4555,151 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         return result;
     }
 
+    @Override
+    public Result<String> createOrg(OrgCreatedEvent event) {
+        final String insertHost = "INSERT INTO org_t (domain, org_name, org_desc, org_owner, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?,  ?)";
+        Result<String> result;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(insertHost)) {
+                statement.setString(1, event.getDomain());
+                statement.setString(2, event.getOrgName());
+                statement.setString(3, event.getOrgDesc());
+                statement.setString(4, event.getOrgOwner());
+                statement.setString(5, event.getEventId().getUserId());
+                statement.setTimestamp(6, new Timestamp(event.getEventId().getTimestamp()));
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert the org " + event.getDomain());
+                }
+                conn.commit();
+                result = Success.of(event.getDomain());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> updateOrg(OrgUpdatedEvent event) {
+        final String updateHost = "UPDATE org_t SET org_name = ?, org_desc = ?, org_owner = ?, " +
+                "update_user = ?, update_ts = ? " +
+                "WHERE domain = ?";
+
+        Result<String> result = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(updateHost)) {
+                if (event.getOrgName() != null) {
+                    statement.setString(1, event.getOrgName());
+                } else {
+                    statement.setNull(1, NULL);
+                }
+                if (event.getOrgDesc() != null) {
+                    statement.setString(2, event.getOrgDesc());
+                } else {
+                    statement.setNull(2, NULL);
+                }
+                if (event.getOrgOwner() != null) {
+                    statement.setString(3, event.getOrgOwner());
+                } else {
+                    statement.setNull(3, NULL);
+                }
+                statement.setString(4, event.getEventId().getUserId());
+                statement.setTimestamp(5, new Timestamp(event.getEventId().getTimestamp()));
+                statement.setString(6, event.getDomain());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    // no record is updated, write an error notification.
+                    throw new SQLException("no record is updated for org " + event.getDomain());
+                }
+                conn.commit();
+                result = Success.of(event.getDomain());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
+    public Result<String> deleteOrg(OrgDeletedEvent event) {
+        final String deleteHost = "DELETE FROM org_t WHERE domain = ?";
+        Result<String> result;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(deleteHost)) {
+                statement.setString(1, event.getDomain());
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("no record is deleted for org " + event.getDomain());
+                }
+                conn.commit();
+                result = Success.of(event.getDomain());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
 
     @Override
     public Result<String> createHost(HostCreatedEvent event) {
-        final String insertHost = "INSERT INTO host_t (host_id, host_domain, org_name, org_desc, org_owner, jwk, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        final String insertHostKey = "INSERT INTO host_key_t (host_id, kid, public_key, private_key, key_type, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?)";
-
+        final String insertHost = "INSERT INTO host_t (host_id, domain, sub_domain, host_desc, host_owner, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?,  ?, ?)";
         Result<String> result;
-        Map<String, Object> map = JsonMapper.string2Map(event.getValue());
         try (Connection conn = ds.getConnection()) {
-            // we create the key pair for the host here so that each environment will have different key pairs. This also avoids to put
-            // the keys in the events which might be used to promote from env to env or from one host to another host.
-            KeyPair longKeyPair = KeyUtil.generateKeyPair("RSA", 2048);
-            String longKeyId = HashUtil.generateUUID();
-            KeyPair currKeyPair = KeyUtil.generateKeyPair("RSA", 2048);
-            String currKeyId = HashUtil.generateUUID();
-            if (logger.isTraceEnabled()) logger.trace("longKeyId is {} currKeyId is {}", longKeyId, currKeyId);
-            // prevKey and prevKeyId are null for the first time create the host. They are available during the key rotation.
-            String jwk = KeyUtil.generateJwk(longKeyPair.getPublic(), longKeyId, currKeyPair.getPublic(), currKeyId, null, null);
-            if (logger.isTraceEnabled()) logger.trace("jwk is {}", jwk);
             conn.setAutoCommit(false);
-            try {
-                // no duplicate record, insert the user into database and write a success notification.
-                try (PreparedStatement statement = conn.prepareStatement(insertHost)) {
-                    statement.setString(1, event.getHostId());
-                    statement.setString(2, event.getHostDomain());
-                    statement.setString(3, event.getName());
-                    statement.setString(4, event.getDesc());
-                    statement.setString(5, event.getOwner());
-                    statement.setString(6, jwk);
-                    statement.setString(7, event.getEventId().getId());
-                    statement.setTimestamp(8, new Timestamp(event.getEventId().getTimestamp()));
-                    int count = statement.executeUpdate();
-                    if (count == 0) {
-                        throw new SQLException("failed to insert the host " + event.getHostDomain());
-                    }
-                }
-                // insert the long key pair
-                try (PreparedStatement statement = conn.prepareStatement(insertHostKey)) {
-                    statement.setString(1, event.getHostId());
-                    statement.setString(2, longKeyId);
-                    statement.setString(3, KeyUtil.serializePublicKey(longKeyPair.getPublic()));
-                    statement.setString(4, KeyUtil.serializePrivateKey(longKeyPair.getPrivate()));
-                    statement.setString(5, "L");
-                    statement.setString(6, event.getEventId().getId());
-                    statement.setTimestamp(7, new Timestamp(event.getEventId().getTimestamp()));
-                    int count = statement.executeUpdate();
-                    if (count == 0) {
-                        throw new SQLException("failed to insert the host_key for host " + event.getHostDomain() + " kid " + longKeyId);
-                    }
-                }
-                // insert the current key pair
-                try (PreparedStatement statement = conn.prepareStatement(insertHostKey)) {
-                    statement.setString(1, event.getHostId());
-                    statement.setString(2, currKeyId);
-                    statement.setString(3, KeyUtil.serializePublicKey(currKeyPair.getPublic()));
-                    statement.setString(4, KeyUtil.serializePrivateKey(currKeyPair.getPrivate()));
-                    statement.setString(5, "C");
-                    statement.setString(6, event.getEventId().getId());
-                    statement.setTimestamp(7, new Timestamp(event.getEventId().getTimestamp()));
-                    int count = statement.executeUpdate();
-                    if (count == 0) {
-                        throw new SQLException("failed to insert the host_key for host " + event.getHostDomain() + " kid " + currKeyId);
-                    }
+            try (PreparedStatement statement = conn.prepareStatement(insertHost)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getDomain());
+                statement.setString(3, event.getSubDomain());
+                statement.setString(4, event.getHostDesc());
+                statement.setString(5, event.getHostOwner());
+                statement.setString(6, event.getEventId().getId());
+                statement.setTimestamp(7, new Timestamp(event.getEventId().getTimestamp()));
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert the host " + event.getDomain());
                 }
                 conn.commit();
                 result = Success.of(event.getHostId());
@@ -4642,17 +4717,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-        } catch (Exception e) {
-            logger.error("Exception:", e);
-            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
         return result;
     }
 
     @Override
     public Result<String> updateHost(HostUpdatedEvent event) {
-        final String updateHost = "UPDATE host_t SET org_name = ?, org_desc = ?, org_owner = ?, update_user = ? " +
-                "update_ts = ? " +
+        final String updateHost = "UPDATE host_t SET domain = ?, sub_domain = ?, host_desc = ?, host_owner = ?, " +
+                "update_user = ?, update_ts = ? " +
                 "WHERE host_id = ?";
 
         Result<String> result = null;
@@ -4660,29 +4732,30 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
 
             try (PreparedStatement statement = conn.prepareStatement(updateHost)) {
-                if (event.getName() != null) {
-                    statement.setString(1, event.getName());
-                } else {
-                    statement.setNull(1, NULL);
-                }
-                if (event.getDesc() != null) {
-                    statement.setString(2, event.getDesc());
+                statement.setString(1, event.getDomain());
+                if (event.getSubDomain() != null) {
+                    statement.setString(2, event.getSubDomain());
                 } else {
                     statement.setNull(2, NULL);
                 }
-                if (event.getOwner() != null) {
-                    statement.setString(3, event.getOwner());
+                if (event.getHostDesc() != null) {
+                    statement.setString(3, event.getHostDesc());
                 } else {
                     statement.setNull(3, NULL);
                 }
-                statement.setString(4, event.getEventId().getId());
-                statement.setTimestamp(5, new Timestamp(event.getEventId().getTimestamp()));
-                statement.setString(6, event.getHostId());
+                if (event.getHostOwner() != null) {
+                    statement.setString(4, event.getHostOwner());
+                } else {
+                    statement.setNull(4, NULL);
+                }
+                statement.setString(5, event.getEventId().getUserId());
+                statement.setTimestamp(6, new Timestamp(event.getEventId().getTimestamp()));
+                statement.setString(7, event.getHostId());
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     // no record is updated, write an error notification.
-                    throw new SQLException("no record is updated for host " + event.getHostDomain());
+                    throw new SQLException("no record is updated for host " + event.getHostId());
                 }
                 conn.commit();
                 result = Success.of(event.getHostId());
@@ -4708,29 +4781,17 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> deleteHost(HostDeletedEvent event) {
         final String deleteHost = "DELETE from host_t WHERE host_id = ?";
-        final String deleteHostKey = "DELETE from host_key_t WHERE host_id = ?";
-
         Result<String> result;
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
-            try {
-                try (PreparedStatement statement = conn.prepareStatement(deleteHostKey)) {
-                    statement.setString(1, event.getHostId());
-                    int count = statement.executeUpdate();
-                    if (count == 0) {
-                        // no record is deleted, write an error notification.
-                        throw new SQLException("no record is deleted for host " + event.getHostId());
-                    }
-                }
-                try (PreparedStatement statement = conn.prepareStatement(deleteHost)) {
-                    statement.setString(1, event.getHostId());
-                    int count = statement.executeUpdate();
-                    if (count == 0) {
-                        throw new SQLException("no record is deleted for host " + event.getHostId());
-                    }
+            try (PreparedStatement statement = conn.prepareStatement(deleteHost)) {
+                statement.setString(1, event.getHostId());
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("no record is deleted for host " + event.getHostId());
                 }
                 conn.commit();
-                result = Success.of(event.getEventId().getId());
+                result = Success.of(event.getHostId());
                 insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
@@ -4752,20 +4813,20 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> queryHostDomainById(String hostId) {
-        final String sql = "SELECT host_domain from host_t WHERE host_id = ?";
+        final String sql = "SELECT sub_domain || '.' || domain AS domain FROM host_t WHERE host_id = ?";
         Result<String> result;
-        String hostDomain = null;
+        String domain = null;
         try (final Connection conn = ds.getConnection(); final PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setString(1, hostId);
             try (ResultSet resultSet = statement.executeQuery()) {
                 if (resultSet.next()) {
-                    hostDomain = resultSet.getString("host_domain");
+                    domain = resultSet.getString("domain");
                 }
             }
-            if (hostDomain == null)
-                result = Failure.of(new Status(OBJECT_NOT_FOUND, "host with hostId ", hostId));
+            if (domain == null)
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "host domain", hostId));
             else
-                result = Success.of(hostDomain);
+                result = Success.of(domain);
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
@@ -4777,9 +4838,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<Map<String, Object>> queryHostById(String id) {
-        final String queryHostById = "SELECT * from host_t WHERE host_id = ?";
-        Result<Map<String, Object>> result;
+    public Result<String> queryHostById(String id) {
+        final String queryHostById = "SELECT host_id, domain, sub_domain, host_desc, host_owner, " +
+                "update_user, update_ts FROM host_t WHERE host_id = ?";
+        Result<String> result;
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
             try (PreparedStatement statement = conn.prepareStatement(queryHostById)) {
@@ -4787,20 +4849,19 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
                         map.put("hostId", resultSet.getString("host_id"));
-                        map.put("hostDomain", resultSet.getString("host_domain"));
-                        map.put("orgName", resultSet.getString("org_name"));
-                        map.put("orgDesc", resultSet.getString("org_desc"));
-                        map.put("orgOwner", resultSet.getString("org_owner"));
-                        map.put("jwk", resultSet.getString("jwk"));
+                        map.put("domain", resultSet.getString("domain"));
+                        map.put("subDomain", resultSet.getString("sub_domain"));
+                        map.put("hostDesc", resultSet.getString("host_desc"));
+                        map.put("hostOwner", resultSet.getString("host_owner"));
                         map.put("updateUser", resultSet.getString("update_user"));
                         map.put("updateTs", resultSet.getTimestamp("update_ts"));
                     }
                 }
             }
-            if (map.size() == 0)
+            if (map.isEmpty())
                 result = Failure.of(new Status(OBJECT_NOT_FOUND, "host with id", id));
             else
-                result = Success.of(map);
+                result = Success.of(JsonMapper.toJson(map));
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
@@ -4809,7 +4870,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
         return result;
-
     }
 
     @Override
@@ -4848,25 +4908,44 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<List<Map<String, Object>>> listHost() {
-        final String listHost = "SELECT host_id, host_domain from host_t";
-        Result<List<Map<String, Object>>> result;
+    public Result<String> getOrg(int limit, int offset) {
+        final String getHost = "SELECT COUNT(*) OVER () AS total,\n" +
+                "domain, org_name, org_desc, \n" +
+                "org_owner, update_user, update_ts \n" +
+                "FROM org_t LIMIT ? OFFSET ?";
+        Result<String> result;
+        int total = 0;
+        List<Map<String, Object>> orgs = new ArrayList<>();
         try (final Connection conn = ds.getConnection()) {
-            List<Map<String, Object>> list = new ArrayList<>();
-            try (PreparedStatement statement = conn.prepareStatement(listHost)) {
+            try (PreparedStatement statement = conn.prepareStatement(getHost)) {
+                statement.setInt(1, limit);
+                statement.setInt(2, offset);
+                boolean isFirstRow = true;
                 try (ResultSet resultSet = statement.executeQuery()) {
                     while (resultSet.next()) {
                         Map<String, Object> map = new HashMap<>();
-                        map.put("id", resultSet.getString("host_id"));
-                        map.put("label", resultSet.getString("host_domain"));
-                        list.add(map);
+                        if (isFirstRow) {
+                            total = resultSet.getInt("total");
+                            isFirstRow = false;
+                        }
+                        map.put("domain", resultSet.getString("domain"));
+                        map.put("orgName", resultSet.getString("org_name"));
+                        map.put("orgDesc", resultSet.getString("org_desc"));
+                        map.put("orgOwner", resultSet.getString("org_owner"));
+                        map.put("updateUser", resultSet.getString("update_user"));
+                        map.put("updateTs", resultSet.getTimestamp("update_ts") != null ? resultSet.getTimestamp("update_ts").toString() : null);
+                        orgs.add(map);
                     }
                 }
             }
-            if (list.isEmpty())
-                result = Failure.of(new Status(OBJECT_NOT_FOUND, "host", "any key"));
-            else
-                result = Success.of(list);
+            if(orgs.isEmpty()) {
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "host", "limit and offset"));
+            } else {
+                Map<String, Object> resultMap = new HashMap<>();
+                resultMap.put("total", total);
+                resultMap.put("orgs", orgs);
+                result = Success.of(JsonMapper.toJson(resultMap));
+            }
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
@@ -4875,15 +4954,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
         return result;
-
     }
 
     @Override
-    public Result<String> getHost(int limit, int offset) {
-        final String getHost = "SELECT COUNT(*) OVER () AS total,\n" +
-                "host_id, host_domain, org_name, org_desc, \n" +
-                "org_owner, jwk, update_user, update_ts \n" +
-                "FROM host_t LIMIT ? OFFSET ?";
+    public Result<String> getHost(int limit, int offset, String domain) {
+        final String getHost = "host_id, domain, sub_domain, host_desc, host_owner, \n" +
+                "update_user, update_ts \n" +
+                "FROM host_t WHERE domain = ? ORDER BY sub_domain LIMIT ? OFFSET ?";
         Result<String> result;
         int total = 0;
         List<Map<String, Object>> hosts = new ArrayList<>();
@@ -4900,24 +4977,54 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                             isFirstRow = false;
                         }
                         map.put("hostId", resultSet.getString("host_id"));
-                        map.put("hostDomain", resultSet.getString("host_domain"));
-                        map.put("orgName", resultSet.getString("org_name"));
-                        map.put("orgDesc", resultSet.getString("org_desc"));
-                        map.put("orgOwner", resultSet.getString("org_owner"));
-                        map.put("jwk", resultSet.getString("jwk"));
+                        map.put("domain", resultSet.getString("domain"));
+                        map.put("subDomain", resultSet.getString("sub_domain"));
+                        map.put("hostDesc", resultSet.getString("host_desc"));
+                        map.put("hostOwner", resultSet.getString("host_owner"));
                         map.put("updateUser", resultSet.getString("update_user"));
-                        map.put("updateTs", resultSet.getTimestamp("update_ts"));
+                        map.put("updateTs", resultSet.getTimestamp("update_ts") != null ? resultSet.getTimestamp("update_ts").toString() : null);
                         hosts.add(map);
                     }
                 }
             }
             if(hosts.isEmpty()) {
-                result = Failure.of(new Status(OBJECT_NOT_FOUND, "host", "limit and offset"));
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "host", domain));
             } else {
                 Map<String, Object> resultMap = new HashMap<>();
                 resultMap.put("total", total);
                 resultMap.put("hosts", hosts);
                 result = Success.of(JsonMapper.toJson(resultMap));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getHostLabel() {
+        final String getHostLabel = "SELECT host_id, domain, sub_domain FROM host_t ORDER BY domain, sub_domain";
+        Result<String> result;
+        List<Map<String, Object>> hosts = new ArrayList<>();
+        try (final Connection conn = ds.getConnection()) {
+            try (PreparedStatement statement = conn.prepareStatement(getHostLabel)) {
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    while (resultSet.next()) {
+                        Map<String, Object> map = new HashMap<>();
+                        map.put("id", resultSet.getString("host_id"));
+                        map.put("label", resultSet.getString("sub_domain") + "." + resultSet.getString("domain"));
+                        hosts.add(map);
+                    }
+                }
+            }
+            if(hosts.isEmpty()) {
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "host", "any key"));
+            } else {
+                result = Success.of(JsonMapper.toJson(hosts));
             }
         } catch (SQLException e) {
             logger.error("SQLException:", e);

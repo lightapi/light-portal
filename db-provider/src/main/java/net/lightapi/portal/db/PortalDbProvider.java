@@ -2,9 +2,7 @@ package net.lightapi.portal.db;
 
 import com.networknt.db.provider.DbProvider;
 import com.networknt.monad.Result;
-import net.lightapi.portal.client.ClientCreatedEvent;
-import net.lightapi.portal.client.ClientDeletedEvent;
-import net.lightapi.portal.client.ClientUpdatedEvent;
+import net.lightapi.portal.client.*;
 import net.lightapi.portal.market.*;
 import net.lightapi.portal.oauth.*;
 import net.lightapi.portal.user.*;
@@ -14,6 +12,7 @@ import net.lightapi.portal.position.*;
 import net.lightapi.portal.role.*;
 import net.lightapi.portal.service.*;
 import net.lightapi.portal.rule.*;
+import net.lightapi.portal.host.*;
 
 
 import java.sql.Timestamp;
@@ -121,14 +120,18 @@ public interface PortalDbProvider extends DbProvider {
     Result<List<String>> queryServiceFilter(String hostId, String apiId, String apiVersion);
 
 
+    Result<String> createOrg(OrgCreatedEvent event);
+    Result<String> updateOrg(OrgUpdatedEvent event);
+    Result<String> deleteOrg(OrgDeletedEvent event);
     Result<String> createHost(HostCreatedEvent event);
     Result<String> updateHost(HostUpdatedEvent event);
     Result<String> deleteHost(HostDeletedEvent event);
     Result<String> queryHostDomainById(String hostId);
-    Result<Map<String, Object>> queryHostById(String id);
+    Result<String> queryHostById(String id);
     Result<Map<String, Object>> queryHostByOwner(String owner);
-    Result<List<Map<String, Object>>> listHost();
-    Result<String> getHost(int limit, int offset);
+    Result<String> getOrg(int limit, int offset);
+    Result<String> getHost(int limit, int offset, String domain);
+    Result<String> getHostLabel();
 
     Result<String> createConfig(ConfigCreatedEvent event);
     Result<String> updateConfig(ConfigUpdatedEvent event);

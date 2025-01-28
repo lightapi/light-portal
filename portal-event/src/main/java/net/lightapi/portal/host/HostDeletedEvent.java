@@ -3,7 +3,7 @@
  *
  * DO NOT EDIT DIRECTLY
  */
-package net.lightapi.portal.user;
+package net.lightapi.portal.host;
 
 import org.apache.avro.specific.SpecificData;
 import org.apache.avro.util.Utf8;
@@ -13,10 +13,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -6004359728249205799L;
+  private static final long serialVersionUID = -6947056105395323556L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"HostDeletedEvent\",\"namespace\":\"net.lightapi.portal.user\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"user\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"event user id\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"HostDeletedEvent\",\"namespace\":\"net.lightapi.portal.host\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -75,8 +75,6 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
   private com.networknt.kafka.common.EventId EventId;
   /** host id */
   private java.lang.String hostId;
-  /** event user id */
-  private java.lang.String user;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -89,12 +87,10 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
    * All-args constructor.
    * @param EventId The new value for EventId
    * @param hostId host id
-   * @param user event user id
    */
-  public HostDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String user) {
+  public HostDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId) {
     this.EventId = EventId;
     this.hostId = hostId;
-    this.user = user;
   }
 
   @Override
@@ -109,7 +105,6 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
     switch (field$) {
     case 0: return EventId;
     case 1: return hostId;
-    case 2: return user;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -121,7 +116,6 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
     case 1: hostId = value$ != null ? value$.toString() : null; break;
-    case 2: user = value$ != null ? value$.toString() : null; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -162,29 +156,11 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
   }
 
   /**
-   * Gets the value of the 'user' field.
-   * @return event user id
-   */
-  public java.lang.String getUser() {
-    return user;
-  }
-
-
-  /**
-   * Sets the value of the 'user' field.
-   * event user id
-   * @param value the value to set.
-   */
-  public void setUser(java.lang.String value) {
-    this.user = value;
-  }
-
-  /**
    * Creates a new HostDeletedEvent RecordBuilder.
    * @return A new HostDeletedEvent RecordBuilder
    */
-  public static net.lightapi.portal.user.HostDeletedEvent.Builder newBuilder() {
-    return new net.lightapi.portal.user.HostDeletedEvent.Builder();
+  public static net.lightapi.portal.host.HostDeletedEvent.Builder newBuilder() {
+    return new net.lightapi.portal.host.HostDeletedEvent.Builder();
   }
 
   /**
@@ -192,11 +168,11 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
    * @param other The existing builder to copy.
    * @return A new HostDeletedEvent RecordBuilder
    */
-  public static net.lightapi.portal.user.HostDeletedEvent.Builder newBuilder(net.lightapi.portal.user.HostDeletedEvent.Builder other) {
+  public static net.lightapi.portal.host.HostDeletedEvent.Builder newBuilder(net.lightapi.portal.host.HostDeletedEvent.Builder other) {
     if (other == null) {
-      return new net.lightapi.portal.user.HostDeletedEvent.Builder();
+      return new net.lightapi.portal.host.HostDeletedEvent.Builder();
     } else {
-      return new net.lightapi.portal.user.HostDeletedEvent.Builder(other);
+      return new net.lightapi.portal.host.HostDeletedEvent.Builder(other);
     }
   }
 
@@ -205,11 +181,11 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
    * @param other The existing instance to copy.
    * @return A new HostDeletedEvent RecordBuilder
    */
-  public static net.lightapi.portal.user.HostDeletedEvent.Builder newBuilder(net.lightapi.portal.user.HostDeletedEvent other) {
+  public static net.lightapi.portal.host.HostDeletedEvent.Builder newBuilder(net.lightapi.portal.host.HostDeletedEvent other) {
     if (other == null) {
-      return new net.lightapi.portal.user.HostDeletedEvent.Builder();
+      return new net.lightapi.portal.host.HostDeletedEvent.Builder();
     } else {
-      return new net.lightapi.portal.user.HostDeletedEvent.Builder(other);
+      return new net.lightapi.portal.host.HostDeletedEvent.Builder(other);
     }
   }
 
@@ -224,8 +200,6 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
     /** host id */
     private java.lang.String hostId;
-    /** event user id */
-    private java.lang.String user;
 
     /** Creates a new Builder */
     private Builder() {
@@ -236,7 +210,7 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
      * Creates a Builder by copying an existing Builder.
      * @param other The existing Builder to copy.
      */
-    private Builder(net.lightapi.portal.user.HostDeletedEvent.Builder other) {
+    private Builder(net.lightapi.portal.host.HostDeletedEvent.Builder other) {
       super(other);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
@@ -249,17 +223,13 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
         this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
-      if (isValidValue(fields()[2], other.user)) {
-        this.user = data().deepCopy(fields()[2].schema(), other.user);
-        fieldSetFlags()[2] = other.fieldSetFlags()[2];
-      }
     }
 
     /**
      * Creates a Builder by copying an existing HostDeletedEvent instance
      * @param other The existing instance to copy.
      */
-    private Builder(net.lightapi.portal.user.HostDeletedEvent other) {
+    private Builder(net.lightapi.portal.host.HostDeletedEvent other) {
       super(SCHEMA$, MODEL$);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
@@ -269,10 +239,6 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
       if (isValidValue(fields()[1], other.hostId)) {
         this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
         fieldSetFlags()[1] = true;
-      }
-      if (isValidValue(fields()[2], other.user)) {
-        this.user = data().deepCopy(fields()[2].schema(), other.user);
-        fieldSetFlags()[2] = true;
       }
     }
 
@@ -290,7 +256,7 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @param value The value of 'EventId'.
       * @return This builder.
       */
-    public net.lightapi.portal.user.HostDeletedEvent.Builder setEventId(com.networknt.kafka.common.EventId value) {
+    public net.lightapi.portal.host.HostDeletedEvent.Builder setEventId(com.networknt.kafka.common.EventId value) {
       validate(fields()[0], value);
       this.EventIdBuilder = null;
       this.EventId = value;
@@ -327,7 +293,7 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
      * @return This builder.
      */
 
-    public net.lightapi.portal.user.HostDeletedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
+    public net.lightapi.portal.host.HostDeletedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
       clearEventId();
       EventIdBuilder = value;
       return this;
@@ -345,7 +311,7 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
       * Clears the value of the 'EventId' field.
       * @return This builder.
       */
-    public net.lightapi.portal.user.HostDeletedEvent.Builder clearEventId() {
+    public net.lightapi.portal.host.HostDeletedEvent.Builder clearEventId() {
       EventId = null;
       EventIdBuilder = null;
       fieldSetFlags()[0] = false;
@@ -368,7 +334,7 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
       * @param value The value of 'hostId'.
       * @return This builder.
       */
-    public net.lightapi.portal.user.HostDeletedEvent.Builder setHostId(java.lang.String value) {
+    public net.lightapi.portal.host.HostDeletedEvent.Builder setHostId(java.lang.String value) {
       validate(fields()[1], value);
       this.hostId = value;
       fieldSetFlags()[1] = true;
@@ -390,53 +356,9 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
       * host id
       * @return This builder.
       */
-    public net.lightapi.portal.user.HostDeletedEvent.Builder clearHostId() {
+    public net.lightapi.portal.host.HostDeletedEvent.Builder clearHostId() {
       hostId = null;
       fieldSetFlags()[1] = false;
-      return this;
-    }
-
-    /**
-      * Gets the value of the 'user' field.
-      * event user id
-      * @return The value.
-      */
-    public java.lang.String getUser() {
-      return user;
-    }
-
-
-    /**
-      * Sets the value of the 'user' field.
-      * event user id
-      * @param value The value of 'user'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.user.HostDeletedEvent.Builder setUser(java.lang.String value) {
-      validate(fields()[2], value);
-      this.user = value;
-      fieldSetFlags()[2] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'user' field has been set.
-      * event user id
-      * @return True if the 'user' field has been set, false otherwise.
-      */
-    public boolean hasUser() {
-      return fieldSetFlags()[2];
-    }
-
-
-    /**
-      * Clears the value of the 'user' field.
-      * event user id
-      * @return This builder.
-      */
-    public net.lightapi.portal.user.HostDeletedEvent.Builder clearUser() {
-      user = null;
-      fieldSetFlags()[2] = false;
       return this;
     }
 
@@ -456,7 +378,6 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
         record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
-        record.user = fieldSetFlags()[2] ? this.user : (java.lang.String) defaultValue(fields()[2]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -493,8 +414,6 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
 
     out.writeString(this.hostId);
 
-    out.writeString(this.user);
-
   }
 
   @Override public void customDecode(org.apache.avro.io.ResolvingDecoder in)
@@ -509,10 +428,8 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
 
       this.hostId = in.readString();
 
-      this.user = in.readString();
-
     } else {
-      for (int i = 0; i < 3; i++) {
+      for (int i = 0; i < 2; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -523,10 +440,6 @@ public class HostDeletedEvent extends org.apache.avro.specific.SpecificRecordBas
 
         case 1:
           this.hostId = in.readString();
-          break;
-
-        case 2:
-          this.user = in.readString();
           break;
 
         default:

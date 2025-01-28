@@ -203,4 +203,13 @@ public class PortalDbProviderImplTest {
         }
     }
 
+    @Test
+    void testGetHostLabel() {
+        Result<String> result = dbProvider.getHostLabel();
+        if(result.isFailure()) {
+            System.out.println(result.getError());
+        } else {
+            System.out.println(result.getResult());
+        }
+    }
 }

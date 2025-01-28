@@ -1,7 +1,7 @@
 {
   "type": "record",
   "name": "HostDeletedEvent",
-  "namespace": "net.lightapi.portal.user",
+  "namespace": "net.lightapi.portal.host",
   "fields": [
     {
       "name": "EventId",
@@ -49,11 +49,6 @@
       "name": "hostId",
       "type": "string",
       "doc": "host id"
-    },
-    {
-      "name": "user",
-      "type": "string",
-      "doc": "event user id"
     }
   ]
 }

@@ -1,6 +1,6 @@
 {
   "type": "record",
-  "name": "HostUpdatedEvent",
+  "name": "OrgCreatedEvent",
   "namespace": "net.lightapi.portal.host",
   "fields": [
     {
@@ -46,29 +46,24 @@
       }
     },
     {
-      "name": "hostId",
-      "type": "string",
-      "doc": "host id"
-    },
-    {
       "name": "domain",
       "type": "string",
       "doc": "host domain"
     },
     {
-      "name": "subDomain",
+      "name": "orgName",
       "type": "string",
-      "doc": "host subdomain"
+      "doc": "org name"
     },
     {
-      "name": "hostDesc",
+      "name": "orgDesc",
       "type": "string",
-      "doc": "host desc"
+      "doc": "org desc"
     },
     {
-      "name": "hostOwner",
+      "name": "orgOwner",
       "type": "string",
-      "doc": "host owner"
+      "doc": "org owner"
     }
   ]
 }

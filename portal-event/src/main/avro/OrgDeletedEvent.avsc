@@ -1,6 +1,6 @@
 {
   "type": "record",
-  "name": "HostUpdatedEvent",
+  "name": "OrgDeletedEvent",
   "namespace": "net.lightapi.portal.host",
   "fields": [
     {
@@ -46,29 +46,9 @@
       }
     },
     {
-      "name": "hostId",
-      "type": "string",
-      "doc": "host id"
-    },
-    {
       "name": "domain",
       "type": "string",
-      "doc": "host domain"
-    },
-    {
-      "name": "subDomain",
-      "type": "string",
-      "doc": "host subdomain"
-    },
-    {
-      "name": "hostDesc",
-      "type": "string",
-      "doc": "host desc"
-    },
-    {
-      "name": "hostOwner",
-      "type": "string",
-      "doc": "host owner"
+      "doc": "domain"
     }
   ]
 }
