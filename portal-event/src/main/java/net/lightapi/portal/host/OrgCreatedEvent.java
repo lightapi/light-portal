@@ -13,10 +13,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class OrgCreatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 6695822382331353468L;
+  private static final long serialVersionUID = -1623627159141254475L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"OrgCreatedEvent\",\"namespace\":\"net.lightapi.portal.host\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"domain\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host domain\"},{\"name\":\"orgName\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"org name\"},{\"name\":\"orgDesc\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"org desc\"},{\"name\":\"orgOwner\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"org owner\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"OrgCreatedEvent\",\"namespace\":\"net.lightapi.portal.host\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"domain\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"org domain\"},{\"name\":\"orgName\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"org name\"},{\"name\":\"orgDesc\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"org desc\"},{\"name\":\"orgOwner\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"org owner\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"subDomain\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"sub domain or host\"},{\"name\":\"hostDesc\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host desc\"},{\"name\":\"hostOwner\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host owner\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -73,7 +73,7 @@ public class OrgCreatedEvent extends org.apache.avro.specific.SpecificRecordBase
   }
 
   private com.networknt.kafka.common.EventId EventId;
-  /** host domain */
+  /** org domain */
   private java.lang.String domain;
   /** org name */
   private java.lang.String orgName;
@@ -81,6 +81,14 @@ public class OrgCreatedEvent extends org.apache.avro.specific.SpecificRecordBase
   private java.lang.String orgDesc;
   /** org owner */
   private java.lang.String orgOwner;
+  /** host id */
+  private java.lang.String hostId;
+  /** sub domain or host */
+  private java.lang.String subDomain;
+  /** host desc */
+  private java.lang.String hostDesc;
+  /** host owner */
+  private java.lang.String hostOwner;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -92,17 +100,25 @@ public class OrgCreatedEvent extends org.apache.avro.specific.SpecificRecordBase
   /**
    * All-args constructor.
    * @param EventId The new value for EventId
-   * @param domain host domain
+   * @param domain org domain
    * @param orgName org name
    * @param orgDesc org desc
    * @param orgOwner org owner
+   * @param hostId host id
+   * @param subDomain sub domain or host
+   * @param hostDesc host desc
+   * @param hostOwner host owner
    */
-  public OrgCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String domain, java.lang.String orgName, java.lang.String orgDesc, java.lang.String orgOwner) {
+  public OrgCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String domain, java.lang.String orgName, java.lang.String orgDesc, java.lang.String orgOwner, java.lang.String hostId, java.lang.String subDomain, java.lang.String hostDesc, java.lang.String hostOwner) {
     this.EventId = EventId;
     this.domain = domain;
     this.orgName = orgName;
     this.orgDesc = orgDesc;
     this.orgOwner = orgOwner;
+    this.hostId = hostId;
+    this.subDomain = subDomain;
+    this.hostDesc = hostDesc;
+    this.hostOwner = hostOwner;
   }
 
   @Override
@@ -120,6 +136,10 @@ public class OrgCreatedEvent extends org.apache.avro.specific.SpecificRecordBase
     case 2: return orgName;
     case 3: return orgDesc;
     case 4: return orgOwner;
+    case 5: return hostId;
+    case 6: return subDomain;
+    case 7: return hostDesc;
+    case 8: return hostOwner;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -134,6 +154,10 @@ public class OrgCreatedEvent extends org.apache.avro.specific.SpecificRecordBase
     case 2: orgName = value$ != null ? value$.toString() : null; break;
     case 3: orgDesc = value$ != null ? value$.toString() : null; break;
     case 4: orgOwner = value$ != null ? value$.toString() : null; break;
+    case 5: hostId = value$ != null ? value$.toString() : null; break;
+    case 6: subDomain = value$ != null ? value$.toString() : null; break;
+    case 7: hostDesc = value$ != null ? value$.toString() : null; break;
+    case 8: hostOwner = value$ != null ? value$.toString() : null; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -157,7 +181,7 @@ public class OrgCreatedEvent extends org.apache.avro.specific.SpecificRecordBase
 
   /**
    * Gets the value of the 'domain' field.
-   * @return host domain
+   * @return org domain
    */
   public java.lang.String getDomain() {
     return domain;
@@ -166,7 +190,7 @@ public class OrgCreatedEvent extends org.apache.avro.specific.SpecificRecordBase
 
   /**
    * Sets the value of the 'domain' field.
-   * host domain
+   * org domain
    * @param value the value to set.
    */
   public void setDomain(java.lang.String value) {
@@ -228,6 +252,78 @@ public class OrgCreatedEvent extends org.apache.avro.specific.SpecificRecordBase
   }
 
   /**
+   * Gets the value of the 'hostId' field.
+   * @return host id
+   */
+  public java.lang.String getHostId() {
+    return hostId;
+  }
+
+
+  /**
+   * Sets the value of the 'hostId' field.
+   * host id
+   * @param value the value to set.
+   */
+  public void setHostId(java.lang.String value) {
+    this.hostId = value;
+  }
+
+  /**
+   * Gets the value of the 'subDomain' field.
+   * @return sub domain or host
+   */
+  public java.lang.String getSubDomain() {
+    return subDomain;
+  }
+
+
+  /**
+   * Sets the value of the 'subDomain' field.
+   * sub domain or host
+   * @param value the value to set.
+   */
+  public void setSubDomain(java.lang.String value) {
+    this.subDomain = value;
+  }
+
+  /**
+   * Gets the value of the 'hostDesc' field.
+   * @return host desc
+   */
+  public java.lang.String getHostDesc() {
+    return hostDesc;
+  }
+
+
+  /**
+   * Sets the value of the 'hostDesc' field.
+   * host desc
+   * @param value the value to set.
+   */
+  public void setHostDesc(java.lang.String value) {
+    this.hostDesc = value;
+  }
+
+  /**
+   * Gets the value of the 'hostOwner' field.
+   * @return host owner
+   */
+  public java.lang.String getHostOwner() {
+    return hostOwner;
+  }
+
+
+  /**
+   * Sets the value of the 'hostOwner' field.
+   * host owner
+   * @param value the value to set.
+   */
+  public void setHostOwner(java.lang.String value) {
+    this.hostOwner = value;
+  }
+
+  /**
    * Creates a new OrgCreatedEvent RecordBuilder.
    * @return A new OrgCreatedEvent RecordBuilder
    */
@@ -270,7 +366,7 @@ public class OrgCreatedEvent extends org.apache.avro.specific.SpecificRecordBase
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
-    /** host domain */
+    /** org domain */
     private java.lang.String domain;
     /** org name */
     private java.lang.String orgName;
@@ -278,6 +374,14 @@ public class OrgCreatedEvent extends org.apache.avro.specific.SpecificRecordBase
     private java.lang.String orgDesc;
     /** org owner */
     private java.lang.String orgOwner;
+    /** host id */
+    private java.lang.String hostId;
+    /** sub domain or host */
+    private java.lang.String subDomain;
+    /** host desc */
+    private java.lang.String hostDesc;
+    /** host owner */
+    private java.lang.String hostOwner;
 
     /** Creates a new Builder */
     private Builder() {
@@ -313,6 +417,22 @@ public class OrgCreatedEvent extends org.apache.avro.specific.SpecificRecordBase
         this.orgOwner = data().deepCopy(fields()[4].schema(), other.orgOwner);
         fieldSetFlags()[4] = other.fieldSetFlags()[4];
       }
+      if (isValidValue(fields()[5], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[5].schema(), other.hostId);
+        fieldSetFlags()[5] = other.fieldSetFlags()[5];
+      }
+      if (isValidValue(fields()[6], other.subDomain)) {
+        this.subDomain = data().deepCopy(fields()[6].schema(), other.subDomain);
+        fieldSetFlags()[6] = other.fieldSetFlags()[6];
+      }
+      if (isValidValue(fields()[7], other.hostDesc)) {
+        this.hostDesc = data().deepCopy(fields()[7].schema(), other.hostDesc);
+        fieldSetFlags()[7] = other.fieldSetFlags()[7];
+      }
+      if (isValidValue(fields()[8], other.hostOwner)) {
+        this.hostOwner = data().deepCopy(fields()[8].schema(), other.hostOwner);
+        fieldSetFlags()[8] = other.fieldSetFlags()[8];
+      }
     }
 
     /**
@@ -341,6 +461,22 @@ public class OrgCreatedEvent extends org.apache.avro.specific.SpecificRecordBase
       if (isValidValue(fields()[4], other.orgOwner)) {
         this.orgOwner = data().deepCopy(fields()[4].schema(), other.orgOwner);
         fieldSetFlags()[4] = true;
+      }
+      if (isValidValue(fields()[5], other.hostId)) {
+        this.hostId = data().deepCopy(fields()[5].schema(), other.hostId);
+        fieldSetFlags()[5] = true;
+      }
+      if (isValidValue(fields()[6], other.subDomain)) {
+        this.subDomain = data().deepCopy(fields()[6].schema(), other.subDomain);
+        fieldSetFlags()[6] = true;
+      }
+      if (isValidValue(fields()[7], other.hostDesc)) {
+        this.hostDesc = data().deepCopy(fields()[7].schema(), other.hostDesc);
+        fieldSetFlags()[7] = true;
+      }
+      if (isValidValue(fields()[8], other.hostOwner)) {
+        this.hostOwner = data().deepCopy(fields()[8].schema(), other.hostOwner);
+        fieldSetFlags()[8] = true;
       }
     }
 
@@ -422,7 +558,7 @@ public class OrgCreatedEvent extends org.apache.avro.specific.SpecificRecordBase
 
     /**
       * Gets the value of the 'domain' field.
-      * host domain
+      * org domain
       * @return The value.
       */
     public java.lang.String getDomain() {
@@ -432,7 +568,7 @@ public class OrgCreatedEvent extends org.apache.avro.specific.SpecificRecordBase
 
     /**
       * Sets the value of the 'domain' field.
-      * host domain
+      * org domain
       * @param value The value of 'domain'.
       * @return This builder.
       */
@@ -445,7 +581,7 @@ public class OrgCreatedEvent extends org.apache.avro.specific.SpecificRecordBase
 
     /**
       * Checks whether the 'domain' field has been set.
-      * host domain
+      * org domain
       * @return True if the 'domain' field has been set, false otherwise.
       */
     public boolean hasDomain() {
@@ -455,7 +591,7 @@ public class OrgCreatedEvent extends org.apache.avro.specific.SpecificRecordBase
 
     /**
       * Clears the value of the 'domain' field.
-      * host domain
+      * org domain
       * @return This builder.
       */
     public net.lightapi.portal.host.OrgCreatedEvent.Builder clearDomain() {
@@ -596,6 +732,182 @@ public class OrgCreatedEvent extends org.apache.avro.specific.SpecificRecordBase
       return this;
     }
 
+    /**
+      * Gets the value of the 'hostId' field.
+      * host id
+      * @return The value.
+      */
+    public java.lang.String getHostId() {
+      return hostId;
+    }
+
+
+    /**
+      * Sets the value of the 'hostId' field.
+      * host id
+      * @param value The value of 'hostId'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.host.OrgCreatedEvent.Builder setHostId(java.lang.String value) {
+      validate(fields()[5], value);
+      this.hostId = value;
+      fieldSetFlags()[5] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'hostId' field has been set.
+      * host id
+      * @return True if the 'hostId' field has been set, false otherwise.
+      */
+    public boolean hasHostId() {
+      return fieldSetFlags()[5];
+    }
+
+
+    /**
+      * Clears the value of the 'hostId' field.
+      * host id
+      * @return This builder.
+      */
+    public net.lightapi.portal.host.OrgCreatedEvent.Builder clearHostId() {
+      hostId = null;
+      fieldSetFlags()[5] = false;
+      return this;
+    }
+
+    /**
+      * Gets the value of the 'subDomain' field.
+      * sub domain or host
+      * @return The value.
+      */
+    public java.lang.String getSubDomain() {
+      return subDomain;
+    }
+
+
+    /**
+      * Sets the value of the 'subDomain' field.
+      * sub domain or host
+      * @param value The value of 'subDomain'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.host.OrgCreatedEvent.Builder setSubDomain(java.lang.String value) {
+      validate(fields()[6], value);
+      this.subDomain = value;
+      fieldSetFlags()[6] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'subDomain' field has been set.
+      * sub domain or host
+      * @return True if the 'subDomain' field has been set, false otherwise.
+      */
+    public boolean hasSubDomain() {
+      return fieldSetFlags()[6];
+    }
+
+
+    /**
+      * Clears the value of the 'subDomain' field.
+      * sub domain or host
+      * @return This builder.
+      */
+    public net.lightapi.portal.host.OrgCreatedEvent.Builder clearSubDomain() {
+      subDomain = null;
+      fieldSetFlags()[6] = false;
+      return this;
+    }
+
+    /**
+      * Gets the value of the 'hostDesc' field.
+      * host desc
+      * @return The value.
+      */
+    public java.lang.String getHostDesc() {
+      return hostDesc;
+    }
+
+
+    /**
+      * Sets the value of the 'hostDesc' field.
+      * host desc
+      * @param value The value of 'hostDesc'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.host.OrgCreatedEvent.Builder setHostDesc(java.lang.String value) {
+      validate(fields()[7], value);
+      this.hostDesc = value;
+      fieldSetFlags()[7] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'hostDesc' field has been set.
+      * host desc
+      * @return True if the 'hostDesc' field has been set, false otherwise.
+      */
+    public boolean hasHostDesc() {
+      return fieldSetFlags()[7];
+    }
+
+
+    /**
+      * Clears the value of the 'hostDesc' field.
+      * host desc
+      * @return This builder.
+      */
+    public net.lightapi.portal.host.OrgCreatedEvent.Builder clearHostDesc() {
+      hostDesc = null;
+      fieldSetFlags()[7] = false;
+      return this;
+    }
+
+    /**
+      * Gets the value of the 'hostOwner' field.
+      * host owner
+      * @return The value.
+      */
+    public java.lang.String getHostOwner() {
+      return hostOwner;
+    }
+
+
+    /**
+      * Sets the value of the 'hostOwner' field.
+      * host owner
+      * @param value The value of 'hostOwner'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.host.OrgCreatedEvent.Builder setHostOwner(java.lang.String value) {
+      validate(fields()[8], value);
+      this.hostOwner = value;
+      fieldSetFlags()[8] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'hostOwner' field has been set.
+      * host owner
+      * @return True if the 'hostOwner' field has been set, false otherwise.
+      */
+    public boolean hasHostOwner() {
+      return fieldSetFlags()[8];
+    }
+
+
+    /**
+      * Clears the value of the 'hostOwner' field.
+      * host owner
+      * @return This builder.
+      */
+    public net.lightapi.portal.host.OrgCreatedEvent.Builder clearHostOwner() {
+      hostOwner = null;
+      fieldSetFlags()[8] = false;
+      return this;
+    }
+
     @Override
     @SuppressWarnings("unchecked")
     public OrgCreatedEvent build() {
@@ -615,6 +927,10 @@ public class OrgCreatedEvent extends org.apache.avro.specific.SpecificRecordBase
         record.orgName = fieldSetFlags()[2] ? this.orgName : (java.lang.String) defaultValue(fields()[2]);
         record.orgDesc = fieldSetFlags()[3] ? this.orgDesc : (java.lang.String) defaultValue(fields()[3]);
         record.orgOwner = fieldSetFlags()[4] ? this.orgOwner : (java.lang.String) defaultValue(fields()[4]);
+        record.hostId = fieldSetFlags()[5] ? this.hostId : (java.lang.String) defaultValue(fields()[5]);
+        record.subDomain = fieldSetFlags()[6] ? this.subDomain : (java.lang.String) defaultValue(fields()[6]);
+        record.hostDesc = fieldSetFlags()[7] ? this.hostDesc : (java.lang.String) defaultValue(fields()[7]);
+        record.hostOwner = fieldSetFlags()[8] ? this.hostOwner : (java.lang.String) defaultValue(fields()[8]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -657,6 +973,14 @@ public class OrgCreatedEvent extends org.apache.avro.specific.SpecificRecordBase
 
     out.writeString(this.orgOwner);
 
+    out.writeString(this.hostId);
+
+    out.writeString(this.subDomain);
+
+    out.writeString(this.hostDesc);
+
+    out.writeString(this.hostOwner);
+
   }
 
   @Override public void customDecode(org.apache.avro.io.ResolvingDecoder in)
@@ -677,8 +1001,16 @@ public class OrgCreatedEvent extends org.apache.avro.specific.SpecificRecordBase
 
       this.orgOwner = in.readString();
 
+      this.hostId = in.readString();
+
+      this.subDomain = in.readString();
+
+      this.hostDesc = in.readString();
+
+      this.hostOwner = in.readString();
+
     } else {
-      for (int i = 0; i < 5; i++) {
+      for (int i = 0; i < 9; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -701,6 +1033,22 @@ public class OrgCreatedEvent extends org.apache.avro.specific.SpecificRecordBase
 
         case 4:
           this.orgOwner = in.readString();
+          break;
+
+        case 5:
+          this.hostId = in.readString();
+          break;
+
+        case 6:
+          this.subDomain = in.readString();
+          break;
+
+        case 7:
+          this.hostDesc = in.readString();
+          break;
+
+        case 8:
+          this.hostOwner = in.readString();
           break;
 
         default:

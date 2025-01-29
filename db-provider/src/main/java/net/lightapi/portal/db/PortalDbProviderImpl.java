@@ -126,6 +126,57 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> loginUserByEmail(String email) {
         Result<String> result = null;
+        /*
+        SELECT
+        uh.host_id,
+        u.user_id,
+        u.email,
+        u.user_type,
+        u.password,
+        u.verified,
+        CASE
+            WHEN u.user_type = 'E' THEN e.employee_id
+            WHEN u.user_type = 'C' THEN c.customer_id
+            ELSE NULL
+        END AS entity_id,
+        CASE WHEN u.user_type = 'E' THEN string_agg(DISTINCT p.position_id, ' ' ORDER BY p.position_id) ELSE NULL END AS positions,
+        string_agg(DISTINCT r.role_id, ' ' ORDER BY r.role_id) AS roles,
+        string_agg(DISTINCT g.group_id, ' ' ORDER BY g.group_id) AS groups,
+        CASE
+            WHEN COUNT(DISTINCT at.attribute_id || '^=^' || aut.attribute_value) > 0 THEN string_agg(DISTINCT at.attribute_id || '^=^' || aut.attribute_value, '~' ORDER BY at.attribute_id || '^=^' || aut.attribute_value)
+            ELSE NULL
+        END AS attributes
+        FROM
+            user_t AS u
+        LEFT JOIN
+             user_host_t AS uh ON u.user_id = uh.user_id
+        LEFT JOIN
+            role_user_t AS ru ON u.user_id = ru.user_id
+        LEFT JOIN
+            role_t AS r ON ru.host_id = r.host_id AND ru.role_id = r.role_id
+        LEFT JOIN
+            attribute_user_t AS aut ON u.user_id = aut.user_id
+        LEFT JOIN
+            attribute_t AS at ON aut.host_id = at.host_id AND aut.attribute_id = at.attribute_id
+        LEFT JOIN
+            group_user_t AS gu ON u.user_id = gu.user_id
+        LEFT JOIN
+            group_t AS g ON gu.host_id = g.host_id AND gu.group_id = g.group_id
+        LEFT JOIN
+            employee_t AS e ON uh.host_id = e.host_id AND u.user_id = e.user_id
+        LEFT JOIN
+            customer_t AS c ON uh.host_id = c.host_id AND u.user_id = c.user_id
+        LEFT JOIN
+            employee_position_t AS ep ON e.host_id = ep.host_id AND e.employee_id = ep.employee_id
+        LEFT JOIN
+            position_t AS p ON ep.host_id = p.host_id AND ep.position_id = p.position_id
+        WHERE
+            u.email = 'steve.hu@networknt.com'
+            AND u.locked = FALSE
+            AND u.verified = TRUE
+        GROUP BY
+            uh.host_id, u.user_id, u.user_type, e.employee_id, c.customer_id;         */
+
         String sql = "SELECT\n" +
                 "    uh.host_id,\n" +
                 "    u.user_id,\n" +
@@ -933,19 +984,19 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()){
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(queryTokenByEmail)) {
-                statement.setString(1, event.getEventId().getId());
+                statement.setString(1, event.getEventId().getUserId());
                 statement.setString(2, event.getToken());
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
                         // found the token record, update user_t for token, verified flog and nonce, write a success notification.
                         try (PreparedStatement updateStatement = conn.prepareStatement(updateUserByEmail)) {
                             updateStatement.setLong(1, event.getEventId().getNonce() + 1);
-                            updateStatement.setString(2, event.getEventId().getId());
+                            updateStatement.setString(2, event.getEventId().getUserId());
                             updateStatement.execute();
                         }
                     } else {
                         // record is not found with the email and token. write an error notification.
-                        throw new SQLException(String.format("token %s is not matched for userId %s.", event.getToken(), event.getEventId().getId()));
+                        throw new SQLException(String.format("token %s is not matched for userId %s.", event.getToken(), event.getEventId().getUserId()));
                     }
                 }
                 conn.commit();
@@ -4557,21 +4608,101 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createOrg(OrgCreatedEvent event) {
-        final String insertHost = "INSERT INTO org_t (domain, org_name, org_desc, org_owner, update_user, update_ts) " +
+        final String insertOrg = "INSERT INTO org_t (domain, org_name, org_desc, org_owner, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?,  ?)";
+        final String insertHost = "INSERT INTO host_t(host_id, domain, sub_domain, host_desc, host_owner, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        final String insertRole = "INSERT INTO role_t (host_id, role_id, role_desc, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?)";
+        final String insertRoleUser = "INSERT INTO role_user_t (host_id, role_id, user_id, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?)";
+        final String updateUserHost = "UPDATE user_host_t SET host_id = ?, update_user = ?, update_ts = ? WHERE user_id = ?";
+
+
         Result<String> result;
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(insertHost)) {
+            try (PreparedStatement statement = conn.prepareStatement(insertOrg)) {
                 statement.setString(1, event.getDomain());
                 statement.setString(2, event.getOrgName());
                 statement.setString(3, event.getOrgDesc());
-                statement.setString(4, event.getOrgOwner());
+                statement.setString(4, event.getOrgOwner());  // org owner is the user id in the eventId
                 statement.setString(5, event.getEventId().getUserId());
                 statement.setTimestamp(6, new Timestamp(event.getEventId().getTimestamp()));
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("failed to insert the org " + event.getDomain());
+                }
+                try (PreparedStatement hostStatement = conn.prepareStatement(insertHost)) {
+                    hostStatement.setString(1, event.getHostId());
+                    hostStatement.setString(2, event.getDomain());
+                    hostStatement.setString(3, event.getSubDomain());
+                    hostStatement.setString(4, event.getHostDesc());
+                    hostStatement.setString(5, event.getHostOwner()); // host owner can be another person selected by the org owner.
+                    hostStatement.setString(6, event.getEventId().getUserId());
+                    hostStatement.setTimestamp(7, new Timestamp(event.getEventId().getTimestamp()));
+                    hostStatement.executeUpdate();
+                }
+                // create user, org-admin and host-admin roles for the hostId by default.
+                try (PreparedStatement roleStatement = conn.prepareStatement(insertRole)) {
+                    roleStatement.setString(1, event.getHostId());
+                    roleStatement.setString(2, "user");
+                    roleStatement.setString(3, "user role");
+                    roleStatement.setString(4, event.getEventId().getUserId());
+                    roleStatement.setTimestamp(5, new Timestamp(event.getEventId().getTimestamp()));
+                    roleStatement.executeUpdate();
+                }
+                try (PreparedStatement roleStatement = conn.prepareStatement(insertRole)) {
+                    roleStatement.setString(1, event.getHostId());
+                    roleStatement.setString(2, "org-admin");
+                    roleStatement.setString(3, "org-admin role");
+                    roleStatement.setString(4, event.getEventId().getUserId());
+                    roleStatement.setTimestamp(5, new Timestamp(event.getEventId().getTimestamp()));
+                    roleStatement.executeUpdate();
+                }
+                try (PreparedStatement roleStatement = conn.prepareStatement(insertRole)) {
+                    roleStatement.setString(1, event.getHostId());
+                    roleStatement.setString(2, "host-admin");
+                    roleStatement.setString(3, "host-admin role");
+                    roleStatement.setString(4, event.getEventId().getUserId());
+                    roleStatement.setTimestamp(5, new Timestamp(event.getEventId().getTimestamp()));
+                    roleStatement.executeUpdate();
+                }
+                // insert role user to user for the host
+                try (PreparedStatement roleUserStatement = conn.prepareStatement(insertRoleUser)) {
+                    roleUserStatement.setString(1, event.getHostId());
+                    roleUserStatement.setString(2, "user");
+                    roleUserStatement.setString(3, event.getOrgOwner());
+                    roleUserStatement.setString(4, event.getEventId().getUserId());
+                    roleUserStatement.setTimestamp(5, new Timestamp(event.getEventId().getTimestamp()));
+                    roleUserStatement.executeUpdate();
+                }
+                // insert role org-admin to user for the host
+                try (PreparedStatement roleUserStatement = conn.prepareStatement(insertRoleUser)) {
+                    roleUserStatement.setString(1, event.getHostId());
+                    roleUserStatement.setString(2, "org-admin");
+                    roleUserStatement.setString(3, event.getOrgOwner());
+                    roleUserStatement.setString(4, event.getEventId().getUserId());
+                    roleUserStatement.setTimestamp(5, new Timestamp(event.getEventId().getTimestamp()));
+                    roleUserStatement.executeUpdate();
+                }
+                // insert host-admin to user for the host
+                try (PreparedStatement roleUserStatement = conn.prepareStatement(insertRoleUser)) {
+                    roleUserStatement.setString(1, event.getHostId());
+                    roleUserStatement.setString(2, "host-admin");
+                    roleUserStatement.setString(3, event.getHostOwner());
+                    roleUserStatement.setString(4, event.getEventId().getUserId());
+                    roleUserStatement.setTimestamp(5, new Timestamp(event.getEventId().getTimestamp()));
+                    roleUserStatement.executeUpdate();
+                }
+                // switch the current user to the hostId by updating to same user pointing to two hosts.
+                try (PreparedStatement userHostStatement = conn.prepareStatement(updateUserHost)) {
+                    userHostStatement.setString(1, event.getHostId());
+                    userHostStatement.setString(2, event.getEventId().getUserId());
+                    userHostStatement.setTimestamp(3, new Timestamp(event.getEventId().getTimestamp()));
+                    userHostStatement.setString(4, event.getOrgOwner());
+
+                    userHostStatement.executeUpdate();
                 }
                 conn.commit();
                 result = Success.of(event.getDomain());

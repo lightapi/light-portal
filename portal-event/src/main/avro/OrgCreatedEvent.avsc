@@ -48,7 +48,7 @@
     {
       "name": "domain",
       "type": "string",
-      "doc": "host domain"
+      "doc": "org domain"
     },
     {
       "name": "orgName",
@@ -64,6 +64,26 @@
       "name": "orgOwner",
       "type": "string",
       "doc": "org owner"
+    },
+    {
+      "name": "hostId",
+      "type": "string",
+      "doc": "host id"
+    },
+    {
+      "name": "subDomain",
+      "type": "string",
+      "doc": "sub domain or host"
+    },
+    {
+      "name": "hostDesc",
+      "type": "string",
+      "doc": "host desc"
+    },
+    {
+      "name": "hostOwner",
+      "type": "string",
+      "doc": "host owner"
     }
   ]
 }
