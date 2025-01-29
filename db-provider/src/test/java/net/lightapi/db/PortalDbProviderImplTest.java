@@ -195,7 +195,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testQueryProviderKey() {
-        Result<String> result = dbProvider.queryProviderKey("N2CMw0HGQXeLvC1wBfln2A", "biAGY0FdRkS38JUtOQymuQ");
+        Result<String> result = dbProvider.queryProviderKey("biAGY0FdRkS38JUtOQymuQ");
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
