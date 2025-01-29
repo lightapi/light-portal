@@ -73,7 +73,7 @@ public interface PortalDbProvider extends DbProvider {
 
     Result<String> createAuthCode(AuthCodeCreatedEvent event);
     Result<String> deleteAuthCode(AuthCodeDeletedEvent event);
-    Result<String> queryAuthCode(String hostId, String authCode);
+    Result<String> queryAuthCode(String authCode);
     Result<String> listAuthCode(int offset, int limit, String hostId, String authCode, String userId,
                                        String entityId, String userType, String email, String roles, String groups, String positions,
                                        String attributes, String redirectUri, String scope, String remember, String codeChallenge,

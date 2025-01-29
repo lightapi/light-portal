@@ -1697,14 +1697,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> deleteRefreshToken(AuthRefreshTokenDeletedEvent event) {
-        final String deleteApp = "DELETE from auth_refresh_token_t WHERE refresh_token = ? AND host_id = ? AND user_id = ?";
+        final String deleteApp = "DELETE from auth_refresh_token_t WHERE refresh_token = ? AND user_id = ?";
         Result<String> result;
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteApp)) {
                 statement.setString(1, event.getRefreshToken());
-                statement.setString(2, event.getHostId());
-                statement.setString(3, event.getUserId());
+                statement.setString(2, event.getUserId());
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     // no record is deleted, write an error notification.
@@ -2019,15 +2018,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> queryAuthCode(String hostId, String authCode) {
+    public Result<String> queryAuthCode(String authCode) {
         final String sql = "SELECT host_id, provider_id, auth_code, user_id, entity_id, user_type, email, " +
                 "roles, redirect_uri, scope, remember, code_challenge, challenge_method " +
-                "FROM auth_code_t WHERE host_id = ? AND auth_code = ?";
+                "FROM auth_code_t WHERE auth_code = ?";
         Result<String> result;
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, hostId);
-            preparedStatement.setString(2, authCode);
+            preparedStatement.setString(1, authCode);
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 if (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
