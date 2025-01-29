@@ -84,7 +84,9 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> rotateAuthProvider(AuthProviderRotatedEvent event);
     Result<String> updateAuthProvider(AuthProviderUpdatedEvent event);
     Result<String> deleteAuthProvider(AuthProviderDeletedEvent event);
-    Result<String> queryProviderKey(String hostId, String providerId);
+    Result<String> queryProviderKey(String providerId);
+    Result<Map<String, Object>> queryCurrentProviderKey(String providerId);
+    Result<Map<String, Object>> queryLongLiveProviderKey(String providerId);
 
     Result<String> queryApp(int offset, int limit, String hostId, String appId, String appName, String appDesc, Boolean isKafkaApp, String operationOwner, String deliveryOwner);
     Result<String> queryClient(int offset, int limit, String hostId, String appId, String clientId, String clientType, String clientProfile, String clientScope, String customClaim, String redirectUri, String authenticateClass, String deRefClientId);
@@ -138,8 +140,6 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> deleteConfig(ConfigDeletedEvent event);
     Result<Map<String, Object>> queryConfig();
     Result<Map<String, Object>> queryConfigById(String configId);
-    Result<Map<String, Object>> queryCurrentProviderKey(String hostId, String providerId);
-    Result<Map<String, Object>> queryLongLiveProviderKey(String hostId, String providerId);
 
     Result<String> createRule(RuleCreatedEvent event);
     Result<String> updateRule(RuleUpdatedEvent event);

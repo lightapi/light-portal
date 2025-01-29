@@ -2314,53 +2314,52 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
 
                 // Insert keys into auth_provider_key_t
-                String keySql = "INSERT INTO auth_provider_key_t(host_id, provider_id, kid, public_key, private_key, key_type, update_user, update_ts) " +
-                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                String keySql = "INSERT INTO auth_provider_key_t(provider_id, kid, public_key, private_key, key_type, update_user, update_ts) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
                 try (PreparedStatement keyStatement = conn.prepareStatement(keySql)) {
                     Map<String, Object> keys = (Map<String, Object>) map.get("keys");
 
-                    keyStatement.setString(1, event.getHostId());
-                    keyStatement.setString(2, event.getProviderId());
+                    keyStatement.setString(1, event.getProviderId());
 
                     Map<String, Object> lcMap = (Map<String, Object>) keys.get("LC");
                     // add long live current key
-                    keyStatement.setString(3, (String)lcMap.get("kid"));
-                    keyStatement.setString(4, (String)lcMap.get("publicKey"));
-                    keyStatement.setString(5, (String)lcMap.get("privateKey"));
-                    keyStatement.setString(6, "LC");
-                    keyStatement.setString(7, event.getEventId().getId());
-                    keyStatement.setTimestamp(8, timestamp);
+                    keyStatement.setString(2, (String)lcMap.get("kid"));
+                    keyStatement.setString(3, (String)lcMap.get("publicKey"));
+                    keyStatement.setString(4, (String)lcMap.get("privateKey"));
+                    keyStatement.setString(5, "LC");
+                    keyStatement.setString(6, event.getEventId().getId());
+                    keyStatement.setTimestamp(7, timestamp);
                     keyStatement.executeUpdate();
 
                     // add long live previous key
                     Map<String, Object> lpMap = (Map<String, Object>) keys.get("LP");
-                    keyStatement.setString(3, (String)lpMap.get("kid"));
-                    keyStatement.setString(4, (String)lpMap.get("publicKey"));
-                    keyStatement.setString(5, (String)lpMap.get("privateKey"));
-                    keyStatement.setString(6, "LP");
-                    keyStatement.setString(7, event.getEventId().getId());
-                    keyStatement.setTimestamp(8, timestamp);
+                    keyStatement.setString(2, (String)lpMap.get("kid"));
+                    keyStatement.setString(3, (String)lpMap.get("publicKey"));
+                    keyStatement.setString(4, (String)lpMap.get("privateKey"));
+                    keyStatement.setString(5, "LP");
+                    keyStatement.setString(6, event.getEventId().getId());
+                    keyStatement.setTimestamp(7, timestamp);
                     keyStatement.executeUpdate();
 
                     // add token current key
                     Map<String, Object> tcMap = (Map<String, Object>) keys.get("TC");
-                    keyStatement.setString(3, (String)tcMap.get("kid"));
-                    keyStatement.setString(4, (String)tcMap.get("publicKey"));
-                    keyStatement.setString(5, (String)tcMap.get("privateKey"));
-                    keyStatement.setString(6, "TC");
-                    keyStatement.setString(7, event.getEventId().getId());
-                    keyStatement.setTimestamp(8, timestamp);
+                    keyStatement.setString(2, (String)tcMap.get("kid"));
+                    keyStatement.setString(3, (String)tcMap.get("publicKey"));
+                    keyStatement.setString(4, (String)tcMap.get("privateKey"));
+                    keyStatement.setString(5, "TC");
+                    keyStatement.setString(6, event.getEventId().getId());
+                    keyStatement.setTimestamp(7, timestamp);
                     keyStatement.executeUpdate();
 
                     // add token previous key
                     Map<String, Object> tpMap = (Map<String, Object>) keys.get("TP");
-                    keyStatement.setString(3, (String)tpMap.get("kid"));
-                    keyStatement.setString(4, (String)tpMap.get("publicKey"));
-                    keyStatement.setString(5, (String)tpMap.get("privateKey"));
-                    keyStatement.setString(6, "TP");
-                    keyStatement.setString(7, event.getEventId().getId());
-                    keyStatement.setTimestamp(8, new Timestamp(event.getEventId().getTimestamp()));
+                    keyStatement.setString(2, (String)tpMap.get("kid"));
+                    keyStatement.setString(3, (String)tpMap.get("publicKey"));
+                    keyStatement.setString(4, (String)tpMap.get("privateKey"));
+                    keyStatement.setString(5, "TP");
+                    keyStatement.setString(6, event.getEventId().getId());
+                    keyStatement.setTimestamp(7, new Timestamp(event.getEventId().getTimestamp()));
                     keyStatement.executeUpdate();
 
                 } catch(SQLException ex) {
@@ -2390,12 +2389,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> rotateAuthProvider(AuthProviderRotatedEvent event) {
         final String sqlJwk = "UPDATE auth_provider_t SET jwk = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? and provider_id = ?";
-        final String sqlInsert = "INSERT INTO auth_provider_key_t(host_id, provider_id, kid, public_key, private_key, key_type, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                "WHERE provider_id = ?";
+        final String sqlInsert = "INSERT INTO auth_provider_key_t(provider_id, kid, public_key, private_key, key_type, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?,  ?, ?)";
         final String sqlUpdate = "UPDATE auth_provider_key_t SET key_type = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? AND provider_id = ? AND kid = ?";
-        final String sqlDelete = "DELETE FROM auth_provider_key_t WHERE host_id = ? AND provider_id = ? AND kid = ?";
+                "WHERE provider_id = ? AND kid = ?";
+        final String sqlDelete = "DELETE FROM auth_provider_key_t WHERE provider_id = ? AND kid = ?";
 
 
         Result<String> result;
@@ -2410,8 +2409,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, jwk);
                 statement.setString(2, event.getEventId().getId());
                 statement.setTimestamp(3, timestamp);
-                statement.setString(4, event.getHostId());
-                statement.setString(5, event.getProviderId());
+                statement.setString(4, event.getProviderId());
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -2420,14 +2418,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
                 try (PreparedStatement statementInsert = conn.prepareStatement(sqlInsert)) {
                     Map<String, Object> insertMap = (Map<String, Object>) map.get("insert");
-                    statementInsert.setString(1, event.getHostId());
-                    statementInsert.setString(2, event.getProviderId());
-                    statementInsert.setString(3, (String) insertMap.get("kid"));
-                    statementInsert.setString(4, (String) insertMap.get("publicKey"));
-                    statementInsert.setString(5, (String) insertMap.get("privateKey"));
-                    statementInsert.setString(6, (String) insertMap.get("keyType"));
-                    statementInsert.setString(7, event.getEventId().getUserId());
-                    statementInsert.setTimestamp(8, timestamp);
+                    statementInsert.setString(1, event.getProviderId());
+                    statementInsert.setString(2, (String) insertMap.get("kid"));
+                    statementInsert.setString(3, (String) insertMap.get("publicKey"));
+                    statementInsert.setString(4, (String) insertMap.get("privateKey"));
+                    statementInsert.setString(5, (String) insertMap.get("keyType"));
+                    statementInsert.setString(6, event.getEventId().getUserId());
+                    statementInsert.setTimestamp(7, timestamp);
 
                     count = statementInsert.executeUpdate();
                     if (count == 0) {
@@ -2439,9 +2436,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     statementUpdate.setString(1, (String) updateMap.get("keyType"));
                     statementUpdate.setString(2, event.getEventId().getUserId());
                     statementUpdate.setTimestamp(3, timestamp);
-                    statementUpdate.setString(4, event.getHostId());
-                    statementUpdate.setString(5, event.getProviderId());
-                    statementUpdate.setString(6, (String) updateMap.get("kid"));
+                    statementUpdate.setString(4, event.getProviderId());
+                    statementUpdate.setString(5, (String) updateMap.get("kid"));
                     count = statementUpdate.executeUpdate();
                     if (count == 0) {
                         throw new SQLException("failed to update the auth provider key with provider id " + event.getProviderId());
@@ -2449,9 +2445,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 try (PreparedStatement statementDelete = conn.prepareStatement(sqlDelete)) {
                     Map<String, Object> deleteMap = (Map<String, Object>) map.get("delete");
-                    statementDelete.setString(1, event.getHostId());
-                    statementDelete.setString(2, event.getProviderId());
-                    statementDelete.setString(3, (String) deleteMap.get("kid"));
+                    statementDelete.setString(1, event.getProviderId());
+                    statementDelete.setString(2, (String) deleteMap.get("kid"));
                     count = statementDelete.executeUpdate();
                     if (count == 0) {
                         throw new SQLException("failed to update the auth provider key with provider id " + event.getProviderId());
@@ -2575,22 +2570,20 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> queryProviderKey(String hostId, String providerId) {
+    public Result<String> queryProviderKey(String providerId) {
         Result<String> result = null;
-        String sql = "SELECT host_id, provider_id, kid, public_key, private_key, key_type, update_user, update_ts\n" +
+        String sql = "SELECT provider_id, kid, public_key, private_key, key_type, update_user, update_ts\n" +
                 "FROM auth_provider_key_t\n" +
-                "WHERE host_id = ? AND provider_id = ?\n";
+                "WHERE provider_id = ?\n";
 
         List<Map<String, Object>> providerKeys = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, hostId);
-            preparedStatement.setString(2, providerId);
+            preparedStatement.setString(1, providerId);
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
-                    map.put("hostId", resultSet.getString("host_id"));
                     map.put("providerId", resultSet.getString("provider_id"));
                     map.put("kid", resultSet.getString("kid"));
                     map.put("publicKey", resultSet.getString("public_key"));
@@ -3051,7 +3044,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> queryClientByProviderClientId(String providerId, String clientId) {
         Result<String> result;
         String sql =
-                "SELECT a.host_id, a.provider_id, a.client_id, c.client_type, c.client_profile, c.client_secret, \n" +
+                "SELECT c.host_id, a.provider_id, a.client_id, c.client_type, c.client_profile, c.client_secret, \n" +
                         "c.client_scope, c.custom_claim, c.redirect_uri, c.authenticate_class, c.deref_client_id\n" +
                         "FROM client_t c, auth_provider_client_t a\n" +
                         "WHERE c.client_id = a.client_id\n" +
@@ -5370,19 +5363,17 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<Map<String, Object>> queryCurrentProviderKey(String hostId, String providerId) {
-        final String queryConfigById = "SELECT host_id, provider_id, kid, public_key, " +
+    public Result<Map<String, Object>> queryCurrentProviderKey(String providerId) {
+        final String queryConfigById = "SELECT provider_id, kid, public_key, " +
                 "private_key, key_type, update_user, update_ts " +
-                "FROM auth_provider_key_t WHERE host_id = ? AND provider_id = ? AND key_type = 'TC'";
+                "FROM auth_provider_key_t WHERE provider_id = ? AND key_type = 'TC'";
         Result<Map<String, Object>> result;
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
             try (PreparedStatement statement = conn.prepareStatement(queryConfigById)) {
-                statement.setString(1, hostId);
-                statement.setString(2, providerId);
+                statement.setString(1, providerId);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
-                        map.put("hostId", resultSet.getString("host_id"));
                         map.put("providerId", resultSet.getString("provider_id"));
                         map.put("kid", resultSet.getString("kid"));
                         map.put("publicKey", resultSet.getString("public_key"));
@@ -5394,7 +5385,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
             }
             if (map.isEmpty())
-                result = Failure.of(new Status(OBJECT_NOT_FOUND, "host key with id", hostId));
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "provider key with id", providerId));
             else
                 result = Success.of(map);
         } catch (SQLException e) {
@@ -5408,19 +5399,17 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<Map<String, Object>> queryLongLiveProviderKey(String hostId, String providerId) {
-        final String queryConfigById = "SELECT host_id, provider_id, kid, public_key, " +
+    public Result<Map<String, Object>> queryLongLiveProviderKey(String providerId) {
+        final String queryConfigById = "SELECT provider_id, kid, public_key, " +
                 "private_key, key_type, update_user, update_ts " +
-                "FROM auth_provider_key_t WHERE host_id = ? AND provider_id = ? AND key_type = 'LC'";
+                "FROM auth_provider_key_t WHERE provider_id = ? AND key_type = 'LC'";
         Result<Map<String, Object>> result;
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
             try (PreparedStatement statement = conn.prepareStatement(queryConfigById)) {
-                statement.setString(1, hostId);
-                statement.setString(2, providerId);
+                statement.setString(1, providerId);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
-                        map.put("hostId", resultSet.getString("host_id"));
                         map.put("providerId", resultSet.getString("provider_id"));
                         map.put("kid", resultSet.getString("kid"));
                         map.put("publicKey", resultSet.getString("public_key"));
@@ -5432,7 +5421,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
             }
             if (map.isEmpty())
-                result = Failure.of(new Status(OBJECT_NOT_FOUND, "host key with id", hostId));
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "provider key with id", providerId));
             else
                 result = Success.of(map);
         } catch (SQLException e) {
