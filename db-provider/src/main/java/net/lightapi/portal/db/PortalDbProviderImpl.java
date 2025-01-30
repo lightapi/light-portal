@@ -4934,6 +4934,42 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
+    public Result<String> switchHost(HostSwitchedEvent event) {
+        final String updateUserHost = "UPDATE user_host_t SET host_id = ?, update_user = ?, update_ts = ? WHERE user_id = ?";
+        Result<String> result;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(updateUserHost)) {
+                statement.setString(1, event.getHostId());
+                statement.setString(2, event.getEventId().getUserId());
+                statement.setTimestamp(3, new Timestamp(event.getEventId().getTimestamp()));
+                statement.setString(4, event.getEventId().getUserId());
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("no record is updated for user " + event.getEventId().getUserId());
+                }
+                conn.commit();
+                result = Success.of(event.getEventId().getUserId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
     public Result<String> queryHostDomainById(String hostId) {
         final String sql = "SELECT sub_domain || '.' || domain AS domain FROM host_t WHERE host_id = ?";
         Result<String> result;
@@ -5030,44 +5066,71 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> getOrg(int limit, int offset) {
-        final String getHost = "SELECT COUNT(*) OVER () AS total,\n" +
-                "domain, org_name, org_desc, \n" +
-                "org_owner, update_user, update_ts \n" +
-                "FROM org_t LIMIT ? OFFSET ?";
-        Result<String> result;
+    public Result<String> getOrg(int offset, int limit, String domain, String orgName, String orgDesc, String orgOwner) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
+                "domain, org_name, org_desc, org_owner, update_user, update_ts \n" +
+                "FROM org_t\n" +
+                "WHERE 1=1\n");
+
+        List<Object> parameters = new ArrayList<>();
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "domain", domain);
+        addCondition(whereClause, parameters, "org_name", orgName);
+        addCondition(whereClause, parameters, "org_desc", orgDesc);
+        addCondition(whereClause, parameters, "org_owner", orgOwner);
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append("ORDER BY domain\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> orgs = new ArrayList<>();
-        try (final Connection conn = ds.getConnection()) {
-            try (PreparedStatement statement = conn.prepareStatement(getHost)) {
-                statement.setInt(1, limit);
-                statement.setInt(2, offset);
-                boolean isFirstRow = true;
-                try (ResultSet resultSet = statement.executeQuery()) {
-                    while (resultSet.next()) {
-                        Map<String, Object> map = new HashMap<>();
-                        if (isFirstRow) {
-                            total = resultSet.getInt("total");
-                            isFirstRow = false;
-                        }
-                        map.put("domain", resultSet.getString("domain"));
-                        map.put("orgName", resultSet.getString("org_name"));
-                        map.put("orgDesc", resultSet.getString("org_desc"));
-                        map.put("orgOwner", resultSet.getString("org_owner"));
-                        map.put("updateUser", resultSet.getString("update_user"));
-                        map.put("updateTs", resultSet.getTimestamp("update_ts") != null ? resultSet.getTimestamp("update_ts").toString() : null);
-                        orgs.add(map);
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
                     }
+                    map.put("domain", resultSet.getString("domain"));
+                    map.put("orgName", resultSet.getString("org_name"));
+                    map.put("orgDesc", resultSet.getString("org_desc"));
+                    map.put("orgOwner", resultSet.getString("org_owner"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    // handling date properly
+                    map.put("updateTs", resultSet.getTimestamp("update_ts") != null ? resultSet.getTimestamp("update_ts").toString() : null);
+                    orgs.add(map);
                 }
             }
-            if(orgs.isEmpty()) {
-                result = Failure.of(new Status(OBJECT_NOT_FOUND, "host", "limit and offset"));
-            } else {
-                Map<String, Object> resultMap = new HashMap<>();
-                resultMap.put("total", total);
-                resultMap.put("orgs", orgs);
-                result = Success.of(JsonMapper.toJson(resultMap));
-            }
+
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("orgs", orgs);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
@@ -5079,48 +5142,138 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> getHost(int limit, int offset, String domain) {
-        final String getHost = "host_id, domain, sub_domain, host_desc, host_owner, \n" +
-                "update_user, update_ts \n" +
-                "FROM host_t WHERE domain = ? ORDER BY sub_domain LIMIT ? OFFSET ?";
-        Result<String> result;
+    public Result<String> getHost(int offset, int limit, String hostId, String domain, String subDomain, String hostDesc, String hostOwner) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
+                "host_id, domain, sub_domain, host_desc, host_owner, update_user, update_ts \n" +
+                "FROM host_t\n" +
+                "WHERE 1=1\n");
+
+
+        List<Object> parameters = new ArrayList<>();
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "host_id", hostId);
+        addCondition(whereClause, parameters, "domain", domain);
+        addCondition(whereClause, parameters, "sub_domain", subDomain);
+        addCondition(whereClause, parameters, "host_desc", hostDesc);
+        addCondition(whereClause, parameters, "host_owner", hostOwner);
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append(" ORDER BY domain\n" +
+                "LIMIT ? OFFSET ?");
+
+
+        parameters.add(limit);
+        parameters.add(offset);
+        String sql = sqlBuilder.toString();
+        if(logger.isTraceEnabled()) logger.trace("sql: {}", sql);
         int total = 0;
         List<Map<String, Object>> hosts = new ArrayList<>();
-        try (final Connection conn = ds.getConnection()) {
-            try (PreparedStatement statement = conn.prepareStatement(getHost)) {
-                statement.setInt(1, limit);
-                statement.setInt(2, offset);
-                boolean isFirstRow = true;
-                try (ResultSet resultSet = statement.executeQuery()) {
-                    while (resultSet.next()) {
-                        Map<String, Object> map = new HashMap<>();
-                        if (isFirstRow) {
-                            total = resultSet.getInt("total");
-                            isFirstRow = false;
-                        }
-                        map.put("hostId", resultSet.getString("host_id"));
-                        map.put("domain", resultSet.getString("domain"));
-                        map.put("subDomain", resultSet.getString("sub_domain"));
-                        map.put("hostDesc", resultSet.getString("host_desc"));
-                        map.put("hostOwner", resultSet.getString("host_owner"));
-                        map.put("updateUser", resultSet.getString("update_user"));
-                        map.put("updateTs", resultSet.getTimestamp("update_ts") != null ? resultSet.getTimestamp("update_ts").toString() : null);
-                        hosts.add(map);
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if(logger.isTraceEnabled()) logger.trace("resultSet: {}", resultSet);
+                while (resultSet.next()) {
+                    if(logger.isTraceEnabled()) logger.trace("at least there is 1 row here in the resultSet");
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
                     }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("domain", resultSet.getString("domain"));
+                    map.put("subDomain", resultSet.getString("sub_domain"));
+                    map.put("hostDesc", resultSet.getString("host_desc"));
+                    map.put("hostOwner", resultSet.getString("host_owner"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    // handling date properly
+                    map.put("updateTs", resultSet.getTimestamp("update_ts") != null ? resultSet.getTimestamp("update_ts").toString() : null);
+                    hosts.add(map);
                 }
             }
-            if(hosts.isEmpty()) {
-                result = Failure.of(new Status(OBJECT_NOT_FOUND, "host", domain));
-            } else {
-                Map<String, Object> resultMap = new HashMap<>();
-                resultMap.put("total", total);
-                resultMap.put("hosts", hosts);
-                result = Success.of(JsonMapper.toJson(resultMap));
-            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("hosts", hosts);
+            if(logger.isTraceEnabled()) logger.trace("resultMap: {}", resultMap);
+            result = Success.of(JsonMapper.toJson(resultMap));
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
         } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getHostByDomain(String domain, String subDomain, String hostDesc) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT host_id, domain, sub_domain, host_desc, host_owner, update_user, update_ts \n" +
+                "FROM host_t\n" +
+                "WHERE 1=1\n");
+
+        List<Object> parameters = new ArrayList<>();
+
+        StringBuilder whereClause = new StringBuilder();
+        addCondition(whereClause, parameters, "domain", domain);
+        addCondition(whereClause, parameters, "sub_domain", subDomain);
+        addCondition(whereClause, parameters, "host_desc", hostDesc);
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append(" ORDER BY sub_domain");
+
+        String sql = sqlBuilder.toString();
+        if(logger.isTraceEnabled()) logger.trace("sql: {}", sql);
+        List<Map<String, Object>> hosts = new ArrayList<>();
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("domain", resultSet.getString("domain"));
+                    map.put("subDomain", resultSet.getString("sub_domain"));
+                    map.put("hostDesc", resultSet.getString("host_desc"));
+                    map.put("hostOwner", resultSet.getString("host_owner"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getTimestamp("update_ts") != null ? resultSet.getTimestamp("update_ts").toString() : null);
+                    hosts.add(map);
+                }
+            }
+
+            if(hosts.isEmpty()) {
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "host", "domain, subDomain or hostDesc"));
+            } else {
+                result = Success.of(JsonMapper.toJson(hosts));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
             logger.error("Exception:", e);
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }

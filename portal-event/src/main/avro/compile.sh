@@ -108,6 +108,7 @@ java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema OrgDelet
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema HostCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema HostUpdatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema HostDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema HostSwitchedEvent.avsc .
 
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ControllerRegisteredEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ControllerDeregisteredEvent.avsc .
@@ -230,6 +231,7 @@ mv net/lightapi/portal/host/OrgDeletedEvent.java ../java/net/lightapi/portal/hos
 mv net/lightapi/portal/host/HostCreatedEvent.java ../java/net/lightapi/portal/host
 mv net/lightapi/portal/host/HostUpdatedEvent.java ../java/net/lightapi/portal/host
 mv net/lightapi/portal/host/HostDeletedEvent.java ../java/net/lightapi/portal/host
+mv net/lightapi/portal/host/HostSwitchedEvent.java ../java/net/lightapi/portal/host
 
 mv net/lightapi/portal/client/ClientCreatedEvent.java ../java/net/lightapi/portal/client
 mv net/lightapi/portal/client/ClientUpdatedEvent.java ../java/net/lightapi/portal/client
