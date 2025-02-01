@@ -13,7 +13,9 @@ import net.lightapi.portal.role.*;
 import net.lightapi.portal.service.*;
 import net.lightapi.portal.rule.*;
 import net.lightapi.portal.host.*;
-
+import net.lightapi.portal.product.*;
+import net.lightapi.portal.instance.*;
+import net.lightapi.portal.deployment.*;
 
 import java.sql.Timestamp;
 import java.util.List;
@@ -240,4 +242,28 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> updateAttributeColFilter(AttributeColFilterUpdatedEvent event);
     Result<String> deleteAttributeColFilter(AttributeColFilterDeletedEvent event);
 
+    Result<String> createProduct(ProductCreatedEvent event);
+    Result<String> updateProduct(ProductUpdatedEvent event);
+    Result<String> deleteProduct(ProductDeletedEvent event);
+    Result<String> getProduct(int offset, int limit, String hostId, String productId, String productVersion, String light4jVersion,
+                              String versionDesc, Boolean isCurrent, String versionStatus);
+
+    Result<String> createInstance(InstanceCreatedEvent event);
+    Result<String> updateInstance(InstanceUpdatedEvent event);
+    Result<String> deleteInstance(InstanceDeletedEvent event);
+    Result<String> getInstance(int offset, int limit, String hostId, String instanceId, String productId, String productVersion,
+                               String serviceId, String platformId, String serviceDesc, String instanceDesc, String tagId);
+
+    Result<String> createPlatform(PlatformCreatedEvent event);
+    Result<String> updatePlatform(PlatformUpdatedEvent event);
+    Result<String> deletePlatform(PlatformDeletedEvent event);
+    Result<String> getPlatform(int offset, int limit, String hostId, String platformId, String platformName, String platformVersion,
+                               String clientType, String clientUrl, String credentials, String proxyUrl, Integer proxyPort,
+                               String environment, String systemEnv, String runtimeEnv, String zone, String region, String lob);
+
+    Result<String> createDeployment(DeploymentCreatedEvent event);
+    Result<String> updateDeployment(DeploymentUpdatedEvent event);
+    Result<String> deleteDeployment(DeploymentDeletedEvent event);
+    Result<String> getDeployment(int offset, int limit, String hostId, String deploymentId, String instanceId, String deploymentStatus,
+                                 String deploymentType, String pipelineId);
 }

@@ -8,8 +8,15 @@ import com.networknt.monad.Result;
 import com.networknt.monad.Success;
 import com.networknt.status.Status;
 import net.lightapi.portal.client.*;
+import net.lightapi.portal.deployment.*;
+import net.lightapi.portal.instance.InstanceCreatedEvent;
+import net.lightapi.portal.instance.InstanceDeletedEvent;
+import net.lightapi.portal.instance.InstanceUpdatedEvent;
 import net.lightapi.portal.market.*;
 import net.lightapi.portal.oauth.*;
+import net.lightapi.portal.product.ProductCreatedEvent;
+import net.lightapi.portal.product.ProductDeletedEvent;
+import net.lightapi.portal.product.ProductUpdatedEvent;
 import net.lightapi.portal.user.*;
 import net.lightapi.portal.attribute.*;
 import net.lightapi.portal.group.*;
@@ -38,7 +45,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public static final String OBJECT_NOT_FOUND = "ERR11637";
 
     public static final String INSERT_NOTIFICATION = "INSERT INTO notification_t (id, host_id, user_id, nonce, event_class, event_json, process_ts, " +
-            "process_flag, error) VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?)";
+            "is_processed, error) VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?)";
 
     @Override
     public Result<String> queryRefTable(int offset, int limit, String hostId, String tableName, String tableDesc, String active, String editable, String common) {
@@ -622,7 +629,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         Result<String> result = null;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "host_id, user_id, nonce, event_class, process_flag, process_ts, event_json, error\n" +
+                "host_id, user_id, nonce, event_class, is_processed, process_ts, event_json, error\n" +
                 "FROM notification_t\n" +
                 "WHERE host_id = ?\n");
 
@@ -634,7 +641,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         addCondition(whereClause, parameters, "user_id", userId);
         addCondition(whereClause, parameters, "nonce", nonce);
         addCondition(whereClause, parameters, "event_class", eventClass);
-        addCondition(whereClause, parameters, "process_flag", successFlag);
+        addCondition(whereClause, parameters, "is_processed", successFlag);
         addCondition(whereClause, parameters, "event_json", eventJson);
         addCondition(whereClause, parameters, "error", error);
 
@@ -672,7 +679,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("userId", resultSet.getString("user_id"));
                     map.put("nonce", resultSet.getLong("nonce"));
                     map.put("eventClass", resultSet.getString("event_class"));
-                    map.put("processFlag", resultSet.getBoolean("process_flag"));
+                    map.put("processFlag", resultSet.getBoolean("is_processed"));
                     // handling date properly
                     map.put("processTs", resultSet.getTimestamp("process_ts") != null ? resultSet.getTimestamp("process_ts").toString() : null);
                     map.put("eventJson", resultSet.getString("event_json"));
@@ -10331,5 +10338,1003 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         }
         return result;
     }
+
+    @Override
+    public Result<String> createProduct(ProductCreatedEvent event) {
+        final String sql = "INSERT INTO product_version_t(host_id, product_id, product_version, " +
+                "light4j_version, version_desc, is_current, version_status, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        Result<String> result;
+        Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, event.getEventId().getHostId());
+                String value = event.getValue();
+                Map<String, Object> map = JsonMapper.string2Map(value);
+                statement.setString(2, event.getProductId());
+                statement.setString(3, event.getProductVersion());
+                statement.setString(4, event.getLight4jVersion());
+                if (map.containsKey("versionDesc")) {
+                    statement.setString(5, (String) map.get("versionDesc"));
+                } else {
+                    statement.setNull(5, Types.VARCHAR);
+                }
+                statement.setBoolean(6, event.getIsCurrent());
+                statement.setString(7, event.getVersionStatus());
+                statement.setString(8, event.getEventId().getId());
+                statement.setTimestamp(9, timestamp);
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert the product with id " + event.getProductId());
+                }
+                conn.commit();
+                result = Success.of((String)map.get("productId"));
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> updateProduct(ProductUpdatedEvent event) {
+        final String sql = "UPDATE product_version_t SET light4j_version = ?, " +
+                "version_desc = ?, is_current = ?, version_status = ?, update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? and product_id = ? and product_version = ?";
+        Result<String> result;
+        Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
+        String value = event.getValue();
+        Map<String, Object> map = JsonMapper.string2Map(value);
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, event.getLight4jVersion());
+                if (map.containsKey("versionDesc")) {
+                    statement.setString(2, (String) map.get("versionDesc"));
+                } else {
+                    statement.setNull(2, Types.VARCHAR);
+                }
+                statement.setBoolean(3, event.getIsCurrent());
+                statement.setString(4, event.getVersionStatus());
+                statement.setString(5, event.getEventId().getId());
+                statement.setTimestamp(6, timestamp);
+                statement.setString(7, event.getEventId().getHostId());
+                statement.setString(8, event.getProductId());
+                statement.setString(9, event.getProductVersion());
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to update the product with id " + event.getProductId());
+                }
+                conn.commit();
+                result = Success.of(event.getProductId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deleteProduct(ProductDeletedEvent event) {
+        final String sql = "DELETE FROM product_version_t WHERE host_id = ? " +
+                "AND product_id = ? AND product_version = ?";
+        Result<String> result;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, event.getEventId().getHostId());
+                statement.setString(2, event.getProductId());
+                statement.setString(3, event.getProductVersion());
+
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to delete the product with id " + event.getProductId());
+                }
+                conn.commit();
+                result = Success.of(event.getProductId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+
+
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            }
+            catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getProduct(int offset, int limit, String hostId, String productId, String productVersion, String light4jVersion,
+                                     String versionDesc, Boolean isCurrent, String versionStatus) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
+                "host_id, product_id, product_version, light4j_version, version_desc, is_current, " +
+                "version_status, update_user, update_ts\n" +
+                "FROM product_version_t\n" +
+                "WHERE 1=1\n");
+
+        List<Object> parameters = new ArrayList<>();
+
+        StringBuilder whereClause = new StringBuilder();
+        addCondition(whereClause, parameters, "host_id", hostId);
+        addCondition(whereClause, parameters, "product_id", productId);
+        addCondition(whereClause, parameters, "product_version", productVersion);
+        addCondition(whereClause, parameters, "light4j_version", light4jVersion);
+        addCondition(whereClause, parameters, "version_desc", versionDesc);
+        addCondition(whereClause, parameters, "is_current", isCurrent);
+        addCondition(whereClause, parameters, "version_status", versionStatus);
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append(" ORDER BY product_id, product_version DESC\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> products = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("productId", resultSet.getString("product_id"));
+                    map.put("productVersion", resultSet.getString("product_version"));
+                    map.put("light4jVersion", resultSet.getString("light4j_version"));
+                    map.put("versionDesc", resultSet.getString("version_desc"));
+                    map.put("isCurrent", resultSet.getBoolean("is_current"));
+                    map.put("versionStatus", resultSet.getString("version_status"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    // handling date properly
+                    map.put("updateTs", resultSet.getTimestamp("update_ts") != null ? resultSet.getTimestamp("update_ts").toString() : null);
+                    products.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("products", products);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+
+    @Override
+    public Result<String> createInstance(InstanceCreatedEvent event) {
+        final String sql = "INSERT INTO instance_t(host_id, instance_id, product_id, product_version, " +
+                "service_id, platform_id, service_desc, instance_desc, tag_id, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        Result<String> result;
+        Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
+        String value = event.getValue();
+        Map<String, Object> map = JsonMapper.string2Map(value);
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, event.getEventId().getHostId());
+                statement.setString(2, event.getInstanceId());
+                statement.setString(3, event.getProductId());
+                statement.setString(4, event.getProductVersion());
+                statement.setString(5, event.getServiceId());
+                statement.setString(6, event.getPlatformId());
+                if (map.containsKey("serviceDesc")) {
+                    statement.setString(7, (String) map.get("serviceDesc"));
+                } else {
+                    statement.setNull(7, Types.VARCHAR);
+                }
+                if(map.containsKey("instanceDesc")) {
+                    statement.setString(8, (String) map.get("instanceDesc"));
+                } else {
+                    statement.setNull(8, Types.VARCHAR);
+                }
+                if(map.containsKey("tagId")) {
+                    statement.setString(9, (String) map.get("tagId"));
+                } else {
+                    statement.setNull(9, Types.VARCHAR);
+                }
+                statement.setString(10, event.getEventId().getId());
+                statement.setTimestamp(11, timestamp);
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert the instance with id " + event.getInstanceId());
+                }
+                conn.commit();
+                result = Success.of(event.getInstanceId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> updateInstance(InstanceUpdatedEvent event) {
+        final String sql = "UPDATE instance_t SET product_id = ?, product_version = ?, service_id = ?, platform_id = ?, service_desc = ?, instance_desc = ?, tag_id = ?, update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? and instance_id = ?";
+        Result<String> result;
+        Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
+        String value = event.getValue();
+        Map<String, Object> map = JsonMapper.string2Map(value);
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, event.getProductId());
+                statement.setString(2, event.getProductVersion());
+                statement.setString(3, event.getServiceId());
+                statement.setString(4, event.getPlatformId());
+                if (map.containsKey("serviceDesc")) {
+                    statement.setString(5, (String) map.get("serviceDesc"));
+                } else {
+                    statement.setNull(5, Types.VARCHAR);
+                }
+                if(map.containsKey("instanceDesc")) {
+                    statement.setString(6, (String) map.get("instanceDesc"));
+                } else {
+                    statement.setNull(6, Types.VARCHAR);
+                }
+                if(map.containsKey("tagId")) {
+                    statement.setString(7, (String) map.get("tagId"));
+                } else {
+                    statement.setNull(7, Types.VARCHAR);
+                }
+                statement.setString(8, event.getEventId().getId());
+                statement.setTimestamp(9, timestamp);
+                statement.setString(10, event.getEventId().getHostId());
+                statement.setString(11, event.getInstanceId());
+
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to update the instance with id " + event.getInstanceId());
+                }
+                conn.commit();
+                result = Success.of(event.getInstanceId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+
+
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            }  catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deleteInstance(InstanceDeletedEvent event) {
+        final String sql = "DELETE FROM instance_t WHERE host_id = ? AND instance_id = ?";
+        Result<String> result;
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, event.getEventId().getHostId());
+                statement.setString(2, event.getInstanceId());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to delete the instance with id " + event.getInstanceId());
+                }
+                conn.commit();
+                result = Success.of(event.getInstanceId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            }
+            catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getInstance(int offset, int limit, String hostId, String instanceId, String productId, String productVersion,
+                                      String serviceId, String platformId, String serviceDesc, String instanceDesc, String tagId) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
+                "host_id, instance_id, product_id, product_version, service_id, platform_id, service_desc, instance_desc, tag_id, update_user, update_ts \n" +
+                "FROM instance_t\n" +
+                "WHERE 1=1\n");
+
+        List<Object> parameters = new ArrayList<>();
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "host_id", hostId);
+        addCondition(whereClause, parameters, "instance_id", instanceId);
+        addCondition(whereClause, parameters, "product_id", productId);
+        addCondition(whereClause, parameters, "product_version", productVersion);
+        addCondition(whereClause, parameters, "service_id", serviceId);
+        addCondition(whereClause, parameters, "platform_id", platformId);
+        addCondition(whereClause, parameters, "service_desc", serviceDesc);
+        addCondition(whereClause, parameters, "instance_desc", instanceDesc);
+        addCondition(whereClause, parameters, "tag_id", tagId);
+
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append("ORDER BY instance_id\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> instances = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("instanceId", resultSet.getString("instance_id"));
+                    map.put("productId", resultSet.getString("product_id"));
+                    map.put("productVersion", resultSet.getString("product_version"));
+                    map.put("serviceId", resultSet.getString("service_id"));
+                    map.put("platformId", resultSet.getString("platform_id"));
+                    map.put("serviceDesc", resultSet.getString("service_desc"));
+                    map.put("instanceDesc", resultSet.getString("instance_desc"));
+                    map.put("tagId", resultSet.getString("tag_id"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    // handling date properly
+                    map.put("updateTs", resultSet.getTimestamp("update_ts") != null ? resultSet.getTimestamp("update_ts").toString() : null);
+                    instances.add(map);
+                }
+            }
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("instances", instances);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> createPlatform(PlatformCreatedEvent event) {
+        final String sql = "INSERT INTO platform_t(host_id, platform_id, platform_name, platform_version, client_type, client_url, credentials, proxy_url, proxy_port, evnironment, system_env, runtime_env, zone, region, lob, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        Result<String> result;
+        Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
+        String value = event.getValue();
+        Map<String, Object> map = JsonMapper.string2Map(value);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, event.getEventId().getHostId());
+                statement.setString(2, event.getPlatformId());
+                statement.setString(3, event.getPlatformName());
+                statement.setString(4, event.getPlatformVersion());
+                statement.setString(5, event.getClientType());
+                statement.setString(6, event.getClientUrl());
+                statement.setString(7, event.getCredentials());
+
+                if (map.containsKey("proxyUrl")) {
+                    statement.setString(8, (String) map.get("proxyUrl"));
+                } else {
+                    statement.setNull(8, Types.VARCHAR);
+                }
+                if (map.containsKey("proxyPort")) {
+                    statement.setInt(9, (Integer)map.get("proxyPort"));
+                } else {
+                    statement.setNull(9, Types.INTEGER);
+                }
+                if (map.containsKey("environment")) {
+                    statement.setString(10, (String) map.get("environment"));
+                } else {
+                    statement.setNull(10, Types.VARCHAR);
+                }
+                if(map.containsKey("systemEnv")) {
+                    statement.setString(11, (String) map.get("systemEnv"));
+                } else {
+                    statement.setNull(11, Types.VARCHAR);
+                }
+                if(map.containsKey("runtimeEnv")) {
+                    statement.setString(12, (String) map.get("runtimeEnv"));
+                } else {
+                    statement.setNull(12, Types.VARCHAR);
+                }
+                if(map.containsKey("zone")) {
+                    statement.setString(13, (String) map.get("zone"));
+                } else {
+                    statement.setNull(13, Types.VARCHAR);
+                }
+                if(map.containsKey("region")) {
+                    statement.setString(14, (String) map.get("region"));
+                } else {
+                    statement.setNull(14, Types.VARCHAR);
+                }
+                if(map.containsKey("lob")) {
+                    statement.setString(15, (String) map.get("lob"));
+                } else {
+                    statement.setNull(15, Types.VARCHAR);
+                }
+                statement.setString(16, event.getEventId().getId());
+                statement.setTimestamp(17, timestamp);
+
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert the platform with id " + event.getPlatformId());
+                }
+                conn.commit();
+                result =  Success.of(event.getPlatformId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            }  catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> updatePlatform(PlatformUpdatedEvent event) {
+        final String sql = "UPDATE platform_t SET platform_name = ?, platform_version = ?, client_type = ?, client_url = ?, credentials = ?, proxy_url = ?, proxy_port = ?, evnironment = ?, system_env = ?, runtime_env = ?, zone = ?, region = ?, lob = ?, update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? and platform_id = ?";
+        Result<String> result;
+        Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
+        String value = event.getValue();
+        Map<String, Object> map = JsonMapper.string2Map(value);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, event.getPlatformName());
+                statement.setString(2, event.getPlatformVersion());
+                statement.setString(3, event.getClientType());
+                statement.setString(4, event.getClientUrl());
+                statement.setString(5, event.getCredentials());
+                if (map.containsKey("proxyUrl")) {
+                    statement.setString(6, (String) map.get("proxyUrl"));
+                } else {
+                    statement.setNull(6, Types.VARCHAR);
+                }
+                if (map.containsKey("proxyPort")) {
+                    statement.setInt(7, (Integer) map.get("proxyPort"));
+                } else {
+                    statement.setNull(7, Types.INTEGER);
+                }
+                if (map.containsKey("environment")) {
+                    statement.setString(8, (String) map.get("environment"));
+                } else {
+                    statement.setNull(8, Types.VARCHAR);
+                }
+                if(map.containsKey("systemEnv")) {
+                    statement.setString(9, (String) map.get("systemEnv"));
+                } else {
+                    statement.setNull(9, Types.VARCHAR);
+                }
+                if(map.containsKey("runtimeEnv")) {
+                    statement.setString(10, (String) map.get("runtimeEnv"));
+                } else {
+                    statement.setNull(10, Types.VARCHAR);
+                }
+                if(map.containsKey("zone")) {
+                    statement.setString(11, (String) map.get("zone"));
+                } else {
+                    statement.setNull(11, Types.VARCHAR);
+                }
+                if(map.containsKey("region")) {
+                    statement.setString(12, (String) map.get("region"));
+                } else {
+                    statement.setNull(12, Types.VARCHAR);
+                }
+                if(map.containsKey("lob")) {
+                    statement.setString(13, (String) map.get("lob"));
+                } else {
+                    statement.setNull(13, Types.VARCHAR);
+                }
+                statement.setString(14, event.getEventId().getId());
+                statement.setTimestamp(15, timestamp);
+                statement.setString(16, event.getEventId().getHostId());
+                statement.setString(17, event.getPlatformId());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to update the platform with id " + event.getPlatformId());
+                }
+                conn.commit();
+                result = Success.of(event.getPlatformId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+
+            }  catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            }   catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deletePlatform(PlatformDeletedEvent event) {
+        final String sql = "DELETE FROM platform_t WHERE host_id = ? AND platform_id = ?";
+        Result<String> result;
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, event.getEventId().getHostId());
+                statement.setString(2, event.getPlatformId());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to delete the platform with id " + event.getPlatformId());
+                }
+                conn.commit();
+                result =  Success.of(event.getPlatformId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+
+
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+
+    @Override
+    public Result<String> getPlatform(int offset, int limit, String hostId, String platformId, String platformName, String platformVersion,
+                                      String clientType, String clientUrl, String credentials, String proxyUrl, Integer proxyPort,
+                                      String environment, String systemEnv, String runtimeEnv, String zone, String region, String lob) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
+                "host_id, platform_id, platform_name, platform_version, client_type, client_url, credentials, proxy_url, proxy_port, evnironment, system_env, runtime_env, zone, region, lob, update_user, update_ts \n" +
+                "FROM platform_t\n" +
+                "WHERE 1=1\n");
+
+        List<Object> parameters = new ArrayList<>();
+
+
+        StringBuilder whereClause = new StringBuilder();
+        addCondition(whereClause, parameters, "host_id", hostId);
+        addCondition(whereClause, parameters, "platform_id", platformId);
+        addCondition(whereClause, parameters, "platform_name", platformName);
+        addCondition(whereClause, parameters, "platform_version", platformVersion);
+        addCondition(whereClause, parameters, "client_type", clientType);
+        addCondition(whereClause, parameters, "client_url", clientUrl);
+        addCondition(whereClause, parameters, "credentials", credentials);
+        addCondition(whereClause, parameters, "proxy_url", proxyUrl);
+        addCondition(whereClause, parameters, "proxy_port", proxyPort);
+        addCondition(whereClause, parameters, "evnironment", environment);
+        addCondition(whereClause, parameters, "system_env", systemEnv);
+        addCondition(whereClause, parameters, "runtime_env", runtimeEnv);
+        addCondition(whereClause, parameters, "zone", zone);
+        addCondition(whereClause, parameters, "region", region);
+        addCondition(whereClause, parameters, "lob", lob);
+
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append("ORDER BY platform_id\n" +
+                "LIMIT ? OFFSET ?");
+
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> platforms = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("platformId", resultSet.getString("platform_id"));
+                    map.put("platformName", resultSet.getString("platform_name"));
+                    map.put("platformVersion", resultSet.getString("platform_version"));
+                    map.put("clientType", resultSet.getString("client_type"));
+                    map.put("clientUrl", resultSet.getString("client_url"));
+                    map.put("credentials", resultSet.getString("credentials"));
+                    map.put("proxyUrl", resultSet.getString("proxy_url"));
+                    map.put("proxyPort", resultSet.getInt("proxy_port"));
+                    map.put("environment", resultSet.getString("evnironment"));
+                    map.put("systemEnv", resultSet.getString("system_env"));
+                    map.put("runtimeEnv", resultSet.getString("runtime_env"));
+                    map.put("zone", resultSet.getString("zone"));
+                    map.put("region", resultSet.getString("region"));
+                    map.put("lob", resultSet.getString("lob"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    // handling date properly
+                    map.put("updateTs", resultSet.getTimestamp("update_ts") != null ? resultSet.getTimestamp("update_ts").toString() : null);
+
+                    platforms.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("platforms", platforms);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> createDeployment(DeploymentCreatedEvent event) {
+        final String sql = "INSERT INTO deployment_t(host_id, deployment_id, instance_id, " +
+                "deployment_status, deployment_type, pipeline_id, schedule_ts, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        Result<String> result;
+        Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, event.getEventId().getHostId());
+                statement.setString(2, event.getDeploymentId());
+                statement.setString(3, event.getInstanceId());
+                statement.setString(4, event.getDeploymentStatus());
+                statement.setString(5, event.getDeploymentType());
+                statement.setString(6, event.getPipelineId());
+                statement.setTimestamp(7, event.getScheduleTs() != 0 ? new java.sql.Timestamp(event.getScheduleTs()) : timestamp);
+                statement.setString(8, event.getEventId().getId());
+                statement.setTimestamp(9, timestamp);
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert the deployment with id " + event.getDeploymentId());
+                }
+                conn.commit();
+                result = Success.of(event.getDeploymentId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            }  catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        }  catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> updateDeployment(DeploymentUpdatedEvent event) {
+        final String sql = "UPDATE deployment_t SET instance_id = ?, deployment_status = ?, deplyment_type = ?, pipeline_id = ?, schedule_ts = ?, update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? and deployment_id = ?";
+        Result<String> result;
+        Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, event.getInstanceId());
+                statement.setString(2, event.getDeploymentStatus());
+                statement.setString(3, event.getDeploymentType());
+                statement.setString(4, event.getPipelineId());
+                statement.setTimestamp(5, event.getScheduleTs() != 0 ? new java.sql.Timestamp(event.getScheduleTs()) : timestamp);
+                statement.setString(6, event.getEventId().getId());
+                statement.setTimestamp(7, timestamp);
+                statement.setString(8, event.getEventId().getHostId());
+                statement.setString(9, event.getDeploymentId());
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to update the deployment with id " + event.getDeploymentId());
+                }
+                conn.commit();
+                result = Success.of(event.getDeploymentId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            }  catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            }  catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        }   catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deleteDeployment(DeploymentDeletedEvent event) {
+        final String sql = "DELETE FROM deployment_t WHERE host_id = ? AND deployment_id = ?";
+        Result<String> result;
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, event.getEventId().getHostId());
+                statement.setString(2, event.getDeploymentId());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to delete the deployment with id " + event.getDeploymentId());
+                }
+                conn.commit();
+                result = Success.of(event.getDeploymentId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+
+            }   catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        }  catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getDeployment(int offset, int limit, String hostId, String deploymentId, String instanceId, String deploymentStatus,
+                                        String deploymentType, String pipelineId) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
+                "host_id, deployment_id, instance_id, deployment_status, deployment_type, pipeline_id, " +
+                "schedule_ts, update_user, update_ts\n" +
+                "FROM deployment_t\n" +
+                "WHERE 1=1\n");
+
+        List<Object> parameters = new ArrayList<>();
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "host_id", hostId);
+        addCondition(whereClause, parameters, "deployment_id", deploymentId);
+        addCondition(whereClause, parameters, "instance_id", instanceId);
+        addCondition(whereClause, parameters, "deployment_status", deploymentStatus);
+        addCondition(whereClause, parameters, "deployment_type", deploymentType);
+        addCondition(whereClause, parameters, "pipeline_id", pipelineId);
+
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append(" ORDER BY deployment_id\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> deployments = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("deploymentId", resultSet.getString("deployment_id"));
+                    map.put("instanceId", resultSet.getString("instance_id"));
+                    map.put("deploymentStatus", resultSet.getString("deployment_status"));
+                    map.put("deplymentType", resultSet.getString("deplyment_type"));
+                    map.put("pipelineId", resultSet.getString("pipeline_id"));
+                    // handling date properly
+                    map.put("scheduleTs", resultSet.getTimestamp("schedule_ts") != null ? resultSet.getTimestamp("schedule_ts").toString() : null);
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getTimestamp("update_ts") != null ? resultSet.getTimestamp("update_ts").toString() : null);
+
+                    deployments.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("deployments", deployments);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
 
 }

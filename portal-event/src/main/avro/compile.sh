@@ -180,6 +180,19 @@ java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema Position
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema PositionColFilterUpdatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema PositionColFilterDeletedEvent.avsc .
 
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema DeploymentCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema DeploymentUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema DeploymentDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema InstanceCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema InstanceUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema InstanceDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema PlatformCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema PlatformUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema PlatformDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ProductCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ProductUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ProductDeletedEvent.avsc .
+
 # Update events to implement from KycEvent interface in order to group these events in streams processing.
 
 # find . -name '*Event.java' -exec sed -i "s/implements org.apache.avro.specific.SpecificRecord/implements UserEvent/g" {} +
@@ -359,6 +372,21 @@ mv net/lightapi/portal/position/PositionColFilterDeletedEvent.java ../java/net/l
 
 mv net/lightapi/portal/controller/ControllerRegisteredEvent.java ../java/net/lightapi/portal/controller
 mv net/lightapi/portal/controller/ControllerDeregisteredEvent.java ../java/net/lightapi/portal/controller
+
+mv net/lightapi/portal/deployment/DeploymentCreatedEvent.java ../java/net/lightapi/portal/deployment
+mv net/lightapi/portal/deployment/DeploymentUpdatedEvent.java ../java/net/lightapi/portal/deployment
+mv net/lightapi/portal/deployment/DeploymentDeletedEvent.java ../java/net/lightapi/portal/deployment
+mv net/lightapi/portal/deployment/PlatformCreatedEvent.java ../java/net/lightapi/portal/deployment
+mv net/lightapi/portal/deployment/PlatformUpdatedEvent.java ../java/net/lightapi/portal/deployment
+mv net/lightapi/portal/deployment/PlatformDeletedEvent.java ../java/net/lightapi/portal/deployment
+
+mv net/lightapi/portal/instance/InstanceCreatedEvent.java ../java/net/lightapi/portal/instance
+mv net/lightapi/portal/instance/InstanceUpdatedEvent.java ../java/net/lightapi/portal/instance
+mv net/lightapi/portal/instance/InstanceDeletedEvent.java ../java/net/lightapi/portal/instance
+
+mv net/lightapi/portal/product/ProductCreatedEvent.java ../java/net/lightapi/portal/product
+mv net/lightapi/portal/product/ProductUpdatedEvent.java ../java/net/lightapi/portal/product
+mv net/lightapi/portal/product/ProductDeletedEvent.java ../java/net/lightapi/portal/product
 
 rm -rf net
 rm -rf com

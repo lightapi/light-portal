@@ -1,0 +1,84 @@
+{
+  "type": "record",
+  "name": "PlatformUpdatedEvent",
+  "namespace": "net.lightapi.portal.deployment",
+  "fields": [
+    {
+      "name": "EventId",
+      "type": {
+        "type": "record",
+        "name": "EventId",
+        "namespace": "com.networknt.kafka.common",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "doc": "a unique identifier for the event"
+          },
+          {
+            "name": "userId",
+            "type": "string",
+            "doc": "the user who creates the event"
+          },
+          {
+            "name": "hostId",
+            "type": "string",
+            "doc": "the host which is the event is created"
+          },
+          {
+            "name": "nonce",
+            "type": "long",
+            "doc": "the number of the transactions for the user"
+          },
+          {
+            "name": "timestamp",
+            "type": "long",
+            "default": 0,
+            "doc": "time the event is recorded"
+          },
+          {
+            "name": "derived",
+            "type": "boolean",
+            "default": false,
+            "doc": "indicate if the event is derived from event processor"
+          }
+        ]
+      }
+    },
+    {
+      "name": "platformId",
+      "type": "string",
+      "doc": "platform id"
+    },
+    {
+      "name": "platformName",
+      "type": "string",
+      "doc": "platform name"
+    },
+    {
+      "name": "platformVersion",
+      "type": "string",
+      "doc": "platform version"
+    },
+    {
+      "name": "clientType",
+      "type": "string",
+      "doc": "client type"
+    },
+    {
+      "name": "clientUrl",
+      "type": "string",
+      "doc": "client url"
+    },
+    {
+      "name": "credentials",
+      "type": "string",
+      "doc": "credentials"
+    },
+    {
+      "name": "value",
+      "type": "string",
+      "doc": "value in json"
+    }
+  ]
+}
