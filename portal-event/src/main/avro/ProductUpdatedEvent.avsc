@@ -61,7 +61,7 @@
       "doc": "light-4j version"
     },
     {
-      "name": "isCurrent",
+      "name": "current",
       "type": "boolean",
       "doc": "is current"
     },

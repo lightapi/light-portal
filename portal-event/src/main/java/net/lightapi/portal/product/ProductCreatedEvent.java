@@ -13,10 +13,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class ProductCreatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -1267438913737449075L;
+  private static final long serialVersionUID = 9086280919113207861L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ProductCreatedEvent\",\"namespace\":\"net.lightapi.portal.product\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"productId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"product id\"},{\"name\":\"productVersion\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"product version\"},{\"name\":\"light4jVersion\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"light-4j version\"},{\"name\":\"isCurrent\",\"type\":\"boolean\",\"doc\":\"is current\"},{\"name\":\"versionStatus\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"versionStatus\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"value in json\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ProductCreatedEvent\",\"namespace\":\"net.lightapi.portal.product\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"productId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"product id\"},{\"name\":\"productVersion\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"product version\"},{\"name\":\"light4jVersion\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"light-4j version\"},{\"name\":\"current\",\"type\":\"boolean\",\"doc\":\"is current\"},{\"name\":\"versionStatus\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"versionStatus\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"value in json\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -80,7 +80,7 @@ public class ProductCreatedEvent extends org.apache.avro.specific.SpecificRecord
   /** light-4j version */
   private java.lang.String light4jVersion;
   /** is current */
-  private boolean isCurrent;
+  private boolean current;
   /** versionStatus */
   private java.lang.String versionStatus;
   /** value in json */
@@ -99,16 +99,16 @@ public class ProductCreatedEvent extends org.apache.avro.specific.SpecificRecord
    * @param productId product id
    * @param productVersion product version
    * @param light4jVersion light-4j version
-   * @param isCurrent is current
+   * @param current is current
    * @param versionStatus versionStatus
    * @param value value in json
    */
-  public ProductCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String productId, java.lang.String productVersion, java.lang.String light4jVersion, java.lang.Boolean isCurrent, java.lang.String versionStatus, java.lang.String value) {
+  public ProductCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String productId, java.lang.String productVersion, java.lang.String light4jVersion, java.lang.Boolean current, java.lang.String versionStatus, java.lang.String value) {
     this.EventId = EventId;
     this.productId = productId;
     this.productVersion = productVersion;
     this.light4jVersion = light4jVersion;
-    this.isCurrent = isCurrent;
+    this.current = current;
     this.versionStatus = versionStatus;
     this.value = value;
   }
@@ -127,7 +127,7 @@ public class ProductCreatedEvent extends org.apache.avro.specific.SpecificRecord
     case 1: return productId;
     case 2: return productVersion;
     case 3: return light4jVersion;
-    case 4: return isCurrent;
+    case 4: return current;
     case 5: return versionStatus;
     case 6: return value;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
@@ -143,7 +143,7 @@ public class ProductCreatedEvent extends org.apache.avro.specific.SpecificRecord
     case 1: productId = value$ != null ? value$.toString() : null; break;
     case 2: productVersion = value$ != null ? value$.toString() : null; break;
     case 3: light4jVersion = value$ != null ? value$.toString() : null; break;
-    case 4: isCurrent = (java.lang.Boolean)value$; break;
+    case 4: current = (java.lang.Boolean)value$; break;
     case 5: versionStatus = value$ != null ? value$.toString() : null; break;
     case 6: value = value$ != null ? value$.toString() : null; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
@@ -222,21 +222,21 @@ public class ProductCreatedEvent extends org.apache.avro.specific.SpecificRecord
   }
 
   /**
-   * Gets the value of the 'isCurrent' field.
+   * Gets the value of the 'current' field.
    * @return is current
    */
-  public boolean getIsCurrent() {
-    return isCurrent;
+  public boolean getCurrent() {
+    return current;
   }
 
 
   /**
-   * Sets the value of the 'isCurrent' field.
+   * Sets the value of the 'current' field.
    * is current
    * @param value the value to set.
    */
-  public void setIsCurrent(boolean value) {
-    this.isCurrent = value;
+  public void setCurrent(boolean value) {
+    this.current = value;
   }
 
   /**
@@ -325,7 +325,7 @@ public class ProductCreatedEvent extends org.apache.avro.specific.SpecificRecord
     /** light-4j version */
     private java.lang.String light4jVersion;
     /** is current */
-    private boolean isCurrent;
+    private boolean current;
     /** versionStatus */
     private java.lang.String versionStatus;
     /** value in json */
@@ -361,8 +361,8 @@ public class ProductCreatedEvent extends org.apache.avro.specific.SpecificRecord
         this.light4jVersion = data().deepCopy(fields()[3].schema(), other.light4jVersion);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
-      if (isValidValue(fields()[4], other.isCurrent)) {
-        this.isCurrent = data().deepCopy(fields()[4].schema(), other.isCurrent);
+      if (isValidValue(fields()[4], other.current)) {
+        this.current = data().deepCopy(fields()[4].schema(), other.current);
         fieldSetFlags()[4] = other.fieldSetFlags()[4];
       }
       if (isValidValue(fields()[5], other.versionStatus)) {
@@ -398,8 +398,8 @@ public class ProductCreatedEvent extends org.apache.avro.specific.SpecificRecord
         this.light4jVersion = data().deepCopy(fields()[3].schema(), other.light4jVersion);
         fieldSetFlags()[3] = true;
       }
-      if (isValidValue(fields()[4], other.isCurrent)) {
-        this.isCurrent = data().deepCopy(fields()[4].schema(), other.isCurrent);
+      if (isValidValue(fields()[4], other.current)) {
+        this.current = data().deepCopy(fields()[4].schema(), other.current);
         fieldSetFlags()[4] = true;
       }
       if (isValidValue(fields()[5], other.versionStatus)) {
@@ -621,44 +621,44 @@ public class ProductCreatedEvent extends org.apache.avro.specific.SpecificRecord
     }
 
     /**
-      * Gets the value of the 'isCurrent' field.
+      * Gets the value of the 'current' field.
       * is current
       * @return The value.
       */
-    public boolean getIsCurrent() {
-      return isCurrent;
+    public boolean getCurrent() {
+      return current;
     }
 
 
     /**
-      * Sets the value of the 'isCurrent' field.
+      * Sets the value of the 'current' field.
       * is current
-      * @param value The value of 'isCurrent'.
+      * @param value The value of 'current'.
       * @return This builder.
       */
-    public net.lightapi.portal.product.ProductCreatedEvent.Builder setIsCurrent(boolean value) {
+    public net.lightapi.portal.product.ProductCreatedEvent.Builder setCurrent(boolean value) {
       validate(fields()[4], value);
-      this.isCurrent = value;
+      this.current = value;
       fieldSetFlags()[4] = true;
       return this;
     }
 
     /**
-      * Checks whether the 'isCurrent' field has been set.
+      * Checks whether the 'current' field has been set.
       * is current
-      * @return True if the 'isCurrent' field has been set, false otherwise.
+      * @return True if the 'current' field has been set, false otherwise.
       */
-    public boolean hasIsCurrent() {
+    public boolean hasCurrent() {
       return fieldSetFlags()[4];
     }
 
 
     /**
-      * Clears the value of the 'isCurrent' field.
+      * Clears the value of the 'current' field.
       * is current
       * @return This builder.
       */
-    public net.lightapi.portal.product.ProductCreatedEvent.Builder clearIsCurrent() {
+    public net.lightapi.portal.product.ProductCreatedEvent.Builder clearCurrent() {
       fieldSetFlags()[4] = false;
       return this;
     }
@@ -769,7 +769,7 @@ public class ProductCreatedEvent extends org.apache.avro.specific.SpecificRecord
         record.productId = fieldSetFlags()[1] ? this.productId : (java.lang.String) defaultValue(fields()[1]);
         record.productVersion = fieldSetFlags()[2] ? this.productVersion : (java.lang.String) defaultValue(fields()[2]);
         record.light4jVersion = fieldSetFlags()[3] ? this.light4jVersion : (java.lang.String) defaultValue(fields()[3]);
-        record.isCurrent = fieldSetFlags()[4] ? this.isCurrent : (java.lang.Boolean) defaultValue(fields()[4]);
+        record.current = fieldSetFlags()[4] ? this.current : (java.lang.Boolean) defaultValue(fields()[4]);
         record.versionStatus = fieldSetFlags()[5] ? this.versionStatus : (java.lang.String) defaultValue(fields()[5]);
         record.value = fieldSetFlags()[6] ? this.value : (java.lang.String) defaultValue(fields()[6]);
         return record;
@@ -812,7 +812,7 @@ public class ProductCreatedEvent extends org.apache.avro.specific.SpecificRecord
 
     out.writeString(this.light4jVersion);
 
-    out.writeBoolean(this.isCurrent);
+    out.writeBoolean(this.current);
 
     out.writeString(this.versionStatus);
 
@@ -836,7 +836,7 @@ public class ProductCreatedEvent extends org.apache.avro.specific.SpecificRecord
 
       this.light4jVersion = in.readString();
 
-      this.isCurrent = in.readBoolean();
+      this.current = in.readBoolean();
 
       this.versionStatus = in.readString();
 
@@ -865,7 +865,7 @@ public class ProductCreatedEvent extends org.apache.avro.specific.SpecificRecord
           break;
 
         case 4:
-          this.isCurrent = in.readBoolean();
+          this.current = in.readBoolean();
           break;
 
         case 5:

@@ -10342,7 +10342,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> createProduct(ProductCreatedEvent event) {
         final String sql = "INSERT INTO product_version_t(host_id, product_id, product_version, " +
-                "light4j_version, version_desc, is_current, version_status, update_user, update_ts) " +
+                "light4j_version, version_desc, current, version_status, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         Result<String> result;
         Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
@@ -10360,7 +10360,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 } else {
                     statement.setNull(5, Types.VARCHAR);
                 }
-                statement.setBoolean(6, event.getIsCurrent());
+                statement.setBoolean(6, event.getCurrent());
                 statement.setString(7, event.getVersionStatus());
                 statement.setString(8, event.getEventId().getId());
                 statement.setTimestamp(9, timestamp);
@@ -10393,7 +10393,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> updateProduct(ProductUpdatedEvent event) {
         final String sql = "UPDATE product_version_t SET light4j_version = ?, " +
-                "version_desc = ?, is_current = ?, version_status = ?, update_user = ?, update_ts = ? " +
+                "version_desc = ?, current = ?, version_status = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? and product_id = ? and product_version = ?";
         Result<String> result;
         Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
@@ -10409,7 +10409,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 } else {
                     statement.setNull(2, Types.VARCHAR);
                 }
-                statement.setBoolean(3, event.getIsCurrent());
+                statement.setBoolean(3, event.getCurrent());
                 statement.setString(4, event.getVersionStatus());
                 statement.setString(5, event.getEventId().getId());
                 statement.setTimestamp(6, timestamp);
@@ -10484,11 +10484,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> getProduct(int offset, int limit, String hostId, String productId, String productVersion, String light4jVersion,
-                                     String versionDesc, Boolean isCurrent, String versionStatus) {
+                                     String versionDesc, Boolean current, String versionStatus) {
         Result<String> result = null;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "host_id, product_id, product_version, light4j_version, version_desc, is_current, " +
+                "host_id, product_id, product_version, light4j_version, version_desc, current, " +
                 "version_status, update_user, update_ts\n" +
                 "FROM product_version_t\n" +
                 "WHERE 1=1\n");
@@ -10501,7 +10501,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         addCondition(whereClause, parameters, "product_version", productVersion);
         addCondition(whereClause, parameters, "light4j_version", light4jVersion);
         addCondition(whereClause, parameters, "version_desc", versionDesc);
-        addCondition(whereClause, parameters, "is_current", isCurrent);
+        addCondition(whereClause, parameters, "current", current);
         addCondition(whereClause, parameters, "version_status", versionStatus);
 
         if (whereClause.length() > 0) {
@@ -10538,7 +10538,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("productVersion", resultSet.getString("product_version"));
                     map.put("light4jVersion", resultSet.getString("light4j_version"));
                     map.put("versionDesc", resultSet.getString("version_desc"));
-                    map.put("isCurrent", resultSet.getBoolean("is_current"));
+                    map.put("current", resultSet.getBoolean("current"));
                     map.put("versionStatus", resultSet.getString("version_status"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     // handling date properly
@@ -11035,7 +11035,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         Result<String> result = null;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "host_id, platform_id, platform_name, platform_version, client_type, client_url, credentials, proxy_url, proxy_port, evnironment, system_env, runtime_env, zone, region, lob, update_user, update_ts \n" +
+                "host_id, platform_id, platform_name, platform_version, client_type, client_url, credentials, proxy_url, " +
+                "proxy_port, environment, system_env, runtime_env, zone, region, lob, update_user, update_ts \n" +
                 "FROM platform_t\n" +
                 "WHERE 1=1\n");
 
@@ -11052,7 +11053,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         addCondition(whereClause, parameters, "credentials", credentials);
         addCondition(whereClause, parameters, "proxy_url", proxyUrl);
         addCondition(whereClause, parameters, "proxy_port", proxyPort);
-        addCondition(whereClause, parameters, "evnironment", environment);
+        addCondition(whereClause, parameters, "environment", environment);
         addCondition(whereClause, parameters, "system_env", systemEnv);
         addCondition(whereClause, parameters, "runtime_env", runtimeEnv);
         addCondition(whereClause, parameters, "zone", zone);
@@ -11064,7 +11065,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append("ORDER BY platform_id\n" +
+        sqlBuilder.append(" ORDER BY platform_id\n" +
                 "LIMIT ? OFFSET ?");
 
 
