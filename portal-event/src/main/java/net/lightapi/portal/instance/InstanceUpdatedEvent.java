@@ -13,10 +13,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -620280932815161063L;
+  private static final long serialVersionUID = -9117082574382968390L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"InstanceUpdatedEvent\",\"namespace\":\"net.lightapi.portal.instance\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"instanceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"instance id\"},{\"name\":\"productId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"product id\"},{\"name\":\"productVersion\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"product version\"},{\"name\":\"serviceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service id\"},{\"name\":\"platformId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"platform id\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"value in json\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"InstanceUpdatedEvent\",\"namespace\":\"net.lightapi.portal.instance\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"instanceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"instance id\"},{\"name\":\"instanceName\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"instance name\"},{\"name\":\"productId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"product id\"},{\"name\":\"productVersion\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"product version\"},{\"name\":\"serviceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service id\"},{\"name\":\"platformId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"platform id\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"value in json\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -75,6 +75,8 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
   private com.networknt.kafka.common.EventId EventId;
   /** instance id */
   private java.lang.String instanceId;
+  /** instance name */
+  private java.lang.String instanceName;
   /** product id */
   private java.lang.String productId;
   /** product version */
@@ -97,15 +99,17 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
    * All-args constructor.
    * @param EventId The new value for EventId
    * @param instanceId instance id
+   * @param instanceName instance name
    * @param productId product id
    * @param productVersion product version
    * @param serviceId service id
    * @param platformId platform id
    * @param value value in json
    */
-  public InstanceUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String instanceId, java.lang.String productId, java.lang.String productVersion, java.lang.String serviceId, java.lang.String platformId, java.lang.String value) {
+  public InstanceUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String instanceId, java.lang.String instanceName, java.lang.String productId, java.lang.String productVersion, java.lang.String serviceId, java.lang.String platformId, java.lang.String value) {
     this.EventId = EventId;
     this.instanceId = instanceId;
+    this.instanceName = instanceName;
     this.productId = productId;
     this.productVersion = productVersion;
     this.serviceId = serviceId;
@@ -125,11 +129,12 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
     switch (field$) {
     case 0: return EventId;
     case 1: return instanceId;
-    case 2: return productId;
-    case 3: return productVersion;
-    case 4: return serviceId;
-    case 5: return platformId;
-    case 6: return value;
+    case 2: return instanceName;
+    case 3: return productId;
+    case 4: return productVersion;
+    case 5: return serviceId;
+    case 6: return platformId;
+    case 7: return value;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -141,11 +146,12 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
     case 1: instanceId = value$ != null ? value$.toString() : null; break;
-    case 2: productId = value$ != null ? value$.toString() : null; break;
-    case 3: productVersion = value$ != null ? value$.toString() : null; break;
-    case 4: serviceId = value$ != null ? value$.toString() : null; break;
-    case 5: platformId = value$ != null ? value$.toString() : null; break;
-    case 6: value = value$ != null ? value$.toString() : null; break;
+    case 2: instanceName = value$ != null ? value$.toString() : null; break;
+    case 3: productId = value$ != null ? value$.toString() : null; break;
+    case 4: productVersion = value$ != null ? value$.toString() : null; break;
+    case 5: serviceId = value$ != null ? value$.toString() : null; break;
+    case 6: platformId = value$ != null ? value$.toString() : null; break;
+    case 7: value = value$ != null ? value$.toString() : null; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -183,6 +189,24 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
    */
   public void setInstanceId(java.lang.String value) {
     this.instanceId = value;
+  }
+
+  /**
+   * Gets the value of the 'instanceName' field.
+   * @return instance name
+   */
+  public java.lang.String getInstanceName() {
+    return instanceName;
+  }
+
+
+  /**
+   * Sets the value of the 'instanceName' field.
+   * instance name
+   * @param value the value to set.
+   */
+  public void setInstanceName(java.lang.String value) {
+    this.instanceName = value;
   }
 
   /**
@@ -320,6 +344,8 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
     /** instance id */
     private java.lang.String instanceId;
+    /** instance name */
+    private java.lang.String instanceName;
     /** product id */
     private java.lang.String productId;
     /** product version */
@@ -353,25 +379,29 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
         this.instanceId = data().deepCopy(fields()[1].schema(), other.instanceId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
-      if (isValidValue(fields()[2], other.productId)) {
-        this.productId = data().deepCopy(fields()[2].schema(), other.productId);
+      if (isValidValue(fields()[2], other.instanceName)) {
+        this.instanceName = data().deepCopy(fields()[2].schema(), other.instanceName);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.productVersion)) {
-        this.productVersion = data().deepCopy(fields()[3].schema(), other.productVersion);
+      if (isValidValue(fields()[3], other.productId)) {
+        this.productId = data().deepCopy(fields()[3].schema(), other.productId);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
-      if (isValidValue(fields()[4], other.serviceId)) {
-        this.serviceId = data().deepCopy(fields()[4].schema(), other.serviceId);
+      if (isValidValue(fields()[4], other.productVersion)) {
+        this.productVersion = data().deepCopy(fields()[4].schema(), other.productVersion);
         fieldSetFlags()[4] = other.fieldSetFlags()[4];
       }
-      if (isValidValue(fields()[5], other.platformId)) {
-        this.platformId = data().deepCopy(fields()[5].schema(), other.platformId);
+      if (isValidValue(fields()[5], other.serviceId)) {
+        this.serviceId = data().deepCopy(fields()[5].schema(), other.serviceId);
         fieldSetFlags()[5] = other.fieldSetFlags()[5];
       }
-      if (isValidValue(fields()[6], other.value)) {
-        this.value = data().deepCopy(fields()[6].schema(), other.value);
+      if (isValidValue(fields()[6], other.platformId)) {
+        this.platformId = data().deepCopy(fields()[6].schema(), other.platformId);
         fieldSetFlags()[6] = other.fieldSetFlags()[6];
+      }
+      if (isValidValue(fields()[7], other.value)) {
+        this.value = data().deepCopy(fields()[7].schema(), other.value);
+        fieldSetFlags()[7] = other.fieldSetFlags()[7];
       }
     }
 
@@ -390,25 +420,29 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
         this.instanceId = data().deepCopy(fields()[1].schema(), other.instanceId);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.productId)) {
-        this.productId = data().deepCopy(fields()[2].schema(), other.productId);
+      if (isValidValue(fields()[2], other.instanceName)) {
+        this.instanceName = data().deepCopy(fields()[2].schema(), other.instanceName);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.productVersion)) {
-        this.productVersion = data().deepCopy(fields()[3].schema(), other.productVersion);
+      if (isValidValue(fields()[3], other.productId)) {
+        this.productId = data().deepCopy(fields()[3].schema(), other.productId);
         fieldSetFlags()[3] = true;
       }
-      if (isValidValue(fields()[4], other.serviceId)) {
-        this.serviceId = data().deepCopy(fields()[4].schema(), other.serviceId);
+      if (isValidValue(fields()[4], other.productVersion)) {
+        this.productVersion = data().deepCopy(fields()[4].schema(), other.productVersion);
         fieldSetFlags()[4] = true;
       }
-      if (isValidValue(fields()[5], other.platformId)) {
-        this.platformId = data().deepCopy(fields()[5].schema(), other.platformId);
+      if (isValidValue(fields()[5], other.serviceId)) {
+        this.serviceId = data().deepCopy(fields()[5].schema(), other.serviceId);
         fieldSetFlags()[5] = true;
       }
-      if (isValidValue(fields()[6], other.value)) {
-        this.value = data().deepCopy(fields()[6].schema(), other.value);
+      if (isValidValue(fields()[6], other.platformId)) {
+        this.platformId = data().deepCopy(fields()[6].schema(), other.platformId);
         fieldSetFlags()[6] = true;
+      }
+      if (isValidValue(fields()[7], other.value)) {
+        this.value = data().deepCopy(fields()[7].schema(), other.value);
+        fieldSetFlags()[7] = true;
       }
     }
 
@@ -533,6 +567,50 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
     }
 
     /**
+      * Gets the value of the 'instanceName' field.
+      * instance name
+      * @return The value.
+      */
+    public java.lang.String getInstanceName() {
+      return instanceName;
+    }
+
+
+    /**
+      * Sets the value of the 'instanceName' field.
+      * instance name
+      * @param value The value of 'instanceName'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.instance.InstanceUpdatedEvent.Builder setInstanceName(java.lang.String value) {
+      validate(fields()[2], value);
+      this.instanceName = value;
+      fieldSetFlags()[2] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'instanceName' field has been set.
+      * instance name
+      * @return True if the 'instanceName' field has been set, false otherwise.
+      */
+    public boolean hasInstanceName() {
+      return fieldSetFlags()[2];
+    }
+
+
+    /**
+      * Clears the value of the 'instanceName' field.
+      * instance name
+      * @return This builder.
+      */
+    public net.lightapi.portal.instance.InstanceUpdatedEvent.Builder clearInstanceName() {
+      instanceName = null;
+      fieldSetFlags()[2] = false;
+      return this;
+    }
+
+    /**
       * Gets the value of the 'productId' field.
       * product id
       * @return The value.
@@ -549,9 +627,9 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
       * @return This builder.
       */
     public net.lightapi.portal.instance.InstanceUpdatedEvent.Builder setProductId(java.lang.String value) {
-      validate(fields()[2], value);
+      validate(fields()[3], value);
       this.productId = value;
-      fieldSetFlags()[2] = true;
+      fieldSetFlags()[3] = true;
       return this;
     }
 
@@ -561,7 +639,7 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
       * @return True if the 'productId' field has been set, false otherwise.
       */
     public boolean hasProductId() {
-      return fieldSetFlags()[2];
+      return fieldSetFlags()[3];
     }
 
 
@@ -572,7 +650,7 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
       */
     public net.lightapi.portal.instance.InstanceUpdatedEvent.Builder clearProductId() {
       productId = null;
-      fieldSetFlags()[2] = false;
+      fieldSetFlags()[3] = false;
       return this;
     }
 
@@ -593,9 +671,9 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
       * @return This builder.
       */
     public net.lightapi.portal.instance.InstanceUpdatedEvent.Builder setProductVersion(java.lang.String value) {
-      validate(fields()[3], value);
+      validate(fields()[4], value);
       this.productVersion = value;
-      fieldSetFlags()[3] = true;
+      fieldSetFlags()[4] = true;
       return this;
     }
 
@@ -605,7 +683,7 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
       * @return True if the 'productVersion' field has been set, false otherwise.
       */
     public boolean hasProductVersion() {
-      return fieldSetFlags()[3];
+      return fieldSetFlags()[4];
     }
 
 
@@ -616,7 +694,7 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
       */
     public net.lightapi.portal.instance.InstanceUpdatedEvent.Builder clearProductVersion() {
       productVersion = null;
-      fieldSetFlags()[3] = false;
+      fieldSetFlags()[4] = false;
       return this;
     }
 
@@ -637,9 +715,9 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
       * @return This builder.
       */
     public net.lightapi.portal.instance.InstanceUpdatedEvent.Builder setServiceId(java.lang.String value) {
-      validate(fields()[4], value);
+      validate(fields()[5], value);
       this.serviceId = value;
-      fieldSetFlags()[4] = true;
+      fieldSetFlags()[5] = true;
       return this;
     }
 
@@ -649,7 +727,7 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
       * @return True if the 'serviceId' field has been set, false otherwise.
       */
     public boolean hasServiceId() {
-      return fieldSetFlags()[4];
+      return fieldSetFlags()[5];
     }
 
 
@@ -660,7 +738,7 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
       */
     public net.lightapi.portal.instance.InstanceUpdatedEvent.Builder clearServiceId() {
       serviceId = null;
-      fieldSetFlags()[4] = false;
+      fieldSetFlags()[5] = false;
       return this;
     }
 
@@ -681,9 +759,9 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
       * @return This builder.
       */
     public net.lightapi.portal.instance.InstanceUpdatedEvent.Builder setPlatformId(java.lang.String value) {
-      validate(fields()[5], value);
+      validate(fields()[6], value);
       this.platformId = value;
-      fieldSetFlags()[5] = true;
+      fieldSetFlags()[6] = true;
       return this;
     }
 
@@ -693,7 +771,7 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
       * @return True if the 'platformId' field has been set, false otherwise.
       */
     public boolean hasPlatformId() {
-      return fieldSetFlags()[5];
+      return fieldSetFlags()[6];
     }
 
 
@@ -704,7 +782,7 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
       */
     public net.lightapi.portal.instance.InstanceUpdatedEvent.Builder clearPlatformId() {
       platformId = null;
-      fieldSetFlags()[5] = false;
+      fieldSetFlags()[6] = false;
       return this;
     }
 
@@ -725,9 +803,9 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
       * @return This builder.
       */
     public net.lightapi.portal.instance.InstanceUpdatedEvent.Builder setValue(java.lang.String value) {
-      validate(fields()[6], value);
+      validate(fields()[7], value);
       this.value = value;
-      fieldSetFlags()[6] = true;
+      fieldSetFlags()[7] = true;
       return this;
     }
 
@@ -737,7 +815,7 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
       * @return True if the 'value' field has been set, false otherwise.
       */
     public boolean hasValue() {
-      return fieldSetFlags()[6];
+      return fieldSetFlags()[7];
     }
 
 
@@ -748,7 +826,7 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
       */
     public net.lightapi.portal.instance.InstanceUpdatedEvent.Builder clearValue() {
       value = null;
-      fieldSetFlags()[6] = false;
+      fieldSetFlags()[7] = false;
       return this;
     }
 
@@ -768,11 +846,12 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
         record.instanceId = fieldSetFlags()[1] ? this.instanceId : (java.lang.String) defaultValue(fields()[1]);
-        record.productId = fieldSetFlags()[2] ? this.productId : (java.lang.String) defaultValue(fields()[2]);
-        record.productVersion = fieldSetFlags()[3] ? this.productVersion : (java.lang.String) defaultValue(fields()[3]);
-        record.serviceId = fieldSetFlags()[4] ? this.serviceId : (java.lang.String) defaultValue(fields()[4]);
-        record.platformId = fieldSetFlags()[5] ? this.platformId : (java.lang.String) defaultValue(fields()[5]);
-        record.value = fieldSetFlags()[6] ? this.value : (java.lang.String) defaultValue(fields()[6]);
+        record.instanceName = fieldSetFlags()[2] ? this.instanceName : (java.lang.String) defaultValue(fields()[2]);
+        record.productId = fieldSetFlags()[3] ? this.productId : (java.lang.String) defaultValue(fields()[3]);
+        record.productVersion = fieldSetFlags()[4] ? this.productVersion : (java.lang.String) defaultValue(fields()[4]);
+        record.serviceId = fieldSetFlags()[5] ? this.serviceId : (java.lang.String) defaultValue(fields()[5]);
+        record.platformId = fieldSetFlags()[6] ? this.platformId : (java.lang.String) defaultValue(fields()[6]);
+        record.value = fieldSetFlags()[7] ? this.value : (java.lang.String) defaultValue(fields()[7]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -809,6 +888,8 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
 
     out.writeString(this.instanceId);
 
+    out.writeString(this.instanceName);
+
     out.writeString(this.productId);
 
     out.writeString(this.productVersion);
@@ -833,6 +914,8 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
 
       this.instanceId = in.readString();
 
+      this.instanceName = in.readString();
+
       this.productId = in.readString();
 
       this.productVersion = in.readString();
@@ -844,7 +927,7 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
       this.value = in.readString();
 
     } else {
-      for (int i = 0; i < 7; i++) {
+      for (int i = 0; i < 8; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -858,22 +941,26 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
           break;
 
         case 2:
-          this.productId = in.readString();
+          this.instanceName = in.readString();
           break;
 
         case 3:
-          this.productVersion = in.readString();
+          this.productId = in.readString();
           break;
 
         case 4:
-          this.serviceId = in.readString();
+          this.productVersion = in.readString();
           break;
 
         case 5:
-          this.platformId = in.readString();
+          this.serviceId = in.readString();
           break;
 
         case 6:
+          this.platformId = in.readString();
+          break;
+
+        case 7:
           this.value = in.readString();
           break;
 

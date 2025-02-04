@@ -51,6 +51,11 @@
       "doc": "instance id"
     },
     {
+      "name": "instanceName",
+      "type": "string",
+      "doc": "instance name"
+    },
+    {
       "name": "productId",
       "type": "string",
       "doc": "product id"

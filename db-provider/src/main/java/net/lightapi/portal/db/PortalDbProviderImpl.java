@@ -4605,6 +4605,33 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
+    public Result<String> getServiceIdLabel(String hostId) {
+        Result<String> result = null;
+        String sql = "SELECT service_id FROM api_version_t WHERE host_id =  ?";
+        List<Map<String, Object>> labels = new ArrayList<>();
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, hostId);
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", resultSet.getString("service_id"));
+                    map.put("label", resultSet.getString("service_id"));
+                    labels.add(map);
+                }
+            }
+            result = Success.of(JsonMapper.toJson(labels));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
     public Result<String> createOrg(OrgCreatedEvent event) {
         final String insertOrg = "INSERT INTO org_t (domain, org_name, org_desc, org_owner, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?,  ?)";
@@ -10562,12 +10589,67 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         return result;
     }
 
+    @Override
+    public Result<String> getProductIdLabel(String hostId) {
+        Result<String> result = null;
+        String sql = "SELECT product_id FROM product_version_t WHERE host_id = ?";
+        List<Map<String, Object>> labels = new ArrayList<>();
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, hostId);
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", resultSet.getString("product_id"));
+                    map.put("label", resultSet.getString("product_id"));
+                    labels.add(map);
+                }
+            }
+            result = Success.of(JsonMapper.toJson(labels));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getProductVersionLabel(String hostId, String productId) {
+        Result<String> result = null;
+        String sql = "SELECT product_version FROM product_version_t WHERE host_id = ? AND product_id = ?";
+        List<Map<String, Object>> versions = new ArrayList<>();
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, hostId);
+            preparedStatement.setString(2, productId);
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    String id = resultSet.getString("product_version");
+                    map.put("id", id);
+                    map.put("label", id);
+                    versions.add(map);
+                }
+            }
+            result = Success.of(JsonMapper.toJson(versions));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
 
     @Override
     public Result<String> createInstance(InstanceCreatedEvent event) {
-        final String sql = "INSERT INTO instance_t(host_id, instance_id, product_id, product_version, " +
+        final String sql = "INSERT INTO instance_t(host_id, instance_id, instance_name, product_id, product_version, " +
                 "service_id, platform_id, service_desc, instance_desc, tag_id, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         Result<String> result;
         Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
         String value = event.getValue();
@@ -10578,27 +10660,28 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, event.getEventId().getHostId());
                 statement.setString(2, event.getInstanceId());
-                statement.setString(3, event.getProductId());
-                statement.setString(4, event.getProductVersion());
-                statement.setString(5, event.getServiceId());
-                statement.setString(6, event.getPlatformId());
+                statement.setString(3, event.getInstanceName());
+                statement.setString(4, event.getProductId());
+                statement.setString(5, event.getProductVersion());
+                statement.setString(6, event.getServiceId());
+                statement.setString(7, event.getPlatformId());
                 if (map.containsKey("serviceDesc")) {
-                    statement.setString(7, (String) map.get("serviceDesc"));
-                } else {
-                    statement.setNull(7, Types.VARCHAR);
-                }
-                if(map.containsKey("instanceDesc")) {
-                    statement.setString(8, (String) map.get("instanceDesc"));
+                    statement.setString(8, (String) map.get("serviceDesc"));
                 } else {
                     statement.setNull(8, Types.VARCHAR);
                 }
-                if(map.containsKey("tagId")) {
-                    statement.setString(9, (String) map.get("tagId"));
+                if(map.containsKey("instanceDesc")) {
+                    statement.setString(9, (String) map.get("instanceDesc"));
                 } else {
                     statement.setNull(9, Types.VARCHAR);
                 }
-                statement.setString(10, event.getEventId().getId());
-                statement.setTimestamp(11, timestamp);
+                if(map.containsKey("tagId")) {
+                    statement.setString(10, (String) map.get("tagId"));
+                } else {
+                    statement.setNull(10, Types.VARCHAR);
+                }
+                statement.setString(11, event.getEventId().getId());
+                statement.setTimestamp(12, timestamp);
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -10628,7 +10711,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateInstance(InstanceUpdatedEvent event) {
-        final String sql = "UPDATE instance_t SET product_id = ?, product_version = ?, service_id = ?, platform_id = ?, service_desc = ?, instance_desc = ?, tag_id = ?, update_user = ?, update_ts = ? " +
+        final String sql = "UPDATE instance_t SET instance_name = ?, product_id = ?, product_version = ?, service_id = ?, platform_id = ?, service_desc = ?, instance_desc = ?, tag_id = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? and instance_id = ?";
         Result<String> result;
         Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
@@ -10638,29 +10721,30 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, event.getProductId());
-                statement.setString(2, event.getProductVersion());
-                statement.setString(3, event.getServiceId());
-                statement.setString(4, event.getPlatformId());
+                statement.setString(1, event.getInstanceName());
+                statement.setString(2, event.getProductId());
+                statement.setString(3, event.getProductVersion());
+                statement.setString(4, event.getServiceId());
+                statement.setString(5, event.getPlatformId());
                 if (map.containsKey("serviceDesc")) {
-                    statement.setString(5, (String) map.get("serviceDesc"));
-                } else {
-                    statement.setNull(5, Types.VARCHAR);
-                }
-                if(map.containsKey("instanceDesc")) {
-                    statement.setString(6, (String) map.get("instanceDesc"));
+                    statement.setString(6, (String) map.get("serviceDesc"));
                 } else {
                     statement.setNull(6, Types.VARCHAR);
                 }
-                if(map.containsKey("tagId")) {
-                    statement.setString(7, (String) map.get("tagId"));
+                if(map.containsKey("instanceDesc")) {
+                    statement.setString(7, (String) map.get("instanceDesc"));
                 } else {
                     statement.setNull(7, Types.VARCHAR);
                 }
-                statement.setString(8, event.getEventId().getId());
-                statement.setTimestamp(9, timestamp);
-                statement.setString(10, event.getEventId().getHostId());
-                statement.setString(11, event.getInstanceId());
+                if(map.containsKey("tagId")) {
+                    statement.setString(8, (String) map.get("tagId"));
+                } else {
+                    statement.setNull(8, Types.VARCHAR);
+                }
+                statement.setString(9, event.getEventId().getId());
+                statement.setTimestamp(10, timestamp);
+                statement.setString(11, event.getEventId().getHostId());
+                statement.setString(12, event.getInstanceId());
 
 
                 int count = statement.executeUpdate();
@@ -10729,12 +10813,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> getInstance(int offset, int limit, String hostId, String instanceId, String productId, String productVersion,
-                                      String serviceId, String platformId, String serviceDesc, String instanceDesc, String tagId) {
+    public Result<String> getInstance(int offset, int limit, String hostId, String instanceId, String instanceName,
+                                      String productId, String productVersion, String serviceId, String platformId,
+                                      String serviceDesc, String instanceDesc, String tagId) {
         Result<String> result = null;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "host_id, instance_id, product_id, product_version, service_id, platform_id, service_desc, instance_desc, tag_id, update_user, update_ts \n" +
+                "host_id, instance_id, instance_name, product_id, product_version, service_id, platform_id, service_desc, instance_desc, tag_id, update_user, update_ts \n" +
                 "FROM instance_t\n" +
                 "WHERE 1=1\n");
 
@@ -10744,6 +10829,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         addCondition(whereClause, parameters, "host_id", hostId);
         addCondition(whereClause, parameters, "instance_id", instanceId);
+        addCondition(whereClause, parameters, "instance_name", instanceName);
         addCondition(whereClause, parameters, "product_id", productId);
         addCondition(whereClause, parameters, "product_version", productVersion);
         addCondition(whereClause, parameters, "service_id", serviceId);
@@ -10757,7 +10843,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append("ORDER BY instance_id\n" +
+        sqlBuilder.append(" ORDER BY instance_id\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -10784,6 +10870,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                     map.put("hostId", resultSet.getString("host_id"));
                     map.put("instanceId", resultSet.getString("instance_id"));
+                    map.put("instanceName", resultSet.getString("instance_name"));
                     map.put("productId", resultSet.getString("product_id"));
                     map.put("productVersion", resultSet.getString("product_version"));
                     map.put("serviceId", resultSet.getString("service_id"));
@@ -10814,8 +10901,35 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
+    public Result<String> getInstanceLabel(String hostId) {
+        Result<String> result = null;
+        String sql = "SELECT instance_id, instance_name FROM instance_t WHERE host_id = ?";
+        List<Map<String, Object>> labels = new ArrayList<>();
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, hostId);
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", resultSet.getString("instance_id"));
+                    map.put("label", resultSet.getString("instance_name"));
+                    labels.add(map);
+                }
+            }
+            result = Success.of(JsonMapper.toJson(labels));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
     public Result<String> createPlatform(PlatformCreatedEvent event) {
-        final String sql = "INSERT INTO platform_t(host_id, platform_id, platform_name, platform_version, client_type, client_url, credentials, proxy_url, proxy_port, evnironment, system_env, runtime_env, zone, region, lob, update_user, update_ts) " +
+        final String sql = "INSERT INTO platform_t(host_id, platform_id, platform_name, platform_version, client_type, client_url, credentials, proxy_url, proxy_port, environment, system_env, runtime_env, zone, region, lob, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         Result<String> result;
         Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
@@ -10904,7 +11018,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updatePlatform(PlatformUpdatedEvent event) {
-        final String sql = "UPDATE platform_t SET platform_name = ?, platform_version = ?, client_type = ?, client_url = ?, credentials = ?, proxy_url = ?, proxy_port = ?, evnironment = ?, system_env = ?, runtime_env = ?, zone = ?, region = ?, lob = ?, update_user = ?, update_ts = ? " +
+        final String sql = "UPDATE platform_t SET platform_name = ?, platform_version = ?, client_type = ?, client_url = ?, credentials = ?, proxy_url = ?, proxy_port = ?, environment = ?, system_env = ?, runtime_env = ?, zone = ?, region = ?, lob = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? and platform_id = ?";
         Result<String> result;
         Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
@@ -11100,7 +11214,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("credentials", resultSet.getString("credentials"));
                     map.put("proxyUrl", resultSet.getString("proxy_url"));
                     map.put("proxyPort", resultSet.getInt("proxy_port"));
-                    map.put("environment", resultSet.getString("evnironment"));
+                    map.put("environment", resultSet.getString("environment"));
                     map.put("systemEnv", resultSet.getString("system_env"));
                     map.put("runtimeEnv", resultSet.getString("runtime_env"));
                     map.put("zone", resultSet.getString("zone"));
@@ -11119,6 +11233,33 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             resultMap.put("platforms", platforms);
             result = Success.of(JsonMapper.toJson(resultMap));
 
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getPlatformLabel(String hostId) {
+        Result<String> result = null;
+        String sql = "SELECT platform_id, platform_name FROM platform_t WHERE host_id = ?";
+        List<Map<String, Object>> labels = new ArrayList<>();
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, hostId);
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", resultSet.getString("platform_id"));
+                    map.put("label", resultSet.getString("platform_name"));
+                    labels.add(map);
+                }
+            }
+            result = Success.of(JsonMapper.toJson(labels));
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));

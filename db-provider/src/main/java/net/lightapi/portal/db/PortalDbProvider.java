@@ -122,7 +122,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> queryServiceRule(String hostId, String apiId, String apiVersion);
     Result<String> queryServicePermission(String hostId, String apiId, String apiVersion);
     Result<List<String>> queryServiceFilter(String hostId, String apiId, String apiVersion);
-
+    Result<String> getServiceIdLabel(String hostId);
 
     Result<String> createOrg(OrgCreatedEvent event);
     Result<String> updateOrg(OrgUpdatedEvent event);
@@ -247,20 +247,21 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> deleteProduct(ProductDeletedEvent event);
     Result<String> getProduct(int offset, int limit, String hostId, String productId, String productVersion, String light4jVersion,
                               String versionDesc, Boolean current, String versionStatus);
-
+    Result<String> getProductIdLabel(String hostId);
+    Result<String> getProductVersionLabel(String hostId, String productId);
     Result<String> createInstance(InstanceCreatedEvent event);
     Result<String> updateInstance(InstanceUpdatedEvent event);
     Result<String> deleteInstance(InstanceDeletedEvent event);
-    Result<String> getInstance(int offset, int limit, String hostId, String instanceId, String productId, String productVersion,
+    Result<String> getInstance(int offset, int limit, String hostId, String instanceId, String instanceName, String productId, String productVersion,
                                String serviceId, String platformId, String serviceDesc, String instanceDesc, String tagId);
-
+    Result<String> getInstanceLabel(String hostId);
     Result<String> createPlatform(PlatformCreatedEvent event);
     Result<String> updatePlatform(PlatformUpdatedEvent event);
     Result<String> deletePlatform(PlatformDeletedEvent event);
     Result<String> getPlatform(int offset, int limit, String hostId, String platformId, String platformName, String platformVersion,
                                String clientType, String clientUrl, String credentials, String proxyUrl, Integer proxyPort,
                                String environment, String systemEnv, String runtimeEnv, String zone, String region, String lob);
-
+    Result<String> getPlatformLabel(String hostId);
     Result<String> createDeployment(DeploymentCreatedEvent event);
     Result<String> updateDeployment(DeploymentUpdatedEvent event);
     Result<String> deleteDeployment(DeploymentDeletedEvent event);
