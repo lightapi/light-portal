@@ -11317,7 +11317,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateDeployment(DeploymentUpdatedEvent event) {
-        final String sql = "UPDATE deployment_t SET instance_id = ?, deployment_status = ?, deplyment_type = ?, pipeline_id = ?, schedule_ts = ?, update_user = ?, update_ts = ? " +
+        final String sql = "UPDATE deployment_t SET instance_id = ?, deployment_status = ?, deployment_type = ?, pipeline_id = ?, schedule_ts = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? and deployment_id = ?";
         Result<String> result;
         Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
@@ -11452,7 +11452,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("deploymentId", resultSet.getString("deployment_id"));
                     map.put("instanceId", resultSet.getString("instance_id"));
                     map.put("deploymentStatus", resultSet.getString("deployment_status"));
-                    map.put("deplymentType", resultSet.getString("deplyment_type"));
+                    map.put("deplymentType", resultSet.getString("deployment_type"));
                     map.put("pipelineId", resultSet.getString("pipeline_id"));
                     // handling date properly
                     map.put("scheduleTs", resultSet.getTimestamp("schedule_ts") != null ? resultSet.getTimestamp("schedule_ts").toString() : null);
