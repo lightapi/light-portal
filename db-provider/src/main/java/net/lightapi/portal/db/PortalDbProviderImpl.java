@@ -10369,8 +10369,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> createProduct(ProductCreatedEvent event) {
         final String sql = "INSERT INTO product_version_t(host_id, product_id, product_version, " +
-                "light4j_version, version_desc, current, version_status, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                "light4j_version, break_code, break_config, upgrade_guide, version_desc, current, " +
+                "version_status, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         Result<String> result;
         Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
         try (Connection conn = ds.getConnection()) {
@@ -10382,15 +10383,30 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(2, event.getProductId());
                 statement.setString(3, event.getProductVersion());
                 statement.setString(4, event.getLight4jVersion());
-                if (map.containsKey("versionDesc")) {
-                    statement.setString(5, (String) map.get("versionDesc"));
+                if (map.containsKey("breakCode")) {
+                    statement.setBoolean(5, (Boolean) map.get("breakCode"));
                 } else {
-                    statement.setNull(5, Types.VARCHAR);
+                    statement.setNull(5, Types.BOOLEAN);
                 }
-                statement.setBoolean(6, event.getCurrent());
-                statement.setString(7, event.getVersionStatus());
-                statement.setString(8, event.getEventId().getId());
-                statement.setTimestamp(9, timestamp);
+                if (map.containsKey("breakConfig")) {
+                    statement.setBoolean(6, (Boolean) map.get("breakConfig"));
+                } else {
+                    statement.setNull(6, Types.BOOLEAN);
+                }
+                if (map.containsKey("upgradeGuide")) {
+                    statement.setString(7, (String) map.get("upgradeGuide"));
+                } else {
+                    statement.setNull(7, Types.VARCHAR);
+                }
+                if (map.containsKey("versionDesc")) {
+                    statement.setString(8, (String) map.get("versionDesc"));
+                } else {
+                    statement.setNull(8, Types.VARCHAR);
+                }
+                statement.setBoolean(9, event.getCurrent());
+                statement.setString(10, event.getVersionStatus());
+                statement.setString(11, event.getEventId().getId());
+                statement.setTimestamp(12, timestamp);
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -10419,8 +10435,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateProduct(ProductUpdatedEvent event) {
-        final String sql = "UPDATE product_version_t SET light4j_version = ?, " +
-                "version_desc = ?, current = ?, version_status = ?, update_user = ?, update_ts = ? " +
+        final String sql = "UPDATE product_version_t SET light4j_version = ?, break_code = ?, break_config = ?, " +
+                "upgrade_guide = ?, version_desc = ?, current = ?, version_status = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? and product_id = ? and product_version = ?";
         Result<String> result;
         Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
@@ -10431,18 +10447,34 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, event.getLight4jVersion());
-                if (map.containsKey("versionDesc")) {
-                    statement.setString(2, (String) map.get("versionDesc"));
+                if (map.containsKey("breakCode")) {
+                    statement.setBoolean(2, (Boolean) map.get("breakCode"));
                 } else {
-                    statement.setNull(2, Types.VARCHAR);
+                    statement.setNull(2, Types.BOOLEAN);
                 }
-                statement.setBoolean(3, event.getCurrent());
-                statement.setString(4, event.getVersionStatus());
-                statement.setString(5, event.getEventId().getId());
-                statement.setTimestamp(6, timestamp);
-                statement.setString(7, event.getEventId().getHostId());
-                statement.setString(8, event.getProductId());
-                statement.setString(9, event.getProductVersion());
+                if (map.containsKey("breakConfig")) {
+                    statement.setBoolean(3, (Boolean) map.get("breakConfig"));
+                } else {
+                    statement.setNull(3, Types.BOOLEAN);
+                }
+                if (map.containsKey("upgradeGuide")) {
+                    statement.setString(4, (String) map.get("upgradeGuide"));
+                } else {
+                    statement.setNull(4, Types.VARCHAR);
+                }
+
+                if (map.containsKey("versionDesc")) {
+                    statement.setString(5, (String) map.get("versionDesc"));
+                } else {
+                    statement.setNull(5, Types.VARCHAR);
+                }
+                statement.setBoolean(6, event.getCurrent());
+                statement.setString(7, event.getVersionStatus());
+                statement.setString(8, event.getEventId().getId());
+                statement.setTimestamp(9, timestamp);
+                statement.setString(10, event.getEventId().getHostId());
+                statement.setString(11, event.getProductId());
+                statement.setString(12, event.getProductVersion());
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("failed to update the product with id " + event.getProductId());
@@ -10510,13 +10542,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> getProduct(int offset, int limit, String hostId, String productId, String productVersion, String light4jVersion,
+    public Result<String> getProduct(int offset, int limit, String hostId, String productId, String productVersion,
+                                     String light4jVersion, Boolean breakCode, Boolean breakConfig, String upgradeGuide,
                                      String versionDesc, Boolean current, String versionStatus) {
         Result<String> result = null;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "host_id, product_id, product_version, light4j_version, version_desc, current, " +
-                "version_status, update_user, update_ts\n" +
+                "host_id, product_id, product_version, light4j_version, breakCode, breakConfig, upgrade_guide,\n" +
+                "version_desc, current, version_status, update_user, update_ts\n" +
                 "FROM product_version_t\n" +
                 "WHERE 1=1\n");
 
@@ -10527,6 +10560,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         addCondition(whereClause, parameters, "product_id", productId);
         addCondition(whereClause, parameters, "product_version", productVersion);
         addCondition(whereClause, parameters, "light4j_version", light4jVersion);
+        addCondition(whereClause, parameters, "breakCode", breakCode);
+        addCondition(whereClause, parameters, "breakConfig", breakConfig);
+        addCondition(whereClause, parameters, "upgrade_guide", upgradeGuide);
         addCondition(whereClause, parameters, "version_desc", versionDesc);
         addCondition(whereClause, parameters, "current", current);
         addCondition(whereClause, parameters, "version_status", versionStatus);
@@ -10564,6 +10600,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("productId", resultSet.getString("product_id"));
                     map.put("productVersion", resultSet.getString("product_version"));
                     map.put("light4jVersion", resultSet.getString("light4j_version"));
+                    map.put("breakCode", resultSet.getBoolean("breakCode"));
+                    map.put("breakConfig", resultSet.getBoolean("breakConfig"));
+                    map.put("upgradeGuide", resultSet.getString("upgrade_guide"));
                     map.put("versionDesc", resultSet.getString("version_desc"));
                     map.put("current", resultSet.getBoolean("current"));
                     map.put("versionStatus", resultSet.getString("version_status"));
