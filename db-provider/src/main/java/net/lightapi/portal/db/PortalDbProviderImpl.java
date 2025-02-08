@@ -10548,7 +10548,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         Result<String> result = null;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "host_id, product_id, product_version, light4j_version, breakCode, breakConfig, upgrade_guide,\n" +
+                "host_id, product_id, product_version, light4j_version, break_code, break_config, upgrade_guide,\n" +
                 "version_desc, current, version_status, update_user, update_ts\n" +
                 "FROM product_version_t\n" +
                 "WHERE 1=1\n");
@@ -10560,8 +10560,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         addCondition(whereClause, parameters, "product_id", productId);
         addCondition(whereClause, parameters, "product_version", productVersion);
         addCondition(whereClause, parameters, "light4j_version", light4jVersion);
-        addCondition(whereClause, parameters, "breakCode", breakCode);
-        addCondition(whereClause, parameters, "breakConfig", breakConfig);
+        addCondition(whereClause, parameters, "break_code", breakCode);
+        addCondition(whereClause, parameters, "break_config", breakConfig);
         addCondition(whereClause, parameters, "upgrade_guide", upgradeGuide);
         addCondition(whereClause, parameters, "version_desc", versionDesc);
         addCondition(whereClause, parameters, "current", current);
@@ -10600,8 +10600,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("productId", resultSet.getString("product_id"));
                     map.put("productVersion", resultSet.getString("product_version"));
                     map.put("light4jVersion", resultSet.getString("light4j_version"));
-                    map.put("breakCode", resultSet.getBoolean("breakCode"));
-                    map.put("breakConfig", resultSet.getBoolean("breakConfig"));
+                    map.put("breakCode", resultSet.getBoolean("break_code"));
+                    map.put("breakConfig", resultSet.getBoolean("break_config"));
                     map.put("upgradeGuide", resultSet.getString("upgrade_guide"));
                     map.put("versionDesc", resultSet.getString("version_desc"));
                     map.put("current", resultSet.getBoolean("current"));
