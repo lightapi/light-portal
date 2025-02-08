@@ -1,0 +1,79 @@
+{
+  "type": "record",
+  "name": "ConfigProductVersionUpdatedEvent",
+  "namespace": "net.lightapi.portal.config",
+  "fields": [
+    {
+      "name": "EventId",
+      "type": {
+        "type": "record",
+        "name": "EventId",
+        "namespace": "com.networknt.kafka.common",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "doc": "a unique identifier for the event"
+          },
+          {
+            "name": "userId",
+            "type": "string",
+            "doc": "the user who creates the event"
+          },
+          {
+            "name": "hostId",
+            "type": "string",
+            "doc": "the host which is the event is created"
+          },
+          {
+            "name": "nonce",
+            "type": "long",
+            "doc": "the number of the transactions for the user"
+          },
+          {
+            "name": "timestamp",
+            "type": "long",
+            "default": 0,
+            "doc": "time the event is recorded"
+          },
+          {
+            "name": "derived",
+            "type": "boolean",
+            "default": false,
+            "doc": "indicate if the event is derived from event processor"
+          }
+        ]
+      }
+    },
+    {
+      "name": "hostId",
+      "type": "string",
+      "doc": "host id"
+    },
+    {
+      "name": "productId",
+      "type": "string",
+      "doc": "product id"
+    },
+    {
+      "name": "productVersion",
+      "type": "string",
+      "doc": "product version"
+    },
+    {
+      "name": "configId",
+      "type": "string",
+      "doc": "configuration id"
+    },
+    {
+      "name": "propertyName",
+      "type": "string",
+      "doc": "property name"
+    },
+    {
+      "name": "value",
+      "type": "string",
+      "doc": "optional fields in json"
+    }
+  ]
+}

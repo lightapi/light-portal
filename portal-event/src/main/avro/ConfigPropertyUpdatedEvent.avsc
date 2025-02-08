@@ -1,7 +1,7 @@
 {
   "type": "record",
   "name": "ConfigPropertyUpdatedEvent",
-  "namespace": "net.lightapi.portal.market",
+  "namespace": "net.lightapi.portal.config",
   "fields": [
     {
       "name": "EventId",
@@ -46,14 +46,9 @@
       }
     },
     {
-      "name": "propertyId",
-      "type": "int",
-      "doc": "property id"
-    },
-    {
       "name": "configId",
-      "type": "int",
-      "doc": "configuration id"
+      "type": "string",
+      "doc": "config id"
     },
     {
       "name": "propertyName",
@@ -63,47 +58,12 @@
     {
       "name": "propertyType",
       "type": "string",
-      "doc": "property type Cert, Config File"
+      "doc": "property type Cert, Config, File"
     },
     {
-      "name": "sequenceId",
-      "type": "int",
-      "doc": "sequence id"
-    },
-    {
-      "name": "requiredFlag",
-      "type": "boolean",
-      "doc": "required flag"
-    },
-    {
-      "name": "propertyDescription",
+      "name": "value",
       "type": "string",
-      "doc": "property description"
-    },
-    {
-      "name": "propertyValue",
-      "type": "string",
-      "doc": "property value"
-    },
-    {
-      "name": "propertyValueType",
-      "type": "string",
-      "doc": "property value type: string, integer, boolean, map, list"
-    },
-    {
-      "name": "propertyFile",
-      "type": "string",
-      "doc": "property description"
-    },
-    {
-      "name": "subResourceType",
-      "type": "string",
-      "doc": "allowed subresource type: none, api, app, all"
-    },
-    {
-      "name": "owner",
-      "type": "string",
-      "doc": "user id"
+      "doc": "optional fields in json"
     }
   ]
 }

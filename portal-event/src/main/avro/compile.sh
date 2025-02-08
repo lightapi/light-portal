@@ -116,6 +116,28 @@ java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema Controll
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ConfigCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ConfigUpdatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ConfigDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ConfigEnvironmentCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ConfigEnvironmentUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ConfigEnvironmentDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ConfigInstanceApiCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ConfigInstanceApiUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ConfigInstanceApiDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ConfigInstanceAppCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ConfigInstanceAppUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ConfigInstanceAppDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ConfigInstanceCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ConfigInstanceUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ConfigInstanceDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ConfigProductCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ConfigProductUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ConfigProductDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ConfigProductVersionCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ConfigProductVersionUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ConfigProductVersionDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ConfigPropertyCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ConfigPropertyUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ConfigPropertyDeletedEvent.avsc .
+
 
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema RoleCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema RoleUpdatedEvent.avsc .
@@ -302,9 +324,31 @@ mv net/lightapi/portal/rule/RuleCreatedEvent.java ../java/net/lightapi/portal/ru
 mv net/lightapi/portal/rule/RuleUpdatedEvent.java ../java/net/lightapi/portal/rule
 mv net/lightapi/portal/rule/RuleDeletedEvent.java ../java/net/lightapi/portal/rule
 
-mv net/lightapi/portal/market/ConfigCreatedEvent.java ../java/net/lightapi/portal/market
-mv net/lightapi/portal/market/ConfigUpdatedEvent.java ../java/net/lightapi/portal/market
-mv net/lightapi/portal/market/ConfigDeletedEvent.java ../java/net/lightapi/portal/market
+mv net/lightapi/portal/config/ConfigCreatedEvent.java ../java/net/lightapi/portal/config
+mv net/lightapi/portal/config/ConfigUpdatedEvent.java ../java/net/lightapi/portal/config
+mv net/lightapi/portal/config/ConfigDeletedEvent.java ../java/net/lightapi/portal/config
+mv net/lightapi/portal/config/ConfigEnvironmentCreatedEvent.java ../java/net/lightapi/portal/config
+mv net/lightapi/portal/config/ConfigEnvironmentUpdatedEvent.java ../java/net/lightapi/portal/config
+mv net/lightapi/portal/config/ConfigEnvironmentDeletedEvent.java ../java/net/lightapi/portal/config
+mv net/lightapi/portal/config/ConfigInstanceApiCreatedEvent.java ../java/net/lightapi/portal/config
+mv net/lightapi/portal/config/ConfigInstanceApiUpdatedEvent.java ../java/net/lightapi/portal/config
+mv net/lightapi/portal/config/ConfigInstanceApiDeletedEvent.java ../java/net/lightapi/portal/config
+mv net/lightapi/portal/config/ConfigInstanceAppCreatedEvent.java ../java/net/lightapi/portal/config
+mv net/lightapi/portal/config/ConfigInstanceAppUpdatedEvent.java ../java/net/lightapi/portal/config
+mv net/lightapi/portal/config/ConfigInstanceAppDeletedEvent.java ../java/net/lightapi/portal/config
+mv net/lightapi/portal/config/ConfigInstanceCreatedEvent.java ../java/net/lightapi/portal/config
+mv net/lightapi/portal/config/ConfigInstanceUpdatedEvent.java ../java/net/lightapi/portal/config
+mv net/lightapi/portal/config/ConfigInstanceDeletedEvent.java ../java/net/lightapi/portal/config
+mv net/lightapi/portal/config/ConfigProductCreatedEvent.java ../java/net/lightapi/portal/config
+mv net/lightapi/portal/config/ConfigProductUpdatedEvent.java ../java/net/lightapi/portal/config
+mv net/lightapi/portal/config/ConfigProductDeletedEvent.java ../java/net/lightapi/portal/config
+mv net/lightapi/portal/config/ConfigProductVersionCreatedEvent.java ../java/net/lightapi/portal/config
+mv net/lightapi/portal/config/ConfigProductVersionUpdatedEvent.java ../java/net/lightapi/portal/config
+mv net/lightapi/portal/config/ConfigProductVersionDeletedEvent.java ../java/net/lightapi/portal/config
+mv net/lightapi/portal/config/ConfigPropertyCreatedEvent.java ../java/net/lightapi/portal/config
+mv net/lightapi/portal/config/ConfigPropertyUpdatedEvent.java ../java/net/lightapi/portal/config
+mv net/lightapi/portal/config/ConfigPropertyDeletedEvent.java ../java/net/lightapi/portal/config
+
 
 mv net/lightapi/portal/role/RoleCreatedEvent.java ../java/net/lightapi/portal/role
 mv net/lightapi/portal/role/RoleUpdatedEvent.java ../java/net/lightapi/portal/role

@@ -3,7 +3,7 @@ package net.lightapi.portal.db;
 import com.networknt.db.provider.DbProvider;
 import com.networknt.monad.Result;
 import net.lightapi.portal.client.*;
-import net.lightapi.portal.market.*;
+import net.lightapi.portal.config.*;
 import net.lightapi.portal.oauth.*;
 import net.lightapi.portal.user.*;
 import net.lightapi.portal.attribute.*;
@@ -142,8 +142,58 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> createConfig(ConfigCreatedEvent event);
     Result<String> updateConfig(ConfigUpdatedEvent event);
     Result<String> deleteConfig(ConfigDeletedEvent event);
-    Result<Map<String, Object>> queryConfig();
-    Result<Map<String, Object>> queryConfigById(String configId);
+    Result<String> getConfig(int offset, int limit, String configId, String configName, String configType, String light4jVersion, String classPath, String configDesc);
+    Result<String> queryConfigById(String configId);
+
+    Result<String> createConfigProperty(ConfigPropertyCreatedEvent event);
+    Result<String> updateConfigProperty(ConfigPropertyUpdatedEvent event);
+    Result<String> deleteConfigProperty(ConfigPropertyDeletedEvent event);
+    Result<String> getConfigProperty(int offset, int limit, String configId, String configName, String propertyName,
+                                                  String propertyType, String light4jVersion, Integer displayOrder, Boolean required,
+                                                  String propertyDesc, String propertyValue, String valueType, String propertyFile,
+                                                  String resourceType);
+    Result<String> queryConfigPropertyById(String configId);
+
+    Result<String> createConfigEnvironment(ConfigEnvironmentCreatedEvent event);
+    Result<String> updateConfigEnvironment(ConfigEnvironmentUpdatedEvent event);
+    Result<String> deleteConfigEnvironment(ConfigEnvironmentDeletedEvent event);
+    Result<String> getConfigEnvironment(int offset, int limit, String environment, String configId, String configName,
+                                                  String propertyName, String propertyValue, String propertyFile);
+
+    Result<String> createConfigInstanceApi(ConfigInstanceApiCreatedEvent event);
+    Result<String> updateConfigInstanceApi(ConfigInstanceApiUpdatedEvent event);
+    Result<String> deleteConfigInstanceApi(ConfigInstanceApiDeletedEvent event);
+    Result<String> getConfigInstanceApi(int offset, int limit, String hostId, String instanceId, String apiId, String apiVersion,
+                                                     String configId, String configName,
+                                                     String propertyName, String propertyValue, String propertyFile);
+
+    Result<String> createConfigInstanceApp(ConfigInstanceAppCreatedEvent event);
+    Result<String> updateConfigInstanceApp(ConfigInstanceAppUpdatedEvent event);
+    Result<String> deleteConfigInstanceApp(ConfigInstanceAppDeletedEvent event);
+    Result<String> getConfigInstanceApp(int offset, int limit, String hostId, String instanceId, String appId, String appVersion,
+                                                     String configId, String configName,
+                                                     String propertyName, String propertyValue, String propertyFile);
+
+    Result<String> createConfigInstance(ConfigInstanceCreatedEvent event);
+    Result<String> updateConfigInstance(ConfigInstanceUpdatedEvent event);
+    Result<String> deleteConfigInstance(ConfigInstanceDeletedEvent event);
+    Result<String> getConfigInstance(int offset, int limit, String hostId, String instanceId,
+                                                     String configId, String configName,
+                                                     String propertyName, String propertyValue, String propertyFile);
+
+    Result<String> createConfigProduct(ConfigProductCreatedEvent event);
+    Result<String> updateConfigProduct(ConfigProductUpdatedEvent event);
+    Result<String> deleteConfigProduct(ConfigProductDeletedEvent event);
+    Result<String> getConfigProduct(int offset, int limit, String productId,
+                                                  String configId, String configName,
+                                                  String propertyName, String propertyValue, String propertyFile);
+
+    Result<String> createConfigProductVersion(ConfigProductVersionCreatedEvent event);
+    Result<String> updateConfigProductVersion(ConfigProductVersionUpdatedEvent event);
+    Result<String> deleteConfigProductVersion(ConfigProductVersionDeletedEvent event);
+    Result<String> getConfigProductVersion(int offset, int limit, String hostId, String productId, String productVersion,
+                                                 String configId, String configName,
+                                                 String propertyName, String propertyValue, String propertyFile);
 
     Result<String> createRule(RuleCreatedEvent event);
     Result<String> updateRule(RuleUpdatedEvent event);

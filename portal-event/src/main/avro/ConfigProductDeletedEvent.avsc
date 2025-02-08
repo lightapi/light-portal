@@ -1,7 +1,7 @@
 {
   "type": "record",
   "name": "ConfigProductDeletedEvent",
-  "namespace": "net.lightapi.portal.market",
+  "namespace": "net.lightapi.portal.config",
   "fields": [
     {
       "name": "EventId",
@@ -46,19 +46,19 @@
       }
     },
     {
-      "name": "hostId",
+      "name": "productId",
       "type": "string",
-      "doc": "host id"
+      "doc": "product id"
     },
     {
-      "name": "propertyId",
-      "type": "int",
-      "doc": "property id"
+      "name": "configId",
+      "type": "string",
+      "doc": "configuration id"
     },
     {
-      "name": "owner",
+      "name": "propertyName",
       "type": "string",
-      "doc": "user id"
+      "doc": "property name"
     }
   ]
 }

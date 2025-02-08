@@ -1,7 +1,7 @@
 {
   "type": "record",
   "name": "ConfigCreatedEvent",
-  "namespace": "net.lightapi.portal.market",
+  "namespace": "net.lightapi.portal.config",
   "fields": [
     {
       "name": "EventId",
@@ -46,40 +46,24 @@
       }
     },
     {
-      "name": "hostId",
-      "type": "string",
-      "doc": "host id"
-    },
-    {
       "name": "configId",
       "type": "string",
-      "doc": "configuration Id"
+      "doc": "config id"
+    },
+    {
+      "name": "configName",
+      "type": "string",
+      "doc": "config name"
     },
     {
       "name": "configType",
       "type": "string",
-      "doc": "configuration type D Deployment H Handler M Module"
+      "doc": "config type Deployment Handler Module"
     },
     {
-      "name": "infraType",
+      "name": "value",
       "type": "string",
-      "default": "GN",
-      "doc": "infrastructure type: GN Generic LN Linux WD Windows KB Kubernetes OS Openshift AW AWS AZ Azure GC GCP"
-    },
-    {
-      "name": "classPath",
-      "type": "string",
-      "doc": "class path"
-    },
-    {
-      "name": "configDesc",
-      "type": "string",
-      "doc": "configuration description"
-    },
-    {
-      "name": "owner",
-      "type": "string",
-      "doc": "user id"
+      "doc": "optional values in json"
     }
   ]
 }

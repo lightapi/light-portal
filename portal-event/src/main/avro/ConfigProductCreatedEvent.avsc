@@ -1,7 +1,7 @@
 {
   "type": "record",
   "name": "ConfigProductCreatedEvent",
-  "namespace": "net.lightapi.portal.market",
+  "namespace": "net.lightapi.portal.config",
   "fields": [
     {
       "name": "EventId",
@@ -46,13 +46,13 @@
       }
     },
     {
-      "name": "hostId",
+      "name": "productId",
       "type": "string",
-      "doc": "host id"
+      "doc": "product id"
     },
     {
       "name": "configId",
-      "type": "int",
+      "type": "string",
       "doc": "configuration id"
     },
     {
@@ -61,49 +61,9 @@
       "doc": "property name"
     },
     {
-      "name": "propertyType",
+      "name": "value",
       "type": "string",
-      "doc": "property type Cert, Config File"
-    },
-    {
-      "name": "sequenceId",
-      "type": "int",
-      "doc": "sequence id"
-    },
-    {
-      "name": "requiredFlag",
-      "type": "boolean",
-      "doc": "required flag"
-    },
-    {
-      "name": "propertyDescription",
-      "type": "string",
-      "doc": "property description"
-    },
-    {
-      "name": "propertyValue",
-      "type": "string",
-      "doc": "property value"
-    },
-    {
-      "name": "propertyValueType",
-      "type": "string",
-      "doc": "property value type: string, integer, boolean, map, list"
-    },
-    {
-      "name": "propertyFile",
-      "type": "string",
-      "doc": "property description"
-    },
-    {
-      "name": "subResourceType",
-      "type": "string",
-      "doc": "allowed subresource type: none, api, app, all"
-    },
-    {
-      "name": "owner",
-      "type": "string",
-      "doc": "user id"
+      "doc": "optional fields in json"
     }
   ]
 }

@@ -1,7 +1,7 @@
 {
   "type": "record",
   "name": "ConfigPropertyDeletedEvent",
-  "namespace": "net.lightapi.portal.market",
+  "namespace": "net.lightapi.portal.config",
   "fields": [
     {
       "name": "EventId",
@@ -46,19 +46,14 @@
       }
     },
     {
-      "name": "hostId",
+      "name": "configId",
       "type": "string",
-      "doc": "host id"
+      "doc": "config id"
     },
     {
-      "name": "propertyId",
-      "type": "int",
-      "doc": "property id"
-    },
-    {
-      "name": "owner",
+      "name": "propertyName",
       "type": "string",
-      "doc": "user id"
+      "doc": "property name"
     }
   ]
 }

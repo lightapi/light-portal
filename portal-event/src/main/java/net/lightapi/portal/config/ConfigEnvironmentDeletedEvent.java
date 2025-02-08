@@ -3,7 +3,7 @@
  *
  * DO NOT EDIT DIRECTLY
  */
-package net.lightapi.portal.market;
+package net.lightapi.portal.config;
 
 import org.apache.avro.specific.SpecificData;
 import org.apache.avro.util.Utf8;
@@ -12,26 +12,26 @@ import org.apache.avro.message.BinaryMessageDecoder;
 import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
-public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -4486937147541749694L;
+public class ConfigEnvironmentDeletedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
+  private static final long serialVersionUID = 2191885754083505565L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ConfigDeletedEvent\",\"namespace\":\"net.lightapi.portal.market\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"configId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"configuration id\"},{\"name\":\"owner\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"user id\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ConfigEnvironmentDeletedEvent\",\"namespace\":\"net.lightapi.portal.config\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"environment\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"environment\"},{\"name\":\"configId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"config id\"},{\"name\":\"propertyName\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"property name\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
 
-  private static final BinaryMessageEncoder<ConfigDeletedEvent> ENCODER =
+  private static final BinaryMessageEncoder<ConfigEnvironmentDeletedEvent> ENCODER =
       new BinaryMessageEncoder<>(MODEL$, SCHEMA$);
 
-  private static final BinaryMessageDecoder<ConfigDeletedEvent> DECODER =
+  private static final BinaryMessageDecoder<ConfigEnvironmentDeletedEvent> DECODER =
       new BinaryMessageDecoder<>(MODEL$, SCHEMA$);
 
   /**
    * Return the BinaryMessageEncoder instance used by this class.
    * @return the message encoder used by this class
    */
-  public static BinaryMessageEncoder<ConfigDeletedEvent> getEncoder() {
+  public static BinaryMessageEncoder<ConfigEnvironmentDeletedEvent> getEncoder() {
     return ENCODER;
   }
 
@@ -39,7 +39,7 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
    * Return the BinaryMessageDecoder instance used by this class.
    * @return the message decoder used by this class
    */
-  public static BinaryMessageDecoder<ConfigDeletedEvent> getDecoder() {
+  public static BinaryMessageDecoder<ConfigEnvironmentDeletedEvent> getDecoder() {
     return DECODER;
   }
 
@@ -48,12 +48,12 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
    * @param resolver a {@link SchemaStore} used to find schemas by fingerprint
    * @return a BinaryMessageDecoder instance for this class backed by the given SchemaStore
    */
-  public static BinaryMessageDecoder<ConfigDeletedEvent> createDecoder(SchemaStore resolver) {
+  public static BinaryMessageDecoder<ConfigEnvironmentDeletedEvent> createDecoder(SchemaStore resolver) {
     return new BinaryMessageDecoder<>(MODEL$, SCHEMA$, resolver);
   }
 
   /**
-   * Serializes this ConfigDeletedEvent to a ByteBuffer.
+   * Serializes this ConfigEnvironmentDeletedEvent to a ByteBuffer.
    * @return a buffer holding the serialized data for this instance
    * @throws java.io.IOException if this instance could not be serialized
    */
@@ -62,43 +62,43 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
   }
 
   /**
-   * Deserializes a ConfigDeletedEvent from a ByteBuffer.
+   * Deserializes a ConfigEnvironmentDeletedEvent from a ByteBuffer.
    * @param b a byte buffer holding serialized data for an instance of this class
-   * @return a ConfigDeletedEvent instance decoded from the given buffer
+   * @return a ConfigEnvironmentDeletedEvent instance decoded from the given buffer
    * @throws java.io.IOException if the given bytes could not be deserialized into an instance of this class
    */
-  public static ConfigDeletedEvent fromByteBuffer(
+  public static ConfigEnvironmentDeletedEvent fromByteBuffer(
       java.nio.ByteBuffer b) throws java.io.IOException {
     return DECODER.decode(b);
   }
 
   private com.networknt.kafka.common.EventId EventId;
-  /** host id */
-  private java.lang.String hostId;
-  /** configuration id */
+  /** environment */
+  private java.lang.String environment;
+  /** config id */
   private java.lang.String configId;
-  /** user id */
-  private java.lang.String owner;
+  /** property name */
+  private java.lang.String propertyName;
 
   /**
    * Default constructor.  Note that this does not initialize fields
    * to their default values from the schema.  If that is desired then
    * one should use <code>newBuilder()</code>.
    */
-  public ConfigDeletedEvent() {}
+  public ConfigEnvironmentDeletedEvent() {}
 
   /**
    * All-args constructor.
    * @param EventId The new value for EventId
-   * @param hostId host id
-   * @param configId configuration id
-   * @param owner user id
+   * @param environment environment
+   * @param configId config id
+   * @param propertyName property name
    */
-  public ConfigDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String configId, java.lang.String owner) {
+  public ConfigEnvironmentDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String environment, java.lang.String configId, java.lang.String propertyName) {
     this.EventId = EventId;
-    this.hostId = hostId;
+    this.environment = environment;
     this.configId = configId;
-    this.owner = owner;
+    this.propertyName = propertyName;
   }
 
   @Override
@@ -112,9 +112,9 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return EventId;
-    case 1: return hostId;
+    case 1: return environment;
     case 2: return configId;
-    case 3: return owner;
+    case 3: return propertyName;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -125,9 +125,9 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
-    case 1: hostId = value$ != null ? value$.toString() : null; break;
+    case 1: environment = value$ != null ? value$.toString() : null; break;
     case 2: configId = value$ != null ? value$.toString() : null; break;
-    case 3: owner = value$ != null ? value$.toString() : null; break;
+    case 3: propertyName = value$ != null ? value$.toString() : null; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -150,26 +150,26 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
   }
 
   /**
-   * Gets the value of the 'hostId' field.
-   * @return host id
+   * Gets the value of the 'environment' field.
+   * @return environment
    */
-  public java.lang.String getHostId() {
-    return hostId;
+  public java.lang.String getEnvironment() {
+    return environment;
   }
 
 
   /**
-   * Sets the value of the 'hostId' field.
-   * host id
+   * Sets the value of the 'environment' field.
+   * environment
    * @param value the value to set.
    */
-  public void setHostId(java.lang.String value) {
-    this.hostId = value;
+  public void setEnvironment(java.lang.String value) {
+    this.environment = value;
   }
 
   /**
    * Gets the value of the 'configId' field.
-   * @return configuration id
+   * @return config id
    */
   public java.lang.String getConfigId() {
     return configId;
@@ -178,7 +178,7 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
 
   /**
    * Sets the value of the 'configId' field.
-   * configuration id
+   * config id
    * @param value the value to set.
    */
   public void setConfigId(java.lang.String value) {
@@ -186,72 +186,72 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
   }
 
   /**
-   * Gets the value of the 'owner' field.
-   * @return user id
+   * Gets the value of the 'propertyName' field.
+   * @return property name
    */
-  public java.lang.String getOwner() {
-    return owner;
+  public java.lang.String getPropertyName() {
+    return propertyName;
   }
 
 
   /**
-   * Sets the value of the 'owner' field.
-   * user id
+   * Sets the value of the 'propertyName' field.
+   * property name
    * @param value the value to set.
    */
-  public void setOwner(java.lang.String value) {
-    this.owner = value;
+  public void setPropertyName(java.lang.String value) {
+    this.propertyName = value;
   }
 
   /**
-   * Creates a new ConfigDeletedEvent RecordBuilder.
-   * @return A new ConfigDeletedEvent RecordBuilder
+   * Creates a new ConfigEnvironmentDeletedEvent RecordBuilder.
+   * @return A new ConfigEnvironmentDeletedEvent RecordBuilder
    */
-  public static net.lightapi.portal.market.ConfigDeletedEvent.Builder newBuilder() {
-    return new net.lightapi.portal.market.ConfigDeletedEvent.Builder();
+  public static net.lightapi.portal.config.ConfigEnvironmentDeletedEvent.Builder newBuilder() {
+    return new net.lightapi.portal.config.ConfigEnvironmentDeletedEvent.Builder();
   }
 
   /**
-   * Creates a new ConfigDeletedEvent RecordBuilder by copying an existing Builder.
+   * Creates a new ConfigEnvironmentDeletedEvent RecordBuilder by copying an existing Builder.
    * @param other The existing builder to copy.
-   * @return A new ConfigDeletedEvent RecordBuilder
+   * @return A new ConfigEnvironmentDeletedEvent RecordBuilder
    */
-  public static net.lightapi.portal.market.ConfigDeletedEvent.Builder newBuilder(net.lightapi.portal.market.ConfigDeletedEvent.Builder other) {
+  public static net.lightapi.portal.config.ConfigEnvironmentDeletedEvent.Builder newBuilder(net.lightapi.portal.config.ConfigEnvironmentDeletedEvent.Builder other) {
     if (other == null) {
-      return new net.lightapi.portal.market.ConfigDeletedEvent.Builder();
+      return new net.lightapi.portal.config.ConfigEnvironmentDeletedEvent.Builder();
     } else {
-      return new net.lightapi.portal.market.ConfigDeletedEvent.Builder(other);
+      return new net.lightapi.portal.config.ConfigEnvironmentDeletedEvent.Builder(other);
     }
   }
 
   /**
-   * Creates a new ConfigDeletedEvent RecordBuilder by copying an existing ConfigDeletedEvent instance.
+   * Creates a new ConfigEnvironmentDeletedEvent RecordBuilder by copying an existing ConfigEnvironmentDeletedEvent instance.
    * @param other The existing instance to copy.
-   * @return A new ConfigDeletedEvent RecordBuilder
+   * @return A new ConfigEnvironmentDeletedEvent RecordBuilder
    */
-  public static net.lightapi.portal.market.ConfigDeletedEvent.Builder newBuilder(net.lightapi.portal.market.ConfigDeletedEvent other) {
+  public static net.lightapi.portal.config.ConfigEnvironmentDeletedEvent.Builder newBuilder(net.lightapi.portal.config.ConfigEnvironmentDeletedEvent other) {
     if (other == null) {
-      return new net.lightapi.portal.market.ConfigDeletedEvent.Builder();
+      return new net.lightapi.portal.config.ConfigEnvironmentDeletedEvent.Builder();
     } else {
-      return new net.lightapi.portal.market.ConfigDeletedEvent.Builder(other);
+      return new net.lightapi.portal.config.ConfigEnvironmentDeletedEvent.Builder(other);
     }
   }
 
   /**
-   * RecordBuilder for ConfigDeletedEvent instances.
+   * RecordBuilder for ConfigEnvironmentDeletedEvent instances.
    */
   @org.apache.avro.specific.AvroGenerated
-  public static class Builder extends org.apache.avro.specific.SpecificRecordBuilderBase<ConfigDeletedEvent>
-    implements org.apache.avro.data.RecordBuilder<ConfigDeletedEvent> {
+  public static class Builder extends org.apache.avro.specific.SpecificRecordBuilderBase<ConfigEnvironmentDeletedEvent>
+    implements org.apache.avro.data.RecordBuilder<ConfigEnvironmentDeletedEvent> {
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
-    /** host id */
-    private java.lang.String hostId;
-    /** configuration id */
+    /** environment */
+    private java.lang.String environment;
+    /** config id */
     private java.lang.String configId;
-    /** user id */
-    private java.lang.String owner;
+    /** property name */
+    private java.lang.String propertyName;
 
     /** Creates a new Builder */
     private Builder() {
@@ -262,7 +262,7 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
      * Creates a Builder by copying an existing Builder.
      * @param other The existing Builder to copy.
      */
-    private Builder(net.lightapi.portal.market.ConfigDeletedEvent.Builder other) {
+    private Builder(net.lightapi.portal.config.ConfigEnvironmentDeletedEvent.Builder other) {
       super(other);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
@@ -271,41 +271,41 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
       if (other.hasEventIdBuilder()) {
         this.EventIdBuilder = com.networknt.kafka.common.EventId.newBuilder(other.getEventIdBuilder());
       }
-      if (isValidValue(fields()[1], other.hostId)) {
-        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
+      if (isValidValue(fields()[1], other.environment)) {
+        this.environment = data().deepCopy(fields()[1].schema(), other.environment);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
       if (isValidValue(fields()[2], other.configId)) {
         this.configId = data().deepCopy(fields()[2].schema(), other.configId);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.owner)) {
-        this.owner = data().deepCopy(fields()[3].schema(), other.owner);
+      if (isValidValue(fields()[3], other.propertyName)) {
+        this.propertyName = data().deepCopy(fields()[3].schema(), other.propertyName);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
     }
 
     /**
-     * Creates a Builder by copying an existing ConfigDeletedEvent instance
+     * Creates a Builder by copying an existing ConfigEnvironmentDeletedEvent instance
      * @param other The existing instance to copy.
      */
-    private Builder(net.lightapi.portal.market.ConfigDeletedEvent other) {
+    private Builder(net.lightapi.portal.config.ConfigEnvironmentDeletedEvent other) {
       super(SCHEMA$, MODEL$);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
         fieldSetFlags()[0] = true;
       }
       this.EventIdBuilder = null;
-      if (isValidValue(fields()[1], other.hostId)) {
-        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
+      if (isValidValue(fields()[1], other.environment)) {
+        this.environment = data().deepCopy(fields()[1].schema(), other.environment);
         fieldSetFlags()[1] = true;
       }
       if (isValidValue(fields()[2], other.configId)) {
         this.configId = data().deepCopy(fields()[2].schema(), other.configId);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.owner)) {
-        this.owner = data().deepCopy(fields()[3].schema(), other.owner);
+      if (isValidValue(fields()[3], other.propertyName)) {
+        this.propertyName = data().deepCopy(fields()[3].schema(), other.propertyName);
         fieldSetFlags()[3] = true;
       }
     }
@@ -324,7 +324,7 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
       * @param value The value of 'EventId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.ConfigDeletedEvent.Builder setEventId(com.networknt.kafka.common.EventId value) {
+    public net.lightapi.portal.config.ConfigEnvironmentDeletedEvent.Builder setEventId(com.networknt.kafka.common.EventId value) {
       validate(fields()[0], value);
       this.EventIdBuilder = null;
       this.EventId = value;
@@ -361,7 +361,7 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
      * @return This builder.
      */
 
-    public net.lightapi.portal.market.ConfigDeletedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
+    public net.lightapi.portal.config.ConfigEnvironmentDeletedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
       clearEventId();
       EventIdBuilder = value;
       return this;
@@ -379,7 +379,7 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
       * Clears the value of the 'EventId' field.
       * @return This builder.
       */
-    public net.lightapi.portal.market.ConfigDeletedEvent.Builder clearEventId() {
+    public net.lightapi.portal.config.ConfigEnvironmentDeletedEvent.Builder clearEventId() {
       EventId = null;
       EventIdBuilder = null;
       fieldSetFlags()[0] = false;
@@ -387,52 +387,52 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
     }
 
     /**
-      * Gets the value of the 'hostId' field.
-      * host id
+      * Gets the value of the 'environment' field.
+      * environment
       * @return The value.
       */
-    public java.lang.String getHostId() {
-      return hostId;
+    public java.lang.String getEnvironment() {
+      return environment;
     }
 
 
     /**
-      * Sets the value of the 'hostId' field.
-      * host id
-      * @param value The value of 'hostId'.
+      * Sets the value of the 'environment' field.
+      * environment
+      * @param value The value of 'environment'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.ConfigDeletedEvent.Builder setHostId(java.lang.String value) {
+    public net.lightapi.portal.config.ConfigEnvironmentDeletedEvent.Builder setEnvironment(java.lang.String value) {
       validate(fields()[1], value);
-      this.hostId = value;
+      this.environment = value;
       fieldSetFlags()[1] = true;
       return this;
     }
 
     /**
-      * Checks whether the 'hostId' field has been set.
-      * host id
-      * @return True if the 'hostId' field has been set, false otherwise.
+      * Checks whether the 'environment' field has been set.
+      * environment
+      * @return True if the 'environment' field has been set, false otherwise.
       */
-    public boolean hasHostId() {
+    public boolean hasEnvironment() {
       return fieldSetFlags()[1];
     }
 
 
     /**
-      * Clears the value of the 'hostId' field.
-      * host id
+      * Clears the value of the 'environment' field.
+      * environment
       * @return This builder.
       */
-    public net.lightapi.portal.market.ConfigDeletedEvent.Builder clearHostId() {
-      hostId = null;
+    public net.lightapi.portal.config.ConfigEnvironmentDeletedEvent.Builder clearEnvironment() {
+      environment = null;
       fieldSetFlags()[1] = false;
       return this;
     }
 
     /**
       * Gets the value of the 'configId' field.
-      * configuration id
+      * config id
       * @return The value.
       */
     public java.lang.String getConfigId() {
@@ -442,11 +442,11 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
 
     /**
       * Sets the value of the 'configId' field.
-      * configuration id
+      * config id
       * @param value The value of 'configId'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.ConfigDeletedEvent.Builder setConfigId(java.lang.String value) {
+    public net.lightapi.portal.config.ConfigEnvironmentDeletedEvent.Builder setConfigId(java.lang.String value) {
       validate(fields()[2], value);
       this.configId = value;
       fieldSetFlags()[2] = true;
@@ -455,7 +455,7 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
 
     /**
       * Checks whether the 'configId' field has been set.
-      * configuration id
+      * config id
       * @return True if the 'configId' field has been set, false otherwise.
       */
     public boolean hasConfigId() {
@@ -465,64 +465,64 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
 
     /**
       * Clears the value of the 'configId' field.
-      * configuration id
+      * config id
       * @return This builder.
       */
-    public net.lightapi.portal.market.ConfigDeletedEvent.Builder clearConfigId() {
+    public net.lightapi.portal.config.ConfigEnvironmentDeletedEvent.Builder clearConfigId() {
       configId = null;
       fieldSetFlags()[2] = false;
       return this;
     }
 
     /**
-      * Gets the value of the 'owner' field.
-      * user id
+      * Gets the value of the 'propertyName' field.
+      * property name
       * @return The value.
       */
-    public java.lang.String getOwner() {
-      return owner;
+    public java.lang.String getPropertyName() {
+      return propertyName;
     }
 
 
     /**
-      * Sets the value of the 'owner' field.
-      * user id
-      * @param value The value of 'owner'.
+      * Sets the value of the 'propertyName' field.
+      * property name
+      * @param value The value of 'propertyName'.
       * @return This builder.
       */
-    public net.lightapi.portal.market.ConfigDeletedEvent.Builder setOwner(java.lang.String value) {
+    public net.lightapi.portal.config.ConfigEnvironmentDeletedEvent.Builder setPropertyName(java.lang.String value) {
       validate(fields()[3], value);
-      this.owner = value;
+      this.propertyName = value;
       fieldSetFlags()[3] = true;
       return this;
     }
 
     /**
-      * Checks whether the 'owner' field has been set.
-      * user id
-      * @return True if the 'owner' field has been set, false otherwise.
+      * Checks whether the 'propertyName' field has been set.
+      * property name
+      * @return True if the 'propertyName' field has been set, false otherwise.
       */
-    public boolean hasOwner() {
+    public boolean hasPropertyName() {
       return fieldSetFlags()[3];
     }
 
 
     /**
-      * Clears the value of the 'owner' field.
-      * user id
+      * Clears the value of the 'propertyName' field.
+      * property name
       * @return This builder.
       */
-    public net.lightapi.portal.market.ConfigDeletedEvent.Builder clearOwner() {
-      owner = null;
+    public net.lightapi.portal.config.ConfigEnvironmentDeletedEvent.Builder clearPropertyName() {
+      propertyName = null;
       fieldSetFlags()[3] = false;
       return this;
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public ConfigDeletedEvent build() {
+    public ConfigEnvironmentDeletedEvent build() {
       try {
-        ConfigDeletedEvent record = new ConfigDeletedEvent();
+        ConfigEnvironmentDeletedEvent record = new ConfigEnvironmentDeletedEvent();
         if (EventIdBuilder != null) {
           try {
             record.EventId = this.EventIdBuilder.build();
@@ -533,9 +533,9 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
         } else {
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
-        record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
+        record.environment = fieldSetFlags()[1] ? this.environment : (java.lang.String) defaultValue(fields()[1]);
         record.configId = fieldSetFlags()[2] ? this.configId : (java.lang.String) defaultValue(fields()[2]);
-        record.owner = fieldSetFlags()[3] ? this.owner : (java.lang.String) defaultValue(fields()[3]);
+        record.propertyName = fieldSetFlags()[3] ? this.propertyName : (java.lang.String) defaultValue(fields()[3]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -546,8 +546,8 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
   }
 
   @SuppressWarnings("unchecked")
-  private static final org.apache.avro.io.DatumWriter<ConfigDeletedEvent>
-    WRITER$ = (org.apache.avro.io.DatumWriter<ConfigDeletedEvent>)MODEL$.createDatumWriter(SCHEMA$);
+  private static final org.apache.avro.io.DatumWriter<ConfigEnvironmentDeletedEvent>
+    WRITER$ = (org.apache.avro.io.DatumWriter<ConfigEnvironmentDeletedEvent>)MODEL$.createDatumWriter(SCHEMA$);
 
   @Override public void writeExternal(java.io.ObjectOutput out)
     throws java.io.IOException {
@@ -555,8 +555,8 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
   }
 
   @SuppressWarnings("unchecked")
-  private static final org.apache.avro.io.DatumReader<ConfigDeletedEvent>
-    READER$ = (org.apache.avro.io.DatumReader<ConfigDeletedEvent>)MODEL$.createDatumReader(SCHEMA$);
+  private static final org.apache.avro.io.DatumReader<ConfigEnvironmentDeletedEvent>
+    READER$ = (org.apache.avro.io.DatumReader<ConfigEnvironmentDeletedEvent>)MODEL$.createDatumReader(SCHEMA$);
 
   @Override public void readExternal(java.io.ObjectInput in)
     throws java.io.IOException {
@@ -570,11 +570,11 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
   {
     this.EventId.customEncode(out);
 
-    out.writeString(this.hostId);
+    out.writeString(this.environment);
 
     out.writeString(this.configId);
 
-    out.writeString(this.owner);
+    out.writeString(this.propertyName);
 
   }
 
@@ -588,11 +588,11 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
       }
       this.EventId.customDecode(in);
 
-      this.hostId = in.readString();
+      this.environment = in.readString();
 
       this.configId = in.readString();
 
-      this.owner = in.readString();
+      this.propertyName = in.readString();
 
     } else {
       for (int i = 0; i < 4; i++) {
@@ -605,7 +605,7 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
           break;
 
         case 1:
-          this.hostId = in.readString();
+          this.environment = in.readString();
           break;
 
         case 2:
@@ -613,7 +613,7 @@ public class ConfigDeletedEvent extends org.apache.avro.specific.SpecificRecordB
           break;
 
         case 3:
-          this.owner = in.readString();
+          this.propertyName = in.readString();
           break;
 
         default:
