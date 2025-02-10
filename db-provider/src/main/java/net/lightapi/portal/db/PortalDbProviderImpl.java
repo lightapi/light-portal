@@ -5627,6 +5627,36 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
+    public Result<String> getConfigIdLabel() {
+        final String sql = "SELECT config_id, config_name FROM config_t ORDER BY config_name";
+        Result<String> result;
+        try (final Connection conn = ds.getConnection()) {
+            List<Map<String, Object>> list = new ArrayList<>();
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    while (resultSet.next()) {
+                        Map<String, Object> map = new HashMap<>();
+                        map.put("id", resultSet.getString("config_id"));
+                        map.put("label", resultSet.getString("config_name"));
+                        list.add(map);
+                    }
+                }
+            }
+            if (list.isEmpty())
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "configId", "any"));
+            else
+                result = Success.of(JsonMapper.toJson(list));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
     public Result<String> createConfigProperty(ConfigPropertyCreatedEvent event) {
         Logger logger = LoggerFactory.getLogger(getClass());
         final String sql = "INSERT INTO config_property_t (config_id, property_name, property_type, property_value, property_file, " +
