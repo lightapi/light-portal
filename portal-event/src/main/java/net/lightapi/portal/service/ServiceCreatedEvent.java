@@ -13,10 +13,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class ServiceCreatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 7429062663310442443L;
+  private static final long serialVersionUID = 2023813098682919037L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ServiceCreatedEvent\",\"namespace\":\"net.lightapi.portal.service\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"apiId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api id\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service detail in JSON\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ServiceCreatedEvent\",\"namespace\":\"net.lightapi.portal.service\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"apiId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api id\"},{\"name\":\"apiName\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api name\"},{\"name\":\"apiStatus\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api status\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service detail in JSON\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -77,6 +77,10 @@ public class ServiceCreatedEvent extends org.apache.avro.specific.SpecificRecord
   private java.lang.String hostId;
   /** api id */
   private java.lang.String apiId;
+  /** api name */
+  private java.lang.String apiName;
+  /** api status */
+  private java.lang.String apiStatus;
   /** service detail in JSON */
   private java.lang.String value;
 
@@ -92,12 +96,16 @@ public class ServiceCreatedEvent extends org.apache.avro.specific.SpecificRecord
    * @param EventId The new value for EventId
    * @param hostId host id
    * @param apiId api id
+   * @param apiName api name
+   * @param apiStatus api status
    * @param value service detail in JSON
    */
-  public ServiceCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String apiId, java.lang.String value) {
+  public ServiceCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String apiId, java.lang.String apiName, java.lang.String apiStatus, java.lang.String value) {
     this.EventId = EventId;
     this.hostId = hostId;
     this.apiId = apiId;
+    this.apiName = apiName;
+    this.apiStatus = apiStatus;
     this.value = value;
   }
 
@@ -114,7 +122,9 @@ public class ServiceCreatedEvent extends org.apache.avro.specific.SpecificRecord
     case 0: return EventId;
     case 1: return hostId;
     case 2: return apiId;
-    case 3: return value;
+    case 3: return apiName;
+    case 4: return apiStatus;
+    case 5: return value;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -127,7 +137,9 @@ public class ServiceCreatedEvent extends org.apache.avro.specific.SpecificRecord
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
     case 1: hostId = value$ != null ? value$.toString() : null; break;
     case 2: apiId = value$ != null ? value$.toString() : null; break;
-    case 3: value = value$ != null ? value$.toString() : null; break;
+    case 3: apiName = value$ != null ? value$.toString() : null; break;
+    case 4: apiStatus = value$ != null ? value$.toString() : null; break;
+    case 5: value = value$ != null ? value$.toString() : null; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -183,6 +195,42 @@ public class ServiceCreatedEvent extends org.apache.avro.specific.SpecificRecord
    */
   public void setApiId(java.lang.String value) {
     this.apiId = value;
+  }
+
+  /**
+   * Gets the value of the 'apiName' field.
+   * @return api name
+   */
+  public java.lang.String getApiName() {
+    return apiName;
+  }
+
+
+  /**
+   * Sets the value of the 'apiName' field.
+   * api name
+   * @param value the value to set.
+   */
+  public void setApiName(java.lang.String value) {
+    this.apiName = value;
+  }
+
+  /**
+   * Gets the value of the 'apiStatus' field.
+   * @return api status
+   */
+  public java.lang.String getApiStatus() {
+    return apiStatus;
+  }
+
+
+  /**
+   * Sets the value of the 'apiStatus' field.
+   * api status
+   * @param value the value to set.
+   */
+  public void setApiStatus(java.lang.String value) {
+    this.apiStatus = value;
   }
 
   /**
@@ -250,6 +298,10 @@ public class ServiceCreatedEvent extends org.apache.avro.specific.SpecificRecord
     private java.lang.String hostId;
     /** api id */
     private java.lang.String apiId;
+    /** api name */
+    private java.lang.String apiName;
+    /** api status */
+    private java.lang.String apiStatus;
     /** service detail in JSON */
     private java.lang.String value;
 
@@ -279,9 +331,17 @@ public class ServiceCreatedEvent extends org.apache.avro.specific.SpecificRecord
         this.apiId = data().deepCopy(fields()[2].schema(), other.apiId);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.value)) {
-        this.value = data().deepCopy(fields()[3].schema(), other.value);
+      if (isValidValue(fields()[3], other.apiName)) {
+        this.apiName = data().deepCopy(fields()[3].schema(), other.apiName);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
+      }
+      if (isValidValue(fields()[4], other.apiStatus)) {
+        this.apiStatus = data().deepCopy(fields()[4].schema(), other.apiStatus);
+        fieldSetFlags()[4] = other.fieldSetFlags()[4];
+      }
+      if (isValidValue(fields()[5], other.value)) {
+        this.value = data().deepCopy(fields()[5].schema(), other.value);
+        fieldSetFlags()[5] = other.fieldSetFlags()[5];
       }
     }
 
@@ -304,9 +364,17 @@ public class ServiceCreatedEvent extends org.apache.avro.specific.SpecificRecord
         this.apiId = data().deepCopy(fields()[2].schema(), other.apiId);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.value)) {
-        this.value = data().deepCopy(fields()[3].schema(), other.value);
+      if (isValidValue(fields()[3], other.apiName)) {
+        this.apiName = data().deepCopy(fields()[3].schema(), other.apiName);
         fieldSetFlags()[3] = true;
+      }
+      if (isValidValue(fields()[4], other.apiStatus)) {
+        this.apiStatus = data().deepCopy(fields()[4].schema(), other.apiStatus);
+        fieldSetFlags()[4] = true;
+      }
+      if (isValidValue(fields()[5], other.value)) {
+        this.value = data().deepCopy(fields()[5].schema(), other.value);
+        fieldSetFlags()[5] = true;
       }
     }
 
@@ -475,6 +543,94 @@ public class ServiceCreatedEvent extends org.apache.avro.specific.SpecificRecord
     }
 
     /**
+      * Gets the value of the 'apiName' field.
+      * api name
+      * @return The value.
+      */
+    public java.lang.String getApiName() {
+      return apiName;
+    }
+
+
+    /**
+      * Sets the value of the 'apiName' field.
+      * api name
+      * @param value The value of 'apiName'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.service.ServiceCreatedEvent.Builder setApiName(java.lang.String value) {
+      validate(fields()[3], value);
+      this.apiName = value;
+      fieldSetFlags()[3] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'apiName' field has been set.
+      * api name
+      * @return True if the 'apiName' field has been set, false otherwise.
+      */
+    public boolean hasApiName() {
+      return fieldSetFlags()[3];
+    }
+
+
+    /**
+      * Clears the value of the 'apiName' field.
+      * api name
+      * @return This builder.
+      */
+    public net.lightapi.portal.service.ServiceCreatedEvent.Builder clearApiName() {
+      apiName = null;
+      fieldSetFlags()[3] = false;
+      return this;
+    }
+
+    /**
+      * Gets the value of the 'apiStatus' field.
+      * api status
+      * @return The value.
+      */
+    public java.lang.String getApiStatus() {
+      return apiStatus;
+    }
+
+
+    /**
+      * Sets the value of the 'apiStatus' field.
+      * api status
+      * @param value The value of 'apiStatus'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.service.ServiceCreatedEvent.Builder setApiStatus(java.lang.String value) {
+      validate(fields()[4], value);
+      this.apiStatus = value;
+      fieldSetFlags()[4] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'apiStatus' field has been set.
+      * api status
+      * @return True if the 'apiStatus' field has been set, false otherwise.
+      */
+    public boolean hasApiStatus() {
+      return fieldSetFlags()[4];
+    }
+
+
+    /**
+      * Clears the value of the 'apiStatus' field.
+      * api status
+      * @return This builder.
+      */
+    public net.lightapi.portal.service.ServiceCreatedEvent.Builder clearApiStatus() {
+      apiStatus = null;
+      fieldSetFlags()[4] = false;
+      return this;
+    }
+
+    /**
       * Gets the value of the 'value' field.
       * service detail in JSON
       * @return The value.
@@ -491,9 +647,9 @@ public class ServiceCreatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return This builder.
       */
     public net.lightapi.portal.service.ServiceCreatedEvent.Builder setValue(java.lang.String value) {
-      validate(fields()[3], value);
+      validate(fields()[5], value);
       this.value = value;
-      fieldSetFlags()[3] = true;
+      fieldSetFlags()[5] = true;
       return this;
     }
 
@@ -503,7 +659,7 @@ public class ServiceCreatedEvent extends org.apache.avro.specific.SpecificRecord
       * @return True if the 'value' field has been set, false otherwise.
       */
     public boolean hasValue() {
-      return fieldSetFlags()[3];
+      return fieldSetFlags()[5];
     }
 
 
@@ -514,7 +670,7 @@ public class ServiceCreatedEvent extends org.apache.avro.specific.SpecificRecord
       */
     public net.lightapi.portal.service.ServiceCreatedEvent.Builder clearValue() {
       value = null;
-      fieldSetFlags()[3] = false;
+      fieldSetFlags()[5] = false;
       return this;
     }
 
@@ -535,7 +691,9 @@ public class ServiceCreatedEvent extends org.apache.avro.specific.SpecificRecord
         }
         record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
         record.apiId = fieldSetFlags()[2] ? this.apiId : (java.lang.String) defaultValue(fields()[2]);
-        record.value = fieldSetFlags()[3] ? this.value : (java.lang.String) defaultValue(fields()[3]);
+        record.apiName = fieldSetFlags()[3] ? this.apiName : (java.lang.String) defaultValue(fields()[3]);
+        record.apiStatus = fieldSetFlags()[4] ? this.apiStatus : (java.lang.String) defaultValue(fields()[4]);
+        record.value = fieldSetFlags()[5] ? this.value : (java.lang.String) defaultValue(fields()[5]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -574,6 +732,10 @@ public class ServiceCreatedEvent extends org.apache.avro.specific.SpecificRecord
 
     out.writeString(this.apiId);
 
+    out.writeString(this.apiName);
+
+    out.writeString(this.apiStatus);
+
     out.writeString(this.value);
 
   }
@@ -592,10 +754,14 @@ public class ServiceCreatedEvent extends org.apache.avro.specific.SpecificRecord
 
       this.apiId = in.readString();
 
+      this.apiName = in.readString();
+
+      this.apiStatus = in.readString();
+
       this.value = in.readString();
 
     } else {
-      for (int i = 0; i < 4; i++) {
+      for (int i = 0; i < 6; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -613,6 +779,14 @@ public class ServiceCreatedEvent extends org.apache.avro.specific.SpecificRecord
           break;
 
         case 3:
+          this.apiName = in.readString();
+          break;
+
+        case 4:
+          this.apiStatus = in.readString();
+          break;
+
+        case 5:
           this.value = in.readString();
           break;
 

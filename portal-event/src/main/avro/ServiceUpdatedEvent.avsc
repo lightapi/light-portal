@@ -56,6 +56,16 @@
       "doc": "api id"
     },
     {
+      "name": "apiName",
+      "type": "string",
+      "doc": "api name"
+    },
+    {
+      "name": "apiStatus",
+      "type": "string",
+      "doc": "api status"
+    },
+    {
       "name": "value",
       "type": "string",
       "doc": "service detail in JSON"

@@ -13,10 +13,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class ServiceVersionUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 3252727147672317356L;
+  private static final long serialVersionUID = -4346830389662842905L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ServiceVersionUpdatedEvent\",\"namespace\":\"net.lightapi.portal.service\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"apiId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api id\"},{\"name\":\"apiVersion\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api version\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service version detail in JSON\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ServiceVersionUpdatedEvent\",\"namespace\":\"net.lightapi.portal.service\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"apiId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api id\"},{\"name\":\"apiVersion\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api version\"},{\"name\":\"apiType\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api type\"},{\"name\":\"serviceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service id\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service version detail in JSON\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -79,6 +79,10 @@ public class ServiceVersionUpdatedEvent extends org.apache.avro.specific.Specifi
   private java.lang.String apiId;
   /** api version */
   private java.lang.String apiVersion;
+  /** api type */
+  private java.lang.String apiType;
+  /** service id */
+  private java.lang.String serviceId;
   /** service version detail in JSON */
   private java.lang.String value;
 
@@ -95,13 +99,17 @@ public class ServiceVersionUpdatedEvent extends org.apache.avro.specific.Specifi
    * @param hostId host id
    * @param apiId api id
    * @param apiVersion api version
+   * @param apiType api type
+   * @param serviceId service id
    * @param value service version detail in JSON
    */
-  public ServiceVersionUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String apiId, java.lang.String apiVersion, java.lang.String value) {
+  public ServiceVersionUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String apiId, java.lang.String apiVersion, java.lang.String apiType, java.lang.String serviceId, java.lang.String value) {
     this.EventId = EventId;
     this.hostId = hostId;
     this.apiId = apiId;
     this.apiVersion = apiVersion;
+    this.apiType = apiType;
+    this.serviceId = serviceId;
     this.value = value;
   }
 
@@ -119,7 +127,9 @@ public class ServiceVersionUpdatedEvent extends org.apache.avro.specific.Specifi
     case 1: return hostId;
     case 2: return apiId;
     case 3: return apiVersion;
-    case 4: return value;
+    case 4: return apiType;
+    case 5: return serviceId;
+    case 6: return value;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -133,7 +143,9 @@ public class ServiceVersionUpdatedEvent extends org.apache.avro.specific.Specifi
     case 1: hostId = value$ != null ? value$.toString() : null; break;
     case 2: apiId = value$ != null ? value$.toString() : null; break;
     case 3: apiVersion = value$ != null ? value$.toString() : null; break;
-    case 4: value = value$ != null ? value$.toString() : null; break;
+    case 4: apiType = value$ != null ? value$.toString() : null; break;
+    case 5: serviceId = value$ != null ? value$.toString() : null; break;
+    case 6: value = value$ != null ? value$.toString() : null; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -210,6 +222,42 @@ public class ServiceVersionUpdatedEvent extends org.apache.avro.specific.Specifi
   }
 
   /**
+   * Gets the value of the 'apiType' field.
+   * @return api type
+   */
+  public java.lang.String getApiType() {
+    return apiType;
+  }
+
+
+  /**
+   * Sets the value of the 'apiType' field.
+   * api type
+   * @param value the value to set.
+   */
+  public void setApiType(java.lang.String value) {
+    this.apiType = value;
+  }
+
+  /**
+   * Gets the value of the 'serviceId' field.
+   * @return service id
+   */
+  public java.lang.String getServiceId() {
+    return serviceId;
+  }
+
+
+  /**
+   * Sets the value of the 'serviceId' field.
+   * service id
+   * @param value the value to set.
+   */
+  public void setServiceId(java.lang.String value) {
+    this.serviceId = value;
+  }
+
+  /**
    * Gets the value of the 'value' field.
    * @return service version detail in JSON
    */
@@ -276,6 +324,10 @@ public class ServiceVersionUpdatedEvent extends org.apache.avro.specific.Specifi
     private java.lang.String apiId;
     /** api version */
     private java.lang.String apiVersion;
+    /** api type */
+    private java.lang.String apiType;
+    /** service id */
+    private java.lang.String serviceId;
     /** service version detail in JSON */
     private java.lang.String value;
 
@@ -309,9 +361,17 @@ public class ServiceVersionUpdatedEvent extends org.apache.avro.specific.Specifi
         this.apiVersion = data().deepCopy(fields()[3].schema(), other.apiVersion);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
-      if (isValidValue(fields()[4], other.value)) {
-        this.value = data().deepCopy(fields()[4].schema(), other.value);
+      if (isValidValue(fields()[4], other.apiType)) {
+        this.apiType = data().deepCopy(fields()[4].schema(), other.apiType);
         fieldSetFlags()[4] = other.fieldSetFlags()[4];
+      }
+      if (isValidValue(fields()[5], other.serviceId)) {
+        this.serviceId = data().deepCopy(fields()[5].schema(), other.serviceId);
+        fieldSetFlags()[5] = other.fieldSetFlags()[5];
+      }
+      if (isValidValue(fields()[6], other.value)) {
+        this.value = data().deepCopy(fields()[6].schema(), other.value);
+        fieldSetFlags()[6] = other.fieldSetFlags()[6];
       }
     }
 
@@ -338,9 +398,17 @@ public class ServiceVersionUpdatedEvent extends org.apache.avro.specific.Specifi
         this.apiVersion = data().deepCopy(fields()[3].schema(), other.apiVersion);
         fieldSetFlags()[3] = true;
       }
-      if (isValidValue(fields()[4], other.value)) {
-        this.value = data().deepCopy(fields()[4].schema(), other.value);
+      if (isValidValue(fields()[4], other.apiType)) {
+        this.apiType = data().deepCopy(fields()[4].schema(), other.apiType);
         fieldSetFlags()[4] = true;
+      }
+      if (isValidValue(fields()[5], other.serviceId)) {
+        this.serviceId = data().deepCopy(fields()[5].schema(), other.serviceId);
+        fieldSetFlags()[5] = true;
+      }
+      if (isValidValue(fields()[6], other.value)) {
+        this.value = data().deepCopy(fields()[6].schema(), other.value);
+        fieldSetFlags()[6] = true;
       }
     }
 
@@ -553,6 +621,94 @@ public class ServiceVersionUpdatedEvent extends org.apache.avro.specific.Specifi
     }
 
     /**
+      * Gets the value of the 'apiType' field.
+      * api type
+      * @return The value.
+      */
+    public java.lang.String getApiType() {
+      return apiType;
+    }
+
+
+    /**
+      * Sets the value of the 'apiType' field.
+      * api type
+      * @param value The value of 'apiType'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.service.ServiceVersionUpdatedEvent.Builder setApiType(java.lang.String value) {
+      validate(fields()[4], value);
+      this.apiType = value;
+      fieldSetFlags()[4] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'apiType' field has been set.
+      * api type
+      * @return True if the 'apiType' field has been set, false otherwise.
+      */
+    public boolean hasApiType() {
+      return fieldSetFlags()[4];
+    }
+
+
+    /**
+      * Clears the value of the 'apiType' field.
+      * api type
+      * @return This builder.
+      */
+    public net.lightapi.portal.service.ServiceVersionUpdatedEvent.Builder clearApiType() {
+      apiType = null;
+      fieldSetFlags()[4] = false;
+      return this;
+    }
+
+    /**
+      * Gets the value of the 'serviceId' field.
+      * service id
+      * @return The value.
+      */
+    public java.lang.String getServiceId() {
+      return serviceId;
+    }
+
+
+    /**
+      * Sets the value of the 'serviceId' field.
+      * service id
+      * @param value The value of 'serviceId'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.service.ServiceVersionUpdatedEvent.Builder setServiceId(java.lang.String value) {
+      validate(fields()[5], value);
+      this.serviceId = value;
+      fieldSetFlags()[5] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'serviceId' field has been set.
+      * service id
+      * @return True if the 'serviceId' field has been set, false otherwise.
+      */
+    public boolean hasServiceId() {
+      return fieldSetFlags()[5];
+    }
+
+
+    /**
+      * Clears the value of the 'serviceId' field.
+      * service id
+      * @return This builder.
+      */
+    public net.lightapi.portal.service.ServiceVersionUpdatedEvent.Builder clearServiceId() {
+      serviceId = null;
+      fieldSetFlags()[5] = false;
+      return this;
+    }
+
+    /**
       * Gets the value of the 'value' field.
       * service version detail in JSON
       * @return The value.
@@ -569,9 +725,9 @@ public class ServiceVersionUpdatedEvent extends org.apache.avro.specific.Specifi
       * @return This builder.
       */
     public net.lightapi.portal.service.ServiceVersionUpdatedEvent.Builder setValue(java.lang.String value) {
-      validate(fields()[4], value);
+      validate(fields()[6], value);
       this.value = value;
-      fieldSetFlags()[4] = true;
+      fieldSetFlags()[6] = true;
       return this;
     }
 
@@ -581,7 +737,7 @@ public class ServiceVersionUpdatedEvent extends org.apache.avro.specific.Specifi
       * @return True if the 'value' field has been set, false otherwise.
       */
     public boolean hasValue() {
-      return fieldSetFlags()[4];
+      return fieldSetFlags()[6];
     }
 
 
@@ -592,7 +748,7 @@ public class ServiceVersionUpdatedEvent extends org.apache.avro.specific.Specifi
       */
     public net.lightapi.portal.service.ServiceVersionUpdatedEvent.Builder clearValue() {
       value = null;
-      fieldSetFlags()[4] = false;
+      fieldSetFlags()[6] = false;
       return this;
     }
 
@@ -614,7 +770,9 @@ public class ServiceVersionUpdatedEvent extends org.apache.avro.specific.Specifi
         record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
         record.apiId = fieldSetFlags()[2] ? this.apiId : (java.lang.String) defaultValue(fields()[2]);
         record.apiVersion = fieldSetFlags()[3] ? this.apiVersion : (java.lang.String) defaultValue(fields()[3]);
-        record.value = fieldSetFlags()[4] ? this.value : (java.lang.String) defaultValue(fields()[4]);
+        record.apiType = fieldSetFlags()[4] ? this.apiType : (java.lang.String) defaultValue(fields()[4]);
+        record.serviceId = fieldSetFlags()[5] ? this.serviceId : (java.lang.String) defaultValue(fields()[5]);
+        record.value = fieldSetFlags()[6] ? this.value : (java.lang.String) defaultValue(fields()[6]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -655,6 +813,10 @@ public class ServiceVersionUpdatedEvent extends org.apache.avro.specific.Specifi
 
     out.writeString(this.apiVersion);
 
+    out.writeString(this.apiType);
+
+    out.writeString(this.serviceId);
+
     out.writeString(this.value);
 
   }
@@ -675,10 +837,14 @@ public class ServiceVersionUpdatedEvent extends org.apache.avro.specific.Specifi
 
       this.apiVersion = in.readString();
 
+      this.apiType = in.readString();
+
+      this.serviceId = in.readString();
+
       this.value = in.readString();
 
     } else {
-      for (int i = 0; i < 5; i++) {
+      for (int i = 0; i < 7; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -700,6 +866,14 @@ public class ServiceVersionUpdatedEvent extends org.apache.avro.specific.Specifi
           break;
 
         case 4:
+          this.apiType = in.readString();
+          break;
+
+        case 5:
+          this.serviceId = in.readString();
+          break;
+
+        case 6:
           this.value = in.readString();
           break;
 

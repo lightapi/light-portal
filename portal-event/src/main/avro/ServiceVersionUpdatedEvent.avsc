@@ -61,6 +61,16 @@
       "doc": "api version"
     },
     {
+      "name": "apiType",
+      "type": "string",
+      "doc": "api type"
+    },
+    {
+      "name": "serviceId",
+      "type": "string",
+      "doc": "service id"
+    },
+    {
       "name": "value",
       "type": "string",
       "doc": "service version detail in JSON"

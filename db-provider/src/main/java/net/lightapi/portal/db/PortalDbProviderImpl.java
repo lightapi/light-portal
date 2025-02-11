@@ -3153,7 +3153,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
                 statement.setString(1, event.getHostId());
                 statement.setString(2, event.getApiId());
-                statement.setString(3, (String) map.get("apiName"));
+                statement.setString(3, event.getApiName());
                 if (map.get("apiDesc") != null)
                     statement.setString(4, (String) map.get("apiDesc"));
                 else
@@ -3204,11 +3204,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 else
                     statement.setNull(13, NULL);
 
-                if (map.get("apiStatus") != null)
-                    statement.setString(14, (String) map.get("apiStatus"));
-                else
-                    statement.setNull(14, NULL);
-
+                statement.setString(14, event.getApiStatus());
                 statement.setString(15, event.getEventId().getId());
                 statement.setTimestamp(16, new Timestamp(System.currentTimeMillis()));
                 int count = statement.executeUpdate();
@@ -3248,13 +3244,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
 
             try (PreparedStatement statement = conn.prepareStatement(updateApi)) {
-
-                if (map.get("apiName") != null) {
-                    statement.setString(1, (String) map.get("apiName"));
-                } else {
-                    statement.setNull(1, NULL);
-                }
-
+                statement.setString(1, event.getApiName());
                 if (map.get("apiDesc") != null) {
                     statement.setString(2, (String) map.get("apiDesc"));
                 } else {
@@ -3308,11 +3298,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 } else {
                     statement.setNull(11, NULL);
                 }
-                if (map.get("apiStatus") != null) {
-                    statement.setString(12, (String) map.get("apiStatus"));
-                } else {
-                    statement.setNull(12, NULL);
-                }
+                statement.setString(12, event.getApiStatus());
                 statement.setString(13, event.getEventId().getId());
                 statement.setTimestamp(14, new Timestamp(event.getEventId().getTimestamp()));
                 statement.setString(15, event.getHostId());
@@ -3577,17 +3563,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, event.getHostId());
                 statement.setString(2, event.getApiId());
                 statement.setString(3, event.getApiVersion());
-
-                if (map.get("apiType") != null)
-                    statement.setString(4, (String) map.get("apiType"));
-                else
-                    statement.setNull(4, NULL);
-
-                if (map.get("serviceId") != null)
-                    statement.setString(5, (String) map.get("serviceId"));
-                else
-                    statement.setNull(5, NULL);
-
+                statement.setString(4, event.getApiType());
+                statement.setString(5, event.getServiceId());
                 if (map.get("apiVersionDesc") != null)
                     statement.setString(6, (String) map.get("apiVersionDesc"));
                 else
@@ -3641,18 +3618,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
 
             try (PreparedStatement statement = conn.prepareStatement(updateApi)) {
-
-                if (map.get("apiType") != null) {
-                    statement.setString(1, (String) map.get("apiType"));
-                } else {
-                    statement.setNull(1, NULL);
-                }
-
-                if (map.get("serviceId") != null) {
-                    statement.setString(2, (String) map.get("serviceId"));
-                } else {
-                    statement.setNull(2, NULL);
-                }
+                statement.setString(1, event.getApiType());
+                statement.setString(2, event.getServiceId());
 
                 if (map.get("apiVersionDesc") != null) {
                     statement.setString(3, (String) map.get("apiVersionDesc"));
