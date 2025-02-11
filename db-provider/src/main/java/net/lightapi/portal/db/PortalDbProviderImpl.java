@@ -3154,55 +3154,106 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, event.getHostId());
                 statement.setString(2, event.getApiId());
                 statement.setString(3, event.getApiName());
-                if (map.get("apiDesc") != null)
-                    statement.setString(4, (String) map.get("apiDesc"));
-                else
-                    statement.setNull(4, NULL);
-
-                if (map.get("operationOwner") != null)
-                    statement.setString(5, (String) map.get("operationOwner"));
-                else
-                    statement.setNull(5, NULL);
-
-                if (map.get("deliveryOwner") != null)
-                    statement.setString(6, (String) map.get("deliveryOwner"));
-                else
-                    statement.setNull(6, NULL);
-
-                if (map.get("region") != null)
-                    statement.setInt(7, (Integer) map.get("region"));
-                else
-                    statement.setNull(7, NULL);
-
-                if (map.get("businessGroup") != null)
-                    statement.setInt(8, (Integer) map.get("businessGroup"));
-                else
-                    statement.setNull(8, NULL);
-
-                if (map.get("lob") != null)
-                    statement.setInt(9, (Integer) map.get("lob"));
-                else
-                    statement.setNull(9, NULL);
-
-                if (map.get("platform") != null)
-                    statement.setInt(10, (Integer) map.get("platform"));
-                else
-                    statement.setNull(10, NULL);
-
-                if (map.get("capability") != null)
-                    statement.setInt(11, (Integer) map.get("capability"));
-                else
-                    statement.setNull(11, NULL);
-
-                if (map.get("gitRepo") != null)
-                    statement.setString(12, (String) map.get("gitRepo"));
-                else
-                    statement.setNull(12, NULL);
-
-                if (map.get("apiTags") != null)
-                    statement.setString(13, (String) map.get("apiTags"));
-                else
-                    statement.setNull(13, NULL);
+                if (map.containsKey("apiDesc")) {
+                    String apiDesc = (String) map.get("apiDesc");
+                    if (apiDesc != null && !apiDesc.trim().isEmpty()) {
+                        statement.setString(4, apiDesc);
+                    } else {
+                        statement.setNull(4, Types.VARCHAR);
+                    }
+                } else {
+                    statement.setNull(4, Types.VARCHAR);
+                }
+                if (map.containsKey("operationOwner")) {
+                    String operationOwner = (String) map.get("operationOwner");
+                    if(operationOwner != null && !operationOwner.trim().isEmpty()) {
+                        statement.setString(5, operationOwner);
+                    } else {
+                        statement.setNull(5, Types.VARCHAR);
+                    }
+                } else {
+                    statement.setNull(5, Types.VARCHAR);
+                }
+                if (map.containsKey("deliveryOwner")) {
+                    String deliveryOwner = (String) map.get("deliveryOwner");
+                    if(deliveryOwner != null && !deliveryOwner.trim().isEmpty()) {
+                        statement.setString(6, deliveryOwner);
+                    } else {
+                        statement.setNull(6, Types.VARCHAR);
+                    }
+                } else {
+                    statement.setNull(6, Types.VARCHAR);
+                }
+                if (map.containsKey("region")) {
+                    String region = (String) map.get("region");
+                    if(region != null && !region.trim().isEmpty()) {
+                        statement.setString(7, region);
+                    } else {
+                        statement.setNull(7, Types.VARCHAR);
+                    }
+                } else {
+                    statement.setNull(7, Types.VARCHAR);
+                }
+                if (map.containsKey("businessGroup")) {
+                    String businessGroup = (String) map.get("businessGroup");
+                    if(businessGroup != null && !businessGroup.trim().isEmpty()) {
+                        statement.setString(8, businessGroup);
+                    } else {
+                        statement.setNull(8, Types.VARCHAR);
+                    }
+                } else {
+                    statement.setNull(8, Types.VARCHAR);
+                }
+                if (map.containsKey("lob")) {
+                    String lob = (String) map.get("lob");
+                    if(lob != null && !lob.trim().isEmpty()) {
+                        statement.setString(9, lob);
+                    } else {
+                        statement.setNull(9, Types.VARCHAR);
+                    }
+                } else {
+                    statement.setNull(9, Types.VARCHAR);
+                }
+                if (map.containsKey("platform")) {
+                    String platform = (String) map.get("platform");
+                    if(platform != null && !platform.trim().isEmpty()) {
+                        statement.setString(10, platform);
+                    } else {
+                        statement.setNull(10, Types.VARCHAR);
+                    }
+                } else {
+                    statement.setNull(10, Types.VARCHAR);
+                }
+                if (map.containsKey("capability")) {
+                    String capability = (String) map.get("capability");
+                    if(capability != null && !capability.trim().isEmpty()) {
+                        statement.setString(11, capability);
+                    } else {
+                        statement.setNull(11, Types.VARCHAR);
+                    }
+                } else {
+                    statement.setNull(11, Types.VARCHAR);
+                }
+                if (map.containsKey("gitRepo")) {
+                    String gitRepo = (String) map.get("gitRepo");
+                    if(gitRepo != null && !gitRepo.trim().isEmpty()) {
+                        statement.setString(12, gitRepo);
+                    } else {
+                        statement.setNull(12, Types.VARCHAR);
+                    }
+                } else {
+                    statement.setNull(12, Types.VARCHAR);
+                }
+                if (map.containsKey("apiTags")) {
+                    String apiTags = (String) map.get("apiTags");
+                    if(apiTags != null && !apiTags.trim().isEmpty()) {
+                        statement.setString(13, apiTags);
+                    } else {
+                        statement.setNull(13, Types.VARCHAR);
+                    }
+                } else {
+                    statement.setNull(13, Types.VARCHAR);
+                }
 
                 statement.setString(14, event.getApiStatus());
                 statement.setString(15, event.getEventId().getId());
@@ -3245,58 +3296,105 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
             try (PreparedStatement statement = conn.prepareStatement(updateApi)) {
                 statement.setString(1, event.getApiName());
-                if (map.get("apiDesc") != null) {
-                    statement.setString(2, (String) map.get("apiDesc"));
+                if (map.containsKey("apiDesc")) {
+                    String apiDesc = (String) map.get("apiDesc");
+                    if (apiDesc != null && !apiDesc.trim().isEmpty()) {
+                        statement.setString(2, apiDesc);
+                    } else {
+                        statement.setNull(2, Types.VARCHAR);
+                    }
                 } else {
-                    statement.setNull(2, NULL);
+                    statement.setNull(2, Types.VARCHAR);
                 }
-
-                if (map.get("operationOwner") != null) {
-                    statement.setString(3, (String) map.get("operationOwner"));
+                if (map.containsKey("operationOwner")) {
+                    String operationOwner = (String) map.get("operationOwner");
+                    if(operationOwner != null && !operationOwner.trim().isEmpty()) {
+                        statement.setString(3, operationOwner);
+                    } else {
+                        statement.setNull(3, Types.VARCHAR);
+                    }
                 } else {
-                    statement.setNull(3, NULL);
+                    statement.setNull(3, Types.VARCHAR);
                 }
-
-                if (map.get("deliveryOwner") != null) {
-                    statement.setString(4, (String) map.get("deliveryOwner"));
+                if (map.containsKey("deliveryOwner")) {
+                    String deliveryOwner = (String) map.get("deliveryOwner");
+                    if(deliveryOwner != null && !deliveryOwner.trim().isEmpty()) {
+                        statement.setString(4, deliveryOwner);
+                    } else {
+                        statement.setNull(4, Types.VARCHAR);
+                    }
                 } else {
-                    statement.setNull(4, NULL);
+                    statement.setNull(4, Types.VARCHAR);
                 }
-
-                if (map.get("region") != null)
-                    statement.setInt(5, (Integer) map.get("region"));
-                else
-                    statement.setNull(5, NULL);
-
-                if (map.get("businessGroup") != null)
-                    statement.setInt(6, (Integer) map.get("businessGroup"));
-                else
-                    statement.setNull(6, NULL);
-
-                if (map.get("lob") != null) {
-                    statement.setInt(7, (Integer) map.get("lob"));
+                if (map.containsKey("region")) {
+                    String region = (String) map.get("region");
+                    if(region != null && !region.trim().isEmpty()) {
+                        statement.setString(5, region);
+                    } else {
+                        statement.setNull(5, Types.VARCHAR);
+                    }
                 } else {
-                    statement.setNull(7, NULL);
+                    statement.setNull(5, Types.VARCHAR);
                 }
-                if (map.get("platform") != null) {
-                    statement.setInt(8, (Integer) map.get("platform"));
+                if (map.containsKey("businessGroup")) {
+                    String businessGroup = (String) map.get("businessGroup");
+                    if(businessGroup != null && !businessGroup.trim().isEmpty()) {
+                        statement.setString(6, businessGroup);
+                    } else {
+                        statement.setNull(6, Types.VARCHAR);
+                    }
                 } else {
-                    statement.setNull(8, NULL);
+                    statement.setNull(6, Types.VARCHAR);
                 }
-                if (map.get("capability") != null) {
-                    statement.setInt(9, (Integer) map.get("capability"));
+                if (map.containsKey("lob")) {
+                    String lob = (String) map.get("lob");
+                    if(lob != null && !lob.trim().isEmpty()) {
+                        statement.setString(7, lob);
+                    } else {
+                        statement.setNull(7, Types.VARCHAR);
+                    }
                 } else {
-                    statement.setNull(9, NULL);
+                    statement.setNull(7, Types.VARCHAR);
                 }
-                if (map.get("gitRepo") != null) {
-                    statement.setString(10, (String) map.get("gitRepo"));
+                if (map.containsKey("platform")) {
+                    String platform = (String) map.get("platform");
+                    if(platform != null && !platform.trim().isEmpty()) {
+                        statement.setString(8, platform);
+                    } else {
+                        statement.setNull(8, Types.VARCHAR);
+                    }
                 } else {
-                    statement.setNull(10, NULL);
+                    statement.setNull(8, Types.VARCHAR);
                 }
-                if (map.get("apiTags") != null) {
-                    statement.setString(11, (String) map.get("apiTags"));
+                if (map.containsKey("capability")) {
+                    String capability = (String) map.get("capability");
+                    if(capability != null && !capability.trim().isEmpty()) {
+                        statement.setString(9, capability);
+                    } else {
+                        statement.setNull(9, Types.VARCHAR);
+                    }
                 } else {
-                    statement.setNull(11, NULL);
+                    statement.setNull(9, Types.VARCHAR);
+                }
+                if (map.containsKey("gitRepo")) {
+                    String gitRepo = (String) map.get("gitRepo");
+                    if(gitRepo != null && !gitRepo.trim().isEmpty()) {
+                        statement.setString(10, gitRepo);
+                    } else {
+                        statement.setNull(10, Types.VARCHAR);
+                    }
+                } else {
+                    statement.setNull(10, Types.VARCHAR);
+                }
+                if (map.containsKey("apiTags")) {
+                    String apiTags = (String) map.get("apiTags");
+                    if(apiTags != null && !apiTags.trim().isEmpty()) {
+                        statement.setString(11, apiTags);
+                    } else {
+                        statement.setNull(11, Types.VARCHAR);
+                    }
+                } else {
+                    statement.setNull(11, Types.VARCHAR);
                 }
                 statement.setString(12, event.getApiStatus());
                 statement.setString(13, event.getEventId().getId());
@@ -3565,20 +3663,37 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(3, event.getApiVersion());
                 statement.setString(4, event.getApiType());
                 statement.setString(5, event.getServiceId());
-                if (map.get("apiVersionDesc") != null)
-                    statement.setString(6, (String) map.get("apiVersionDesc"));
-                else
-                    statement.setNull(6, NULL);
 
-                if (map.get("specLink") != null)
-                    statement.setString(7, (String) map.get("specLink"));
-                else
-                    statement.setNull(7, NULL);
-
-                if (map.get("spec") != null)
-                    statement.setInt(8, (Integer) map.get("spec"));
-                else
-                    statement.setNull(8, NULL);
+                if (map.containsKey("apiVersionDesc")) {
+                    String apiDesc = (String) map.get("apiVersionDesc");
+                    if (apiDesc != null && !apiDesc.trim().isEmpty()) {
+                        statement.setString(6, apiDesc);
+                    } else {
+                        statement.setNull(6, Types.VARCHAR);
+                    }
+                } else {
+                    statement.setNull(6, Types.VARCHAR);
+                }
+                if (map.containsKey("specLink")) {
+                    String specLink = (String) map.get("specLink");
+                    if (specLink != null && !specLink.trim().isEmpty()) {
+                        statement.setString(7, specLink);
+                    } else {
+                        statement.setNull(7, Types.VARCHAR);
+                    }
+                } else {
+                    statement.setNull(7, Types.VARCHAR);
+                }
+                if (map.containsKey("spec")) {
+                    String spec = (String) map.get("spec");
+                    if (spec != null && !spec.trim().isEmpty()) {
+                        statement.setString(8, spec);
+                    } else {
+                        statement.setNull(8, Types.VARCHAR);
+                    }
+                } else {
+                    statement.setNull(8, Types.VARCHAR);
+                }
                 statement.setString(9, event.getEventId().getId());
                 statement.setTimestamp(10, new Timestamp(System.currentTimeMillis()));
                 int count = statement.executeUpdate();
@@ -3621,22 +3736,35 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, event.getApiType());
                 statement.setString(2, event.getServiceId());
 
-                if (map.get("apiVersionDesc") != null) {
-                    statement.setString(3, (String) map.get("apiVersionDesc"));
+                if (map.containsKey("apiVersionDesc")) {
+                    String apiDesc = (String) map.get("apiVersionDesc");
+                    if (apiDesc != null && !apiDesc.trim().isEmpty()) {
+                        statement.setString(3, apiDesc);
+                    } else {
+                        statement.setNull(3, Types.VARCHAR);
+                    }
                 } else {
-                    statement.setNull(3, NULL);
+                    statement.setNull(3, Types.VARCHAR);
                 }
-
-                if (map.get("specLink") != null) {
-                    statement.setString(4, (String) map.get("specLink"));
+                if (map.containsKey("specLink")) {
+                    String specLink = (String) map.get("specLink");
+                    if (specLink != null && !specLink.trim().isEmpty()) {
+                        statement.setString(4, specLink);
+                    } else {
+                        statement.setNull(4, Types.VARCHAR);
+                    }
                 } else {
-                    statement.setNull(4, NULL);
+                    statement.setNull(4, Types.VARCHAR);
                 }
-
-                if (map.get("spec") != null) {
-                    statement.setString(5, (String) map.get("spec"));
+                if (map.containsKey("spec")) {
+                    String spec = (String) map.get("spec");
+                    if (spec != null && !spec.trim().isEmpty()) {
+                        statement.setString(5, spec);
+                    } else {
+                        statement.setNull(5, Types.VARCHAR);
+                    }
                 } else {
-                    statement.setNull(5, NULL);
+                    statement.setNull(5, Types.VARCHAR);
                 }
 
                 statement.setString(6, event.getEventId().getId());
