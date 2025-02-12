@@ -5,7 +5,6 @@
  */
 package com.networknt.scheduler;
 
-import org.apache.avro.generic.GenericArray;
 import org.apache.avro.specific.SpecificData;
 import org.apache.avro.util.Utf8;
 import org.apache.avro.message.BinaryMessageEncoder;
@@ -836,7 +835,7 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
         long size0 = in.readMapStart();
         java.util.Map<java.lang.String,java.lang.String> m0 = this.data; // Need fresh name due to limitation of macro system
         if (m0 == null) {
-          m0 = new java.util.HashMap<java.lang.String,java.lang.String>((int)size0);
+          m0 = new java.util.HashMap<java.lang.String,java.lang.String>((int)(size0 * 4)/3 + 1);
           this.data = m0;
         } else m0.clear();
         for ( ; 0 < size0; size0 = in.mapNext()) {
@@ -893,7 +892,7 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
             long size0 = in.readMapStart();
             java.util.Map<java.lang.String,java.lang.String> m0 = this.data; // Need fresh name due to limitation of macro system
             if (m0 == null) {
-              m0 = new java.util.HashMap<java.lang.String,java.lang.String>((int)size0);
+              m0 = new java.util.HashMap<java.lang.String,java.lang.String>((int)(size0 * 4)/3 + 1);
               this.data = m0;
             } else m0.clear();
             for ( ; 0 < size0; size0 = in.mapNext()) {
@@ -915,3 +914,13 @@ public class TaskDefinition extends org.apache.avro.specific.SpecificRecordBase 
     }
   }
 }
+
+
+
+
+
+
+
+
+
+

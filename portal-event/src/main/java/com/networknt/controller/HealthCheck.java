@@ -5,7 +5,6 @@
  */
 package com.networknt.controller;
 
-import org.apache.avro.generic.GenericArray;
 import org.apache.avro.specific.SpecificData;
 import org.apache.avro.util.Utf8;
 import org.apache.avro.message.BinaryMessageEncoder;
@@ -1277,3 +1276,13 @@ public class HealthCheck extends org.apache.avro.specific.SpecificRecordBase imp
     }
   }
 }
+
+
+
+
+
+
+
+
+
+
