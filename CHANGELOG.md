@@ -1,5 +1,14 @@
 # Change Log
 
+## [2.2.0](https://github.com/networknt/light-portal/tree/2.2.0) (2025-02-11)
+
+
+**Merged pull requests:**
+
+
+- fixes \#76 Add loginUserByEmail method to PortalDbProviderImpl [\#77](https://github.com/lightapi/light-portal/pull/77) ([stevehu](https://github.com/stevehu))
+
+
 ## [2.1.37](https://github.com/networknt/light-portal/tree/2.1.37) (2024-09-20)
 
 
