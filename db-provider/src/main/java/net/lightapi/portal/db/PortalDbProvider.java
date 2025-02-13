@@ -109,8 +109,8 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> queryApiVersionLabel(String hostId, String apiId);
     Result<String> queryEndpointLabel(String hostId, String apiId, String apiVersion);
 
-    Result<String> createServiceVersion(ServiceVersionCreatedEvent event);
-    Result<String> updateServiceVersion(ServiceVersionUpdatedEvent event);
+    Result<String> createServiceVersion(ServiceVersionCreatedEvent event, List<Map<String, Object>> endpoints);
+    Result<String> updateServiceVersion(ServiceVersionUpdatedEvent event, List<Map<String, Object>> endpoints);
     Result<String> deleteServiceVersion(ServiceVersionDeletedEvent event);
     Result<String> queryServiceVersion(String hostId, String apiId);
     Result<String> updateServiceSpec(ServiceSpecUpdatedEvent event, List<Map<String, Object>> endpoints);

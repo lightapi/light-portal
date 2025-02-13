@@ -3648,10 +3648,17 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> createServiceVersion(ServiceVersionCreatedEvent event) {
+    public Result<String> createServiceVersion(ServiceVersionCreatedEvent event, List<Map<String, Object>> endpoints) {
         final String insertUser = "INSERT INTO api_version_t (host_id, api_id, api_version, api_type, service_id, api_version_desc, " +
                 "spec_link, spec, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?)";
+        final String insertEndpoint = "INSERT INTO api_endpoint_t (host_id, api_id, api_version, endpoint, http_method, " +
+                "endpoint_path, endpoint_name, endpoint_desc, update_user, update_ts) " +
+                "VALUES (?,? ,?, ?, ?,  ?, ?, ?, ?, ?)";
+        final String insertScope = "INSERT INTO api_endpoint_scope_t (host_id, api_id, api_version, endpoint, scope, scope_desc, " +
+                "update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?,  ?, ?, ?)";
+
         Result<String> result = null;
         Map<String, Object> map = JsonMapper.string2Map(event.getValue());
         try (Connection conn = ds.getConnection()) {
@@ -3700,6 +3707,62 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 if (count == 0) {
                     throw new SQLException(String.format("no record is inserted for api version %s", "hostId " + event.getHostId() + " apiId " + event.getApiId() + " apiVersion " + event.getApiVersion()));
                 }
+                if(endpoints != null && !endpoints.isEmpty()) {
+                    // insert endpoints
+                    for (Map<String, Object> endpoint : endpoints) {
+                        try (PreparedStatement statementInsert = conn.prepareStatement(insertEndpoint)) {
+                            statementInsert.setString(1, event.getHostId());
+                            statementInsert.setString(2, event.getApiId());
+                            statementInsert.setString(3, event.getApiVersion());
+                            statementInsert.setString(4, (String) endpoint.get("endpoint"));
+
+                            if (endpoint.get("httpMethod") == null)
+                                statementInsert.setNull(5, NULL);
+                            else
+                                statementInsert.setString(5, ((String) endpoint.get("httpMethod")).toLowerCase().trim());
+
+                            if (endpoint.get("endpointPath") == null)
+                                statementInsert.setNull(6, NULL);
+                            else
+                                statementInsert.setString(6, (String) endpoint.get("endpointPath"));
+
+                            if (endpoint.get("endpointName") == null)
+                                statementInsert.setNull(7, NULL);
+                            else
+                                statementInsert.setString(7, (String) endpoint.get("endpointName"));
+
+                            if (endpoint.get("endpointDesc") == null)
+                                statementInsert.setNull(8, NULL);
+                            else
+                                statementInsert.setString(8, (String) endpoint.get("endpointDesc"));
+
+                            statementInsert.setString(9, event.getEventId().getId());
+                            statementInsert.setTimestamp(10, new Timestamp(event.getEventId().getTimestamp()));
+                            statementInsert.executeUpdate();
+                        }
+                        // insert scopes
+                        List<String> scopes = (List<String>) endpoint.get("scopes");
+                        if(scopes != null) {
+                            for (String scope : scopes) {
+                                String[] scopeDesc = scope.split(":");
+                                try (PreparedStatement statementScope = conn.prepareStatement(insertScope)) {
+                                    statementScope.setString(1, event.getHostId());
+                                    statementScope.setString(2, event.getApiId());
+                                    statementScope.setString(3, event.getApiVersion());
+                                    statementScope.setString(4, (String) endpoint.get("endpoint"));
+                                    statementScope.setString(5, scopeDesc[0]);
+                                    if (scopeDesc.length == 1)
+                                        statementScope.setNull(6, NULL);
+                                    else
+                                        statementScope.setString(6, scopeDesc[1]);
+                                    statementScope.setString(7, event.getEventId().getId());
+                                    statementScope.setTimestamp(8, new Timestamp(event.getEventId().getTimestamp()));
+                                    statementScope.executeUpdate();
+                                }
+                            }
+                        }
+                    }
+                }
                 conn.commit();
                 result = Success.of(event.getApiId());
                 insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
@@ -3722,10 +3785,17 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> updateServiceVersion(ServiceVersionUpdatedEvent event) {
+    public Result<String> updateServiceVersion(ServiceVersionUpdatedEvent event, List<Map<String, Object>> endpoints) {
         final String updateApi = "UPDATE api_version_t SET api_type = ?, service_id = ?, api_version_desc = ?, spec_link = ?,  spec = ?," +
                 "update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? AND api_id = ? AND api_version = ?";
+        final String deleteEndpoint = "DELETE FROM api_endpoint_t WHERE host_id = ? AND api_id = ? AND api_version = ?";
+        final String insertEndpoint = "INSERT INTO api_endpoint_t (host_id, api_id, api_version, endpoint, http_method, " +
+                "endpoint_path, endpoint_name, endpoint_desc, update_user, update_ts) " +
+                "VALUES (?,? ,?, ?, ?,  ?, ?, ?, ?, ?)";
+        final String insertScope = "INSERT INTO api_endpoint_scope_t (host_id, api_id, api_version, endpoint, scope, scope_desc, " +
+                "update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?,  ?, ?, ?)";
 
         Result<String> result = null;
         Map<String, Object> map = JsonMapper.string2Map(event.getValue());
@@ -3776,6 +3846,69 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException(String.format("no record is updated for api version %s", "hostId " + event.getHostId() + " apiId " + event.getApiId() + " apiVersion " + event.getApiVersion()));
+                }
+                if(endpoints != null && !endpoints.isEmpty()) {
+                    // delete endpoints for the api version. the api_endpoint_scope_t will be deleted by the cascade.
+                    try (PreparedStatement statementDelete = conn.prepareStatement(deleteEndpoint)) {
+                        statementDelete.setString(1, event.getHostId());
+                        statementDelete.setString(2, event.getApiId());
+                        statementDelete.setString(3, event.getApiVersion());
+                        statementDelete.executeUpdate();
+                    }
+                    // insert endpoints
+                    for (Map<String, Object> endpoint : endpoints) {
+                        try (PreparedStatement statementInsert = conn.prepareStatement(insertEndpoint)) {
+                            statementInsert.setString(1, event.getHostId());
+                            statementInsert.setString(2, event.getApiId());
+                            statementInsert.setString(3, event.getApiVersion());
+                            statementInsert.setString(4, (String) endpoint.get("endpoint"));
+
+                            if (endpoint.get("httpMethod") == null)
+                                statementInsert.setNull(5, NULL);
+                            else
+                                statementInsert.setString(5, ((String) endpoint.get("httpMethod")).toLowerCase().trim());
+
+                            if (endpoint.get("endpointPath") == null)
+                                statementInsert.setNull(6, NULL);
+                            else
+                                statementInsert.setString(6, (String) endpoint.get("endpointPath"));
+
+                            if (endpoint.get("endpointName") == null)
+                                statementInsert.setNull(7, NULL);
+                            else
+                                statementInsert.setString(7, (String) endpoint.get("endpointName"));
+
+                            if (endpoint.get("endpointDesc") == null)
+                                statementInsert.setNull(8, NULL);
+                            else
+                                statementInsert.setString(8, (String) endpoint.get("endpointDesc"));
+
+                            statementInsert.setString(9, event.getEventId().getId());
+                            statementInsert.setTimestamp(10, new Timestamp(event.getEventId().getTimestamp()));
+                            statementInsert.executeUpdate();
+                        }
+                        // insert scopes
+                        List<String> scopes = (List<String>) endpoint.get("scopes");
+                        if (scopes != null) {
+                            for (String scope : scopes) {
+                                String[] scopeDesc = scope.split(":");
+                                try (PreparedStatement statementScope = conn.prepareStatement(insertScope)) {
+                                    statementScope.setString(1, event.getHostId());
+                                    statementScope.setString(2, event.getApiId());
+                                    statementScope.setString(3, event.getApiVersion());
+                                    statementScope.setString(4, (String) endpoint.get("endpoint"));
+                                    statementScope.setString(5, scopeDesc[0]);
+                                    if (scopeDesc.length == 1)
+                                        statementScope.setNull(6, NULL);
+                                    else
+                                        statementScope.setString(6, scopeDesc[1]);
+                                    statementScope.setString(7, event.getEventId().getId());
+                                    statementScope.setTimestamp(8, new Timestamp(event.getEventId().getTimestamp()));
+                                    statementScope.executeUpdate();
+                                }
+                            }
+                        }
+                    }
                 }
                 conn.commit();
                 result = Success.of(event.getApiId());
@@ -3946,8 +4079,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         statement.setString(2, event.getApiId());
                         statement.setString(3, event.getApiVersion());
                         statement.setString(4, (String) endpoint.get("endpoint"));
-                        statement.setString(5, ((String) endpoint.get("httpMethod")).toLowerCase().trim());
-                        statement.setString(6, (String) endpoint.get("endpointPath"));
+
+                        if (endpoint.get("httpMethod") == null)
+                            statement.setNull(5, NULL);
+                        else
+                            statement.setString(5, ((String) endpoint.get("httpMethod")).toLowerCase().trim());
+
+                        if (endpoint.get("endpointPath") == null)
+                            statement.setNull(6, NULL);
+                        else
+                            statement.setString(6, (String) endpoint.get("endpointPath"));
 
                         if (endpoint.get("endpointName") == null)
                             statement.setNull(7, NULL);
@@ -3965,21 +4106,23 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                     // insert scopes
                     List<String> scopes = (List<String>) endpoint.get("scopes");
-                    for (String scope : scopes) {
-                        String[] scopeDesc = scope.split(":");
-                        try (PreparedStatement statement = conn.prepareStatement(insertScope)) {
-                            statement.setString(1, event.getHostId());
-                            statement.setString(2, event.getApiId());
-                            statement.setString(3, event.getApiVersion());
-                            statement.setString(4, (String) endpoint.get("endpoint"));
-                            statement.setString(5, scopeDesc[0]);
-                            if (scopeDesc.length == 1)
-                                statement.setNull(6, NULL);
-                            else
-                                statement.setString(6, scopeDesc[1]);
-                            statement.setString(7, event.getEventId().getId());
-                            statement.setTimestamp(8, new Timestamp(event.getEventId().getTimestamp()));
-                            statement.executeUpdate();
+                    if(scopes != null) {
+                        for (String scope : scopes) {
+                            String[] scopeDesc = scope.split(":");
+                            try (PreparedStatement statement = conn.prepareStatement(insertScope)) {
+                                statement.setString(1, event.getHostId());
+                                statement.setString(2, event.getApiId());
+                                statement.setString(3, event.getApiVersion());
+                                statement.setString(4, (String) endpoint.get("endpoint"));
+                                statement.setString(5, scopeDesc[0]);
+                                if (scopeDesc.length == 1)
+                                    statement.setNull(6, NULL);
+                                else
+                                    statement.setString(6, scopeDesc[1]);
+                                statement.setString(7, event.getEventId().getId());
+                                statement.setTimestamp(8, new Timestamp(event.getEventId().getTimestamp()));
+                                statement.executeUpdate();
+                            }
                         }
                     }
                 }
