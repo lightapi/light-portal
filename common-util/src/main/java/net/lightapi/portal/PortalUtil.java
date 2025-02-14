@@ -17,7 +17,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class PortalUtil {
-    public static PortalConfig config = (PortalConfig) Config.getInstance().getJsonObjectConfig(PortalConfig.CONFIG_NAME, PortalConfig.class);
 
     private static final HttpClient client = HttpClient.newBuilder()
             .version(HttpClient.Version.HTTP_1_1) //Good practice to specify the version
@@ -67,7 +66,12 @@ public class PortalUtil {
         // Use SafeConstructor for security and LoaderOptions for safety defaults.
         LoaderOptions options = new LoaderOptions();
         Yaml yaml = new Yaml(new SafeConstructor(options));
-        // Use LinkedHashMap to maintain the order from the YAML
-        return yaml.loadAs(yamlString, LinkedHashMap.class);
+        Object obj = yaml.load(yamlString);
+        if (obj instanceof Map<?, ?>) {
+            return (Map<String, Object>) obj;
+        } else {
+            // If the YAML is not a map, return an empty map.
+            return new LinkedHashMap<>();
+        }
     }
 }
