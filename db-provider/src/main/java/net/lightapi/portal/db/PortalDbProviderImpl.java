@@ -12911,7 +12911,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> getProductIdLabel(String hostId) {
         Result<String> result = null;
-        String sql = "SELECT product_id FROM product_version_t WHERE host_id = ?";
+        String sql = "SELECT DISTINCT product_id FROM product_version_t WHERE host_id = ?";
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
