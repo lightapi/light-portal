@@ -13706,7 +13706,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         Result<String> result = null;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "host_id, platform_id, platform_name, platform_version, pipelineId, client_type, client_url, " +
+                "host_id, platform_id, platform_name, platform_version, pipeline_id, client_type, client_url, " +
                 "credentials, proxy_url, " +
                 "proxy_port, environment, system_env, runtime_env, zone, region, lob, update_user, update_ts \n" +
                 "FROM platform_t\n" +
@@ -13768,7 +13768,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("platformId", resultSet.getString("platform_id"));
                     map.put("platformName", resultSet.getString("platform_name"));
                     map.put("platformVersion", resultSet.getString("platform_version"));
-                    map.put("pipelineId", resultSet.getString("pipelineId"));
+                    map.put("pipelineId", resultSet.getString("pipeline_id"));
                     map.put("clientType", resultSet.getString("client_type"));
                     map.put("clientUrl", resultSet.getString("client_url"));
                     map.put("credentials", resultSet.getString("credentials"));
