@@ -13,10 +13,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class DeploymentUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -364706038401910089L;
+  private static final long serialVersionUID = 5603058159423911655L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"DeploymentUpdatedEvent\",\"namespace\":\"net.lightapi.portal.deployment\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"deploymentId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"deployment id\"},{\"name\":\"instanceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"instance id\"},{\"name\":\"deploymentStatus\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"deployment status\"},{\"name\":\"deploymentType\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"deployment type\"},{\"name\":\"pipelineId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"pipeline id\"},{\"name\":\"scheduleTs\",\"type\":\"long\",\"doc\":\"schedule timestamp\",\"default\":0}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"DeploymentUpdatedEvent\",\"namespace\":\"net.lightapi.portal.deployment\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"deploymentId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"deployment id\"},{\"name\":\"instanceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"instance id\"},{\"name\":\"deploymentStatus\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"deployment status\"},{\"name\":\"deploymentType\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"deployment type\"},{\"name\":\"scheduleTs\",\"type\":\"long\",\"doc\":\"schedule timestamp\",\"default\":0}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -81,8 +81,6 @@ public class DeploymentUpdatedEvent extends org.apache.avro.specific.SpecificRec
   private java.lang.String deploymentStatus;
   /** deployment type */
   private java.lang.String deploymentType;
-  /** pipeline id */
-  private java.lang.String pipelineId;
   /** schedule timestamp */
   private long scheduleTs;
 
@@ -100,16 +98,14 @@ public class DeploymentUpdatedEvent extends org.apache.avro.specific.SpecificRec
    * @param instanceId instance id
    * @param deploymentStatus deployment status
    * @param deploymentType deployment type
-   * @param pipelineId pipeline id
    * @param scheduleTs schedule timestamp
    */
-  public DeploymentUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String deploymentId, java.lang.String instanceId, java.lang.String deploymentStatus, java.lang.String deploymentType, java.lang.String pipelineId, java.lang.Long scheduleTs) {
+  public DeploymentUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String deploymentId, java.lang.String instanceId, java.lang.String deploymentStatus, java.lang.String deploymentType, java.lang.Long scheduleTs) {
     this.EventId = EventId;
     this.deploymentId = deploymentId;
     this.instanceId = instanceId;
     this.deploymentStatus = deploymentStatus;
     this.deploymentType = deploymentType;
-    this.pipelineId = pipelineId;
     this.scheduleTs = scheduleTs;
   }
 
@@ -128,8 +124,7 @@ public class DeploymentUpdatedEvent extends org.apache.avro.specific.SpecificRec
     case 2: return instanceId;
     case 3: return deploymentStatus;
     case 4: return deploymentType;
-    case 5: return pipelineId;
-    case 6: return scheduleTs;
+    case 5: return scheduleTs;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -144,8 +139,7 @@ public class DeploymentUpdatedEvent extends org.apache.avro.specific.SpecificRec
     case 2: instanceId = value$ != null ? value$.toString() : null; break;
     case 3: deploymentStatus = value$ != null ? value$.toString() : null; break;
     case 4: deploymentType = value$ != null ? value$.toString() : null; break;
-    case 5: pipelineId = value$ != null ? value$.toString() : null; break;
-    case 6: scheduleTs = (java.lang.Long)value$; break;
+    case 5: scheduleTs = (java.lang.Long)value$; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -240,24 +234,6 @@ public class DeploymentUpdatedEvent extends org.apache.avro.specific.SpecificRec
   }
 
   /**
-   * Gets the value of the 'pipelineId' field.
-   * @return pipeline id
-   */
-  public java.lang.String getPipelineId() {
-    return pipelineId;
-  }
-
-
-  /**
-   * Sets the value of the 'pipelineId' field.
-   * pipeline id
-   * @param value the value to set.
-   */
-  public void setPipelineId(java.lang.String value) {
-    this.pipelineId = value;
-  }
-
-  /**
    * Gets the value of the 'scheduleTs' field.
    * @return schedule timestamp
    */
@@ -326,8 +302,6 @@ public class DeploymentUpdatedEvent extends org.apache.avro.specific.SpecificRec
     private java.lang.String deploymentStatus;
     /** deployment type */
     private java.lang.String deploymentType;
-    /** pipeline id */
-    private java.lang.String pipelineId;
     /** schedule timestamp */
     private long scheduleTs;
 
@@ -365,13 +339,9 @@ public class DeploymentUpdatedEvent extends org.apache.avro.specific.SpecificRec
         this.deploymentType = data().deepCopy(fields()[4].schema(), other.deploymentType);
         fieldSetFlags()[4] = other.fieldSetFlags()[4];
       }
-      if (isValidValue(fields()[5], other.pipelineId)) {
-        this.pipelineId = data().deepCopy(fields()[5].schema(), other.pipelineId);
+      if (isValidValue(fields()[5], other.scheduleTs)) {
+        this.scheduleTs = data().deepCopy(fields()[5].schema(), other.scheduleTs);
         fieldSetFlags()[5] = other.fieldSetFlags()[5];
-      }
-      if (isValidValue(fields()[6], other.scheduleTs)) {
-        this.scheduleTs = data().deepCopy(fields()[6].schema(), other.scheduleTs);
-        fieldSetFlags()[6] = other.fieldSetFlags()[6];
       }
     }
 
@@ -402,13 +372,9 @@ public class DeploymentUpdatedEvent extends org.apache.avro.specific.SpecificRec
         this.deploymentType = data().deepCopy(fields()[4].schema(), other.deploymentType);
         fieldSetFlags()[4] = true;
       }
-      if (isValidValue(fields()[5], other.pipelineId)) {
-        this.pipelineId = data().deepCopy(fields()[5].schema(), other.pipelineId);
+      if (isValidValue(fields()[5], other.scheduleTs)) {
+        this.scheduleTs = data().deepCopy(fields()[5].schema(), other.scheduleTs);
         fieldSetFlags()[5] = true;
-      }
-      if (isValidValue(fields()[6], other.scheduleTs)) {
-        this.scheduleTs = data().deepCopy(fields()[6].schema(), other.scheduleTs);
-        fieldSetFlags()[6] = true;
       }
     }
 
@@ -665,50 +631,6 @@ public class DeploymentUpdatedEvent extends org.apache.avro.specific.SpecificRec
     }
 
     /**
-      * Gets the value of the 'pipelineId' field.
-      * pipeline id
-      * @return The value.
-      */
-    public java.lang.String getPipelineId() {
-      return pipelineId;
-    }
-
-
-    /**
-      * Sets the value of the 'pipelineId' field.
-      * pipeline id
-      * @param value The value of 'pipelineId'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.deployment.DeploymentUpdatedEvent.Builder setPipelineId(java.lang.String value) {
-      validate(fields()[5], value);
-      this.pipelineId = value;
-      fieldSetFlags()[5] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'pipelineId' field has been set.
-      * pipeline id
-      * @return True if the 'pipelineId' field has been set, false otherwise.
-      */
-    public boolean hasPipelineId() {
-      return fieldSetFlags()[5];
-    }
-
-
-    /**
-      * Clears the value of the 'pipelineId' field.
-      * pipeline id
-      * @return This builder.
-      */
-    public net.lightapi.portal.deployment.DeploymentUpdatedEvent.Builder clearPipelineId() {
-      pipelineId = null;
-      fieldSetFlags()[5] = false;
-      return this;
-    }
-
-    /**
       * Gets the value of the 'scheduleTs' field.
       * schedule timestamp
       * @return The value.
@@ -725,9 +647,9 @@ public class DeploymentUpdatedEvent extends org.apache.avro.specific.SpecificRec
       * @return This builder.
       */
     public net.lightapi.portal.deployment.DeploymentUpdatedEvent.Builder setScheduleTs(long value) {
-      validate(fields()[6], value);
+      validate(fields()[5], value);
       this.scheduleTs = value;
-      fieldSetFlags()[6] = true;
+      fieldSetFlags()[5] = true;
       return this;
     }
 
@@ -737,7 +659,7 @@ public class DeploymentUpdatedEvent extends org.apache.avro.specific.SpecificRec
       * @return True if the 'scheduleTs' field has been set, false otherwise.
       */
     public boolean hasScheduleTs() {
-      return fieldSetFlags()[6];
+      return fieldSetFlags()[5];
     }
 
 
@@ -747,7 +669,7 @@ public class DeploymentUpdatedEvent extends org.apache.avro.specific.SpecificRec
       * @return This builder.
       */
     public net.lightapi.portal.deployment.DeploymentUpdatedEvent.Builder clearScheduleTs() {
-      fieldSetFlags()[6] = false;
+      fieldSetFlags()[5] = false;
       return this;
     }
 
@@ -770,8 +692,7 @@ public class DeploymentUpdatedEvent extends org.apache.avro.specific.SpecificRec
         record.instanceId = fieldSetFlags()[2] ? this.instanceId : (java.lang.String) defaultValue(fields()[2]);
         record.deploymentStatus = fieldSetFlags()[3] ? this.deploymentStatus : (java.lang.String) defaultValue(fields()[3]);
         record.deploymentType = fieldSetFlags()[4] ? this.deploymentType : (java.lang.String) defaultValue(fields()[4]);
-        record.pipelineId = fieldSetFlags()[5] ? this.pipelineId : (java.lang.String) defaultValue(fields()[5]);
-        record.scheduleTs = fieldSetFlags()[6] ? this.scheduleTs : (java.lang.Long) defaultValue(fields()[6]);
+        record.scheduleTs = fieldSetFlags()[5] ? this.scheduleTs : (java.lang.Long) defaultValue(fields()[5]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -814,8 +735,6 @@ public class DeploymentUpdatedEvent extends org.apache.avro.specific.SpecificRec
 
     out.writeString(this.deploymentType);
 
-    out.writeString(this.pipelineId);
-
     out.writeLong(this.scheduleTs);
 
   }
@@ -838,12 +757,10 @@ public class DeploymentUpdatedEvent extends org.apache.avro.specific.SpecificRec
 
       this.deploymentType = in.readString();
 
-      this.pipelineId = in.readString();
-
       this.scheduleTs = in.readLong();
 
     } else {
-      for (int i = 0; i < 7; i++) {
+      for (int i = 0; i < 6; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -869,10 +786,6 @@ public class DeploymentUpdatedEvent extends org.apache.avro.specific.SpecificRec
           break;
 
         case 5:
-          this.pipelineId = in.readString();
-          break;
-
-        case 6:
           this.scheduleTs = in.readLong();
           break;
 

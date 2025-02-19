@@ -13,10 +13,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class PlatformCreatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 8611495173681552649L;
+  private static final long serialVersionUID = -2528469012222008367L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"PlatformCreatedEvent\",\"namespace\":\"net.lightapi.portal.deployment\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"platformId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"platform id\"},{\"name\":\"platformName\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"platform name\"},{\"name\":\"platformVersion\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"platform version\"},{\"name\":\"clientType\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"client type\"},{\"name\":\"clientUrl\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"client url\"},{\"name\":\"credentials\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"credentials\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"value in json\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"PlatformCreatedEvent\",\"namespace\":\"net.lightapi.portal.deployment\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"platformId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"platform id\"},{\"name\":\"platformName\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"platform name\"},{\"name\":\"platformVersion\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"platform version\"},{\"name\":\"pipelineId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"pipeline id\"},{\"name\":\"clientType\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"client type\"},{\"name\":\"clientUrl\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"client url\"},{\"name\":\"credentials\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"credentials\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"value in json\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -79,6 +79,8 @@ public class PlatformCreatedEvent extends org.apache.avro.specific.SpecificRecor
   private java.lang.String platformName;
   /** platform version */
   private java.lang.String platformVersion;
+  /** pipeline id */
+  private java.lang.String pipelineId;
   /** client type */
   private java.lang.String clientType;
   /** client url */
@@ -101,16 +103,18 @@ public class PlatformCreatedEvent extends org.apache.avro.specific.SpecificRecor
    * @param platformId platform id
    * @param platformName platform name
    * @param platformVersion platform version
+   * @param pipelineId pipeline id
    * @param clientType client type
    * @param clientUrl client url
    * @param credentials credentials
    * @param value value in json
    */
-  public PlatformCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String platformId, java.lang.String platformName, java.lang.String platformVersion, java.lang.String clientType, java.lang.String clientUrl, java.lang.String credentials, java.lang.String value) {
+  public PlatformCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String platformId, java.lang.String platformName, java.lang.String platformVersion, java.lang.String pipelineId, java.lang.String clientType, java.lang.String clientUrl, java.lang.String credentials, java.lang.String value) {
     this.EventId = EventId;
     this.platformId = platformId;
     this.platformName = platformName;
     this.platformVersion = platformVersion;
+    this.pipelineId = pipelineId;
     this.clientType = clientType;
     this.clientUrl = clientUrl;
     this.credentials = credentials;
@@ -131,10 +135,11 @@ public class PlatformCreatedEvent extends org.apache.avro.specific.SpecificRecor
     case 1: return platformId;
     case 2: return platformName;
     case 3: return platformVersion;
-    case 4: return clientType;
-    case 5: return clientUrl;
-    case 6: return credentials;
-    case 7: return value;
+    case 4: return pipelineId;
+    case 5: return clientType;
+    case 6: return clientUrl;
+    case 7: return credentials;
+    case 8: return value;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -148,10 +153,11 @@ public class PlatformCreatedEvent extends org.apache.avro.specific.SpecificRecor
     case 1: platformId = value$ != null ? value$.toString() : null; break;
     case 2: platformName = value$ != null ? value$.toString() : null; break;
     case 3: platformVersion = value$ != null ? value$.toString() : null; break;
-    case 4: clientType = value$ != null ? value$.toString() : null; break;
-    case 5: clientUrl = value$ != null ? value$.toString() : null; break;
-    case 6: credentials = value$ != null ? value$.toString() : null; break;
-    case 7: value = value$ != null ? value$.toString() : null; break;
+    case 4: pipelineId = value$ != null ? value$.toString() : null; break;
+    case 5: clientType = value$ != null ? value$.toString() : null; break;
+    case 6: clientUrl = value$ != null ? value$.toString() : null; break;
+    case 7: credentials = value$ != null ? value$.toString() : null; break;
+    case 8: value = value$ != null ? value$.toString() : null; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -225,6 +231,24 @@ public class PlatformCreatedEvent extends org.apache.avro.specific.SpecificRecor
    */
   public void setPlatformVersion(java.lang.String value) {
     this.platformVersion = value;
+  }
+
+  /**
+   * Gets the value of the 'pipelineId' field.
+   * @return pipeline id
+   */
+  public java.lang.String getPipelineId() {
+    return pipelineId;
+  }
+
+
+  /**
+   * Sets the value of the 'pipelineId' field.
+   * pipeline id
+   * @param value the value to set.
+   */
+  public void setPipelineId(java.lang.String value) {
+    this.pipelineId = value;
   }
 
   /**
@@ -348,6 +372,8 @@ public class PlatformCreatedEvent extends org.apache.avro.specific.SpecificRecor
     private java.lang.String platformName;
     /** platform version */
     private java.lang.String platformVersion;
+    /** pipeline id */
+    private java.lang.String pipelineId;
     /** client type */
     private java.lang.String clientType;
     /** client url */
@@ -387,21 +413,25 @@ public class PlatformCreatedEvent extends org.apache.avro.specific.SpecificRecor
         this.platformVersion = data().deepCopy(fields()[3].schema(), other.platformVersion);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
-      if (isValidValue(fields()[4], other.clientType)) {
-        this.clientType = data().deepCopy(fields()[4].schema(), other.clientType);
+      if (isValidValue(fields()[4], other.pipelineId)) {
+        this.pipelineId = data().deepCopy(fields()[4].schema(), other.pipelineId);
         fieldSetFlags()[4] = other.fieldSetFlags()[4];
       }
-      if (isValidValue(fields()[5], other.clientUrl)) {
-        this.clientUrl = data().deepCopy(fields()[5].schema(), other.clientUrl);
+      if (isValidValue(fields()[5], other.clientType)) {
+        this.clientType = data().deepCopy(fields()[5].schema(), other.clientType);
         fieldSetFlags()[5] = other.fieldSetFlags()[5];
       }
-      if (isValidValue(fields()[6], other.credentials)) {
-        this.credentials = data().deepCopy(fields()[6].schema(), other.credentials);
+      if (isValidValue(fields()[6], other.clientUrl)) {
+        this.clientUrl = data().deepCopy(fields()[6].schema(), other.clientUrl);
         fieldSetFlags()[6] = other.fieldSetFlags()[6];
       }
-      if (isValidValue(fields()[7], other.value)) {
-        this.value = data().deepCopy(fields()[7].schema(), other.value);
+      if (isValidValue(fields()[7], other.credentials)) {
+        this.credentials = data().deepCopy(fields()[7].schema(), other.credentials);
         fieldSetFlags()[7] = other.fieldSetFlags()[7];
+      }
+      if (isValidValue(fields()[8], other.value)) {
+        this.value = data().deepCopy(fields()[8].schema(), other.value);
+        fieldSetFlags()[8] = other.fieldSetFlags()[8];
       }
     }
 
@@ -428,21 +458,25 @@ public class PlatformCreatedEvent extends org.apache.avro.specific.SpecificRecor
         this.platformVersion = data().deepCopy(fields()[3].schema(), other.platformVersion);
         fieldSetFlags()[3] = true;
       }
-      if (isValidValue(fields()[4], other.clientType)) {
-        this.clientType = data().deepCopy(fields()[4].schema(), other.clientType);
+      if (isValidValue(fields()[4], other.pipelineId)) {
+        this.pipelineId = data().deepCopy(fields()[4].schema(), other.pipelineId);
         fieldSetFlags()[4] = true;
       }
-      if (isValidValue(fields()[5], other.clientUrl)) {
-        this.clientUrl = data().deepCopy(fields()[5].schema(), other.clientUrl);
+      if (isValidValue(fields()[5], other.clientType)) {
+        this.clientType = data().deepCopy(fields()[5].schema(), other.clientType);
         fieldSetFlags()[5] = true;
       }
-      if (isValidValue(fields()[6], other.credentials)) {
-        this.credentials = data().deepCopy(fields()[6].schema(), other.credentials);
+      if (isValidValue(fields()[6], other.clientUrl)) {
+        this.clientUrl = data().deepCopy(fields()[6].schema(), other.clientUrl);
         fieldSetFlags()[6] = true;
       }
-      if (isValidValue(fields()[7], other.value)) {
-        this.value = data().deepCopy(fields()[7].schema(), other.value);
+      if (isValidValue(fields()[7], other.credentials)) {
+        this.credentials = data().deepCopy(fields()[7].schema(), other.credentials);
         fieldSetFlags()[7] = true;
+      }
+      if (isValidValue(fields()[8], other.value)) {
+        this.value = data().deepCopy(fields()[8].schema(), other.value);
+        fieldSetFlags()[8] = true;
       }
     }
 
@@ -655,6 +689,50 @@ public class PlatformCreatedEvent extends org.apache.avro.specific.SpecificRecor
     }
 
     /**
+      * Gets the value of the 'pipelineId' field.
+      * pipeline id
+      * @return The value.
+      */
+    public java.lang.String getPipelineId() {
+      return pipelineId;
+    }
+
+
+    /**
+      * Sets the value of the 'pipelineId' field.
+      * pipeline id
+      * @param value The value of 'pipelineId'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.deployment.PlatformCreatedEvent.Builder setPipelineId(java.lang.String value) {
+      validate(fields()[4], value);
+      this.pipelineId = value;
+      fieldSetFlags()[4] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'pipelineId' field has been set.
+      * pipeline id
+      * @return True if the 'pipelineId' field has been set, false otherwise.
+      */
+    public boolean hasPipelineId() {
+      return fieldSetFlags()[4];
+    }
+
+
+    /**
+      * Clears the value of the 'pipelineId' field.
+      * pipeline id
+      * @return This builder.
+      */
+    public net.lightapi.portal.deployment.PlatformCreatedEvent.Builder clearPipelineId() {
+      pipelineId = null;
+      fieldSetFlags()[4] = false;
+      return this;
+    }
+
+    /**
       * Gets the value of the 'clientType' field.
       * client type
       * @return The value.
@@ -671,9 +749,9 @@ public class PlatformCreatedEvent extends org.apache.avro.specific.SpecificRecor
       * @return This builder.
       */
     public net.lightapi.portal.deployment.PlatformCreatedEvent.Builder setClientType(java.lang.String value) {
-      validate(fields()[4], value);
+      validate(fields()[5], value);
       this.clientType = value;
-      fieldSetFlags()[4] = true;
+      fieldSetFlags()[5] = true;
       return this;
     }
 
@@ -683,7 +761,7 @@ public class PlatformCreatedEvent extends org.apache.avro.specific.SpecificRecor
       * @return True if the 'clientType' field has been set, false otherwise.
       */
     public boolean hasClientType() {
-      return fieldSetFlags()[4];
+      return fieldSetFlags()[5];
     }
 
 
@@ -694,7 +772,7 @@ public class PlatformCreatedEvent extends org.apache.avro.specific.SpecificRecor
       */
     public net.lightapi.portal.deployment.PlatformCreatedEvent.Builder clearClientType() {
       clientType = null;
-      fieldSetFlags()[4] = false;
+      fieldSetFlags()[5] = false;
       return this;
     }
 
@@ -715,9 +793,9 @@ public class PlatformCreatedEvent extends org.apache.avro.specific.SpecificRecor
       * @return This builder.
       */
     public net.lightapi.portal.deployment.PlatformCreatedEvent.Builder setClientUrl(java.lang.String value) {
-      validate(fields()[5], value);
+      validate(fields()[6], value);
       this.clientUrl = value;
-      fieldSetFlags()[5] = true;
+      fieldSetFlags()[6] = true;
       return this;
     }
 
@@ -727,7 +805,7 @@ public class PlatformCreatedEvent extends org.apache.avro.specific.SpecificRecor
       * @return True if the 'clientUrl' field has been set, false otherwise.
       */
     public boolean hasClientUrl() {
-      return fieldSetFlags()[5];
+      return fieldSetFlags()[6];
     }
 
 
@@ -738,7 +816,7 @@ public class PlatformCreatedEvent extends org.apache.avro.specific.SpecificRecor
       */
     public net.lightapi.portal.deployment.PlatformCreatedEvent.Builder clearClientUrl() {
       clientUrl = null;
-      fieldSetFlags()[5] = false;
+      fieldSetFlags()[6] = false;
       return this;
     }
 
@@ -759,9 +837,9 @@ public class PlatformCreatedEvent extends org.apache.avro.specific.SpecificRecor
       * @return This builder.
       */
     public net.lightapi.portal.deployment.PlatformCreatedEvent.Builder setCredentials(java.lang.String value) {
-      validate(fields()[6], value);
+      validate(fields()[7], value);
       this.credentials = value;
-      fieldSetFlags()[6] = true;
+      fieldSetFlags()[7] = true;
       return this;
     }
 
@@ -771,7 +849,7 @@ public class PlatformCreatedEvent extends org.apache.avro.specific.SpecificRecor
       * @return True if the 'credentials' field has been set, false otherwise.
       */
     public boolean hasCredentials() {
-      return fieldSetFlags()[6];
+      return fieldSetFlags()[7];
     }
 
 
@@ -782,7 +860,7 @@ public class PlatformCreatedEvent extends org.apache.avro.specific.SpecificRecor
       */
     public net.lightapi.portal.deployment.PlatformCreatedEvent.Builder clearCredentials() {
       credentials = null;
-      fieldSetFlags()[6] = false;
+      fieldSetFlags()[7] = false;
       return this;
     }
 
@@ -803,9 +881,9 @@ public class PlatformCreatedEvent extends org.apache.avro.specific.SpecificRecor
       * @return This builder.
       */
     public net.lightapi.portal.deployment.PlatformCreatedEvent.Builder setValue(java.lang.String value) {
-      validate(fields()[7], value);
+      validate(fields()[8], value);
       this.value = value;
-      fieldSetFlags()[7] = true;
+      fieldSetFlags()[8] = true;
       return this;
     }
 
@@ -815,7 +893,7 @@ public class PlatformCreatedEvent extends org.apache.avro.specific.SpecificRecor
       * @return True if the 'value' field has been set, false otherwise.
       */
     public boolean hasValue() {
-      return fieldSetFlags()[7];
+      return fieldSetFlags()[8];
     }
 
 
@@ -826,7 +904,7 @@ public class PlatformCreatedEvent extends org.apache.avro.specific.SpecificRecor
       */
     public net.lightapi.portal.deployment.PlatformCreatedEvent.Builder clearValue() {
       value = null;
-      fieldSetFlags()[7] = false;
+      fieldSetFlags()[8] = false;
       return this;
     }
 
@@ -848,10 +926,11 @@ public class PlatformCreatedEvent extends org.apache.avro.specific.SpecificRecor
         record.platformId = fieldSetFlags()[1] ? this.platformId : (java.lang.String) defaultValue(fields()[1]);
         record.platformName = fieldSetFlags()[2] ? this.platformName : (java.lang.String) defaultValue(fields()[2]);
         record.platformVersion = fieldSetFlags()[3] ? this.platformVersion : (java.lang.String) defaultValue(fields()[3]);
-        record.clientType = fieldSetFlags()[4] ? this.clientType : (java.lang.String) defaultValue(fields()[4]);
-        record.clientUrl = fieldSetFlags()[5] ? this.clientUrl : (java.lang.String) defaultValue(fields()[5]);
-        record.credentials = fieldSetFlags()[6] ? this.credentials : (java.lang.String) defaultValue(fields()[6]);
-        record.value = fieldSetFlags()[7] ? this.value : (java.lang.String) defaultValue(fields()[7]);
+        record.pipelineId = fieldSetFlags()[4] ? this.pipelineId : (java.lang.String) defaultValue(fields()[4]);
+        record.clientType = fieldSetFlags()[5] ? this.clientType : (java.lang.String) defaultValue(fields()[5]);
+        record.clientUrl = fieldSetFlags()[6] ? this.clientUrl : (java.lang.String) defaultValue(fields()[6]);
+        record.credentials = fieldSetFlags()[7] ? this.credentials : (java.lang.String) defaultValue(fields()[7]);
+        record.value = fieldSetFlags()[8] ? this.value : (java.lang.String) defaultValue(fields()[8]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -892,6 +971,8 @@ public class PlatformCreatedEvent extends org.apache.avro.specific.SpecificRecor
 
     out.writeString(this.platformVersion);
 
+    out.writeString(this.pipelineId);
+
     out.writeString(this.clientType);
 
     out.writeString(this.clientUrl);
@@ -918,6 +999,8 @@ public class PlatformCreatedEvent extends org.apache.avro.specific.SpecificRecor
 
       this.platformVersion = in.readString();
 
+      this.pipelineId = in.readString();
+
       this.clientType = in.readString();
 
       this.clientUrl = in.readString();
@@ -927,7 +1010,7 @@ public class PlatformCreatedEvent extends org.apache.avro.specific.SpecificRecor
       this.value = in.readString();
 
     } else {
-      for (int i = 0; i < 8; i++) {
+      for (int i = 0; i < 9; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -949,18 +1032,22 @@ public class PlatformCreatedEvent extends org.apache.avro.specific.SpecificRecor
           break;
 
         case 4:
-          this.clientType = in.readString();
+          this.pipelineId = in.readString();
           break;
 
         case 5:
-          this.clientUrl = in.readString();
+          this.clientType = in.readString();
           break;
 
         case 6:
-          this.credentials = in.readString();
+          this.clientUrl = in.readString();
           break;
 
         case 7:
+          this.credentials = in.readString();
+          break;
+
+        case 8:
           this.value = in.readString();
           break;
 

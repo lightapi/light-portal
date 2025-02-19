@@ -66,11 +66,6 @@
       "doc": "deployment type"
     },
     {
-      "name": "pipelineId",
-      "type": "string",
-      "doc": "pipeline id"
-    },
-    {
       "name": "scheduleTs",
       "type": "long",
       "default": 0,
