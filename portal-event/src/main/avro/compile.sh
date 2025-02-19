@@ -208,6 +208,9 @@ java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema Deployme
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema InstanceCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema InstanceUpdatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema InstanceDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema PipelineCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema PipelineUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema PipelineDeletedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema PlatformCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema PlatformUpdatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema PlatformDeletedEvent.avsc .
@@ -420,6 +423,9 @@ mv net/lightapi/portal/controller/ControllerDeregisteredEvent.java ../java/net/l
 mv net/lightapi/portal/deployment/DeploymentCreatedEvent.java ../java/net/lightapi/portal/deployment
 mv net/lightapi/portal/deployment/DeploymentUpdatedEvent.java ../java/net/lightapi/portal/deployment
 mv net/lightapi/portal/deployment/DeploymentDeletedEvent.java ../java/net/lightapi/portal/deployment
+mv net/lightapi/portal/deployment/PipelineCreatedEvent.java ../java/net/lightapi/portal/deployment
+mv net/lightapi/portal/deployment/PipelineUpdatedEvent.java ../java/net/lightapi/portal/deployment
+mv net/lightapi/portal/deployment/PipelineDeletedEvent.java ../java/net/lightapi/portal/deployment
 mv net/lightapi/portal/deployment/PlatformCreatedEvent.java ../java/net/lightapi/portal/deployment
 mv net/lightapi/portal/deployment/PlatformUpdatedEvent.java ../java/net/lightapi/portal/deployment
 mv net/lightapi/portal/deployment/PlatformDeletedEvent.java ../java/net/lightapi/portal/deployment

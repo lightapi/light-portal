@@ -13246,6 +13246,237 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         return result;
     }
 
+
+    @Override
+    public Result<String> createPipeline(PipelineCreatedEvent event) {
+        final String sql = "INSERT INTO pipeline_t(host_id, pipeline_id, endpoint, request_schema, response_schema, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        Result<String> result;
+        Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, event.getEventId().getHostId());
+                statement.setString(2, event.getPipelineId());
+                statement.setString(3, event.getEndpoint());
+                statement.setString(4, event.getRequestSchema());
+                statement.setString(5, event.getResponseSchema());
+                statement.setString(6, event.getEventId().getId());
+                statement.setTimestamp(7, timestamp);
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert the pipeline with id " + event.getPipelineId());
+                }
+                conn.commit();
+                result = Success.of(event.getPipelineId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            }   catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> updatePipeline(PipelineUpdatedEvent event) {
+        final String sql = "UPDATE pipeline_t SET endpoint = ?, request_schema = ?, response_schema = ?, update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? and pipeline_id = ?";
+        Result<String> result;
+        Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, event.getEndpoint());
+                statement.setString(2, event.getRequestSchema());
+                statement.setString(3, event.getResponseSchema());
+                statement.setString(4, event.getEventId().getId());
+                statement.setTimestamp(5, timestamp);
+                statement.setString(6, event.getEventId().getHostId());
+                statement.setString(7, event.getPipelineId());
+
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to update the pipeline with id " + event.getPipelineId());
+                }
+                conn.commit();
+                result = Success.of(event.getPipelineId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+
+            }  catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deletePipeline(PipelineDeletedEvent event) {
+        final String sql = "DELETE FROM pipeline_t WHERE host_id = ? AND pipeline_id = ?";
+        Result<String> result;
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, event.getEventId().getHostId());
+                statement.setString(2, event.getPipelineId());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to delete the pipeline with id " + event.getPipelineId());
+                }
+                conn.commit();
+                result = Success.of(event.getPipelineId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            }   catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            }  catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+
+    @Override
+    public Result<String> getPipeline(int offset, int limit, String hostId, String pipelineId, String endpoint,
+                                      String requestSchema, String responseSchema) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
+                "host_id, pipeline_id, endpoint, request_schema, response_schema, update_user, update_ts\n" +
+                "FROM pipeline_t\n" +
+                "WHERE 1=1\n");
+
+        List<Object> parameters = new ArrayList<>();
+
+        StringBuilder whereClause = new StringBuilder();
+        addCondition(whereClause, parameters, "host_id", hostId);
+        addCondition(whereClause, parameters, "pipeline_id", pipelineId);
+        addCondition(whereClause, parameters, "endpoint", endpoint);
+        addCondition(whereClause, parameters, "request_schema", requestSchema);
+        addCondition(whereClause, parameters, "response_schema", responseSchema);
+
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append(" ORDER BY pipeline_id\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> pipelines = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("pipelineId", resultSet.getString("pipeline_id"));
+                    map.put("endpoint", resultSet.getString("endpoint"));
+                    map.put("requestSchema", resultSet.getString("request_schema"));
+                    map.put("responseSchema", resultSet.getString("response_schema"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    // handling date properly
+                    map.put("updateTs", resultSet.getTimestamp("update_ts") != null ? resultSet.getTimestamp("update_ts").toString() : null);
+                    pipelines.add(map);
+                }
+            }
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("pipelines", pipelines);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getPipelineLabel(String hostId) {
+        Result<String> result = null;
+        String sql = "SELECT pipeline_id, pipeline_id FROM pipeline_t WHERE host_id = ?";
+        List<Map<String, Object>> labels = new ArrayList<>();
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, hostId);
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    String pipelineId = resultSet.getString("pipeline_id");
+                    map.put("id", pipelineId);
+                    map.put("label", pipelineId);
+                    labels.add(map);
+                }
+            }
+            result = Success.of(JsonMapper.toJson(labels));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
     @Override
     public Result<String> createPlatform(PlatformCreatedEvent event) {
         final String sql = "INSERT INTO platform_t(host_id, platform_id, platform_name, platform_version, client_type, client_url, credentials, proxy_url, proxy_port, environment, system_env, runtime_env, zone, region, lob, update_user, update_ts) " +
