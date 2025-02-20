@@ -3176,7 +3176,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "SELECT c.host_id, a.provider_id, a.client_id, c.client_type, c.client_profile, c.client_secret, \n" +
                         "c.client_scope, c.custom_claim, c.redirect_uri, c.authenticate_class, c.deref_client_id\n" +
                         "FROM client_t c, auth_provider_client_t a\n" +
-                        "WHERE c.client_id = a.client_id\n" +
+                        "WHERE c.host_id = a.host_id AND c.client_id = a.client_id\n" +
                         "AND a.provider_id = ?\n" +
                         "AND a.client_id = ?\n";
         try (final Connection conn = ds.getConnection()) {
