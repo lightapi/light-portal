@@ -638,7 +638,7 @@ public class HybridQueryClient {
      * @return Result of client object in JSON
      */
     public static Result<String> getClientById(HttpServerExchange exchange, String url, String clientId) {
-        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"client\",\"action\":\"getClientById\",\"version\":\"0.1.0\",\"data\":{\"clientId\":\"%s\"}}", clientId);
+        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"oauth\",\"action\":\"getClientById\",\"version\":\"0.1.0\",\"data\":{\"clientId\":\"%s\"}}", clientId);
         return callQueryExchangeUrl(command, exchange, url);
     }
 
@@ -651,7 +651,7 @@ public class HybridQueryClient {
      * @return Result of client object in JSON
      */
     public static Result<String> getClientById(String token, String url, String clientId) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"client\",\"action\":\"getClientById\",\"version\":\"0.1.0\",\"data\":{\"clientId\":\"%s\"}}", clientId);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"oauth\",\"action\":\"getClientById\",\"version\":\"0.1.0\",\"data\":{\"clientId\":\"%s\"}}", clientId);
         return callQueryTokenUrl(s, token, url);
     }
 
@@ -665,7 +665,7 @@ public class HybridQueryClient {
      * @return Result of client
      */
     public static Result<String> getClientById(String token, String clientId) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"client\",\"action\":\"getClientById\",\"version\":\"0.1.0\",\"data\":{\"clientId\":\"%s\"}}", clientId);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"oauth\",\"action\":\"getClientById\",\"version\":\"0.1.0\",\"data\":{\"clientId\":\"%s\"}}", clientId);
         if (config.isPortalByServiceUrl()) {
             return callQueryTokenUrl(s, token, config.getPortalQueryServiceUrl());
         } else {
