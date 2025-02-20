@@ -2697,7 +2697,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "client_id, host_id, app_id, api_id, client_name, client_type, client_profile, " +
                 "client_scope, custom_claim, " +
                 "redirect_uri, authenticate_class, deref_client_id, update_user, update_ts\n" +
-                "FROM client_t\n" +
+                "FROM auth_client_t\n" +
                 "WHERE host_id = ?\n");
 
         List<Object> parameters = new ArrayList<>();
