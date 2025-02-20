@@ -1750,7 +1750,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "r.host_id, r.refresh_token, r.user_id, r.user_type, r.entity_id, r.email, u.first_name, u.last_name, \n" +
                 "r.client_id, a.app_id, a.app_name, r.scope, r.roles, r.groups, r.positions, r.attributes, r.csrf, " +
                 "r.custom_claim, r.update_user, r.update_ts \n" +
-                "FROM auth_refresh_token_t r, user_t u, app_t a, client_t c\n" +
+                "FROM auth_refresh_token_t r, user_t u, app_t a, auth_client_t c\n" +
                 "WHERE r.user_id = u.user_id AND r.client_id = c.client_id AND a.app_id = c.app_id\n" +
                 "AND r.host_id = ?\n");
 
@@ -2956,7 +2956,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createClient(ClientCreatedEvent event) {
-        final String insertUser = "INSERT INTO client_t (host_id, app_id, api_id, client_name, client_id, " +
+        final String insertUser = "INSERT INTO auth_client_t (host_id, app_id, api_id, client_name, client_id, " +
                 "client_type, client_profile, client_secret, client_scope, custom_claim, redirect_uri, " +
                 "authenticate_class, deref_client_id, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?, ?)";
@@ -3036,7 +3036,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateClient(ClientUpdatedEvent event) {
-        final String updateApplication = "UPDATE client_t SET app_id = ?, api_id = ?, client_name = ?, " +
+        final String updateApplication = "UPDATE auth_client_t SET app_id = ?, api_id = ?, client_name = ?, " +
                 "client_type = ?, client_profile = ?, " +
                 "client_scope = ?, custom_claim = ?, redirect_uri = ?, authenticate_class = ?, " +
                 "deref_client_id = ?, update_user = ?, update_ts = ? " +
@@ -3118,7 +3118,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> deleteClient(ClientDeletedEvent event) {
-        final String deleteApp = "DELETE from client_t WHERE host_id = ? AND client_id = ?";
+        final String deleteApp = "DELETE from auth_client_t WHERE host_id = ? AND client_id = ?";
         Result<String> result;
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
@@ -3158,7 +3158,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "SELECT host_id, app_id, api_id, client_name, client_id, client_type, client_profile, client_secret, " +
                         "client_scope, custom_claim,\n" +
                         "redirect_uri, authenticate_class, deref_client_id, update_user, update_ts\n" +
-                        "FROM client_t \n" +
+                        "FROM auth_client_t \n" +
                         "WHERE client_id = ?";
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
@@ -3205,7 +3205,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         String sql =
                 "SELECT c.host_id, a.provider_id, a.client_id, c.client_type, c.client_profile, c.client_secret, \n" +
                         "c.client_scope, c.custom_claim, c.redirect_uri, c.authenticate_class, c.deref_client_id\n" +
-                        "FROM client_t c, auth_provider_client_t a\n" +
+                        "FROM auth_client_t c, auth_provider_client_t a\n" +
                         "WHERE c.host_id = a.host_id AND c.client_id = a.client_id\n" +
                         "AND a.provider_id = ?\n" +
                         "AND a.client_id = ?\n";
@@ -3251,7 +3251,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         String sql =
                 "SELECT host_id, app_id, client_id, client_type, client_profile, client_scope, custom_claim, \n" +
                         "redirect_uri, authenticate_class, deref_client_id, update_user, update_ts \n" +
-                        "FROM client_t c\n" +
+                        "FROM auth_client_t c\n" +
                         "WHERE host_id = ? AND app_id = ?";
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
