@@ -46,14 +46,9 @@
       }
     },
     {
-      "name": "hostId",
+      "name": "clientId",
       "type": "string",
-      "doc": "host id"
-    },
-    {
-      "name": "appId",
-      "type": "string",
-      "doc": "app id"
+      "doc": "client id"
     }
   ]
 }

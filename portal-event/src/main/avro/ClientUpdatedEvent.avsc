@@ -46,14 +46,24 @@
       }
     },
     {
-      "name": "hostId",
-      "type": "string",
-      "doc": "host id"
-    },
-    {
       "name": "appId",
       "type": "string",
       "doc": "app id"
+    },
+    {
+      "name": "clientId",
+      "type": "string",
+      "doc": "client id"
+    },
+    {
+      "name": "clientType",
+      "type": "string",
+      "doc": "client type"
+    },
+    {
+      "name": "clientProfile",
+      "type": "string",
+      "doc": "client profile"
     },
     {
       "name": "value",

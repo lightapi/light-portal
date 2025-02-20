@@ -1,6 +1,6 @@
 {
   "type": "record",
-  "name": "ClientCreatedEvent",
+  "name": "AppDeletedEvent",
   "namespace": "net.lightapi.portal.client",
   "fields": [
     {
@@ -49,31 +49,6 @@
       "name": "appId",
       "type": "string",
       "doc": "app id"
-    },
-    {
-      "name": "clientId",
-      "type": "string",
-      "doc": "client id"
-    },
-    {
-      "name": "clientType",
-      "type": "string",
-      "doc": "client type"
-    },
-    {
-      "name": "clientProfile",
-      "type": "string",
-      "doc": "client profile"
-    },
-    {
-      "name": "clientSecret",
-      "type": "string",
-      "doc": "client secret"
-    },
-    {
-      "name": "value",
-      "type": "string",
-      "doc": "app detail in JSON"
     }
   ]
 }

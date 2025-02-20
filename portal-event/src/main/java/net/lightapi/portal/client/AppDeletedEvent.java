@@ -12,26 +12,26 @@ import org.apache.avro.message.BinaryMessageDecoder;
 import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
-public class ClientDeletedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 2235299151192632539L;
+public class AppDeletedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
+  private static final long serialVersionUID = -6743301053891079634L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ClientDeletedEvent\",\"namespace\":\"net.lightapi.portal.client\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"clientId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"client id\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"AppDeletedEvent\",\"namespace\":\"net.lightapi.portal.client\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"appId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"app id\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
 
-  private static final BinaryMessageEncoder<ClientDeletedEvent> ENCODER =
+  private static final BinaryMessageEncoder<AppDeletedEvent> ENCODER =
       new BinaryMessageEncoder<>(MODEL$, SCHEMA$);
 
-  private static final BinaryMessageDecoder<ClientDeletedEvent> DECODER =
+  private static final BinaryMessageDecoder<AppDeletedEvent> DECODER =
       new BinaryMessageDecoder<>(MODEL$, SCHEMA$);
 
   /**
    * Return the BinaryMessageEncoder instance used by this class.
    * @return the message encoder used by this class
    */
-  public static BinaryMessageEncoder<ClientDeletedEvent> getEncoder() {
+  public static BinaryMessageEncoder<AppDeletedEvent> getEncoder() {
     return ENCODER;
   }
 
@@ -39,7 +39,7 @@ public class ClientDeletedEvent extends org.apache.avro.specific.SpecificRecordB
    * Return the BinaryMessageDecoder instance used by this class.
    * @return the message decoder used by this class
    */
-  public static BinaryMessageDecoder<ClientDeletedEvent> getDecoder() {
+  public static BinaryMessageDecoder<AppDeletedEvent> getDecoder() {
     return DECODER;
   }
 
@@ -48,12 +48,12 @@ public class ClientDeletedEvent extends org.apache.avro.specific.SpecificRecordB
    * @param resolver a {@link SchemaStore} used to find schemas by fingerprint
    * @return a BinaryMessageDecoder instance for this class backed by the given SchemaStore
    */
-  public static BinaryMessageDecoder<ClientDeletedEvent> createDecoder(SchemaStore resolver) {
+  public static BinaryMessageDecoder<AppDeletedEvent> createDecoder(SchemaStore resolver) {
     return new BinaryMessageDecoder<>(MODEL$, SCHEMA$, resolver);
   }
 
   /**
-   * Serializes this ClientDeletedEvent to a ByteBuffer.
+   * Serializes this AppDeletedEvent to a ByteBuffer.
    * @return a buffer holding the serialized data for this instance
    * @throws java.io.IOException if this instance could not be serialized
    */
@@ -62,35 +62,35 @@ public class ClientDeletedEvent extends org.apache.avro.specific.SpecificRecordB
   }
 
   /**
-   * Deserializes a ClientDeletedEvent from a ByteBuffer.
+   * Deserializes a AppDeletedEvent from a ByteBuffer.
    * @param b a byte buffer holding serialized data for an instance of this class
-   * @return a ClientDeletedEvent instance decoded from the given buffer
+   * @return a AppDeletedEvent instance decoded from the given buffer
    * @throws java.io.IOException if the given bytes could not be deserialized into an instance of this class
    */
-  public static ClientDeletedEvent fromByteBuffer(
+  public static AppDeletedEvent fromByteBuffer(
       java.nio.ByteBuffer b) throws java.io.IOException {
     return DECODER.decode(b);
   }
 
   private com.networknt.kafka.common.EventId EventId;
-  /** client id */
-  private java.lang.String clientId;
+  /** app id */
+  private java.lang.String appId;
 
   /**
    * Default constructor.  Note that this does not initialize fields
    * to their default values from the schema.  If that is desired then
    * one should use <code>newBuilder()</code>.
    */
-  public ClientDeletedEvent() {}
+  public AppDeletedEvent() {}
 
   /**
    * All-args constructor.
    * @param EventId The new value for EventId
-   * @param clientId client id
+   * @param appId app id
    */
-  public ClientDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String clientId) {
+  public AppDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String appId) {
     this.EventId = EventId;
-    this.clientId = clientId;
+    this.appId = appId;
   }
 
   @Override
@@ -104,7 +104,7 @@ public class ClientDeletedEvent extends org.apache.avro.specific.SpecificRecordB
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return EventId;
-    case 1: return clientId;
+    case 1: return appId;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -115,7 +115,7 @@ public class ClientDeletedEvent extends org.apache.avro.specific.SpecificRecordB
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
-    case 1: clientId = value$ != null ? value$.toString() : null; break;
+    case 1: appId = value$ != null ? value$.toString() : null; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -138,68 +138,68 @@ public class ClientDeletedEvent extends org.apache.avro.specific.SpecificRecordB
   }
 
   /**
-   * Gets the value of the 'clientId' field.
-   * @return client id
+   * Gets the value of the 'appId' field.
+   * @return app id
    */
-  public java.lang.String getClientId() {
-    return clientId;
+  public java.lang.String getAppId() {
+    return appId;
   }
 
 
   /**
-   * Sets the value of the 'clientId' field.
-   * client id
+   * Sets the value of the 'appId' field.
+   * app id
    * @param value the value to set.
    */
-  public void setClientId(java.lang.String value) {
-    this.clientId = value;
+  public void setAppId(java.lang.String value) {
+    this.appId = value;
   }
 
   /**
-   * Creates a new ClientDeletedEvent RecordBuilder.
-   * @return A new ClientDeletedEvent RecordBuilder
+   * Creates a new AppDeletedEvent RecordBuilder.
+   * @return A new AppDeletedEvent RecordBuilder
    */
-  public static net.lightapi.portal.client.ClientDeletedEvent.Builder newBuilder() {
-    return new net.lightapi.portal.client.ClientDeletedEvent.Builder();
+  public static net.lightapi.portal.client.AppDeletedEvent.Builder newBuilder() {
+    return new net.lightapi.portal.client.AppDeletedEvent.Builder();
   }
 
   /**
-   * Creates a new ClientDeletedEvent RecordBuilder by copying an existing Builder.
+   * Creates a new AppDeletedEvent RecordBuilder by copying an existing Builder.
    * @param other The existing builder to copy.
-   * @return A new ClientDeletedEvent RecordBuilder
+   * @return A new AppDeletedEvent RecordBuilder
    */
-  public static net.lightapi.portal.client.ClientDeletedEvent.Builder newBuilder(net.lightapi.portal.client.ClientDeletedEvent.Builder other) {
+  public static net.lightapi.portal.client.AppDeletedEvent.Builder newBuilder(net.lightapi.portal.client.AppDeletedEvent.Builder other) {
     if (other == null) {
-      return new net.lightapi.portal.client.ClientDeletedEvent.Builder();
+      return new net.lightapi.portal.client.AppDeletedEvent.Builder();
     } else {
-      return new net.lightapi.portal.client.ClientDeletedEvent.Builder(other);
+      return new net.lightapi.portal.client.AppDeletedEvent.Builder(other);
     }
   }
 
   /**
-   * Creates a new ClientDeletedEvent RecordBuilder by copying an existing ClientDeletedEvent instance.
+   * Creates a new AppDeletedEvent RecordBuilder by copying an existing AppDeletedEvent instance.
    * @param other The existing instance to copy.
-   * @return A new ClientDeletedEvent RecordBuilder
+   * @return A new AppDeletedEvent RecordBuilder
    */
-  public static net.lightapi.portal.client.ClientDeletedEvent.Builder newBuilder(net.lightapi.portal.client.ClientDeletedEvent other) {
+  public static net.lightapi.portal.client.AppDeletedEvent.Builder newBuilder(net.lightapi.portal.client.AppDeletedEvent other) {
     if (other == null) {
-      return new net.lightapi.portal.client.ClientDeletedEvent.Builder();
+      return new net.lightapi.portal.client.AppDeletedEvent.Builder();
     } else {
-      return new net.lightapi.portal.client.ClientDeletedEvent.Builder(other);
+      return new net.lightapi.portal.client.AppDeletedEvent.Builder(other);
     }
   }
 
   /**
-   * RecordBuilder for ClientDeletedEvent instances.
+   * RecordBuilder for AppDeletedEvent instances.
    */
   @org.apache.avro.specific.AvroGenerated
-  public static class Builder extends org.apache.avro.specific.SpecificRecordBuilderBase<ClientDeletedEvent>
-    implements org.apache.avro.data.RecordBuilder<ClientDeletedEvent> {
+  public static class Builder extends org.apache.avro.specific.SpecificRecordBuilderBase<AppDeletedEvent>
+    implements org.apache.avro.data.RecordBuilder<AppDeletedEvent> {
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
-    /** client id */
-    private java.lang.String clientId;
+    /** app id */
+    private java.lang.String appId;
 
     /** Creates a new Builder */
     private Builder() {
@@ -210,7 +210,7 @@ public class ClientDeletedEvent extends org.apache.avro.specific.SpecificRecordB
      * Creates a Builder by copying an existing Builder.
      * @param other The existing Builder to copy.
      */
-    private Builder(net.lightapi.portal.client.ClientDeletedEvent.Builder other) {
+    private Builder(net.lightapi.portal.client.AppDeletedEvent.Builder other) {
       super(other);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
@@ -219,25 +219,25 @@ public class ClientDeletedEvent extends org.apache.avro.specific.SpecificRecordB
       if (other.hasEventIdBuilder()) {
         this.EventIdBuilder = com.networknt.kafka.common.EventId.newBuilder(other.getEventIdBuilder());
       }
-      if (isValidValue(fields()[1], other.clientId)) {
-        this.clientId = data().deepCopy(fields()[1].schema(), other.clientId);
+      if (isValidValue(fields()[1], other.appId)) {
+        this.appId = data().deepCopy(fields()[1].schema(), other.appId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
     }
 
     /**
-     * Creates a Builder by copying an existing ClientDeletedEvent instance
+     * Creates a Builder by copying an existing AppDeletedEvent instance
      * @param other The existing instance to copy.
      */
-    private Builder(net.lightapi.portal.client.ClientDeletedEvent other) {
+    private Builder(net.lightapi.portal.client.AppDeletedEvent other) {
       super(SCHEMA$, MODEL$);
       if (isValidValue(fields()[0], other.EventId)) {
         this.EventId = data().deepCopy(fields()[0].schema(), other.EventId);
         fieldSetFlags()[0] = true;
       }
       this.EventIdBuilder = null;
-      if (isValidValue(fields()[1], other.clientId)) {
-        this.clientId = data().deepCopy(fields()[1].schema(), other.clientId);
+      if (isValidValue(fields()[1], other.appId)) {
+        this.appId = data().deepCopy(fields()[1].schema(), other.appId);
         fieldSetFlags()[1] = true;
       }
     }
@@ -256,7 +256,7 @@ public class ClientDeletedEvent extends org.apache.avro.specific.SpecificRecordB
       * @param value The value of 'EventId'.
       * @return This builder.
       */
-    public net.lightapi.portal.client.ClientDeletedEvent.Builder setEventId(com.networknt.kafka.common.EventId value) {
+    public net.lightapi.portal.client.AppDeletedEvent.Builder setEventId(com.networknt.kafka.common.EventId value) {
       validate(fields()[0], value);
       this.EventIdBuilder = null;
       this.EventId = value;
@@ -293,7 +293,7 @@ public class ClientDeletedEvent extends org.apache.avro.specific.SpecificRecordB
      * @return This builder.
      */
 
-    public net.lightapi.portal.client.ClientDeletedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
+    public net.lightapi.portal.client.AppDeletedEvent.Builder setEventIdBuilder(com.networknt.kafka.common.EventId.Builder value) {
       clearEventId();
       EventIdBuilder = value;
       return this;
@@ -311,7 +311,7 @@ public class ClientDeletedEvent extends org.apache.avro.specific.SpecificRecordB
       * Clears the value of the 'EventId' field.
       * @return This builder.
       */
-    public net.lightapi.portal.client.ClientDeletedEvent.Builder clearEventId() {
+    public net.lightapi.portal.client.AppDeletedEvent.Builder clearEventId() {
       EventId = null;
       EventIdBuilder = null;
       fieldSetFlags()[0] = false;
@@ -319,54 +319,54 @@ public class ClientDeletedEvent extends org.apache.avro.specific.SpecificRecordB
     }
 
     /**
-      * Gets the value of the 'clientId' field.
-      * client id
+      * Gets the value of the 'appId' field.
+      * app id
       * @return The value.
       */
-    public java.lang.String getClientId() {
-      return clientId;
+    public java.lang.String getAppId() {
+      return appId;
     }
 
 
     /**
-      * Sets the value of the 'clientId' field.
-      * client id
-      * @param value The value of 'clientId'.
+      * Sets the value of the 'appId' field.
+      * app id
+      * @param value The value of 'appId'.
       * @return This builder.
       */
-    public net.lightapi.portal.client.ClientDeletedEvent.Builder setClientId(java.lang.String value) {
+    public net.lightapi.portal.client.AppDeletedEvent.Builder setAppId(java.lang.String value) {
       validate(fields()[1], value);
-      this.clientId = value;
+      this.appId = value;
       fieldSetFlags()[1] = true;
       return this;
     }
 
     /**
-      * Checks whether the 'clientId' field has been set.
-      * client id
-      * @return True if the 'clientId' field has been set, false otherwise.
+      * Checks whether the 'appId' field has been set.
+      * app id
+      * @return True if the 'appId' field has been set, false otherwise.
       */
-    public boolean hasClientId() {
+    public boolean hasAppId() {
       return fieldSetFlags()[1];
     }
 
 
     /**
-      * Clears the value of the 'clientId' field.
-      * client id
+      * Clears the value of the 'appId' field.
+      * app id
       * @return This builder.
       */
-    public net.lightapi.portal.client.ClientDeletedEvent.Builder clearClientId() {
-      clientId = null;
+    public net.lightapi.portal.client.AppDeletedEvent.Builder clearAppId() {
+      appId = null;
       fieldSetFlags()[1] = false;
       return this;
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public ClientDeletedEvent build() {
+    public AppDeletedEvent build() {
       try {
-        ClientDeletedEvent record = new ClientDeletedEvent();
+        AppDeletedEvent record = new AppDeletedEvent();
         if (EventIdBuilder != null) {
           try {
             record.EventId = this.EventIdBuilder.build();
@@ -377,7 +377,7 @@ public class ClientDeletedEvent extends org.apache.avro.specific.SpecificRecordB
         } else {
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
-        record.clientId = fieldSetFlags()[1] ? this.clientId : (java.lang.String) defaultValue(fields()[1]);
+        record.appId = fieldSetFlags()[1] ? this.appId : (java.lang.String) defaultValue(fields()[1]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -388,8 +388,8 @@ public class ClientDeletedEvent extends org.apache.avro.specific.SpecificRecordB
   }
 
   @SuppressWarnings("unchecked")
-  private static final org.apache.avro.io.DatumWriter<ClientDeletedEvent>
-    WRITER$ = (org.apache.avro.io.DatumWriter<ClientDeletedEvent>)MODEL$.createDatumWriter(SCHEMA$);
+  private static final org.apache.avro.io.DatumWriter<AppDeletedEvent>
+    WRITER$ = (org.apache.avro.io.DatumWriter<AppDeletedEvent>)MODEL$.createDatumWriter(SCHEMA$);
 
   @Override public void writeExternal(java.io.ObjectOutput out)
     throws java.io.IOException {
@@ -397,8 +397,8 @@ public class ClientDeletedEvent extends org.apache.avro.specific.SpecificRecordB
   }
 
   @SuppressWarnings("unchecked")
-  private static final org.apache.avro.io.DatumReader<ClientDeletedEvent>
-    READER$ = (org.apache.avro.io.DatumReader<ClientDeletedEvent>)MODEL$.createDatumReader(SCHEMA$);
+  private static final org.apache.avro.io.DatumReader<AppDeletedEvent>
+    READER$ = (org.apache.avro.io.DatumReader<AppDeletedEvent>)MODEL$.createDatumReader(SCHEMA$);
 
   @Override public void readExternal(java.io.ObjectInput in)
     throws java.io.IOException {
@@ -412,7 +412,7 @@ public class ClientDeletedEvent extends org.apache.avro.specific.SpecificRecordB
   {
     this.EventId.customEncode(out);
 
-    out.writeString(this.clientId);
+    out.writeString(this.appId);
 
   }
 
@@ -426,7 +426,7 @@ public class ClientDeletedEvent extends org.apache.avro.specific.SpecificRecordB
       }
       this.EventId.customDecode(in);
 
-      this.clientId = in.readString();
+      this.appId = in.readString();
 
     } else {
       for (int i = 0; i < 2; i++) {
@@ -439,7 +439,7 @@ public class ClientDeletedEvent extends org.apache.avro.specific.SpecificRecordB
           break;
 
         case 1:
-          this.clientId = in.readString();
+          this.appId = in.readString();
           break;
 
         default:

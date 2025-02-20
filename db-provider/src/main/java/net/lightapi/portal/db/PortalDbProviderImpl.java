@@ -2614,7 +2614,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> queryApp(int offset, int limit, String hostId, String appId, String appName, String appDesc, Boolean isKafkaApp, String operationOwner, String deliveryOwner) {
+    public Result<String> queryApp(int offset, int limit, String hostId, String appId, String appName, String appDesc,
+                                   Boolean isKafkaApp, String operationOwner, String deliveryOwner) {
         Result<String> result = null;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
@@ -2691,11 +2692,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> queryClient(int offset, int limit, String hostId, String appId, String clientId, String clientType, String clientProfile, String clientScope, String customClaim, String redirectUri, String authenticateClass, String deRefClientId) {
+    public Result<String> queryClient(int offset, int limit, String hostId, String appId, String clientId,
+                                      String clientType, String clientProfile, String clientScope,
+                                      String customClaim, String redirectUri, String authenticateClass,
+                                      String deRefClientId) {
         Result<String> result = null;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "client_id, host_id, lob, client_type, client_profile, client_name, client_desc, scope, custom_claim, redirect_uri, authenticate_class, deref_client_id, service_id\n" +
+                "client_id, host_id, api_id, client_type, client_profile, client_scope, custom_claim, " +
+                "redirect_uri, authenticate_class, deref_client_id, update_user, update_ts\n" +
                 "FROM client_t\n" +
                 "WHERE host_id = ?\n");
 
@@ -2704,10 +2709,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
 
+        addCondition(whereClause, parameters, "app_id", appId);
         addCondition(whereClause, parameters, "client_id", clientId);
         addCondition(whereClause, parameters, "client_type", clientType);
         addCondition(whereClause, parameters, "client_profile", clientProfile);
-        addCondition(whereClause, parameters, "scope", clientScope);
+        addCondition(whereClause, parameters, "client_scope", clientScope);
         addCondition(whereClause, parameters, "custom_claim", customClaim);
         addCondition(whereClause, parameters, "redirect_uri", redirectUri);
         addCondition(whereClause, parameters, "authenticate_class", authenticateClass);
@@ -2717,7 +2723,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append("ORDER BY client_id\n" +
+        sqlBuilder.append(" ORDER BY client_id\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -2743,19 +2749,19 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("clientId", resultSet.getString("client_id"));
+
                     map.put("hostId", resultSet.getString("host_id"));
-                    map.put("lob", resultSet.getString("lob"));
+                    map.put("clientId", resultSet.getString("client_id"));
+                    map.put("appId", resultSet.getString("app_id"));
                     map.put("clientType", resultSet.getString("client_type"));
                     map.put("clientProfile", resultSet.getString("client_profile"));
-                    map.put("clientName", resultSet.getString("client_name"));
-                    map.put("clientDesc", resultSet.getString("client_desc"));
-                    map.put("scope", resultSet.getString("scope"));
+                    map.put("clientScope", resultSet.getString("client_scope"));
                     map.put("customClaim", resultSet.getString("custom_claim"));
                     map.put("redirectUri", resultSet.getString("redirect_uri"));
                     map.put("authenticateClass", resultSet.getString("authenticate_class"));
                     map.put("deRefClientId", resultSet.getString("deref_client_id"));
-                    map.put("serviceId", resultSet.getString("service_id"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getTimestamp("update_ts"));
                     clients.add(map);
                 }
             }
@@ -2776,72 +2782,220 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
+    public Result<String> createApp(AppCreatedEvent event) {
+        final String sql = "INSERT INTO app_t(host_id, app_id, app_name, app_desc, is_kafka_app, operation_owner, delivery_owner, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        Result<String> result;
+        Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
+        String value = event.getValue();
+        Map<String, Object> map = JsonMapper.string2Map(value);
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, event.getEventId().getHostId());
+                statement.setString(2, event.getAppId());
+                statement.setString(3, event.getAppName());
+                if (map.containsKey("appDesc")) {
+                    statement.setString(4, (String) map.get("appDesc"));
+                } else {
+                    statement.setNull(4, Types.VARCHAR);
+                }
+                if (map.containsKey("isKafkaApp")) {
+                    statement.setBoolean(5, (Boolean) map.get("isKafkaApp"));
+                } else {
+                    statement.setNull(5, Types.BOOLEAN);
+                }
+                if (map.containsKey("operationOwner")) {
+                    statement.setString(6, (String) map.get("operationOwner"));
+                } else {
+                    statement.setNull(6, Types.VARCHAR);
+                }
+                if (map.containsKey("deliveryOwner")) {
+                    statement.setString(7, (String) map.get("deliveryOwner"));
+                } else {
+                    statement.setNull(7, Types.VARCHAR);
+                }
+                statement.setString(8, event.getEventId().getId());
+                statement.setTimestamp(9, timestamp);
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert the app with id " + event.getAppId());
+                }
+                conn.commit();
+                result = Success.of(event.getAppId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+
+            }   catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            }  catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> updateApp(AppUpdatedEvent event) {
+        final String sql = "UPDATE app_t SET app_name = ?, app_desc = ?, is_kafka_app = ?, operation_owner = ?, delivery_owner = ?, update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? and app_id = ?";
+        Result<String> result;
+        Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
+        String value = event.getValue();
+        Map<String, Object> map = JsonMapper.string2Map(value);
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, event.getAppName());
+
+                if (map.containsKey("appDesc")) {
+                    statement.setString(2, (String) map.get("appDesc"));
+                } else {
+                    statement.setNull(2, Types.VARCHAR);
+                }
+
+                if (map.containsKey("isKafkaApp")) {
+                    statement.setBoolean(3, (Boolean) map.get("isKafkaApp"));
+                } else {
+                    statement.setNull(3, Types.BOOLEAN);
+                }
+
+                if (map.containsKey("operationOwner")) {
+                    statement.setString(4, (String) map.get("operationOwner"));
+                } else {
+                    statement.setNull(4, Types.VARCHAR);
+                }
+                if (map.containsKey("deliveryOwner")) {
+                    statement.setString(5, (String) map.get("deliveryOwner"));
+                } else {
+                    statement.setNull(5, Types.VARCHAR);
+                }
+                statement.setString(6, event.getEventId().getId());
+                statement.setTimestamp(7, timestamp);
+                statement.setString(8, event.getEventId().getHostId());
+                statement.setString(9, event.getAppId());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to update the app with id " + event.getAppId());
+                }
+                conn.commit();
+                result = Success.of(event.getAppId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+
+            }  catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            }   catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deleteApp(AppDeletedEvent event) {
+        final String sql = "DELETE FROM app_t WHERE host_id = ? AND app_id = ?";
+        Result<String> result;
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, event.getEventId().getHostId());
+                statement.setString(2, event.getAppId());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to delete the app with id " + event.getAppId());
+                }
+                conn.commit();
+                result = Success.of(event.getAppId());
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            }  catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
     public Result<String> createClient(ClientCreatedEvent event) {
-        final String insertUser = "INSERT INTO app_t (host_id, app_id, app_name, app_desc, " +
-                "is_kafka_app, client_id, client_type, client_profile, client_secret, client_scope, custom_claim, " +
-                "redirect_uri, authenticate_class, deref_client_id, operation_owner, delivery_owner, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?)";
+        final String insertUser = "INSERT INTO client_t (host_id, app_id, client_id, client_type, client_profile, " +
+                "client_secret, client_scope, custom_claim, redirect_uri, authenticate_class, deref_client_id, " +
+                "update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?)";
         Result<String> result = null;
         Map<String, Object> map = JsonMapper.string2Map(event.getValue());
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
-                statement.setString(1, event.getHostId());
+                statement.setString(1, event.getEventId().getHostId());
                 statement.setString(2, event.getAppId());
-                statement.setString(3, (String) map.get("appName"));
-                if (map.get("appDesc") != null)
-                    statement.setString(4, (String) map.get("appDesc"));
-                else
-                    statement.setNull(4, NULL);
-                if (map.get("isKafkaApp") != null)
-                    statement.setBoolean(5, (Boolean) map.get("isKafkaApp"));
-                else
-                    statement.setNull(5, NULL);
-                statement.setString(6, (String) map.get("clientId"));
-                statement.setString(7, (String) map.get("clientType"));
-                statement.setString(8, (String) map.get("clientProfile"));
-                statement.setString(9, (String) map.get("clientSecret"));
+                statement.setString(3, event.getClientId());
+                statement.setString(4, event.getClientType());
+                statement.setString(5, event.getClientProfile());
+                statement.setString(6, event.getClientSecret());
                 if (map.get("clientScope") != null) {
-                    statement.setString(10, (String) map.get("clientScope"));
+                    statement.setString(7, (String) map.get("clientScope"));
+                } else {
+                    statement.setNull(7, NULL);
+                }
+                if (map.get("customClaim") != null) {
+                    statement.setString(8, (String) map.get("customClaim"));
+                } else {
+                    statement.setNull(8, NULL);
+                }
+                if (map.get("redirectUri") != null) {
+                    statement.setString(9, (String) map.get("redirectUri"));
+                } else {
+                    statement.setNull(9, NULL);
+                }
+                if (map.get("authenticateClass") != null) {
+                    statement.setString(10, (String) map.get("authenticateClass"));
                 } else {
                     statement.setNull(10, NULL);
                 }
-                if (map.get("customClaim") != null) {
-                    statement.setString(11, (String) map.get("customClaim"));
+                if (map.get("deRefClientId") != null) {
+                    statement.setString(11, (String) map.get("deRefClientId"));
                 } else {
                     statement.setNull(11, NULL);
                 }
-                if (map.get("redirectUri") != null) {
-                    statement.setString(12, (String) map.get("redirectUri"));
-                } else {
-                    statement.setNull(12, NULL);
-                }
-                if (map.get("authenticateClass") != null) {
-                    statement.setString(13, (String) map.get("authenticateClass"));
-                } else {
-                    statement.setNull(13, NULL);
-                }
-                if (map.get("derefClientId") != null) {
-                    statement.setString(14, (String) map.get("derefClientId"));
-                } else {
-                    statement.setNull(14, NULL);
-                }
-                if (map.get("operationOwner") != null) {
-                    statement.setString(15, (String) map.get("operationOwner"));
-                } else {
-                    statement.setNull(15, NULL);
-                }
-                if (map.get("deliveryOwner") != null) {
-                    statement.setString(16, (String) map.get("deliveryOwner"));
-                } else {
-                    statement.setNull(16, NULL);
-                }
-                statement.setString(17, event.getEventId().getId());
+                statement.setString(12, event.getEventId().getId());
                 statement.setTimestamp(18, new Timestamp(System.currentTimeMillis()));
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException(String.format("no record is inserted for app %s", event.getAppId()));
+                    throw new SQLException(String.format("no record is inserted for client %s", event.getClientId()));
                 }
                 conn.commit();
                 result = Success.of(event.getAppId());
@@ -2866,10 +3020,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateClient(ClientUpdatedEvent event) {
-        final String updateApplication = "UPDATE app_t SET app_name = ?, app_desc = ?, is_kafka_app = ?, " +
-                "client_type = ?, client_profile = ?, client_scope = ?, custom_claim = ?, redirect_uri = ?, authenticate_class = ?, " +
-                "deref_client_id = ?, operation_owner = ?, delivery_owner = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? AND app_id = ?";
+        final String updateApplication = "UPDATE client_t SET app_id = ?, client_type = ?, client_profile = ?, " +
+                "client_scope = ?, custom_claim = ?, redirect_uri = ?, authenticate_class = ?, " +
+                "deref_client_id = ?, update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? AND client_id = ?";
 
         Result<String> result = null;
         Map<String, Object> map = JsonMapper.string2Map(event.getValue());
@@ -2877,76 +3031,45 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
 
             try (PreparedStatement statement = conn.prepareStatement(updateApplication)) {
-                if (map.get("appName") != null) {
-                    statement.setString(1, (String) map.get("appName"));
-                } else {
-                    statement.setNull(1, NULL);
-                }
-                if (map.get("appDesc") != null) {
-                    statement.setString(2, (String) map.get("appDesc"));
-                } else {
-                    statement.setNull(2, NULL);
-                }
-                if (map.get("isKafkaApp") != null) {
-                    statement.setBoolean(3, (Boolean) map.get("isKafkaApp"));
-                } else {
-                    statement.setNull(3, NULL);
-                }
-                if (map.get("clientType") != null) {
-                    statement.setString(4, (String) map.get("clientType"));
+                statement.setString(1, event.getAppId());
+                statement.setString(2, event.getClientType());
+                statement.setString(3, event.getClientProfile());
+                if (map.get("clientScope") != null) {
+                    statement.setString(4, (String) map.get("clientScope"));
                 } else {
                     statement.setNull(4, NULL);
                 }
-                if (map.get("clientProfile") != null) {
-                    statement.setString(5, (String) map.get("clientProfile"));
+                if (map.get("customClaim") != null) {
+                    statement.setString(5, (String) map.get("customClaim"));
                 } else {
                     statement.setNull(5, NULL);
                 }
-                if (map.get("clientScope") != null) {
-                    statement.setString(6, (String) map.get("clientScope"));
+                if (map.get("redirectUri") != null) {
+                    statement.setString(6, (String) map.get("redirectUri"));
                 } else {
                     statement.setNull(6, NULL);
                 }
-                if (map.get("customClaim") != null)
-                    statement.setString(7, (String) map.get("customClaim"));
-                else
-                    statement.setNull(7, NULL);
-                if (map.get("redirectUri") != null)
-                    statement.setString(8, (String) map.get("redirectUri"));
-                else
-                    statement.setNull(8, NULL);
                 if (map.get("authenticateClass") != null) {
-                    statement.setString(9, (String) map.get("authenticateClass"));
+                    statement.setString(7, (String) map.get("authenticateClass"));
                 } else {
-                    statement.setNull(9, NULL);
+                    statement.setNull(7, NULL);
                 }
-                if (map.get("derefClientId") != null) {
-                    statement.setString(10, (String) map.get("derefClientId"));
+                if (map.get("deRefClientId") != null) {
+                    statement.setString(8, (String) map.get("deRefClientId"));
                 } else {
-                    statement.setNull(10, NULL);
+                    statement.setNull(8, NULL);
                 }
-                if (map.get("operationOwner") != null) {
-                    statement.setString(11, (String) map.get("operationOwner"));
-                } else {
-                    statement.setNull(11, NULL);
-                }
-                if (map.get("deliveryOwner") != null) {
-                    statement.setString(12, (String) map.get("deliveryOwner"));
-                } else {
-                    statement.setNull(12, NULL);
-                }
-                statement.setString(13, event.getEventId().getId());
-                statement.setTimestamp(14, new Timestamp(System.currentTimeMillis()));
-                statement.setString(15, event.getHostId());
-                statement.setString(16, event.getAppId());
-
+                statement.setString(9, event.getEventId().getId());
+                statement.setTimestamp(9, new Timestamp(System.currentTimeMillis()));
+                statement.setString(11, event.getEventId().getHostId());
+                statement.setString(12, event.getClientId());
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     // no record is updated, write an error notification.
-                    throw new SQLException(String.format("no record is updated for app %s", event.getAppId()));
+                    throw new SQLException(String.format("no record is updated for client %s", event.getClientId()));
                 }
                 conn.commit();
-                result = Success.of(event.getAppId());
+                result = Success.of(event.getClientId());
                 insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
@@ -2968,21 +3091,20 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> deleteClient(ClientDeletedEvent event) {
-        final String deleteApp = "DELETE from app_t WHERE host_id = ? AND app_id = ?";
-        // TODO delete all other tables related to this user.
+        final String deleteApp = "DELETE from client_t WHERE host_id = ? AND client_id = ?";
         Result<String> result;
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteApp)) {
-                statement.setString(1, event.getHostId());
-                statement.setString(2, event.getAppId());
+                statement.setString(1, event.getEventId().getHostId());
+                statement.setString(2, event.getClientId());
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     // no record is deleted, write an error notification.
-                    throw new SQLException(String.format("no record is deleted for app %s", event.getAppId()));
+                    throw new SQLException(String.format("no record is deleted for client %s", event.getClientId()));
                 }
                 conn.commit();
-                result = Success.of(event.getEventId().getId());
+                result = Success.of(event.getClientId());
                 insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);

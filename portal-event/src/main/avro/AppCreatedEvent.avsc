@@ -1,6 +1,6 @@
 {
   "type": "record",
-  "name": "ClientCreatedEvent",
+  "name": "AppCreatedEvent",
   "namespace": "net.lightapi.portal.client",
   "fields": [
     {
@@ -51,24 +51,9 @@
       "doc": "app id"
     },
     {
-      "name": "clientId",
+      "name": "appName",
       "type": "string",
-      "doc": "client id"
-    },
-    {
-      "name": "clientType",
-      "type": "string",
-      "doc": "client type"
-    },
-    {
-      "name": "clientProfile",
-      "type": "string",
-      "doc": "client profile"
-    },
-    {
-      "name": "clientSecret",
-      "type": "string",
-      "doc": "client secret"
+      "doc": "app name"
     },
     {
       "name": "value",

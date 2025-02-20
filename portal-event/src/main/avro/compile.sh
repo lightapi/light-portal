@@ -46,6 +46,9 @@ java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema OrderDel
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ClientCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ClientUpdatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ClientDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema AppCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema AppUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema AppDeletedEvent.avsc .
 
 
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ServiceCreatedEvent.avsc .
@@ -274,6 +277,9 @@ mv net/lightapi/portal/host/HostSwitchedEvent.java ../java/net/lightapi/portal/h
 mv net/lightapi/portal/client/ClientCreatedEvent.java ../java/net/lightapi/portal/client
 mv net/lightapi/portal/client/ClientUpdatedEvent.java ../java/net/lightapi/portal/client
 mv net/lightapi/portal/client/ClientDeletedEvent.java ../java/net/lightapi/portal/client
+mv net/lightapi/portal/client/AppCreatedEvent.java ../java/net/lightapi/portal/client
+mv net/lightapi/portal/client/AppUpdatedEvent.java ../java/net/lightapi/portal/client
+mv net/lightapi/portal/client/AppDeletedEvent.java ../java/net/lightapi/portal/client
 
 mv net/lightapi/portal/service/ServiceCreatedEvent.java ../java/net/lightapi/portal/service
 mv net/lightapi/portal/service/ServiceUpdatedEvent.java ../java/net/lightapi/portal/service
