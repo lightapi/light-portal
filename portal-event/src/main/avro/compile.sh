@@ -43,9 +43,6 @@ java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema OrderCre
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema OrderCancelledEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema OrderDeliveredEvent.avsc .
 
-java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ClientCreatedEvent.avsc .
-java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ClientUpdatedEvent.avsc .
-java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ClientDeletedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema AppCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema AppUpdatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema AppDeletedEvent.avsc .
@@ -71,6 +68,9 @@ java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema AuthProv
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema AuthProviderUpdatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema AuthProviderDeletedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema AuthProviderRotatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ClientCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ClientUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema ClientDeletedEvent.avsc .
 
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema CategoryCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema CategoryCreatedEvent.avsc .
@@ -274,9 +274,6 @@ mv net/lightapi/portal/host/HostUpdatedEvent.java ../java/net/lightapi/portal/ho
 mv net/lightapi/portal/host/HostDeletedEvent.java ../java/net/lightapi/portal/host
 mv net/lightapi/portal/host/HostSwitchedEvent.java ../java/net/lightapi/portal/host
 
-mv net/lightapi/portal/client/ClientCreatedEvent.java ../java/net/lightapi/portal/client
-mv net/lightapi/portal/client/ClientUpdatedEvent.java ../java/net/lightapi/portal/client
-mv net/lightapi/portal/client/ClientDeletedEvent.java ../java/net/lightapi/portal/client
 mv net/lightapi/portal/client/AppCreatedEvent.java ../java/net/lightapi/portal/client
 mv net/lightapi/portal/client/AppUpdatedEvent.java ../java/net/lightapi/portal/client
 mv net/lightapi/portal/client/AppDeletedEvent.java ../java/net/lightapi/portal/client
@@ -301,6 +298,9 @@ mv net/lightapi/portal/oauth/AuthProviderCreatedEvent.java ../java/net/lightapi/
 mv net/lightapi/portal/oauth/AuthProviderUpdatedEvent.java ../java/net/lightapi/portal/oauth
 mv net/lightapi/portal/oauth/AuthProviderDeletedEvent.java ../java/net/lightapi/portal/oauth
 mv net/lightapi/portal/oauth/AuthProviderRotatedEvent.java ../java/net/lightapi/portal/oauth
+mv net/lightapi/portal/oauth/ClientCreatedEvent.java ../java/net/lightapi/portal/oauth
+mv net/lightapi/portal/oauth/ClientUpdatedEvent.java ../java/net/lightapi/portal/oauth
+mv net/lightapi/portal/oauth/ClientDeletedEvent.java ../java/net/lightapi/portal/oauth
 
 mv net/lightapi/portal/market/CategoryCreatedEvent.java ../java/net/lightapi/portal/market
 mv net/lightapi/portal/market/CategoryUpdatedEvent.java ../java/net/lightapi/portal/market

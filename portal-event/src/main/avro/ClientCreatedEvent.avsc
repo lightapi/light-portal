@@ -1,7 +1,7 @@
 {
   "type": "record",
   "name": "ClientCreatedEvent",
-  "namespace": "net.lightapi.portal.client",
+  "namespace": "net.lightapi.portal.oauth",
   "fields": [
     {
       "name": "EventId",
