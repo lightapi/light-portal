@@ -13,10 +13,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class ClientCreatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -960192992634199907L;
+  private static final long serialVersionUID = 7606417121079239713L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ClientCreatedEvent\",\"namespace\":\"net.lightapi.portal.client\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"appId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"app id\"},{\"name\":\"clientId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"client id\"},{\"name\":\"clientType\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"client type\"},{\"name\":\"clientProfile\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"client profile\"},{\"name\":\"clientSecret\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"client secret\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"app detail in JSON\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ClientCreatedEvent\",\"namespace\":\"net.lightapi.portal.client\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"clientId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"client id\"},{\"name\":\"clientName\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"client name\"},{\"name\":\"clientType\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"client type\"},{\"name\":\"clientProfile\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"client profile\"},{\"name\":\"clientSecret\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"client secret\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"app detail in JSON\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -73,10 +73,10 @@ public class ClientCreatedEvent extends org.apache.avro.specific.SpecificRecordB
   }
 
   private com.networknt.kafka.common.EventId EventId;
-  /** app id */
-  private java.lang.String appId;
   /** client id */
   private java.lang.String clientId;
+  /** client name */
+  private java.lang.String clientName;
   /** client type */
   private java.lang.String clientType;
   /** client profile */
@@ -96,17 +96,17 @@ public class ClientCreatedEvent extends org.apache.avro.specific.SpecificRecordB
   /**
    * All-args constructor.
    * @param EventId The new value for EventId
-   * @param appId app id
    * @param clientId client id
+   * @param clientName client name
    * @param clientType client type
    * @param clientProfile client profile
    * @param clientSecret client secret
    * @param value app detail in JSON
    */
-  public ClientCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String appId, java.lang.String clientId, java.lang.String clientType, java.lang.String clientProfile, java.lang.String clientSecret, java.lang.String value) {
+  public ClientCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String clientId, java.lang.String clientName, java.lang.String clientType, java.lang.String clientProfile, java.lang.String clientSecret, java.lang.String value) {
     this.EventId = EventId;
-    this.appId = appId;
     this.clientId = clientId;
+    this.clientName = clientName;
     this.clientType = clientType;
     this.clientProfile = clientProfile;
     this.clientSecret = clientSecret;
@@ -124,8 +124,8 @@ public class ClientCreatedEvent extends org.apache.avro.specific.SpecificRecordB
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return EventId;
-    case 1: return appId;
-    case 2: return clientId;
+    case 1: return clientId;
+    case 2: return clientName;
     case 3: return clientType;
     case 4: return clientProfile;
     case 5: return clientSecret;
@@ -140,8 +140,8 @@ public class ClientCreatedEvent extends org.apache.avro.specific.SpecificRecordB
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
-    case 1: appId = value$ != null ? value$.toString() : null; break;
-    case 2: clientId = value$ != null ? value$.toString() : null; break;
+    case 1: clientId = value$ != null ? value$.toString() : null; break;
+    case 2: clientName = value$ != null ? value$.toString() : null; break;
     case 3: clientType = value$ != null ? value$.toString() : null; break;
     case 4: clientProfile = value$ != null ? value$.toString() : null; break;
     case 5: clientSecret = value$ != null ? value$.toString() : null; break;
@@ -168,24 +168,6 @@ public class ClientCreatedEvent extends org.apache.avro.specific.SpecificRecordB
   }
 
   /**
-   * Gets the value of the 'appId' field.
-   * @return app id
-   */
-  public java.lang.String getAppId() {
-    return appId;
-  }
-
-
-  /**
-   * Sets the value of the 'appId' field.
-   * app id
-   * @param value the value to set.
-   */
-  public void setAppId(java.lang.String value) {
-    this.appId = value;
-  }
-
-  /**
    * Gets the value of the 'clientId' field.
    * @return client id
    */
@@ -201,6 +183,24 @@ public class ClientCreatedEvent extends org.apache.avro.specific.SpecificRecordB
    */
   public void setClientId(java.lang.String value) {
     this.clientId = value;
+  }
+
+  /**
+   * Gets the value of the 'clientName' field.
+   * @return client name
+   */
+  public java.lang.String getClientName() {
+    return clientName;
+  }
+
+
+  /**
+   * Sets the value of the 'clientName' field.
+   * client name
+   * @param value the value to set.
+   */
+  public void setClientName(java.lang.String value) {
+    this.clientName = value;
   }
 
   /**
@@ -318,10 +318,10 @@ public class ClientCreatedEvent extends org.apache.avro.specific.SpecificRecordB
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
-    /** app id */
-    private java.lang.String appId;
     /** client id */
     private java.lang.String clientId;
+    /** client name */
+    private java.lang.String clientName;
     /** client type */
     private java.lang.String clientType;
     /** client profile */
@@ -349,12 +349,12 @@ public class ClientCreatedEvent extends org.apache.avro.specific.SpecificRecordB
       if (other.hasEventIdBuilder()) {
         this.EventIdBuilder = com.networknt.kafka.common.EventId.newBuilder(other.getEventIdBuilder());
       }
-      if (isValidValue(fields()[1], other.appId)) {
-        this.appId = data().deepCopy(fields()[1].schema(), other.appId);
+      if (isValidValue(fields()[1], other.clientId)) {
+        this.clientId = data().deepCopy(fields()[1].schema(), other.clientId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
-      if (isValidValue(fields()[2], other.clientId)) {
-        this.clientId = data().deepCopy(fields()[2].schema(), other.clientId);
+      if (isValidValue(fields()[2], other.clientName)) {
+        this.clientName = data().deepCopy(fields()[2].schema(), other.clientName);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
       if (isValidValue(fields()[3], other.clientType)) {
@@ -386,12 +386,12 @@ public class ClientCreatedEvent extends org.apache.avro.specific.SpecificRecordB
         fieldSetFlags()[0] = true;
       }
       this.EventIdBuilder = null;
-      if (isValidValue(fields()[1], other.appId)) {
-        this.appId = data().deepCopy(fields()[1].schema(), other.appId);
+      if (isValidValue(fields()[1], other.clientId)) {
+        this.clientId = data().deepCopy(fields()[1].schema(), other.clientId);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.clientId)) {
-        this.clientId = data().deepCopy(fields()[2].schema(), other.clientId);
+      if (isValidValue(fields()[2], other.clientName)) {
+        this.clientName = data().deepCopy(fields()[2].schema(), other.clientName);
         fieldSetFlags()[2] = true;
       }
       if (isValidValue(fields()[3], other.clientType)) {
@@ -489,50 +489,6 @@ public class ClientCreatedEvent extends org.apache.avro.specific.SpecificRecordB
     }
 
     /**
-      * Gets the value of the 'appId' field.
-      * app id
-      * @return The value.
-      */
-    public java.lang.String getAppId() {
-      return appId;
-    }
-
-
-    /**
-      * Sets the value of the 'appId' field.
-      * app id
-      * @param value The value of 'appId'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.client.ClientCreatedEvent.Builder setAppId(java.lang.String value) {
-      validate(fields()[1], value);
-      this.appId = value;
-      fieldSetFlags()[1] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'appId' field has been set.
-      * app id
-      * @return True if the 'appId' field has been set, false otherwise.
-      */
-    public boolean hasAppId() {
-      return fieldSetFlags()[1];
-    }
-
-
-    /**
-      * Clears the value of the 'appId' field.
-      * app id
-      * @return This builder.
-      */
-    public net.lightapi.portal.client.ClientCreatedEvent.Builder clearAppId() {
-      appId = null;
-      fieldSetFlags()[1] = false;
-      return this;
-    }
-
-    /**
       * Gets the value of the 'clientId' field.
       * client id
       * @return The value.
@@ -549,9 +505,9 @@ public class ClientCreatedEvent extends org.apache.avro.specific.SpecificRecordB
       * @return This builder.
       */
     public net.lightapi.portal.client.ClientCreatedEvent.Builder setClientId(java.lang.String value) {
-      validate(fields()[2], value);
+      validate(fields()[1], value);
       this.clientId = value;
-      fieldSetFlags()[2] = true;
+      fieldSetFlags()[1] = true;
       return this;
     }
 
@@ -561,7 +517,7 @@ public class ClientCreatedEvent extends org.apache.avro.specific.SpecificRecordB
       * @return True if the 'clientId' field has been set, false otherwise.
       */
     public boolean hasClientId() {
-      return fieldSetFlags()[2];
+      return fieldSetFlags()[1];
     }
 
 
@@ -572,6 +528,50 @@ public class ClientCreatedEvent extends org.apache.avro.specific.SpecificRecordB
       */
     public net.lightapi.portal.client.ClientCreatedEvent.Builder clearClientId() {
       clientId = null;
+      fieldSetFlags()[1] = false;
+      return this;
+    }
+
+    /**
+      * Gets the value of the 'clientName' field.
+      * client name
+      * @return The value.
+      */
+    public java.lang.String getClientName() {
+      return clientName;
+    }
+
+
+    /**
+      * Sets the value of the 'clientName' field.
+      * client name
+      * @param value The value of 'clientName'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.client.ClientCreatedEvent.Builder setClientName(java.lang.String value) {
+      validate(fields()[2], value);
+      this.clientName = value;
+      fieldSetFlags()[2] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'clientName' field has been set.
+      * client name
+      * @return True if the 'clientName' field has been set, false otherwise.
+      */
+    public boolean hasClientName() {
+      return fieldSetFlags()[2];
+    }
+
+
+    /**
+      * Clears the value of the 'clientName' field.
+      * client name
+      * @return This builder.
+      */
+    public net.lightapi.portal.client.ClientCreatedEvent.Builder clearClientName() {
+      clientName = null;
       fieldSetFlags()[2] = false;
       return this;
     }
@@ -767,8 +767,8 @@ public class ClientCreatedEvent extends org.apache.avro.specific.SpecificRecordB
         } else {
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
-        record.appId = fieldSetFlags()[1] ? this.appId : (java.lang.String) defaultValue(fields()[1]);
-        record.clientId = fieldSetFlags()[2] ? this.clientId : (java.lang.String) defaultValue(fields()[2]);
+        record.clientId = fieldSetFlags()[1] ? this.clientId : (java.lang.String) defaultValue(fields()[1]);
+        record.clientName = fieldSetFlags()[2] ? this.clientName : (java.lang.String) defaultValue(fields()[2]);
         record.clientType = fieldSetFlags()[3] ? this.clientType : (java.lang.String) defaultValue(fields()[3]);
         record.clientProfile = fieldSetFlags()[4] ? this.clientProfile : (java.lang.String) defaultValue(fields()[4]);
         record.clientSecret = fieldSetFlags()[5] ? this.clientSecret : (java.lang.String) defaultValue(fields()[5]);
@@ -807,9 +807,9 @@ public class ClientCreatedEvent extends org.apache.avro.specific.SpecificRecordB
   {
     this.EventId.customEncode(out);
 
-    out.writeString(this.appId);
-
     out.writeString(this.clientId);
+
+    out.writeString(this.clientName);
 
     out.writeString(this.clientType);
 
@@ -831,9 +831,9 @@ public class ClientCreatedEvent extends org.apache.avro.specific.SpecificRecordB
       }
       this.EventId.customDecode(in);
 
-      this.appId = in.readString();
-
       this.clientId = in.readString();
+
+      this.clientName = in.readString();
 
       this.clientType = in.readString();
 
@@ -854,11 +854,11 @@ public class ClientCreatedEvent extends org.apache.avro.specific.SpecificRecordB
           break;
 
         case 1:
-          this.appId = in.readString();
+          this.clientId = in.readString();
           break;
 
         case 2:
-          this.clientId = in.readString();
+          this.clientName = in.readString();
           break;
 
         case 3:

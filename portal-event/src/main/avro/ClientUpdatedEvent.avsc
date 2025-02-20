@@ -46,14 +46,14 @@
       }
     },
     {
-      "name": "appId",
-      "type": "string",
-      "doc": "app id"
-    },
-    {
       "name": "clientId",
       "type": "string",
       "doc": "client id"
+    },
+    {
+      "name": "clientName",
+      "type": "string",
+      "doc": "client name"
     },
     {
       "name": "clientType",

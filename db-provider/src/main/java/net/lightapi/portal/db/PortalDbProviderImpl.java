@@ -2692,14 +2692,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> queryClient(int offset, int limit, String hostId, String appId, String clientId,
+    public Result<String> queryClient(int offset, int limit, String hostId, String appId, String apiId,
+                                      String clientId, String clientName,
                                       String clientType, String clientProfile, String clientScope,
                                       String customClaim, String redirectUri, String authenticateClass,
                                       String deRefClientId) {
         Result<String> result = null;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "client_id, host_id, api_id, client_type, client_profile, client_scope, custom_claim, " +
+                "client_id, host_id, app_id, api_id, client_name, client_type, client_profile, " +
+                "client_scope, custom_claim, " +
                 "redirect_uri, authenticate_class, deref_client_id, update_user, update_ts\n" +
                 "FROM client_t\n" +
                 "WHERE host_id = ?\n");
@@ -2710,7 +2712,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         StringBuilder whereClause = new StringBuilder();
 
         addCondition(whereClause, parameters, "app_id", appId);
+        addCondition(whereClause, parameters, "api_id", apiId);
         addCondition(whereClause, parameters, "client_id", clientId);
+        addCondition(whereClause, parameters, "client_name", clientName);
         addCondition(whereClause, parameters, "client_type", clientType);
         addCondition(whereClause, parameters, "client_profile", clientProfile);
         addCondition(whereClause, parameters, "client_scope", clientScope);
@@ -2753,6 +2757,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("hostId", resultSet.getString("host_id"));
                     map.put("clientId", resultSet.getString("client_id"));
                     map.put("appId", resultSet.getString("app_id"));
+                    map.put("apiId", resultSet.getString("api_id"));
+                    map.put("clientName", resultSet.getString("client_name"));
                     map.put("clientType", resultSet.getString("client_type"));
                     map.put("clientProfile", resultSet.getString("client_profile"));
                     map.put("clientScope", resultSet.getString("client_scope"));
@@ -2950,10 +2956,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createClient(ClientCreatedEvent event) {
-        final String insertUser = "INSERT INTO client_t (host_id, app_id, client_id, client_type, client_profile, " +
-                "client_secret, client_scope, custom_claim, redirect_uri, authenticate_class, deref_client_id, " +
-                "update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?)";
+        final String insertUser = "INSERT INTO client_t (host_id, app_id, api_id, client_name, client_id, " +
+                "client_type, client_profile, client_secret, client_scope, custom_claim, redirect_uri, " +
+                "authenticate_class, deref_client_id, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?, ?)";
         Result<String> result = null;
         Map<String, Object> map = JsonMapper.string2Map(event.getValue());
         try (Connection conn = ds.getConnection()) {
@@ -2961,44 +2967,54 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
                 statement.setString(1, event.getEventId().getHostId());
-                statement.setString(2, event.getAppId());
-                statement.setString(3, event.getClientId());
-                statement.setString(4, event.getClientType());
-                statement.setString(5, event.getClientProfile());
-                statement.setString(6, event.getClientSecret());
+                if (map.get("appId") != null) {
+                    statement.setString(2, (String) map.get("appId"));
+                } else {
+                    statement.setNull(2, NULL);
+                }
+                if (map.get("apiId") != null) {
+                    statement.setString(3, (String) map.get("apiId"));
+                } else {
+                    statement.setNull(3, NULL);
+                }
+                statement.setString(4, event.getClientName());
+                statement.setString(5, event.getClientId());
+                statement.setString(6, event.getClientType());
+                statement.setString(7, event.getClientProfile());
+                statement.setString(8, event.getClientSecret());
                 if (map.get("clientScope") != null) {
-                    statement.setString(7, (String) map.get("clientScope"));
-                } else {
-                    statement.setNull(7, NULL);
-                }
-                if (map.get("customClaim") != null) {
-                    statement.setString(8, (String) map.get("customClaim"));
-                } else {
-                    statement.setNull(8, NULL);
-                }
-                if (map.get("redirectUri") != null) {
-                    statement.setString(9, (String) map.get("redirectUri"));
+                    statement.setString(9, (String) map.get("clientScope"));
                 } else {
                     statement.setNull(9, NULL);
                 }
-                if (map.get("authenticateClass") != null) {
-                    statement.setString(10, (String) map.get("authenticateClass"));
+                if (map.get("customClaim") != null) {
+                    statement.setString(10, (String) map.get("customClaim"));
                 } else {
                     statement.setNull(10, NULL);
                 }
-                if (map.get("deRefClientId") != null) {
-                    statement.setString(11, (String) map.get("deRefClientId"));
+                if (map.get("redirectUri") != null) {
+                    statement.setString(11, (String) map.get("redirectUri"));
                 } else {
                     statement.setNull(11, NULL);
                 }
-                statement.setString(12, event.getEventId().getId());
-                statement.setTimestamp(18, new Timestamp(System.currentTimeMillis()));
+                if (map.get("authenticateClass") != null) {
+                    statement.setString(12, (String) map.get("authenticateClass"));
+                } else {
+                    statement.setNull(12, NULL);
+                }
+                if (map.get("deRefClientId") != null) {
+                    statement.setString(13, (String) map.get("deRefClientId"));
+                } else {
+                    statement.setNull(13, NULL);
+                }
+                statement.setString(14, event.getEventId().getId());
+                statement.setTimestamp(15, new Timestamp(System.currentTimeMillis()));
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException(String.format("no record is inserted for client %s", event.getClientId()));
                 }
                 conn.commit();
-                result = Success.of(event.getAppId());
+                result = Success.of(event.getClientId());
                 insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
@@ -3020,7 +3036,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateClient(ClientUpdatedEvent event) {
-        final String updateApplication = "UPDATE client_t SET app_id = ?, client_type = ?, client_profile = ?, " +
+        final String updateApplication = "UPDATE client_t SET app_id = ?, api_id = ?, client_name = ?, " +
+                "client_type = ?, client_profile = ?, " +
                 "client_scope = ?, custom_claim = ?, redirect_uri = ?, authenticate_class = ?, " +
                 "deref_client_id = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? AND client_id = ?";
@@ -3031,38 +3048,48 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
 
             try (PreparedStatement statement = conn.prepareStatement(updateApplication)) {
-                statement.setString(1, event.getAppId());
-                statement.setString(2, event.getClientType());
-                statement.setString(3, event.getClientProfile());
+                if (map.get("appId") != null) {
+                    statement.setString(1, (String) map.get("appId"));
+                } else {
+                    statement.setNull(1, NULL);
+                }
+                if (map.get("apiId") != null) {
+                    statement.setString(2, (String) map.get("apiId"));
+                } else {
+                    statement.setNull(2, NULL);
+                }
+                statement.setString(3, event.getClientName());
+                statement.setString(4, event.getClientType());
+                statement.setString(5, event.getClientProfile());
                 if (map.get("clientScope") != null) {
-                    statement.setString(4, (String) map.get("clientScope"));
-                } else {
-                    statement.setNull(4, NULL);
-                }
-                if (map.get("customClaim") != null) {
-                    statement.setString(5, (String) map.get("customClaim"));
-                } else {
-                    statement.setNull(5, NULL);
-                }
-                if (map.get("redirectUri") != null) {
-                    statement.setString(6, (String) map.get("redirectUri"));
+                    statement.setString(6, (String) map.get("clientScope"));
                 } else {
                     statement.setNull(6, NULL);
                 }
-                if (map.get("authenticateClass") != null) {
-                    statement.setString(7, (String) map.get("authenticateClass"));
+                if (map.get("customClaim") != null) {
+                    statement.setString(7, (String) map.get("customClaim"));
                 } else {
                     statement.setNull(7, NULL);
                 }
-                if (map.get("deRefClientId") != null) {
-                    statement.setString(8, (String) map.get("deRefClientId"));
+                if (map.get("redirectUri") != null) {
+                    statement.setString(8, (String) map.get("redirectUri"));
                 } else {
                     statement.setNull(8, NULL);
                 }
-                statement.setString(9, event.getEventId().getId());
-                statement.setTimestamp(9, new Timestamp(System.currentTimeMillis()));
-                statement.setString(11, event.getEventId().getHostId());
-                statement.setString(12, event.getClientId());
+                if (map.get("authenticateClass") != null) {
+                    statement.setString(9, (String) map.get("authenticateClass"));
+                } else {
+                    statement.setNull(9, NULL);
+                }
+                if (map.get("deRefClientId") != null) {
+                    statement.setString(10, (String) map.get("deRefClientId"));
+                } else {
+                    statement.setNull(10, NULL);
+                }
+                statement.setString(11, event.getEventId().getId());
+                statement.setTimestamp(12, new Timestamp(System.currentTimeMillis()));
+                statement.setString(13, event.getEventId().getHostId());
+                statement.setString(14, event.getClientId());
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     // no record is updated, write an error notification.
@@ -3128,7 +3155,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<Map<String, Object>> queryClientByClientId(String clientId) {
         Result<Map<String, Object>> result;
         String sql =
-                "SELECT host_id, app_id, client_id, client_type, client_profile, client_secret, client_scope, custom_claim,\n" +
+                "SELECT host_id, app_id, api_id, client_name, client_id, client_type, client_profile, client_secret, " +
+                        "client_scope, custom_claim,\n" +
                         "redirect_uri, authenticate_class, deref_client_id, update_user, update_ts\n" +
                         "FROM client_t \n" +
                         "WHERE client_id = ?";
@@ -3140,6 +3168,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     if (resultSet.next()) {
                         map.put("hostId", resultSet.getString("host_id"));
                         map.put("appId", resultSet.getString("app_id"));
+                        map.put("apiId", resultSet.getString("api_id"));
+                        map.put("clientName", resultSet.getString("client_name"));
                         map.put("clientId", resultSet.getString("client_id"));
                         map.put("clientType", resultSet.getString("client_type"));
                         map.put("clientProfile", resultSet.getString("client_profile"));
@@ -3154,7 +3184,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                 }
             }
-            if (map.size() == 0)
+            if (map.isEmpty())
                 result = Failure.of(new Status(OBJECT_NOT_FOUND, "application with clientId ", clientId));
             else
                 result = Success.of(map);
