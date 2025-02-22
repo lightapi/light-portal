@@ -61,6 +61,11 @@
       "doc": "light-4j version"
     },
     {
+      "name": "releaseType",
+      "type": "string",
+      "doc": "release type"
+    },
+    {
       "name": "current",
       "type": "boolean",
       "doc": "is current"
@@ -68,7 +73,7 @@
     {
       "name": "versionStatus",
       "type": "string",
-      "doc": "versionStatus"
+      "doc": "version status"
     },
     {
       "name": "value",

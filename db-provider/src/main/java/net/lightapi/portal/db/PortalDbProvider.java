@@ -301,8 +301,8 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> updateProduct(ProductUpdatedEvent event);
     Result<String> deleteProduct(ProductDeletedEvent event);
     Result<String> getProduct(int offset, int limit, String hostId, String productId, String productVersion, String light4jVersion,
-                              Boolean breakCode, Boolean breakConfig, String upgradeGuide,
-                              String versionDesc, Boolean current, String versionStatus);
+                              Boolean breakCode, Boolean breakConfig, String releaseNote,
+                              String versionDesc, String releaseType, Boolean current, String versionStatus);
     Result<String> getProductIdLabel(String hostId);
     Result<String> getProductVersionLabel(String hostId, String productId);
     Result<String> createInstance(InstanceCreatedEvent event);

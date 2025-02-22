@@ -215,7 +215,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testGetProduct() {
-        Result<String> result = dbProvider.getProduct(0, 2, "N2CMw0HGQXeLvC1wBfln2A", null, null, null, null, null, null, null, null, null);
+        Result<String> result = dbProvider.getProduct(0, 2, "N2CMw0HGQXeLvC1wBfln2A", null, null, null, null, null, null, null, null, null, null);
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
