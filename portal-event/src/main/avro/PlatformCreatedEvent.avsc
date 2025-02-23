@@ -61,11 +61,6 @@
       "doc": "platform version"
     },
     {
-      "name": "pipelineId",
-      "type": "string",
-      "doc": "pipeline id"
-    },
-    {
       "name": "clientType",
       "type": "string",
       "doc": "client type"
