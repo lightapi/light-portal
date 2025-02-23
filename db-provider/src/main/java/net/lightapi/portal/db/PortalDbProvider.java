@@ -309,7 +309,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> updateInstance(InstanceUpdatedEvent event);
     Result<String> deleteInstance(InstanceDeletedEvent event);
     Result<String> getInstance(int offset, int limit, String hostId, String instanceId, String instanceName, String productId, String productVersion,
-                               String serviceId, String platformId, String serviceDesc, String instanceDesc, String tagId);
+                               String serviceId, String environment, String pipelineId, String serviceDesc, String instanceDesc, String tagId);
     Result<String> getInstanceLabel(String hostId);
 
 

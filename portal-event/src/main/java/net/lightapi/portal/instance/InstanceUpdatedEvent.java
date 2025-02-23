@@ -13,10 +13,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -9117082574382968390L;
+  private static final long serialVersionUID = -2019444452104499108L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"InstanceUpdatedEvent\",\"namespace\":\"net.lightapi.portal.instance\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"instanceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"instance id\"},{\"name\":\"instanceName\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"instance name\"},{\"name\":\"productId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"product id\"},{\"name\":\"productVersion\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"product version\"},{\"name\":\"serviceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service id\"},{\"name\":\"platformId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"platform id\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"value in json\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"InstanceUpdatedEvent\",\"namespace\":\"net.lightapi.portal.instance\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"instanceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"instance id\"},{\"name\":\"instanceName\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"instance name\"},{\"name\":\"productId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"product id\"},{\"name\":\"productVersion\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"product version\"},{\"name\":\"serviceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"service id\"},{\"name\":\"pipelineId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"pipeline id\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"value in json\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -83,8 +83,8 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
   private java.lang.String productVersion;
   /** service id */
   private java.lang.String serviceId;
-  /** platform id */
-  private java.lang.String platformId;
+  /** pipeline id */
+  private java.lang.String pipelineId;
   /** value in json */
   private java.lang.String value;
 
@@ -103,17 +103,17 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
    * @param productId product id
    * @param productVersion product version
    * @param serviceId service id
-   * @param platformId platform id
+   * @param pipelineId pipeline id
    * @param value value in json
    */
-  public InstanceUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String instanceId, java.lang.String instanceName, java.lang.String productId, java.lang.String productVersion, java.lang.String serviceId, java.lang.String platformId, java.lang.String value) {
+  public InstanceUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String instanceId, java.lang.String instanceName, java.lang.String productId, java.lang.String productVersion, java.lang.String serviceId, java.lang.String pipelineId, java.lang.String value) {
     this.EventId = EventId;
     this.instanceId = instanceId;
     this.instanceName = instanceName;
     this.productId = productId;
     this.productVersion = productVersion;
     this.serviceId = serviceId;
-    this.platformId = platformId;
+    this.pipelineId = pipelineId;
     this.value = value;
   }
 
@@ -133,7 +133,7 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
     case 3: return productId;
     case 4: return productVersion;
     case 5: return serviceId;
-    case 6: return platformId;
+    case 6: return pipelineId;
     case 7: return value;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
@@ -150,7 +150,7 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
     case 3: productId = value$ != null ? value$.toString() : null; break;
     case 4: productVersion = value$ != null ? value$.toString() : null; break;
     case 5: serviceId = value$ != null ? value$.toString() : null; break;
-    case 6: platformId = value$ != null ? value$.toString() : null; break;
+    case 6: pipelineId = value$ != null ? value$.toString() : null; break;
     case 7: value = value$ != null ? value$.toString() : null; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
@@ -264,21 +264,21 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
   }
 
   /**
-   * Gets the value of the 'platformId' field.
-   * @return platform id
+   * Gets the value of the 'pipelineId' field.
+   * @return pipeline id
    */
-  public java.lang.String getPlatformId() {
-    return platformId;
+  public java.lang.String getPipelineId() {
+    return pipelineId;
   }
 
 
   /**
-   * Sets the value of the 'platformId' field.
-   * platform id
+   * Sets the value of the 'pipelineId' field.
+   * pipeline id
    * @param value the value to set.
    */
-  public void setPlatformId(java.lang.String value) {
-    this.platformId = value;
+  public void setPipelineId(java.lang.String value) {
+    this.pipelineId = value;
   }
 
   /**
@@ -352,8 +352,8 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
     private java.lang.String productVersion;
     /** service id */
     private java.lang.String serviceId;
-    /** platform id */
-    private java.lang.String platformId;
+    /** pipeline id */
+    private java.lang.String pipelineId;
     /** value in json */
     private java.lang.String value;
 
@@ -395,8 +395,8 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
         this.serviceId = data().deepCopy(fields()[5].schema(), other.serviceId);
         fieldSetFlags()[5] = other.fieldSetFlags()[5];
       }
-      if (isValidValue(fields()[6], other.platformId)) {
-        this.platformId = data().deepCopy(fields()[6].schema(), other.platformId);
+      if (isValidValue(fields()[6], other.pipelineId)) {
+        this.pipelineId = data().deepCopy(fields()[6].schema(), other.pipelineId);
         fieldSetFlags()[6] = other.fieldSetFlags()[6];
       }
       if (isValidValue(fields()[7], other.value)) {
@@ -436,8 +436,8 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
         this.serviceId = data().deepCopy(fields()[5].schema(), other.serviceId);
         fieldSetFlags()[5] = true;
       }
-      if (isValidValue(fields()[6], other.platformId)) {
-        this.platformId = data().deepCopy(fields()[6].schema(), other.platformId);
+      if (isValidValue(fields()[6], other.pipelineId)) {
+        this.pipelineId = data().deepCopy(fields()[6].schema(), other.pipelineId);
         fieldSetFlags()[6] = true;
       }
       if (isValidValue(fields()[7], other.value)) {
@@ -743,45 +743,45 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
     }
 
     /**
-      * Gets the value of the 'platformId' field.
-      * platform id
+      * Gets the value of the 'pipelineId' field.
+      * pipeline id
       * @return The value.
       */
-    public java.lang.String getPlatformId() {
-      return platformId;
+    public java.lang.String getPipelineId() {
+      return pipelineId;
     }
 
 
     /**
-      * Sets the value of the 'platformId' field.
-      * platform id
-      * @param value The value of 'platformId'.
+      * Sets the value of the 'pipelineId' field.
+      * pipeline id
+      * @param value The value of 'pipelineId'.
       * @return This builder.
       */
-    public net.lightapi.portal.instance.InstanceUpdatedEvent.Builder setPlatformId(java.lang.String value) {
+    public net.lightapi.portal.instance.InstanceUpdatedEvent.Builder setPipelineId(java.lang.String value) {
       validate(fields()[6], value);
-      this.platformId = value;
+      this.pipelineId = value;
       fieldSetFlags()[6] = true;
       return this;
     }
 
     /**
-      * Checks whether the 'platformId' field has been set.
-      * platform id
-      * @return True if the 'platformId' field has been set, false otherwise.
+      * Checks whether the 'pipelineId' field has been set.
+      * pipeline id
+      * @return True if the 'pipelineId' field has been set, false otherwise.
       */
-    public boolean hasPlatformId() {
+    public boolean hasPipelineId() {
       return fieldSetFlags()[6];
     }
 
 
     /**
-      * Clears the value of the 'platformId' field.
-      * platform id
+      * Clears the value of the 'pipelineId' field.
+      * pipeline id
       * @return This builder.
       */
-    public net.lightapi.portal.instance.InstanceUpdatedEvent.Builder clearPlatformId() {
-      platformId = null;
+    public net.lightapi.portal.instance.InstanceUpdatedEvent.Builder clearPipelineId() {
+      pipelineId = null;
       fieldSetFlags()[6] = false;
       return this;
     }
@@ -850,7 +850,7 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
         record.productId = fieldSetFlags()[3] ? this.productId : (java.lang.String) defaultValue(fields()[3]);
         record.productVersion = fieldSetFlags()[4] ? this.productVersion : (java.lang.String) defaultValue(fields()[4]);
         record.serviceId = fieldSetFlags()[5] ? this.serviceId : (java.lang.String) defaultValue(fields()[5]);
-        record.platformId = fieldSetFlags()[6] ? this.platformId : (java.lang.String) defaultValue(fields()[6]);
+        record.pipelineId = fieldSetFlags()[6] ? this.pipelineId : (java.lang.String) defaultValue(fields()[6]);
         record.value = fieldSetFlags()[7] ? this.value : (java.lang.String) defaultValue(fields()[7]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
@@ -896,7 +896,7 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
 
     out.writeString(this.serviceId);
 
-    out.writeString(this.platformId);
+    out.writeString(this.pipelineId);
 
     out.writeString(this.value);
 
@@ -922,7 +922,7 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
 
       this.serviceId = in.readString();
 
-      this.platformId = in.readString();
+      this.pipelineId = in.readString();
 
       this.value = in.readString();
 
@@ -957,7 +957,7 @@ public class InstanceUpdatedEvent extends org.apache.avro.specific.SpecificRecor
           break;
 
         case 6:
-          this.platformId = in.readString();
+          this.pipelineId = in.readString();
           break;
 
         case 7:

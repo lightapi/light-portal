@@ -71,9 +71,9 @@
       "doc": "service id"
     },
     {
-      "name": "platformId",
+      "name": "pipelineId",
       "type": "string",
-      "doc": "platform id"
+      "doc": "pipeline id"
     },
     {
       "name": "value",
