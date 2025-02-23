@@ -13,10 +13,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class PipelineCreatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -3319619276822329294L;
+  private static final long serialVersionUID = 2401071169770000581L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"PipelineCreatedEvent\",\"namespace\":\"net.lightapi.portal.deployment\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"pipelineId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"pipeline id\"},{\"name\":\"endpoint\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"endpoint\"},{\"name\":\"requestSchema\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"request schema\"},{\"name\":\"responseSchema\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"response schema\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"PipelineCreatedEvent\",\"namespace\":\"net.lightapi.portal.deployment\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"pipelineId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"pipeline id\"},{\"name\":\"platformId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"platform id\"},{\"name\":\"endpoint\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"endpoint\"},{\"name\":\"requestSchema\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"request schema\"},{\"name\":\"responseSchema\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"response schema\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -75,6 +75,8 @@ public class PipelineCreatedEvent extends org.apache.avro.specific.SpecificRecor
   private com.networknt.kafka.common.EventId EventId;
   /** pipeline id */
   private java.lang.String pipelineId;
+  /** platform id */
+  private java.lang.String platformId;
   /** endpoint */
   private java.lang.String endpoint;
   /** request schema */
@@ -93,13 +95,15 @@ public class PipelineCreatedEvent extends org.apache.avro.specific.SpecificRecor
    * All-args constructor.
    * @param EventId The new value for EventId
    * @param pipelineId pipeline id
+   * @param platformId platform id
    * @param endpoint endpoint
    * @param requestSchema request schema
    * @param responseSchema response schema
    */
-  public PipelineCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String pipelineId, java.lang.String endpoint, java.lang.String requestSchema, java.lang.String responseSchema) {
+  public PipelineCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String pipelineId, java.lang.String platformId, java.lang.String endpoint, java.lang.String requestSchema, java.lang.String responseSchema) {
     this.EventId = EventId;
     this.pipelineId = pipelineId;
+    this.platformId = platformId;
     this.endpoint = endpoint;
     this.requestSchema = requestSchema;
     this.responseSchema = responseSchema;
@@ -117,9 +121,10 @@ public class PipelineCreatedEvent extends org.apache.avro.specific.SpecificRecor
     switch (field$) {
     case 0: return EventId;
     case 1: return pipelineId;
-    case 2: return endpoint;
-    case 3: return requestSchema;
-    case 4: return responseSchema;
+    case 2: return platformId;
+    case 3: return endpoint;
+    case 4: return requestSchema;
+    case 5: return responseSchema;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -131,9 +136,10 @@ public class PipelineCreatedEvent extends org.apache.avro.specific.SpecificRecor
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
     case 1: pipelineId = value$ != null ? value$.toString() : null; break;
-    case 2: endpoint = value$ != null ? value$.toString() : null; break;
-    case 3: requestSchema = value$ != null ? value$.toString() : null; break;
-    case 4: responseSchema = value$ != null ? value$.toString() : null; break;
+    case 2: platformId = value$ != null ? value$.toString() : null; break;
+    case 3: endpoint = value$ != null ? value$.toString() : null; break;
+    case 4: requestSchema = value$ != null ? value$.toString() : null; break;
+    case 5: responseSchema = value$ != null ? value$.toString() : null; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -171,6 +177,24 @@ public class PipelineCreatedEvent extends org.apache.avro.specific.SpecificRecor
    */
   public void setPipelineId(java.lang.String value) {
     this.pipelineId = value;
+  }
+
+  /**
+   * Gets the value of the 'platformId' field.
+   * @return platform id
+   */
+  public java.lang.String getPlatformId() {
+    return platformId;
+  }
+
+
+  /**
+   * Sets the value of the 'platformId' field.
+   * platform id
+   * @param value the value to set.
+   */
+  public void setPlatformId(java.lang.String value) {
+    this.platformId = value;
   }
 
   /**
@@ -272,6 +296,8 @@ public class PipelineCreatedEvent extends org.apache.avro.specific.SpecificRecor
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
     /** pipeline id */
     private java.lang.String pipelineId;
+    /** platform id */
+    private java.lang.String platformId;
     /** endpoint */
     private java.lang.String endpoint;
     /** request schema */
@@ -301,17 +327,21 @@ public class PipelineCreatedEvent extends org.apache.avro.specific.SpecificRecor
         this.pipelineId = data().deepCopy(fields()[1].schema(), other.pipelineId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
-      if (isValidValue(fields()[2], other.endpoint)) {
-        this.endpoint = data().deepCopy(fields()[2].schema(), other.endpoint);
+      if (isValidValue(fields()[2], other.platformId)) {
+        this.platformId = data().deepCopy(fields()[2].schema(), other.platformId);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.requestSchema)) {
-        this.requestSchema = data().deepCopy(fields()[3].schema(), other.requestSchema);
+      if (isValidValue(fields()[3], other.endpoint)) {
+        this.endpoint = data().deepCopy(fields()[3].schema(), other.endpoint);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
-      if (isValidValue(fields()[4], other.responseSchema)) {
-        this.responseSchema = data().deepCopy(fields()[4].schema(), other.responseSchema);
+      if (isValidValue(fields()[4], other.requestSchema)) {
+        this.requestSchema = data().deepCopy(fields()[4].schema(), other.requestSchema);
         fieldSetFlags()[4] = other.fieldSetFlags()[4];
+      }
+      if (isValidValue(fields()[5], other.responseSchema)) {
+        this.responseSchema = data().deepCopy(fields()[5].schema(), other.responseSchema);
+        fieldSetFlags()[5] = other.fieldSetFlags()[5];
       }
     }
 
@@ -330,17 +360,21 @@ public class PipelineCreatedEvent extends org.apache.avro.specific.SpecificRecor
         this.pipelineId = data().deepCopy(fields()[1].schema(), other.pipelineId);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.endpoint)) {
-        this.endpoint = data().deepCopy(fields()[2].schema(), other.endpoint);
+      if (isValidValue(fields()[2], other.platformId)) {
+        this.platformId = data().deepCopy(fields()[2].schema(), other.platformId);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.requestSchema)) {
-        this.requestSchema = data().deepCopy(fields()[3].schema(), other.requestSchema);
+      if (isValidValue(fields()[3], other.endpoint)) {
+        this.endpoint = data().deepCopy(fields()[3].schema(), other.endpoint);
         fieldSetFlags()[3] = true;
       }
-      if (isValidValue(fields()[4], other.responseSchema)) {
-        this.responseSchema = data().deepCopy(fields()[4].schema(), other.responseSchema);
+      if (isValidValue(fields()[4], other.requestSchema)) {
+        this.requestSchema = data().deepCopy(fields()[4].schema(), other.requestSchema);
         fieldSetFlags()[4] = true;
+      }
+      if (isValidValue(fields()[5], other.responseSchema)) {
+        this.responseSchema = data().deepCopy(fields()[5].schema(), other.responseSchema);
+        fieldSetFlags()[5] = true;
       }
     }
 
@@ -465,6 +499,50 @@ public class PipelineCreatedEvent extends org.apache.avro.specific.SpecificRecor
     }
 
     /**
+      * Gets the value of the 'platformId' field.
+      * platform id
+      * @return The value.
+      */
+    public java.lang.String getPlatformId() {
+      return platformId;
+    }
+
+
+    /**
+      * Sets the value of the 'platformId' field.
+      * platform id
+      * @param value The value of 'platformId'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.deployment.PipelineCreatedEvent.Builder setPlatformId(java.lang.String value) {
+      validate(fields()[2], value);
+      this.platformId = value;
+      fieldSetFlags()[2] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'platformId' field has been set.
+      * platform id
+      * @return True if the 'platformId' field has been set, false otherwise.
+      */
+    public boolean hasPlatformId() {
+      return fieldSetFlags()[2];
+    }
+
+
+    /**
+      * Clears the value of the 'platformId' field.
+      * platform id
+      * @return This builder.
+      */
+    public net.lightapi.portal.deployment.PipelineCreatedEvent.Builder clearPlatformId() {
+      platformId = null;
+      fieldSetFlags()[2] = false;
+      return this;
+    }
+
+    /**
       * Gets the value of the 'endpoint' field.
       * endpoint
       * @return The value.
@@ -481,9 +559,9 @@ public class PipelineCreatedEvent extends org.apache.avro.specific.SpecificRecor
       * @return This builder.
       */
     public net.lightapi.portal.deployment.PipelineCreatedEvent.Builder setEndpoint(java.lang.String value) {
-      validate(fields()[2], value);
+      validate(fields()[3], value);
       this.endpoint = value;
-      fieldSetFlags()[2] = true;
+      fieldSetFlags()[3] = true;
       return this;
     }
 
@@ -493,7 +571,7 @@ public class PipelineCreatedEvent extends org.apache.avro.specific.SpecificRecor
       * @return True if the 'endpoint' field has been set, false otherwise.
       */
     public boolean hasEndpoint() {
-      return fieldSetFlags()[2];
+      return fieldSetFlags()[3];
     }
 
 
@@ -504,7 +582,7 @@ public class PipelineCreatedEvent extends org.apache.avro.specific.SpecificRecor
       */
     public net.lightapi.portal.deployment.PipelineCreatedEvent.Builder clearEndpoint() {
       endpoint = null;
-      fieldSetFlags()[2] = false;
+      fieldSetFlags()[3] = false;
       return this;
     }
 
@@ -525,9 +603,9 @@ public class PipelineCreatedEvent extends org.apache.avro.specific.SpecificRecor
       * @return This builder.
       */
     public net.lightapi.portal.deployment.PipelineCreatedEvent.Builder setRequestSchema(java.lang.String value) {
-      validate(fields()[3], value);
+      validate(fields()[4], value);
       this.requestSchema = value;
-      fieldSetFlags()[3] = true;
+      fieldSetFlags()[4] = true;
       return this;
     }
 
@@ -537,7 +615,7 @@ public class PipelineCreatedEvent extends org.apache.avro.specific.SpecificRecor
       * @return True if the 'requestSchema' field has been set, false otherwise.
       */
     public boolean hasRequestSchema() {
-      return fieldSetFlags()[3];
+      return fieldSetFlags()[4];
     }
 
 
@@ -548,7 +626,7 @@ public class PipelineCreatedEvent extends org.apache.avro.specific.SpecificRecor
       */
     public net.lightapi.portal.deployment.PipelineCreatedEvent.Builder clearRequestSchema() {
       requestSchema = null;
-      fieldSetFlags()[3] = false;
+      fieldSetFlags()[4] = false;
       return this;
     }
 
@@ -569,9 +647,9 @@ public class PipelineCreatedEvent extends org.apache.avro.specific.SpecificRecor
       * @return This builder.
       */
     public net.lightapi.portal.deployment.PipelineCreatedEvent.Builder setResponseSchema(java.lang.String value) {
-      validate(fields()[4], value);
+      validate(fields()[5], value);
       this.responseSchema = value;
-      fieldSetFlags()[4] = true;
+      fieldSetFlags()[5] = true;
       return this;
     }
 
@@ -581,7 +659,7 @@ public class PipelineCreatedEvent extends org.apache.avro.specific.SpecificRecor
       * @return True if the 'responseSchema' field has been set, false otherwise.
       */
     public boolean hasResponseSchema() {
-      return fieldSetFlags()[4];
+      return fieldSetFlags()[5];
     }
 
 
@@ -592,7 +670,7 @@ public class PipelineCreatedEvent extends org.apache.avro.specific.SpecificRecor
       */
     public net.lightapi.portal.deployment.PipelineCreatedEvent.Builder clearResponseSchema() {
       responseSchema = null;
-      fieldSetFlags()[4] = false;
+      fieldSetFlags()[5] = false;
       return this;
     }
 
@@ -612,9 +690,10 @@ public class PipelineCreatedEvent extends org.apache.avro.specific.SpecificRecor
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
         record.pipelineId = fieldSetFlags()[1] ? this.pipelineId : (java.lang.String) defaultValue(fields()[1]);
-        record.endpoint = fieldSetFlags()[2] ? this.endpoint : (java.lang.String) defaultValue(fields()[2]);
-        record.requestSchema = fieldSetFlags()[3] ? this.requestSchema : (java.lang.String) defaultValue(fields()[3]);
-        record.responseSchema = fieldSetFlags()[4] ? this.responseSchema : (java.lang.String) defaultValue(fields()[4]);
+        record.platformId = fieldSetFlags()[2] ? this.platformId : (java.lang.String) defaultValue(fields()[2]);
+        record.endpoint = fieldSetFlags()[3] ? this.endpoint : (java.lang.String) defaultValue(fields()[3]);
+        record.requestSchema = fieldSetFlags()[4] ? this.requestSchema : (java.lang.String) defaultValue(fields()[4]);
+        record.responseSchema = fieldSetFlags()[5] ? this.responseSchema : (java.lang.String) defaultValue(fields()[5]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -651,6 +730,8 @@ public class PipelineCreatedEvent extends org.apache.avro.specific.SpecificRecor
 
     out.writeString(this.pipelineId);
 
+    out.writeString(this.platformId);
+
     out.writeString(this.endpoint);
 
     out.writeString(this.requestSchema);
@@ -671,6 +752,8 @@ public class PipelineCreatedEvent extends org.apache.avro.specific.SpecificRecor
 
       this.pipelineId = in.readString();
 
+      this.platformId = in.readString();
+
       this.endpoint = in.readString();
 
       this.requestSchema = in.readString();
@@ -678,7 +761,7 @@ public class PipelineCreatedEvent extends org.apache.avro.specific.SpecificRecor
       this.responseSchema = in.readString();
 
     } else {
-      for (int i = 0; i < 5; i++) {
+      for (int i = 0; i < 6; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -692,14 +775,18 @@ public class PipelineCreatedEvent extends org.apache.avro.specific.SpecificRecor
           break;
 
         case 2:
-          this.endpoint = in.readString();
+          this.platformId = in.readString();
           break;
 
         case 3:
-          this.requestSchema = in.readString();
+          this.endpoint = in.readString();
           break;
 
         case 4:
+          this.requestSchema = in.readString();
+          break;
+
+        case 5:
           this.responseSchema = in.readString();
           break;
 

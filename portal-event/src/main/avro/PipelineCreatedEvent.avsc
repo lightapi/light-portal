@@ -51,6 +51,11 @@
       "doc": "pipeline id"
     },
     {
+      "name": "platformId",
+      "type": "string",
+      "doc": "platform id"
+    },
+    {
       "name": "endpoint",
       "type": "string",
       "doc": "endpoint"

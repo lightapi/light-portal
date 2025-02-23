@@ -13399,8 +13399,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createPipeline(PipelineCreatedEvent event) {
-        final String sql = "INSERT INTO pipeline_t(host_id, pipeline_id, endpoint, request_schema, response_schema, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        final String sql = "INSERT INTO pipeline_t(host_id, pipeline_id, platform_id, endpoint, request_schema, response_schema, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         Result<String> result;
         Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
 
@@ -13409,11 +13409,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, event.getEventId().getHostId());
                 statement.setString(2, event.getPipelineId());
-                statement.setString(3, event.getEndpoint());
-                statement.setString(4, event.getRequestSchema());
-                statement.setString(5, event.getResponseSchema());
-                statement.setString(6, event.getEventId().getId());
-                statement.setTimestamp(7, timestamp);
+                statement.setString(3, event.getPlatformId());
+                statement.setString(4, event.getEndpoint());
+                statement.setString(5, event.getRequestSchema());
+                statement.setString(6, event.getResponseSchema());
+                statement.setString(7, event.getEventId().getId());
+                statement.setTimestamp(8, timestamp);
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -13442,7 +13443,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updatePipeline(PipelineUpdatedEvent event) {
-        final String sql = "UPDATE pipeline_t SET endpoint = ?, request_schema = ?, response_schema = ?, update_user = ?, update_ts = ? " +
+        final String sql = "UPDATE pipeline_t SET platform_id = ?, endpoint = ?, request_schema = ?, response_schema = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? and pipeline_id = ?";
         Result<String> result;
         Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
@@ -13450,13 +13451,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, event.getEndpoint());
-                statement.setString(2, event.getRequestSchema());
-                statement.setString(3, event.getResponseSchema());
-                statement.setString(4, event.getEventId().getId());
-                statement.setTimestamp(5, timestamp);
-                statement.setString(6, event.getEventId().getHostId());
-                statement.setString(7, event.getPipelineId());
+                statement.setString(1, event.getPlatformId());
+                statement.setString(2, event.getEndpoint());
+                statement.setString(3, event.getRequestSchema());
+                statement.setString(4, event.getResponseSchema());
+                statement.setString(5, event.getEventId().getId());
+                statement.setTimestamp(6, timestamp);
+                statement.setString(7, event.getEventId().getHostId());
+                statement.setString(8, event.getPipelineId());
 
 
                 int count = statement.executeUpdate();
@@ -13523,12 +13525,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
 
     @Override
-    public Result<String> getPipeline(int offset, int limit, String hostId, String pipelineId, String endpoint,
+    public Result<String> getPipeline(int offset, int limit, String hostId, String pipelineId, String platformId, String endpoint,
                                       String requestSchema, String responseSchema) {
         Result<String> result = null;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "host_id, pipeline_id, endpoint, request_schema, response_schema, update_user, update_ts\n" +
+                "host_id, pipeline_id, platform_id, endpoint, request_schema, response_schema, update_user, update_ts\n" +
                 "FROM pipeline_t\n" +
                 "WHERE 1=1\n");
 
@@ -13537,6 +13539,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         StringBuilder whereClause = new StringBuilder();
         addCondition(whereClause, parameters, "host_id", hostId);
         addCondition(whereClause, parameters, "pipeline_id", pipelineId);
+        addCondition(whereClause, parameters, "platform_id", platformId);
         addCondition(whereClause, parameters, "endpoint", endpoint);
         addCondition(whereClause, parameters, "request_schema", requestSchema);
         addCondition(whereClause, parameters, "response_schema", responseSchema);
@@ -13574,6 +13577,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                     map.put("hostId", resultSet.getString("host_id"));
                     map.put("pipelineId", resultSet.getString("pipeline_id"));
+                    map.put("platformId", resultSet.getString("platform_id"));
                     map.put("endpoint", resultSet.getString("endpoint"));
                     map.put("requestSchema", resultSet.getString("request_schema"));
                     map.put("responseSchema", resultSet.getString("response_schema"));
