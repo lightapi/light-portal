@@ -12798,6 +12798,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "light4j_version, break_code, break_config, release_note, version_desc, release_type, current, " +
                 "version_status, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        final String sqlUpdate = "UPDATE product_version_t SET current = false \n" +
+                "WHERE host_id = ?\n" +
+                "AND product_id = ?\n" +
+                "AND product_version != ?";
         Result<String> result;
         Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
         try (Connection conn = ds.getConnection()) {
@@ -12839,6 +12843,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 if (count == 0) {
                     throw new SQLException("failed to insert the product with id " + event.getProductId());
                 }
+                // try to update current to false for others if current is true.
+                if(event.getCurrent()) {
+                    try (PreparedStatement statementUpdate = conn.prepareStatement(sqlUpdate)) {
+                        statementUpdate.setString(1, event.getEventId().getHostId());
+                        statementUpdate.setString(2, event.getProductId());
+                        statementUpdate.setString(3, event.getProductVersion());
+                        statementUpdate.executeUpdate();
+                    }
+                }
                 conn.commit();
                 result = Success.of((String)map.get("productId"));
                 insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
@@ -12865,6 +12878,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         final String sql = "UPDATE product_version_t SET light4j_version = ?, break_code = ?, break_config = ?, " +
                 "release_note = ?, version_desc = ?, release_type = ?, current = ?, version_status = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? and product_id = ? and product_version = ?";
+        final String sqlUpdate = "UPDATE product_version_t SET current = false \n" +
+                "WHERE host_id = ?\n" +
+                "AND product_id = ?\n" +
+                "AND product_version != ?";
+
         Result<String> result;
         Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
         String value = event.getValue();
@@ -12906,6 +12924,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("failed to update the product with id " + event.getProductId());
+                }
+                // try to update current to false for others if current is true.
+                if(event.getCurrent()) {
+                    try (PreparedStatement statementUpdate = conn.prepareStatement(sqlUpdate)) {
+                        statementUpdate.setString(1, event.getEventId().getHostId());
+                        statementUpdate.setString(2, event.getProductId());
+                        statementUpdate.setString(3, event.getProductVersion());
+                        statementUpdate.executeUpdate();
+                    }
                 }
                 conn.commit();
                 result = Success.of(event.getProductId());
