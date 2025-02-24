@@ -7382,8 +7382,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "ip.host_id, ip.instance_id, ip.config_id, ip.property_name, ip.property_value, ip.property_file, ip.update_user, ip.update_ts, \n" +
-                "c.config_name \n" +
+                "ip.host_id, ip.instance_id, ip.config_id, ip.property_name, ip.property_value, ip.property_file, " +
+                "ip.update_user, ip.update_ts, c.config_name \n" +
                 "FROM instance_property_t ip\n" +
                 "LEFT JOIN config_t c ON ip.config_id = c.config_id\n" +
                 "WHERE 1=1\n");
