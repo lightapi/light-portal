@@ -145,8 +145,8 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> createConfig(ConfigCreatedEvent event);
     Result<String> updateConfig(ConfigUpdatedEvent event);
     Result<String> deleteConfig(ConfigDeletedEvent event);
-    Result<String> getConfig(int offset, int limit, String configId, String configName, String configType, String light4jVersion,
-                             String classPath, String configDesc);
+    Result<String> getConfig(int offset, int limit, String configId, String configName, String configPhase,
+                             String configType, String light4jVersion, String classPath, String configDesc);
     Result<String> queryConfigById(String configId);
     Result<String> getConfigIdLabel();
 

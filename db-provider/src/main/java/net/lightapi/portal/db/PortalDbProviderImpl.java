@@ -5733,9 +5733,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createConfig(ConfigCreatedEvent event) {
-        final String sql = "INSERT INTO config_t(config_id, config_name, config_type, light4j_version, " +
+        final String sql = "INSERT INTO config_t(config_id, config_name, config_phase, config_type, light4j_version, " +
                 "class_path, config_desc, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         Result<String> result;
         Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
         String value = event.getValue();
@@ -5746,27 +5746,28 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, event.getConfigId());
                 statement.setString(2, event.getConfigName());
-                statement.setString(3, event.getConfigType());
+                statement.setString(3, event.getConfigPhase());
+                statement.setString(4, event.getConfigType());
 
                 if (map.containsKey("light4jVersion")) {
-                    statement.setString(4, (String) map.get("light4jVersion"));
-                } else {
-                    statement.setNull(4, Types.VARCHAR);
-                }
-
-                if (map.containsKey("classPath")) {
-                    statement.setString(5, (String) map.get("classPath"));
+                    statement.setString(5, (String) map.get("light4jVersion"));
                 } else {
                     statement.setNull(5, Types.VARCHAR);
                 }
 
-                if (map.containsKey("configDesc")) {
-                    statement.setString(6, (String) map.get("configDesc"));
+                if (map.containsKey("classPath")) {
+                    statement.setString(6, (String) map.get("classPath"));
                 } else {
                     statement.setNull(6, Types.VARCHAR);
                 }
-                statement.setString(7, event.getEventId().getId());
-                statement.setTimestamp(8, timestamp);
+
+                if (map.containsKey("configDesc")) {
+                    statement.setString(7, (String) map.get("configDesc"));
+                } else {
+                    statement.setNull(7, Types.VARCHAR);
+                }
+                statement.setString(8, event.getEventId().getId());
+                statement.setTimestamp(9, timestamp);
 
 
                 int count = statement.executeUpdate();
@@ -5797,7 +5798,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateConfig(ConfigUpdatedEvent event) {
-        final String sql = "UPDATE config_t SET config_name = ?, config_type = ?, light4j_version = ?, class_path = ?, config_desc = ?, update_user = ?, update_ts = ? " +
+        final String sql = "UPDATE config_t SET config_name = ?, config_phase = ?, config_type = ?, " +
+                "light4j_version = ?, class_path = ?, config_desc = ?, update_user = ?, update_ts = ? " +
                 "WHERE config_id = ?";
         Result<String> result;
         Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
@@ -5808,28 +5810,29 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, event.getConfigName());
-                statement.setString(2, event.getConfigType());
+                statement.setString(2, event.getConfigPhase());
+                statement.setString(3, event.getConfigType());
 
                 if (map.containsKey("light4jVersion")) {
-                    statement.setString(3, (String) map.get("light4jVersion"));
-                } else {
-                    statement.setNull(3, Types.VARCHAR);
-                }
-
-                if (map.containsKey("classPath")) {
-                    statement.setString(4, (String) map.get("classPath"));
+                    statement.setString(4, (String) map.get("light4jVersion"));
                 } else {
                     statement.setNull(4, Types.VARCHAR);
                 }
 
-                if (map.containsKey("configDesc")) {
-                    statement.setString(5, (String) map.get("configDesc"));
+                if (map.containsKey("classPath")) {
+                    statement.setString(5, (String) map.get("classPath"));
                 } else {
                     statement.setNull(5, Types.VARCHAR);
                 }
-                statement.setString(6, event.getEventId().getId());
-                statement.setTimestamp(7, timestamp);
-                statement.setString(8, event.getConfigId());
+
+                if (map.containsKey("configDesc")) {
+                    statement.setString(6, (String) map.get("configDesc"));
+                } else {
+                    statement.setNull(6, Types.VARCHAR);
+                }
+                statement.setString(7, event.getEventId().getId());
+                statement.setTimestamp(8, timestamp);
+                statement.setString(9, event.getConfigId());
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -5894,11 +5897,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
 
     @Override
-    public Result<String> getConfig(int offset, int limit, String configId, String configName, String configType, String light4jVersion, String classPath, String configDesc) {
+    public Result<String> getConfig(int offset, int limit, String configId, String configName, String configPhase,
+                                    String configType, String light4jVersion, String classPath, String configDesc) {
         Result<String> result = null;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "config_id, config_name, config_type, light4j_version, class_path, config_desc, update_user, update_ts\n" +
+                "config_id, config_name, config_phase, config_type, light4j_version, class_path, config_desc, update_user, update_ts\n" +
                 "FROM config_t\n" +
                 "WHERE 1=1\n");
 
@@ -5907,6 +5911,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         StringBuilder whereClause = new StringBuilder();
         addCondition(whereClause, parameters, "config_id", configId);
         addCondition(whereClause, parameters, "config_name", configName);
+        addCondition(whereClause, parameters, "config_phase", configPhase);
         addCondition(whereClause, parameters, "config_type", configType);
         addCondition(whereClause, parameters, "light4j_version", light4jVersion);
         addCondition(whereClause, parameters, "class_path", classPath);
@@ -5943,6 +5948,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                     map.put("configId", resultSet.getString("config_id"));
                     map.put("configName", resultSet.getString("config_name"));
+                    map.put("configPhase", resultSet.getString("config_phase"));
                     map.put("configType", resultSet.getString("config_type"));
                     map.put("light4jVersion", resultSet.getString("light4j_version"));
                     map.put("classPath", resultSet.getString("class_path"));
@@ -5973,7 +5979,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> queryConfigById(String configId) {
-        final String queryConfigById = "SELECT config_id, config_name, config_type, light4j_version, " +
+        final String queryConfigById = "SELECT config_id, config_name, config_phase, config_type, light4j_version, " +
                 "class_path, config_desc, update_user, update_ts FROM config_t WHERE config_id = ?";
         Result<String> result;
         Map<String, Object> config = new HashMap<>();
@@ -5987,6 +5993,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 if (resultSet.next()) {
                     config.put("configId", resultSet.getString("config_id"));
                     config.put("configName", resultSet.getString("config_name"));
+                    config.put("configPhase", resultSet.getString("config_phase"));
                     config.put("configType", resultSet.getString("config_type"));
                     config.put("light4jVersion", resultSet.getString("light4j_version"));
                     config.put("classPath", resultSet.getString("class_path"));

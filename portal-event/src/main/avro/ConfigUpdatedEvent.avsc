@@ -56,9 +56,14 @@
       "doc": "config name"
     },
     {
+      "name": "configPhase",
+      "type": "string",
+      "doc": "config phase"
+    },
+    {
       "name": "configType",
       "type": "string",
-      "doc": "config type Deployment Handler Module"
+      "doc": "config type"
     },
     {
       "name": "value",

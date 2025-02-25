@@ -13,10 +13,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class ConfigCreatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 1278676303246826297L;
+  private static final long serialVersionUID = 2739765593287415921L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ConfigCreatedEvent\",\"namespace\":\"net.lightapi.portal.config\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"configId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"config id\"},{\"name\":\"configName\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"config name\"},{\"name\":\"configType\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"config type Deployment Handler Module\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"optional values in json\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ConfigCreatedEvent\",\"namespace\":\"net.lightapi.portal.config\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"configId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"config id\"},{\"name\":\"configName\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"config name\"},{\"name\":\"configPhase\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"config phase\"},{\"name\":\"configType\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"config type\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"optional values in json\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -77,7 +77,9 @@ public class ConfigCreatedEvent extends org.apache.avro.specific.SpecificRecordB
   private java.lang.String configId;
   /** config name */
   private java.lang.String configName;
-  /** config type Deployment Handler Module */
+  /** config phase */
+  private java.lang.String configPhase;
+  /** config type */
   private java.lang.String configType;
   /** optional values in json */
   private java.lang.String value;
@@ -94,13 +96,15 @@ public class ConfigCreatedEvent extends org.apache.avro.specific.SpecificRecordB
    * @param EventId The new value for EventId
    * @param configId config id
    * @param configName config name
-   * @param configType config type Deployment Handler Module
+   * @param configPhase config phase
+   * @param configType config type
    * @param value optional values in json
    */
-  public ConfigCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String configId, java.lang.String configName, java.lang.String configType, java.lang.String value) {
+  public ConfigCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String configId, java.lang.String configName, java.lang.String configPhase, java.lang.String configType, java.lang.String value) {
     this.EventId = EventId;
     this.configId = configId;
     this.configName = configName;
+    this.configPhase = configPhase;
     this.configType = configType;
     this.value = value;
   }
@@ -118,8 +122,9 @@ public class ConfigCreatedEvent extends org.apache.avro.specific.SpecificRecordB
     case 0: return EventId;
     case 1: return configId;
     case 2: return configName;
-    case 3: return configType;
-    case 4: return value;
+    case 3: return configPhase;
+    case 4: return configType;
+    case 5: return value;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -132,8 +137,9 @@ public class ConfigCreatedEvent extends org.apache.avro.specific.SpecificRecordB
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
     case 1: configId = value$ != null ? value$.toString() : null; break;
     case 2: configName = value$ != null ? value$.toString() : null; break;
-    case 3: configType = value$ != null ? value$.toString() : null; break;
-    case 4: value = value$ != null ? value$.toString() : null; break;
+    case 3: configPhase = value$ != null ? value$.toString() : null; break;
+    case 4: configType = value$ != null ? value$.toString() : null; break;
+    case 5: value = value$ != null ? value$.toString() : null; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -192,8 +198,26 @@ public class ConfigCreatedEvent extends org.apache.avro.specific.SpecificRecordB
   }
 
   /**
+   * Gets the value of the 'configPhase' field.
+   * @return config phase
+   */
+  public java.lang.String getConfigPhase() {
+    return configPhase;
+  }
+
+
+  /**
+   * Sets the value of the 'configPhase' field.
+   * config phase
+   * @param value the value to set.
+   */
+  public void setConfigPhase(java.lang.String value) {
+    this.configPhase = value;
+  }
+
+  /**
    * Gets the value of the 'configType' field.
-   * @return config type Deployment Handler Module
+   * @return config type
    */
   public java.lang.String getConfigType() {
     return configType;
@@ -202,7 +226,7 @@ public class ConfigCreatedEvent extends org.apache.avro.specific.SpecificRecordB
 
   /**
    * Sets the value of the 'configType' field.
-   * config type Deployment Handler Module
+   * config type
    * @param value the value to set.
    */
   public void setConfigType(java.lang.String value) {
@@ -274,7 +298,9 @@ public class ConfigCreatedEvent extends org.apache.avro.specific.SpecificRecordB
     private java.lang.String configId;
     /** config name */
     private java.lang.String configName;
-    /** config type Deployment Handler Module */
+    /** config phase */
+    private java.lang.String configPhase;
+    /** config type */
     private java.lang.String configType;
     /** optional values in json */
     private java.lang.String value;
@@ -305,13 +331,17 @@ public class ConfigCreatedEvent extends org.apache.avro.specific.SpecificRecordB
         this.configName = data().deepCopy(fields()[2].schema(), other.configName);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.configType)) {
-        this.configType = data().deepCopy(fields()[3].schema(), other.configType);
+      if (isValidValue(fields()[3], other.configPhase)) {
+        this.configPhase = data().deepCopy(fields()[3].schema(), other.configPhase);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
-      if (isValidValue(fields()[4], other.value)) {
-        this.value = data().deepCopy(fields()[4].schema(), other.value);
+      if (isValidValue(fields()[4], other.configType)) {
+        this.configType = data().deepCopy(fields()[4].schema(), other.configType);
         fieldSetFlags()[4] = other.fieldSetFlags()[4];
+      }
+      if (isValidValue(fields()[5], other.value)) {
+        this.value = data().deepCopy(fields()[5].schema(), other.value);
+        fieldSetFlags()[5] = other.fieldSetFlags()[5];
       }
     }
 
@@ -334,13 +364,17 @@ public class ConfigCreatedEvent extends org.apache.avro.specific.SpecificRecordB
         this.configName = data().deepCopy(fields()[2].schema(), other.configName);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.configType)) {
-        this.configType = data().deepCopy(fields()[3].schema(), other.configType);
+      if (isValidValue(fields()[3], other.configPhase)) {
+        this.configPhase = data().deepCopy(fields()[3].schema(), other.configPhase);
         fieldSetFlags()[3] = true;
       }
-      if (isValidValue(fields()[4], other.value)) {
-        this.value = data().deepCopy(fields()[4].schema(), other.value);
+      if (isValidValue(fields()[4], other.configType)) {
+        this.configType = data().deepCopy(fields()[4].schema(), other.configType);
         fieldSetFlags()[4] = true;
+      }
+      if (isValidValue(fields()[5], other.value)) {
+        this.value = data().deepCopy(fields()[5].schema(), other.value);
+        fieldSetFlags()[5] = true;
       }
     }
 
@@ -509,8 +543,52 @@ public class ConfigCreatedEvent extends org.apache.avro.specific.SpecificRecordB
     }
 
     /**
+      * Gets the value of the 'configPhase' field.
+      * config phase
+      * @return The value.
+      */
+    public java.lang.String getConfigPhase() {
+      return configPhase;
+    }
+
+
+    /**
+      * Sets the value of the 'configPhase' field.
+      * config phase
+      * @param value The value of 'configPhase'.
+      * @return This builder.
+      */
+    public net.lightapi.portal.config.ConfigCreatedEvent.Builder setConfigPhase(java.lang.String value) {
+      validate(fields()[3], value);
+      this.configPhase = value;
+      fieldSetFlags()[3] = true;
+      return this;
+    }
+
+    /**
+      * Checks whether the 'configPhase' field has been set.
+      * config phase
+      * @return True if the 'configPhase' field has been set, false otherwise.
+      */
+    public boolean hasConfigPhase() {
+      return fieldSetFlags()[3];
+    }
+
+
+    /**
+      * Clears the value of the 'configPhase' field.
+      * config phase
+      * @return This builder.
+      */
+    public net.lightapi.portal.config.ConfigCreatedEvent.Builder clearConfigPhase() {
+      configPhase = null;
+      fieldSetFlags()[3] = false;
+      return this;
+    }
+
+    /**
       * Gets the value of the 'configType' field.
-      * config type Deployment Handler Module
+      * config type
       * @return The value.
       */
     public java.lang.String getConfigType() {
@@ -520,35 +598,35 @@ public class ConfigCreatedEvent extends org.apache.avro.specific.SpecificRecordB
 
     /**
       * Sets the value of the 'configType' field.
-      * config type Deployment Handler Module
+      * config type
       * @param value The value of 'configType'.
       * @return This builder.
       */
     public net.lightapi.portal.config.ConfigCreatedEvent.Builder setConfigType(java.lang.String value) {
-      validate(fields()[3], value);
+      validate(fields()[4], value);
       this.configType = value;
-      fieldSetFlags()[3] = true;
+      fieldSetFlags()[4] = true;
       return this;
     }
 
     /**
       * Checks whether the 'configType' field has been set.
-      * config type Deployment Handler Module
+      * config type
       * @return True if the 'configType' field has been set, false otherwise.
       */
     public boolean hasConfigType() {
-      return fieldSetFlags()[3];
+      return fieldSetFlags()[4];
     }
 
 
     /**
       * Clears the value of the 'configType' field.
-      * config type Deployment Handler Module
+      * config type
       * @return This builder.
       */
     public net.lightapi.portal.config.ConfigCreatedEvent.Builder clearConfigType() {
       configType = null;
-      fieldSetFlags()[3] = false;
+      fieldSetFlags()[4] = false;
       return this;
     }
 
@@ -569,9 +647,9 @@ public class ConfigCreatedEvent extends org.apache.avro.specific.SpecificRecordB
       * @return This builder.
       */
     public net.lightapi.portal.config.ConfigCreatedEvent.Builder setValue(java.lang.String value) {
-      validate(fields()[4], value);
+      validate(fields()[5], value);
       this.value = value;
-      fieldSetFlags()[4] = true;
+      fieldSetFlags()[5] = true;
       return this;
     }
 
@@ -581,7 +659,7 @@ public class ConfigCreatedEvent extends org.apache.avro.specific.SpecificRecordB
       * @return True if the 'value' field has been set, false otherwise.
       */
     public boolean hasValue() {
-      return fieldSetFlags()[4];
+      return fieldSetFlags()[5];
     }
 
 
@@ -592,7 +670,7 @@ public class ConfigCreatedEvent extends org.apache.avro.specific.SpecificRecordB
       */
     public net.lightapi.portal.config.ConfigCreatedEvent.Builder clearValue() {
       value = null;
-      fieldSetFlags()[4] = false;
+      fieldSetFlags()[5] = false;
       return this;
     }
 
@@ -613,8 +691,9 @@ public class ConfigCreatedEvent extends org.apache.avro.specific.SpecificRecordB
         }
         record.configId = fieldSetFlags()[1] ? this.configId : (java.lang.String) defaultValue(fields()[1]);
         record.configName = fieldSetFlags()[2] ? this.configName : (java.lang.String) defaultValue(fields()[2]);
-        record.configType = fieldSetFlags()[3] ? this.configType : (java.lang.String) defaultValue(fields()[3]);
-        record.value = fieldSetFlags()[4] ? this.value : (java.lang.String) defaultValue(fields()[4]);
+        record.configPhase = fieldSetFlags()[3] ? this.configPhase : (java.lang.String) defaultValue(fields()[3]);
+        record.configType = fieldSetFlags()[4] ? this.configType : (java.lang.String) defaultValue(fields()[4]);
+        record.value = fieldSetFlags()[5] ? this.value : (java.lang.String) defaultValue(fields()[5]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -653,6 +732,8 @@ public class ConfigCreatedEvent extends org.apache.avro.specific.SpecificRecordB
 
     out.writeString(this.configName);
 
+    out.writeString(this.configPhase);
+
     out.writeString(this.configType);
 
     out.writeString(this.value);
@@ -673,12 +754,14 @@ public class ConfigCreatedEvent extends org.apache.avro.specific.SpecificRecordB
 
       this.configName = in.readString();
 
+      this.configPhase = in.readString();
+
       this.configType = in.readString();
 
       this.value = in.readString();
 
     } else {
-      for (int i = 0; i < 5; i++) {
+      for (int i = 0; i < 6; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -696,10 +779,14 @@ public class ConfigCreatedEvent extends org.apache.avro.specific.SpecificRecordB
           break;
 
         case 3:
-          this.configType = in.readString();
+          this.configPhase = in.readString();
           break;
 
         case 4:
+          this.configType = in.readString();
+          break;
+
+        case 5:
           this.value = in.readString();
           break;
 
