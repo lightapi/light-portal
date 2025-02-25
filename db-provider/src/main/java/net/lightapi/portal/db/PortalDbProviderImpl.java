@@ -13144,8 +13144,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> createInstance(InstanceCreatedEvent event) {
         final String sql = "INSERT INTO instance_t(host_id, instance_id, instance_name, product_id, product_version, " +
-                "service_id, environment, pipeline_id, service_desc, instance_desc, tag_id, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?)";
+                "service_id, api_id, api_version, environment, pipeline_id, service_desc, instance_desc, tag_id, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?)";
         Result<String> result;
         Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
         String value = event.getValue();
@@ -13160,29 +13160,41 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(4, event.getProductId());
                 statement.setString(5, event.getProductVersion());
                 statement.setString(6, event.getServiceId());
-                if (map.containsKey("environment")) {
-                    statement.setString(7, (String) map.get("environment"));
+
+                if (map.containsKey("apiId")) {
+                    statement.setString(7, (String) map.get("apiId"));
                 } else {
                     statement.setNull(7, Types.VARCHAR);
                 }
-                statement.setString(8, event.getPipelineId());
-                if (map.containsKey("serviceDesc")) {
-                    statement.setString(9, (String) map.get("serviceDesc"));
+                if (map.containsKey("apiVersion")) {
+                    statement.setString(8, (String) map.get("apiVersion"));
+                } else {
+                    statement.setNull(8, Types.VARCHAR);
+                }
+
+                if (map.containsKey("environment")) {
+                    statement.setString(9, (String) map.get("environment"));
                 } else {
                     statement.setNull(9, Types.VARCHAR);
                 }
-                if(map.containsKey("instanceDesc")) {
-                    statement.setString(10, (String) map.get("instanceDesc"));
-                } else {
-                    statement.setNull(10, Types.VARCHAR);
-                }
-                if(map.containsKey("tagId")) {
-                    statement.setString(11, (String) map.get("tagId"));
+                statement.setString(10, event.getPipelineId());
+                if (map.containsKey("serviceDesc")) {
+                    statement.setString(11, (String) map.get("serviceDesc"));
                 } else {
                     statement.setNull(11, Types.VARCHAR);
                 }
-                statement.setString(12, event.getEventId().getId());
-                statement.setTimestamp(13, timestamp);
+                if(map.containsKey("instanceDesc")) {
+                    statement.setString(12, (String) map.get("instanceDesc"));
+                } else {
+                    statement.setNull(12, Types.VARCHAR);
+                }
+                if(map.containsKey("tagId")) {
+                    statement.setString(13, (String) map.get("tagId"));
+                } else {
+                    statement.setNull(13, Types.VARCHAR);
+                }
+                statement.setString(14, event.getEventId().getId());
+                statement.setTimestamp(15, timestamp);
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -13213,7 +13225,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> updateInstance(InstanceUpdatedEvent event) {
         final String sql = "UPDATE instance_t SET instance_name = ?, product_id = ?, product_version = ?, service_id = ?, " +
-                "environment = ?, pipeline_id = ?, " +
+                "api_id = ?, api_version = ?, environment = ?, pipeline_id = ?, " +
                 "service_desc = ?, instance_desc = ?, tag_id = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? and instance_id = ?";
         Result<String> result;
@@ -13228,31 +13240,41 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(2, event.getProductId());
                 statement.setString(3, event.getProductVersion());
                 statement.setString(4, event.getServiceId());
-                if (map.containsKey("environment")) {
-                    statement.setString(5, (String) map.get("environment"));
+                if (map.containsKey("apiId")) {
+                    statement.setString(5, (String) map.get("apiId"));
                 } else {
                     statement.setNull(5, Types.VARCHAR);
                 }
-                statement.setString(6, event.getPipelineId());
-                if (map.containsKey("serviceDesc")) {
-                    statement.setString(7, (String) map.get("serviceDesc"));
+                if (map.containsKey("apiVersion")) {
+                    statement.setString(6, (String) map.get("apiVersion"));
+                } else {
+                    statement.setNull(6, Types.VARCHAR);
+                }
+                if (map.containsKey("environment")) {
+                    statement.setString(7, (String) map.get("environment"));
                 } else {
                     statement.setNull(7, Types.VARCHAR);
                 }
-                if(map.containsKey("instanceDesc")) {
-                    statement.setString(8, (String) map.get("instanceDesc"));
-                } else {
-                    statement.setNull(8, Types.VARCHAR);
-                }
-                if(map.containsKey("tagId")) {
-                    statement.setString(9, (String) map.get("tagId"));
+                statement.setString(8, event.getPipelineId());
+                if (map.containsKey("serviceDesc")) {
+                    statement.setString(9, (String) map.get("serviceDesc"));
                 } else {
                     statement.setNull(9, Types.VARCHAR);
                 }
-                statement.setString(10, event.getEventId().getId());
-                statement.setTimestamp(11, timestamp);
-                statement.setString(12, event.getEventId().getHostId());
-                statement.setString(13, event.getInstanceId());
+                if(map.containsKey("instanceDesc")) {
+                    statement.setString(10, (String) map.get("instanceDesc"));
+                } else {
+                    statement.setNull(10, Types.VARCHAR);
+                }
+                if(map.containsKey("tagId")) {
+                    statement.setString(11, (String) map.get("tagId"));
+                } else {
+                    statement.setNull(11, Types.VARCHAR);
+                }
+                statement.setString(12, event.getEventId().getId());
+                statement.setTimestamp(13, timestamp);
+                statement.setString(14, event.getEventId().getHostId());
+                statement.setString(15, event.getInstanceId());
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -13321,13 +13343,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> getInstance(int offset, int limit, String hostId, String instanceId, String instanceName,
-                                      String productId, String productVersion, String serviceId, String environment,
-                                      String pipelineId, String serviceDesc, String instanceDesc, String tagId) {
+                                      String productId, String productVersion, String serviceId, String apiId, String apiVersion,
+                                      String environment, String pipelineId, String serviceDesc, String instanceDesc, String tagId) {
         Result<String> result = null;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "host_id, instance_id, instance_name, product_id, product_version, service_id, environment, pipeline_id, " +
-                "service_desc, instance_desc, tag_id, update_user, update_ts \n" +
+                "host_id, instance_id, instance_name, product_id, product_version, service_id, api_id, api_version, " +
+                "environment, pipeline_id, service_desc, instance_desc, tag_id, update_user, update_ts \n" +
                 "FROM instance_t\n" +
                 "WHERE 1=1\n");
 
@@ -13341,6 +13363,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         addCondition(whereClause, parameters, "product_id", productId);
         addCondition(whereClause, parameters, "product_version", productVersion);
         addCondition(whereClause, parameters, "service_id", serviceId);
+        addCondition(whereClause, parameters, "api_id", apiId);
+        addCondition(whereClause, parameters, "api_version", apiVersion);
         addCondition(whereClause, parameters, "environment", environment);
         addCondition(whereClause, parameters, "pipeline_id", pipelineId);
         addCondition(whereClause, parameters, "service_desc", serviceDesc);
@@ -13383,6 +13407,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("productId", resultSet.getString("product_id"));
                     map.put("productVersion", resultSet.getString("product_version"));
                     map.put("serviceId", resultSet.getString("service_id"));
+                    map.put("apiId", resultSet.getString("api_id"));
+                    map.put("apiVersion", resultSet.getString("api_version"));
                     map.put("environment", resultSet.getString("environment"));
                     map.put("pipelineId", resultSet.getString("pipeline_id"));
                     map.put("serviceDesc", resultSet.getString("service_desc"));
