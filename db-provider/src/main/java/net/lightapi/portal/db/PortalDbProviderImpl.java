@@ -14182,12 +14182,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> getDeployment(int offset, int limit, String hostId, String deploymentId,
                                         String instanceId, String deploymentStatus,
-                                        String deploymentType) {
+                                        String deploymentType, String platformJobId) {
         Result<String> result = null;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
                 "host_id, deployment_id, instance_id, deployment_status, deployment_type, " +
-                "schedule_ts, update_user, update_ts\n" +
+                "schedule_ts, platform_job_id, update_user, update_ts\n" +
                 "FROM deployment_t\n" +
                 "WHERE 1=1\n");
 
@@ -14200,6 +14200,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         addCondition(whereClause, parameters, "instance_id", instanceId);
         addCondition(whereClause, parameters, "deployment_status", deploymentStatus);
         addCondition(whereClause, parameters, "deployment_type", deploymentType);
+        addCondition(whereClause, parameters, "platform_job_id", platformJobId);
 
         if (whereClause.length() > 0) {
             sqlBuilder.append("AND ").append(whereClause);
@@ -14237,6 +14238,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("deploymentType", resultSet.getString("deployment_type"));
                     // handling date properly
                     map.put("scheduleTs", resultSet.getTimestamp("schedule_ts") != null ? resultSet.getTimestamp("schedule_ts").toString() : null);
+                    map.put("platformJobId", resultSet.getString("platform_job_id"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getTimestamp("update_ts") != null ? resultSet.getTimestamp("update_ts").toString() : null);
 
