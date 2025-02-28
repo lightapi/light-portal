@@ -66,9 +66,9 @@
       "doc": "app version"
     },
     {
-      "name": "active",
-      "type": "boolean",
-      "doc": "active flag"
+      "name": "value",
+      "type": "string",
+      "doc": "optional fields in json"
     }
   ]
 }

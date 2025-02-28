@@ -13,10 +13,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class InstanceAppUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = 3916172991706420466L;
+  private static final long serialVersionUID = 7367832332643502413L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"InstanceAppUpdatedEvent\",\"namespace\":\"net.lightapi.portal.instance\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"instanceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"instance id\"},{\"name\":\"appId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"app id\"},{\"name\":\"appVersion\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"app version\"},{\"name\":\"active\",\"type\":\"boolean\",\"doc\":\"active flag\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"InstanceAppUpdatedEvent\",\"namespace\":\"net.lightapi.portal.instance\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"instanceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"instance id\"},{\"name\":\"appId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"app id\"},{\"name\":\"appVersion\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"app version\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"optional fields in json\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -81,8 +81,8 @@ public class InstanceAppUpdatedEvent extends org.apache.avro.specific.SpecificRe
   private java.lang.String appId;
   /** app version */
   private java.lang.String appVersion;
-  /** active flag */
-  private boolean active;
+  /** optional fields in json */
+  private java.lang.String value;
 
   /**
    * Default constructor.  Note that this does not initialize fields
@@ -98,15 +98,15 @@ public class InstanceAppUpdatedEvent extends org.apache.avro.specific.SpecificRe
    * @param instanceId instance id
    * @param appId app id
    * @param appVersion app version
-   * @param active active flag
+   * @param value optional fields in json
    */
-  public InstanceAppUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String instanceId, java.lang.String appId, java.lang.String appVersion, java.lang.Boolean active) {
+  public InstanceAppUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String instanceId, java.lang.String appId, java.lang.String appVersion, java.lang.String value) {
     this.EventId = EventId;
     this.hostId = hostId;
     this.instanceId = instanceId;
     this.appId = appId;
     this.appVersion = appVersion;
-    this.active = active;
+    this.value = value;
   }
 
   @Override
@@ -124,7 +124,7 @@ public class InstanceAppUpdatedEvent extends org.apache.avro.specific.SpecificRe
     case 2: return instanceId;
     case 3: return appId;
     case 4: return appVersion;
-    case 5: return active;
+    case 5: return value;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -139,7 +139,7 @@ public class InstanceAppUpdatedEvent extends org.apache.avro.specific.SpecificRe
     case 2: instanceId = value$ != null ? value$.toString() : null; break;
     case 3: appId = value$ != null ? value$.toString() : null; break;
     case 4: appVersion = value$ != null ? value$.toString() : null; break;
-    case 5: active = (java.lang.Boolean)value$; break;
+    case 5: value = value$ != null ? value$.toString() : null; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -234,21 +234,21 @@ public class InstanceAppUpdatedEvent extends org.apache.avro.specific.SpecificRe
   }
 
   /**
-   * Gets the value of the 'active' field.
-   * @return active flag
+   * Gets the value of the 'value' field.
+   * @return optional fields in json
    */
-  public boolean getActive() {
-    return active;
+  public java.lang.String getValue() {
+    return value;
   }
 
 
   /**
-   * Sets the value of the 'active' field.
-   * active flag
+   * Sets the value of the 'value' field.
+   * optional fields in json
    * @param value the value to set.
    */
-  public void setActive(boolean value) {
-    this.active = value;
+  public void setValue(java.lang.String value) {
+    this.value = value;
   }
 
   /**
@@ -302,8 +302,8 @@ public class InstanceAppUpdatedEvent extends org.apache.avro.specific.SpecificRe
     private java.lang.String appId;
     /** app version */
     private java.lang.String appVersion;
-    /** active flag */
-    private boolean active;
+    /** optional fields in json */
+    private java.lang.String value;
 
     /** Creates a new Builder */
     private Builder() {
@@ -339,8 +339,8 @@ public class InstanceAppUpdatedEvent extends org.apache.avro.specific.SpecificRe
         this.appVersion = data().deepCopy(fields()[4].schema(), other.appVersion);
         fieldSetFlags()[4] = other.fieldSetFlags()[4];
       }
-      if (isValidValue(fields()[5], other.active)) {
-        this.active = data().deepCopy(fields()[5].schema(), other.active);
+      if (isValidValue(fields()[5], other.value)) {
+        this.value = data().deepCopy(fields()[5].schema(), other.value);
         fieldSetFlags()[5] = other.fieldSetFlags()[5];
       }
     }
@@ -372,8 +372,8 @@ public class InstanceAppUpdatedEvent extends org.apache.avro.specific.SpecificRe
         this.appVersion = data().deepCopy(fields()[4].schema(), other.appVersion);
         fieldSetFlags()[4] = true;
       }
-      if (isValidValue(fields()[5], other.active)) {
-        this.active = data().deepCopy(fields()[5].schema(), other.active);
+      if (isValidValue(fields()[5], other.value)) {
+        this.value = data().deepCopy(fields()[5].schema(), other.value);
         fieldSetFlags()[5] = true;
       }
     }
@@ -631,44 +631,45 @@ public class InstanceAppUpdatedEvent extends org.apache.avro.specific.SpecificRe
     }
 
     /**
-      * Gets the value of the 'active' field.
-      * active flag
+      * Gets the value of the 'value' field.
+      * optional fields in json
       * @return The value.
       */
-    public boolean getActive() {
-      return active;
+    public java.lang.String getValue() {
+      return value;
     }
 
 
     /**
-      * Sets the value of the 'active' field.
-      * active flag
-      * @param value The value of 'active'.
+      * Sets the value of the 'value' field.
+      * optional fields in json
+      * @param value The value of 'value'.
       * @return This builder.
       */
-    public net.lightapi.portal.instance.InstanceAppUpdatedEvent.Builder setActive(boolean value) {
+    public net.lightapi.portal.instance.InstanceAppUpdatedEvent.Builder setValue(java.lang.String value) {
       validate(fields()[5], value);
-      this.active = value;
+      this.value = value;
       fieldSetFlags()[5] = true;
       return this;
     }
 
     /**
-      * Checks whether the 'active' field has been set.
-      * active flag
-      * @return True if the 'active' field has been set, false otherwise.
+      * Checks whether the 'value' field has been set.
+      * optional fields in json
+      * @return True if the 'value' field has been set, false otherwise.
       */
-    public boolean hasActive() {
+    public boolean hasValue() {
       return fieldSetFlags()[5];
     }
 
 
     /**
-      * Clears the value of the 'active' field.
-      * active flag
+      * Clears the value of the 'value' field.
+      * optional fields in json
       * @return This builder.
       */
-    public net.lightapi.portal.instance.InstanceAppUpdatedEvent.Builder clearActive() {
+    public net.lightapi.portal.instance.InstanceAppUpdatedEvent.Builder clearValue() {
+      value = null;
       fieldSetFlags()[5] = false;
       return this;
     }
@@ -692,7 +693,7 @@ public class InstanceAppUpdatedEvent extends org.apache.avro.specific.SpecificRe
         record.instanceId = fieldSetFlags()[2] ? this.instanceId : (java.lang.String) defaultValue(fields()[2]);
         record.appId = fieldSetFlags()[3] ? this.appId : (java.lang.String) defaultValue(fields()[3]);
         record.appVersion = fieldSetFlags()[4] ? this.appVersion : (java.lang.String) defaultValue(fields()[4]);
-        record.active = fieldSetFlags()[5] ? this.active : (java.lang.Boolean) defaultValue(fields()[5]);
+        record.value = fieldSetFlags()[5] ? this.value : (java.lang.String) defaultValue(fields()[5]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -735,7 +736,7 @@ public class InstanceAppUpdatedEvent extends org.apache.avro.specific.SpecificRe
 
     out.writeString(this.appVersion);
 
-    out.writeBoolean(this.active);
+    out.writeString(this.value);
 
   }
 
@@ -757,7 +758,7 @@ public class InstanceAppUpdatedEvent extends org.apache.avro.specific.SpecificRe
 
       this.appVersion = in.readString();
 
-      this.active = in.readBoolean();
+      this.value = in.readString();
 
     } else {
       for (int i = 0; i < 6; i++) {
@@ -786,7 +787,7 @@ public class InstanceAppUpdatedEvent extends org.apache.avro.specific.SpecificRe
           break;
 
         case 5:
-          this.active = in.readBoolean();
+          this.value = in.readString();
           break;
 
         default:

@@ -6746,6 +6746,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "VALUES (?, ?, ?, ?, ?, ?, ?)";
         Result<String> result;
         Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
+        String value = event.getValue();
+        Map<String, Object> map = JsonMapper.string2Map(value);
+
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
@@ -6753,7 +6756,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(2, event.getInstanceId());
                 statement.setString(3, event.getApiId());
                 statement.setString(4, event.getApiVersion());
-                statement.setBoolean(5, event.getActive());
+                if (map.containsKey("active")) {
+                    statement.setBoolean(5, (Boolean) map.get("active"));
+                } else {
+                    statement.setNull(5, Types.BOOLEAN);
+                }
                 statement.setString(6, event.getEventId().getId());
                 statement.setTimestamp(7, timestamp);
 
@@ -6790,10 +6797,17 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "WHERE host_id = ? and instance_id = ? and api_id = ? and api_version = ?";
         Result<String> result;
         Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
+        String value = event.getValue();
+        Map<String, Object> map = JsonMapper.string2Map(value);
+
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setBoolean(1, event.getActive());
+                if (map.containsKey("active")) {
+                    statement.setBoolean(1, (Boolean) map.get("active"));
+                } else {
+                    statement.setNull(1, Types.BOOLEAN);
+                }
                 statement.setString(2, event.getEventId().getId());
                 statement.setTimestamp(3, timestamp);
                 statement.setString(4, event.getEventId().getHostId());
@@ -7196,6 +7210,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "VALUES (?, ?, ?, ?, ?, ?, ?)";
         Result<String> result;
         Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
+        String value = event.getValue();
+        Map<String, Object> map = JsonMapper.string2Map(value);
+
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
@@ -7203,7 +7220,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(2, event.getInstanceId());
                 statement.setString(3, event.getAppId());
                 statement.setString(4, event.getAppVersion());
-                statement.setBoolean(5, event.getActive());
+                if (map.containsKey("active")) {
+                    statement.setBoolean(5, (Boolean) map.get("active"));
+                } else {
+                    statement.setNull(5, Types.BOOLEAN);
+                }
                 statement.setString(6, event.getEventId().getId());
                 statement.setTimestamp(7, timestamp);
                 int count = statement.executeUpdate();
@@ -7239,11 +7260,17 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "WHERE host_id = ? and instance_id = ? and app_id = ? and app_version = ?";
         Result<String> result;
         Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
+        String value = event.getValue();
+        Map<String, Object> map = JsonMapper.string2Map(value);
 
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setBoolean(1, event.getActive());
+                if (map.containsKey("active")) {
+                    statement.setBoolean(1, (Boolean) map.get("active"));
+                } else {
+                    statement.setNull(1, Types.BOOLEAN);
+                }
                 statement.setString(2, event.getEventId().getId());
                 statement.setTimestamp(3, timestamp);
                 statement.setString(4, event.getEventId().getHostId());
