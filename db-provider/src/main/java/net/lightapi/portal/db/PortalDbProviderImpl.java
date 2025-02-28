@@ -6739,6 +6739,211 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         return result;
     }
 
+
+    @Override
+    public Result<String> createInstanceApi(InstanceApiCreatedEvent event) {
+        final String sql = "INSERT INTO instance_api_t(host_id, instance_id, api_id, api_version, active, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        Result<String> result;
+        Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, event.getEventId().getHostId());
+                statement.setString(2, event.getInstanceId());
+                statement.setString(3, event.getApiId());
+                statement.setString(4, event.getApiVersion());
+                statement.setBoolean(5, event.getActive());
+                statement.setString(6, event.getEventId().getId());
+                statement.setTimestamp(7, timestamp);
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert the instance api");
+                }
+                conn.commit();
+                result = Success.of(String.format("Instance API created for instanceId: %s, apiId: %s, apiVersion: %s",
+                        event.getInstanceId(), event.getApiId(), event.getApiVersion())); // return some kind of key.
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+
+            }   catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> updateInstanceApi(InstanceApiUpdatedEvent event) {
+        final String sql = "UPDATE instance_api_t SET active = ?, update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? and instance_id = ? and api_id = ? and api_version = ?";
+        Result<String> result;
+        Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setBoolean(1, event.getActive());
+                statement.setString(2, event.getEventId().getId());
+                statement.setTimestamp(3, timestamp);
+                statement.setString(4, event.getEventId().getHostId());
+                statement.setString(5, event.getInstanceId());
+                statement.setString(6, event.getApiId());
+                statement.setString(7, event.getApiVersion());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to update instance api");
+                }
+                conn.commit();
+                result = Success.of(String.format("Instance API updated for instanceId: %s, apiId: %s, apiVersion: %s",
+                        event.getInstanceId(), event.getApiId(), event.getApiVersion()));
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            }  catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deleteInstanceApi(InstanceApiDeletedEvent event) {
+        final String sql = "DELETE FROM instance_api_t WHERE host_id = ? AND instance_id = ? AND api_id = ? AND api_version = ?";
+        Result<String> result;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, event.getEventId().getHostId());
+                statement.setString(2, event.getInstanceId());
+                statement.setString(3, event.getApiId());
+                statement.setString(4, event.getApiVersion());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to delete the instance api with id " + event.getApiId());
+                }
+                conn.commit();
+                result = Success.of(String.format("Instance API deleted for instanceId: %s, apiId: %s, apiVersion: %s",
+                        event.getInstanceId(), event.getApiId(), event.getApiVersion())); //Return some information about the deleted record
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            }  catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getInstanceApi(int offset, int limit, String hostId, String instanceId, String apiId, String apiVersion,
+                                         Boolean active) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
+                "host_id, instance_id, api_id, api_version, active, update_user, update_ts\n" +
+                "FROM instance_api_t\n" +
+                "WHERE 1=1\n");
+
+        List<Object> parameters = new ArrayList<>();
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "host_id", hostId);
+        addCondition(whereClause, parameters, "instance_id", instanceId);
+        addCondition(whereClause, parameters, "api_id", apiId);
+        addCondition(whereClause, parameters, "api_version", apiVersion);
+        addCondition(whereClause, parameters, "active", active);
+
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append("ORDER BY instance_id, api_id, api_version\n" + // Added ordering
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> instanceApis = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("instanceId", resultSet.getString("instance_id"));
+                    map.put("apiId", resultSet.getString("api_id"));
+                    map.put("apiVersion", resultSet.getString("api_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    // handling date properly
+                    map.put("updateTs", resultSet.getTimestamp("update_ts") != null ? resultSet.getTimestamp("update_ts").toString() : null);
+                    instanceApis.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("instanceApis", instanceApis);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
     @Override
     public Result<String> createConfigInstanceApi(ConfigInstanceApiCreatedEvent event) {
         Logger logger = LoggerFactory.getLogger(getClass());
@@ -6981,6 +7186,208 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         } catch (Exception e) {
             logger.error("Exception:", e);
             result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> createInstanceApp(InstanceAppCreatedEvent event) {
+        final String sql = "INSERT INTO instance_app_t(host_id, instance_id, app_id, app_version, active, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        Result<String> result;
+        Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, event.getEventId().getHostId());
+                statement.setString(2, event.getInstanceId());
+                statement.setString(3, event.getAppId());
+                statement.setString(4, event.getAppVersion());
+                statement.setBoolean(5, event.getActive());
+                statement.setString(6, event.getEventId().getId());
+                statement.setTimestamp(7, timestamp);
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert the instance app with event " + event.toString());
+                }
+                conn.commit();
+                result = Success.of(String.format("Instance App created for instanceId: %s, appId: %s, appVersion: %s",
+                        event.getInstanceId(), event.getAppId(), event.getAppVersion())); //Return some info about the created instance
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> updateInstanceApp(InstanceAppUpdatedEvent event) {
+        final String sql = "UPDATE instance_app_t SET active = ?, update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? and instance_id = ? and app_id = ? and app_version = ?";
+        Result<String> result;
+        Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setBoolean(1, event.getActive());
+                statement.setString(2, event.getEventId().getId());
+                statement.setTimestamp(3, timestamp);
+                statement.setString(4, event.getEventId().getHostId());
+                statement.setString(5, event.getInstanceId());
+                statement.setString(6, event.getAppId());
+                statement.setString(7, event.getAppVersion());
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to update the instance app with id " + event.getAppId());
+                }
+                conn.commit();
+                result = Success.of(String.format("Instance App updated for instanceId: %s, appId: %s, appVersion: %s",
+                        event.getInstanceId(), event.getAppId(), event.getAppVersion())); //Return some info about the updated record.
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deleteInstanceApp(InstanceAppDeletedEvent event) {
+        final String sql = "DELETE FROM instance_app_t WHERE host_id = ? AND instance_id = ? AND app_id = ? AND app_version = ?";
+        Result<String> result;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, event.getEventId().getHostId());
+                statement.setString(2, event.getInstanceId());
+                statement.setString(3, event.getAppId());
+                statement.setString(4, event.getAppVersion());
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to delete the instance app with id " + event.getAppId());
+                }
+                conn.commit();
+                result = Success.of(String.format("Instance app deleted for instanceId: %s, appId: %s, appVersion: %s",
+                        event.getInstanceId(), event.getAppId(), event.getAppVersion())); //Return some info about the deleted record
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getInstanceApp(int offset, int limit, String hostId, String instanceId, String appId, String appVersion,
+                                         Boolean active) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
+                "host_id, instance_id, app_id, app_version, active, update_user, update_ts\n" +
+                "FROM instance_app_t\n" +
+                "WHERE 1=1\n");
+
+        List<Object> parameters = new ArrayList<>();
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "host_id", hostId);
+        addCondition(whereClause, parameters, "instance_id", instanceId);
+        addCondition(whereClause, parameters, "app_id", appId);
+        addCondition(whereClause, parameters, "app_version", appVersion);
+        addCondition(whereClause, parameters, "active", active);
+
+        if (whereClause.length() > 0) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append("ORDER BY instance_id, app_id, app_version\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> instanceApps = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("instanceId", resultSet.getString("instance_id"));
+                    map.put("appId", resultSet.getString("app_id"));
+                    map.put("appVersion", resultSet.getString("app_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    // handling date properly
+                    map.put("updateTs", resultSet.getTimestamp("update_ts") != null ? resultSet.getTimestamp("update_ts").toString() : null);
+                    instanceApps.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("instanceApps", instanceApps);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
         return result;
     }

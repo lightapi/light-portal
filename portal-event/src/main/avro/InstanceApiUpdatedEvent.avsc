@@ -1,0 +1,74 @@
+{
+  "type": "record",
+  "name": "InstanceApiUpdatedEvent",
+  "namespace": "net.lightapi.portal.instance",
+  "fields": [
+    {
+      "name": "EventId",
+      "type": {
+        "type": "record",
+        "name": "EventId",
+        "namespace": "com.networknt.kafka.common",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "doc": "a unique identifier for the event"
+          },
+          {
+            "name": "userId",
+            "type": "string",
+            "doc": "the user who creates the event"
+          },
+          {
+            "name": "hostId",
+            "type": "string",
+            "doc": "the host which is the event is created"
+          },
+          {
+            "name": "nonce",
+            "type": "long",
+            "doc": "the number of the transactions for the user"
+          },
+          {
+            "name": "timestamp",
+            "type": "long",
+            "default": 0,
+            "doc": "time the event is recorded"
+          },
+          {
+            "name": "derived",
+            "type": "boolean",
+            "default": false,
+            "doc": "indicate if the event is derived from event processor"
+          }
+        ]
+      }
+    },
+    {
+      "name": "hostId",
+      "type": "string",
+      "doc": "host id"
+    },
+    {
+      "name": "instanceId",
+      "type": "string",
+      "doc": "instance id"
+    },
+    {
+      "name": "apiId",
+      "type": "string",
+      "doc": "api id"
+    },
+    {
+      "name": "apiVersion",
+      "type": "string",
+      "doc": "api version"
+    },
+    {
+      "name": "active",
+      "type": "boolean",
+      "doc": "active flag"
+    }
+  ]
+}

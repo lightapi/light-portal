@@ -212,6 +212,13 @@ java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema Deployme
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema InstanceCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema InstanceUpdatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema InstanceDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema InstanceApiCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema InstanceApiUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema InstanceApiDeletedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema InstanceAppCreatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema InstanceAppUpdatedEvent.avsc .
+java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema InstanceAppDeletedEvent.avsc .
+
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema PipelineCreatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema PipelineUpdatedEvent.avsc .
 java -jar /home/steve/tool/avro-tools-1.12.0.jar compile -string schema PipelineDeletedEvent.avsc .
@@ -441,6 +448,12 @@ mv net/lightapi/portal/deployment/PlatformDeletedEvent.java ../java/net/lightapi
 mv net/lightapi/portal/instance/InstanceCreatedEvent.java ../java/net/lightapi/portal/instance
 mv net/lightapi/portal/instance/InstanceUpdatedEvent.java ../java/net/lightapi/portal/instance
 mv net/lightapi/portal/instance/InstanceDeletedEvent.java ../java/net/lightapi/portal/instance
+mv net/lightapi/portal/instance/InstanceApiCreatedEvent.java ../java/net/lightapi/portal/instance
+mv net/lightapi/portal/instance/InstanceApiUpdatedEvent.java ../java/net/lightapi/portal/instance
+mv net/lightapi/portal/instance/InstanceApiDeletedEvent.java ../java/net/lightapi/portal/instance
+mv net/lightapi/portal/instance/InstanceAppCreatedEvent.java ../java/net/lightapi/portal/instance
+mv net/lightapi/portal/instance/InstanceAppUpdatedEvent.java ../java/net/lightapi/portal/instance
+mv net/lightapi/portal/instance/InstanceAppDeletedEvent.java ../java/net/lightapi/portal/instance
 
 mv net/lightapi/portal/product/ProductCreatedEvent.java ../java/net/lightapi/portal/product
 mv net/lightapi/portal/product/ProductUpdatedEvent.java ../java/net/lightapi/portal/product
