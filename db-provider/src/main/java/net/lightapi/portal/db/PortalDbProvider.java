@@ -149,6 +149,7 @@ public interface PortalDbProvider extends DbProvider {
                              String configType, String light4jVersion, String classPath, String configDesc);
     Result<String> queryConfigById(String configId);
     Result<String> getConfigIdLabel();
+    Result<String> getPropertyNameLabel(String configId);
 
     Result<String> createConfigProperty(ConfigPropertyCreatedEvent event);
     Result<String> updateConfigProperty(ConfigPropertyUpdatedEvent event);
