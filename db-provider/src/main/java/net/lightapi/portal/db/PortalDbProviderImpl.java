@@ -6962,11 +6962,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> createConfigInstanceApi(ConfigInstanceApiCreatedEvent event) {
         Logger logger = LoggerFactory.getLogger(getClass());
 
-        final String sql = "INSERT INTO instance_api_t (host_id, instance_id, api_id, api_version, active, " +
-                "update_user, update_ts) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        final String sql = "INSERT INTO instance_api_property_t (host_id, instance_id, api_id, api_version, config_id, " +
+                "property_name, property_value, update_user, update_ts) VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?)";
         Result<String> result;
         Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
-        String value = event.getValue(); // Assuming 'value' contains optional fields like 'active'
+        String value = event.getValue();
         Map<String, Object> map = JsonMapper.string2Map(value);
 
         try (Connection conn = ds.getConnection()) {
@@ -6976,16 +6976,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(2, event.getInstanceId());
                 statement.setString(3, event.getApiId());
                 statement.setString(4, event.getApiVersion());
-
-                // Handle 'active' (optional, defaults to true in the database)
-                if (map.containsKey("active")) {
-                    statement.setBoolean(5, Boolean.parseBoolean(map.get("active").toString()));
+                statement.setString(5, event.getConfigId());
+                statement.setString(6, event.getPropertyName());
+                if (map.containsKey("propertyValue")) {
+                    statement.setString(7, (String)map.get("propertyValue"));
                 } else {
-                    statement.setBoolean(5, true); // Default if not provided
+                    statement.setNull(7, Types.VARCHAR);
                 }
-
-                statement.setString(6, event.getEventId().getUserId());
-                statement.setTimestamp(7, timestamp);
+                statement.setString(8, event.getEventId().getUserId());
+                statement.setTimestamp(9, timestamp);
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -7017,33 +7016,30 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> updateConfigInstanceApi(ConfigInstanceApiUpdatedEvent event) {
         Logger logger = LoggerFactory.getLogger(getClass());
-        final String sql = "UPDATE instance_api_t SET active = ?, update_user = ?, update_ts = ? " +
+        final String sql = "UPDATE instance_api_property_t SET config_id = ?, property_name = ?, " +
+                "property_value = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? AND instance_id = ? AND api_id = ? AND api_version = ?";
         Result<String> result;
         Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
-        String value = event.getValue(); // 'value' contains fields like 'active'
+        String value = event.getValue();
         Map<String, Object> map = JsonMapper.string2Map(value);
 
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-
-                // Handle 'active' (optional, but likely the main thing being updated)
-                if (map.containsKey("active")) {
-                    statement.setBoolean(1, Boolean.parseBoolean(map.get("active").toString()));
+                statement.setString(1, event.getConfigId());
+                statement.setString(2, event.getPropertyName());
+                if (map.containsKey("propertyValue")) {
+                    statement.setString(3, (String)map.get("propertyValue"));
                 } else {
-                    statement.setNull(1, Types.BOOLEAN); // Or keep existing; see discussion below
+                    statement.setNull(3, Types.VARCHAR);
                 }
-
-                statement.setString(2, event.getEventId().getUserId());
-                statement.setTimestamp(3, timestamp);
-
-                // WHERE clause parameters (from the event, NOT the JSON)
-                statement.setString(4, event.getHostId());
-                statement.setString(5, event.getInstanceId());
-                statement.setString(6, event.getApiId());
-                statement.setString(7, event.getApiVersion());
-
+                statement.setString(4, event.getEventId().getUserId());
+                statement.setTimestamp(5, timestamp);
+                statement.setString(6, event.getHostId());
+                statement.setString(7, event.getInstanceId());
+                statement.setString(8, event.getApiId());
+                statement.setString(9, event.getApiVersion());
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -7075,7 +7071,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> deleteConfigInstanceApi(ConfigInstanceApiDeletedEvent event) {
         Logger logger = LoggerFactory.getLogger(getClass());
-        final String sql = "DELETE FROM instance_api_t WHERE host_id = ? AND instance_id = ? AND api_id = ? AND api_version = ?";
+        final String sql = "DELETE FROM instance_api_property_t " +
+                "WHERE host_id = ? AND instance_id = ? AND api_id = ? AND api_version = ? AND config_id = ? AND property_name = ?";
         Result<String> result;
 
         try (Connection conn = ds.getConnection()) {
@@ -7085,6 +7082,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(2, event.getInstanceId());
                 statement.setString(3, event.getApiId());
                 statement.setString(4, event.getApiVersion());
+                statement.setString(5, event.getConfigId());
+                statement.setString(6, event.getPropertyName());
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -7423,7 +7422,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> createConfigInstanceApp(ConfigInstanceAppCreatedEvent event) {
         Logger logger = LoggerFactory.getLogger(getClass());
 
-        final String sql = "INSERT INTO instance_app_t (host_id, instance_id, app_id, app_version, active, update_user, update_ts) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        final String sql = "INSERT INTO instance_app_property_t (host_id, instance_id, app_id, app_version, config_id, property_name, property_value, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?)";
         Result<String> result;
         Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
         String value = event.getValue(); // 'value' can contain optional fields
@@ -7436,16 +7436,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(2, event.getInstanceId());
                 statement.setString(3, event.getAppId());
                 statement.setString(4, event.getAppVersion());
-
-                // Handle 'active' (optional, defaults to true)
-                if (map.containsKey("active")) {
-                    statement.setBoolean(5, Boolean.parseBoolean(map.get("active").toString()));
+                statement.setString(5, event.getConfigId());
+                statement.setString(6, event.getPropertyName());
+                if (map.containsKey("propertyValue")) {
+                    statement.setString(7, (String)map.get("propertyValue"));
                 } else {
-                    statement.setBoolean(5, true); // Default
+                    statement.setNull(7, Types.VARCHAR);
                 }
-
-                statement.setString(6, event.getEventId().getUserId());
-                statement.setTimestamp(7, timestamp);
+                statement.setString(8, event.getEventId().getUserId());
+                statement.setTimestamp(9, timestamp);
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -7480,7 +7479,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> updateConfigInstanceApp(ConfigInstanceAppUpdatedEvent event) {
         Logger logger = LoggerFactory.getLogger(getClass());
 
-        final String sql = "UPDATE instance_app_t SET active = ?, update_user = ?, update_ts = ? " +
+        final String sql = "UPDATE instance_app_t SET config_id = ?, property_name = ?, " +
+                "property_value = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? AND instance_id = ? AND app_id = ? AND app_version = ?";
         Result<String> result;
         Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
@@ -7490,22 +7490,19 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-
-                // Handle 'active' (optional, but the main thing likely being updated)
-                if (map.containsKey("active")) {
-                    statement.setBoolean(1, Boolean.parseBoolean(map.get("active").toString()));
+                statement.setString(1, event.getConfigId());
+                statement.setString(2, event.getPropertyName());
+                if (map.containsKey("propertyValue")) {
+                    statement.setString(3, (String)map.get("propertyValue"));
                 } else {
-                    statement.setNull(1, Types.BOOLEAN); // Or keep existing; see discussion below
+                    statement.setNull(3, Types.VARCHAR);
                 }
-
-                statement.setString(2, event.getEventId().getUserId());
-                statement.setTimestamp(3, timestamp);
-
-                // WHERE clause parameters (from the event, NOT the JSON)
-                statement.setString(4, event.getHostId());
-                statement.setString(5, event.getInstanceId());
-                statement.setString(6, event.getAppId());
-                statement.setString(7, event.getAppVersion());
+                statement.setString(4, event.getEventId().getUserId());
+                statement.setTimestamp(5, timestamp);
+                statement.setString(6, event.getHostId());
+                statement.setString(7, event.getInstanceId());
+                statement.setString(8, event.getAppId());
+                statement.setString(9, event.getAppVersion());
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -7538,7 +7535,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> deleteConfigInstanceApp(ConfigInstanceAppDeletedEvent event) {
         Logger logger = LoggerFactory.getLogger(getClass());
-        final String sql = "DELETE FROM instance_app_t WHERE host_id = ? AND instance_id = ? AND app_id = ? AND app_version = ?";
+        final String sql = "DELETE FROM instance_app_property_t " +
+                "WHERE host_id = ? AND instance_id = ? AND app_id = ? AND app_version = ? AND config_id = ? AND property_name = ?";
         Result<String> result;
 
         try (Connection conn = ds.getConnection()) {
@@ -7548,6 +7546,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(2, event.getInstanceId());
                 statement.setString(3, event.getAppId());
                 statement.setString(4, event.getAppVersion());
+                statement.setString(5, event.getConfigId());
+                statement.setString(6, event.getPropertyName());
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
