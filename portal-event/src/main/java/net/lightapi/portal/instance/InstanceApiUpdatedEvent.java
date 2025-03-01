@@ -13,10 +13,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class InstanceApiUpdatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -5407762591434473165L;
+  private static final long serialVersionUID = 5775954342863627378L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"InstanceApiUpdatedEvent\",\"namespace\":\"net.lightapi.portal.instance\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"instanceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"instance id\"},{\"name\":\"apiId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api id\"},{\"name\":\"apiVersion\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api version\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"optional fields in json\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"InstanceApiUpdatedEvent\",\"namespace\":\"net.lightapi.portal.instance\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"instanceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"instance id\"},{\"name\":\"apiId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api id\"},{\"name\":\"apiVersion\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"api version\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"optional fields in json\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -73,8 +73,6 @@ public class InstanceApiUpdatedEvent extends org.apache.avro.specific.SpecificRe
   }
 
   private com.networknt.kafka.common.EventId EventId;
-  /** host id */
-  private java.lang.String hostId;
   /** instance id */
   private java.lang.String instanceId;
   /** api id */
@@ -94,15 +92,13 @@ public class InstanceApiUpdatedEvent extends org.apache.avro.specific.SpecificRe
   /**
    * All-args constructor.
    * @param EventId The new value for EventId
-   * @param hostId host id
    * @param instanceId instance id
    * @param apiId api id
    * @param apiVersion api version
    * @param value optional fields in json
    */
-  public InstanceApiUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String instanceId, java.lang.String apiId, java.lang.String apiVersion, java.lang.String value) {
+  public InstanceApiUpdatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String instanceId, java.lang.String apiId, java.lang.String apiVersion, java.lang.String value) {
     this.EventId = EventId;
-    this.hostId = hostId;
     this.instanceId = instanceId;
     this.apiId = apiId;
     this.apiVersion = apiVersion;
@@ -120,11 +116,10 @@ public class InstanceApiUpdatedEvent extends org.apache.avro.specific.SpecificRe
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return EventId;
-    case 1: return hostId;
-    case 2: return instanceId;
-    case 3: return apiId;
-    case 4: return apiVersion;
-    case 5: return value;
+    case 1: return instanceId;
+    case 2: return apiId;
+    case 3: return apiVersion;
+    case 4: return value;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -135,11 +130,10 @@ public class InstanceApiUpdatedEvent extends org.apache.avro.specific.SpecificRe
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
-    case 1: hostId = value$ != null ? value$.toString() : null; break;
-    case 2: instanceId = value$ != null ? value$.toString() : null; break;
-    case 3: apiId = value$ != null ? value$.toString() : null; break;
-    case 4: apiVersion = value$ != null ? value$.toString() : null; break;
-    case 5: value = value$ != null ? value$.toString() : null; break;
+    case 1: instanceId = value$ != null ? value$.toString() : null; break;
+    case 2: apiId = value$ != null ? value$.toString() : null; break;
+    case 3: apiVersion = value$ != null ? value$.toString() : null; break;
+    case 4: value = value$ != null ? value$.toString() : null; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -159,24 +153,6 @@ public class InstanceApiUpdatedEvent extends org.apache.avro.specific.SpecificRe
    */
   public void setEventId(com.networknt.kafka.common.EventId value) {
     this.EventId = value;
-  }
-
-  /**
-   * Gets the value of the 'hostId' field.
-   * @return host id
-   */
-  public java.lang.String getHostId() {
-    return hostId;
-  }
-
-
-  /**
-   * Sets the value of the 'hostId' field.
-   * host id
-   * @param value the value to set.
-   */
-  public void setHostId(java.lang.String value) {
-    this.hostId = value;
   }
 
   /**
@@ -294,8 +270,6 @@ public class InstanceApiUpdatedEvent extends org.apache.avro.specific.SpecificRe
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
-    /** host id */
-    private java.lang.String hostId;
     /** instance id */
     private java.lang.String instanceId;
     /** api id */
@@ -323,25 +297,21 @@ public class InstanceApiUpdatedEvent extends org.apache.avro.specific.SpecificRe
       if (other.hasEventIdBuilder()) {
         this.EventIdBuilder = com.networknt.kafka.common.EventId.newBuilder(other.getEventIdBuilder());
       }
-      if (isValidValue(fields()[1], other.hostId)) {
-        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
+      if (isValidValue(fields()[1], other.instanceId)) {
+        this.instanceId = data().deepCopy(fields()[1].schema(), other.instanceId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
-      if (isValidValue(fields()[2], other.instanceId)) {
-        this.instanceId = data().deepCopy(fields()[2].schema(), other.instanceId);
+      if (isValidValue(fields()[2], other.apiId)) {
+        this.apiId = data().deepCopy(fields()[2].schema(), other.apiId);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.apiId)) {
-        this.apiId = data().deepCopy(fields()[3].schema(), other.apiId);
+      if (isValidValue(fields()[3], other.apiVersion)) {
+        this.apiVersion = data().deepCopy(fields()[3].schema(), other.apiVersion);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
-      if (isValidValue(fields()[4], other.apiVersion)) {
-        this.apiVersion = data().deepCopy(fields()[4].schema(), other.apiVersion);
+      if (isValidValue(fields()[4], other.value)) {
+        this.value = data().deepCopy(fields()[4].schema(), other.value);
         fieldSetFlags()[4] = other.fieldSetFlags()[4];
-      }
-      if (isValidValue(fields()[5], other.value)) {
-        this.value = data().deepCopy(fields()[5].schema(), other.value);
-        fieldSetFlags()[5] = other.fieldSetFlags()[5];
       }
     }
 
@@ -356,25 +326,21 @@ public class InstanceApiUpdatedEvent extends org.apache.avro.specific.SpecificRe
         fieldSetFlags()[0] = true;
       }
       this.EventIdBuilder = null;
-      if (isValidValue(fields()[1], other.hostId)) {
-        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
+      if (isValidValue(fields()[1], other.instanceId)) {
+        this.instanceId = data().deepCopy(fields()[1].schema(), other.instanceId);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.instanceId)) {
-        this.instanceId = data().deepCopy(fields()[2].schema(), other.instanceId);
+      if (isValidValue(fields()[2], other.apiId)) {
+        this.apiId = data().deepCopy(fields()[2].schema(), other.apiId);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.apiId)) {
-        this.apiId = data().deepCopy(fields()[3].schema(), other.apiId);
+      if (isValidValue(fields()[3], other.apiVersion)) {
+        this.apiVersion = data().deepCopy(fields()[3].schema(), other.apiVersion);
         fieldSetFlags()[3] = true;
       }
-      if (isValidValue(fields()[4], other.apiVersion)) {
-        this.apiVersion = data().deepCopy(fields()[4].schema(), other.apiVersion);
+      if (isValidValue(fields()[4], other.value)) {
+        this.value = data().deepCopy(fields()[4].schema(), other.value);
         fieldSetFlags()[4] = true;
-      }
-      if (isValidValue(fields()[5], other.value)) {
-        this.value = data().deepCopy(fields()[5].schema(), other.value);
-        fieldSetFlags()[5] = true;
       }
     }
 
@@ -455,50 +421,6 @@ public class InstanceApiUpdatedEvent extends org.apache.avro.specific.SpecificRe
     }
 
     /**
-      * Gets the value of the 'hostId' field.
-      * host id
-      * @return The value.
-      */
-    public java.lang.String getHostId() {
-      return hostId;
-    }
-
-
-    /**
-      * Sets the value of the 'hostId' field.
-      * host id
-      * @param value The value of 'hostId'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.instance.InstanceApiUpdatedEvent.Builder setHostId(java.lang.String value) {
-      validate(fields()[1], value);
-      this.hostId = value;
-      fieldSetFlags()[1] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'hostId' field has been set.
-      * host id
-      * @return True if the 'hostId' field has been set, false otherwise.
-      */
-    public boolean hasHostId() {
-      return fieldSetFlags()[1];
-    }
-
-
-    /**
-      * Clears the value of the 'hostId' field.
-      * host id
-      * @return This builder.
-      */
-    public net.lightapi.portal.instance.InstanceApiUpdatedEvent.Builder clearHostId() {
-      hostId = null;
-      fieldSetFlags()[1] = false;
-      return this;
-    }
-
-    /**
       * Gets the value of the 'instanceId' field.
       * instance id
       * @return The value.
@@ -515,9 +437,9 @@ public class InstanceApiUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.instance.InstanceApiUpdatedEvent.Builder setInstanceId(java.lang.String value) {
-      validate(fields()[2], value);
+      validate(fields()[1], value);
       this.instanceId = value;
-      fieldSetFlags()[2] = true;
+      fieldSetFlags()[1] = true;
       return this;
     }
 
@@ -527,7 +449,7 @@ public class InstanceApiUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return True if the 'instanceId' field has been set, false otherwise.
       */
     public boolean hasInstanceId() {
-      return fieldSetFlags()[2];
+      return fieldSetFlags()[1];
     }
 
 
@@ -538,7 +460,7 @@ public class InstanceApiUpdatedEvent extends org.apache.avro.specific.SpecificRe
       */
     public net.lightapi.portal.instance.InstanceApiUpdatedEvent.Builder clearInstanceId() {
       instanceId = null;
-      fieldSetFlags()[2] = false;
+      fieldSetFlags()[1] = false;
       return this;
     }
 
@@ -559,9 +481,9 @@ public class InstanceApiUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.instance.InstanceApiUpdatedEvent.Builder setApiId(java.lang.String value) {
-      validate(fields()[3], value);
+      validate(fields()[2], value);
       this.apiId = value;
-      fieldSetFlags()[3] = true;
+      fieldSetFlags()[2] = true;
       return this;
     }
 
@@ -571,7 +493,7 @@ public class InstanceApiUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return True if the 'apiId' field has been set, false otherwise.
       */
     public boolean hasApiId() {
-      return fieldSetFlags()[3];
+      return fieldSetFlags()[2];
     }
 
 
@@ -582,7 +504,7 @@ public class InstanceApiUpdatedEvent extends org.apache.avro.specific.SpecificRe
       */
     public net.lightapi.portal.instance.InstanceApiUpdatedEvent.Builder clearApiId() {
       apiId = null;
-      fieldSetFlags()[3] = false;
+      fieldSetFlags()[2] = false;
       return this;
     }
 
@@ -603,9 +525,9 @@ public class InstanceApiUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.instance.InstanceApiUpdatedEvent.Builder setApiVersion(java.lang.String value) {
-      validate(fields()[4], value);
+      validate(fields()[3], value);
       this.apiVersion = value;
-      fieldSetFlags()[4] = true;
+      fieldSetFlags()[3] = true;
       return this;
     }
 
@@ -615,7 +537,7 @@ public class InstanceApiUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return True if the 'apiVersion' field has been set, false otherwise.
       */
     public boolean hasApiVersion() {
-      return fieldSetFlags()[4];
+      return fieldSetFlags()[3];
     }
 
 
@@ -626,7 +548,7 @@ public class InstanceApiUpdatedEvent extends org.apache.avro.specific.SpecificRe
       */
     public net.lightapi.portal.instance.InstanceApiUpdatedEvent.Builder clearApiVersion() {
       apiVersion = null;
-      fieldSetFlags()[4] = false;
+      fieldSetFlags()[3] = false;
       return this;
     }
 
@@ -647,9 +569,9 @@ public class InstanceApiUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return This builder.
       */
     public net.lightapi.portal.instance.InstanceApiUpdatedEvent.Builder setValue(java.lang.String value) {
-      validate(fields()[5], value);
+      validate(fields()[4], value);
       this.value = value;
-      fieldSetFlags()[5] = true;
+      fieldSetFlags()[4] = true;
       return this;
     }
 
@@ -659,7 +581,7 @@ public class InstanceApiUpdatedEvent extends org.apache.avro.specific.SpecificRe
       * @return True if the 'value' field has been set, false otherwise.
       */
     public boolean hasValue() {
-      return fieldSetFlags()[5];
+      return fieldSetFlags()[4];
     }
 
 
@@ -670,7 +592,7 @@ public class InstanceApiUpdatedEvent extends org.apache.avro.specific.SpecificRe
       */
     public net.lightapi.portal.instance.InstanceApiUpdatedEvent.Builder clearValue() {
       value = null;
-      fieldSetFlags()[5] = false;
+      fieldSetFlags()[4] = false;
       return this;
     }
 
@@ -689,11 +611,10 @@ public class InstanceApiUpdatedEvent extends org.apache.avro.specific.SpecificRe
         } else {
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
-        record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
-        record.instanceId = fieldSetFlags()[2] ? this.instanceId : (java.lang.String) defaultValue(fields()[2]);
-        record.apiId = fieldSetFlags()[3] ? this.apiId : (java.lang.String) defaultValue(fields()[3]);
-        record.apiVersion = fieldSetFlags()[4] ? this.apiVersion : (java.lang.String) defaultValue(fields()[4]);
-        record.value = fieldSetFlags()[5] ? this.value : (java.lang.String) defaultValue(fields()[5]);
+        record.instanceId = fieldSetFlags()[1] ? this.instanceId : (java.lang.String) defaultValue(fields()[1]);
+        record.apiId = fieldSetFlags()[2] ? this.apiId : (java.lang.String) defaultValue(fields()[2]);
+        record.apiVersion = fieldSetFlags()[3] ? this.apiVersion : (java.lang.String) defaultValue(fields()[3]);
+        record.value = fieldSetFlags()[4] ? this.value : (java.lang.String) defaultValue(fields()[4]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -728,8 +649,6 @@ public class InstanceApiUpdatedEvent extends org.apache.avro.specific.SpecificRe
   {
     this.EventId.customEncode(out);
 
-    out.writeString(this.hostId);
-
     out.writeString(this.instanceId);
 
     out.writeString(this.apiId);
@@ -750,8 +669,6 @@ public class InstanceApiUpdatedEvent extends org.apache.avro.specific.SpecificRe
       }
       this.EventId.customDecode(in);
 
-      this.hostId = in.readString();
-
       this.instanceId = in.readString();
 
       this.apiId = in.readString();
@@ -761,7 +678,7 @@ public class InstanceApiUpdatedEvent extends org.apache.avro.specific.SpecificRe
       this.value = in.readString();
 
     } else {
-      for (int i = 0; i < 6; i++) {
+      for (int i = 0; i < 5; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -771,22 +688,18 @@ public class InstanceApiUpdatedEvent extends org.apache.avro.specific.SpecificRe
           break;
 
         case 1:
-          this.hostId = in.readString();
-          break;
-
-        case 2:
           this.instanceId = in.readString();
           break;
 
-        case 3:
+        case 2:
           this.apiId = in.readString();
           break;
 
-        case 4:
+        case 3:
           this.apiVersion = in.readString();
           break;
 
-        case 5:
+        case 4:
           this.value = in.readString();
           break;
 

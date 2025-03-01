@@ -7000,7 +7000,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, event.getHostId());
+                statement.setString(1, event.getEventId().getHostId());
                 statement.setString(2, event.getInstanceId());
                 statement.setString(3, event.getApiId());
                 statement.setString(4, event.getApiVersion());
@@ -7016,11 +7016,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("Failed to insert instance API for host_id: " + event.getHostId() +
+                    throw new SQLException("Failed to insert instance API for host_id: " + event.getEventId().getHostId() +
                             ", instance_id: " + event.getInstanceId() + ", api_id: " + event.getApiId() + ", api_version: " + event.getApiVersion());
                 }
                 conn.commit();
-                result = Success.of(event.getHostId() + "|" + event.getInstanceId() + "|" + event.getApiId() + "|" + event.getApiVersion()); // Composite key
+                result = Success.of(event.getEventId().getHostId() + "|" + event.getInstanceId() + "|" + event.getApiId() + "|" + event.getApiVersion()); // Composite key
                 insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
 
             } catch (SQLException e) {
@@ -7064,18 +7064,18 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 statement.setString(4, event.getEventId().getUserId());
                 statement.setTimestamp(5, timestamp);
-                statement.setString(6, event.getHostId());
+                statement.setString(6, event.getEventId().getHostId());
                 statement.setString(7, event.getInstanceId());
                 statement.setString(8, event.getApiId());
                 statement.setString(9, event.getApiVersion());
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("Failed to update instance API. No rows affected for host_id: " + event.getHostId() +
+                    throw new SQLException("Failed to update instance API. No rows affected for host_id: " + event.getEventId().getHostId() +
                             ", instance_id: " + event.getInstanceId() + ", api_id: " + event.getApiId() + ", api_version: " + event.getApiVersion());
                 }
                 conn.commit();
-                result = Success.of(event.getHostId() + "|" + event.getInstanceId() + "|" + event.getApiId() + "|" + event.getApiVersion()); // Composite key
+                result = Success.of(event.getEventId().getHostId() + "|" + event.getInstanceId() + "|" + event.getApiId() + "|" + event.getApiVersion()); // Composite key
                 insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
 
             } catch (SQLException e) {
@@ -7106,7 +7106,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, event.getHostId());
+                statement.setString(1, event.getEventId().getHostId());
                 statement.setString(2, event.getInstanceId());
                 statement.setString(3, event.getApiId());
                 statement.setString(4, event.getApiVersion());
@@ -7115,11 +7115,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("Failed to delete instance API. No rows affected for host_id: " + event.getHostId() +
+                    throw new SQLException("Failed to delete instance API. No rows affected for host_id: " + event.getEventId().getHostId() +
                             ", instance_id: " + event.getInstanceId() + ", api_id: " + event.getApiId() + ", api_version: " + event.getApiVersion());
                 }
                 conn.commit();
-                result = Success.of(event.getHostId() + "|" + event.getInstanceId() + "|" + event.getApiId() + "|" + event.getApiVersion()); // Composite key
+                result = Success.of(event.getEventId().getHostId() + "|" + event.getInstanceId() + "|" + event.getApiId() + "|" + event.getApiVersion()); // Composite key
                 insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
 
             } catch (SQLException e) {
@@ -7460,7 +7460,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, event.getHostId());
+                statement.setString(1, event.getEventId().getHostId());
                 statement.setString(2, event.getInstanceId());
                 statement.setString(3, event.getAppId());
                 statement.setString(4, event.getAppVersion());
@@ -7476,11 +7476,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("Failed to insert instance app for host_id: " + event.getHostId() +
+                    throw new SQLException("Failed to insert instance app for host_id: " + event.getEventId().getHostId() +
                             ", instance_id: " + event.getInstanceId() + ", app_id: " + event.getAppId() + ", app_version: " + event.getAppVersion());
                 }
                 conn.commit();
-                result = Success.of(event.getHostId() + "|" + event.getInstanceId() + "|" + event.getAppId() + "|" + event.getAppVersion()); // Composite key
+                result = Success.of(event.getEventId().getHostId() + "|" + event.getInstanceId() + "|" + event.getAppId() + "|" + event.getAppVersion()); // Composite key
                 insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
 
 
@@ -7527,18 +7527,18 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 statement.setString(4, event.getEventId().getUserId());
                 statement.setTimestamp(5, timestamp);
-                statement.setString(6, event.getHostId());
+                statement.setString(6, event.getEventId().getHostId());
                 statement.setString(7, event.getInstanceId());
                 statement.setString(8, event.getAppId());
                 statement.setString(9, event.getAppVersion());
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("Failed to update instance app.  No rows affected for host_id: " + event.getHostId() +
+                    throw new SQLException("Failed to update instance app.  No rows affected for host_id: " + event.getEventId().getHostId() +
                             ", instance_id: " + event.getInstanceId() + ", app_id: " + event.getAppId() + ", app_version: " + event.getAppVersion());
                 }
                 conn.commit();
-                result = Success.of(event.getHostId() + "|" + event.getInstanceId() + "|" + event.getAppId() + "|" + event.getAppVersion()); // Composite key
+                result = Success.of(event.getEventId().getHostId() + "|" + event.getInstanceId() + "|" + event.getAppId() + "|" + event.getAppVersion()); // Composite key
                 insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
 
             } catch (SQLException e) {
@@ -7570,7 +7570,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, event.getHostId());
+                statement.setString(1, event.getEventId().getHostId());
                 statement.setString(2, event.getInstanceId());
                 statement.setString(3, event.getAppId());
                 statement.setString(4, event.getAppVersion());
@@ -7579,11 +7579,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("Failed to delete instance app. No rows affected for host_id: " + event.getHostId() +
+                    throw new SQLException("Failed to delete instance app. No rows affected for host_id: " + event.getEventId().getHostId() +
                             ", instance_id: " + event.getInstanceId() + ", app_id: " + event.getAppId() + ", app_version: " + event.getAppVersion());
                 }
                 conn.commit();
-                result = Success.of(event.getHostId() + "|" + event.getInstanceId() + "|" + event.getAppId() + "|" + event.getAppVersion());  // Composite key
+                result = Success.of(event.getEventId().getHostId() + "|" + event.getInstanceId() + "|" + event.getAppId() + "|" + event.getAppVersion());  // Composite key
                 insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
 
             } catch (SQLException e) {
@@ -7710,7 +7710,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, event.getHostId());
+                statement.setString(1, event.getEventId().getHostId());
                 statement.setString(2, event.getInstanceId());
                 statement.setString(3, event.getConfigId()); // Now using configId from the event
                 statement.setString(4, event.getPropertyName());
@@ -7734,12 +7734,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("Failed to insert instance property for host_id: " + event.getHostId() +
+                    throw new SQLException("Failed to insert instance property for host_id: " + event.getEventId().getHostId() +
                             ", instance_id: " + event.getInstanceId() + ", config_id: " + event.getConfigId() +
                             ", property_name: " + event.getPropertyName());
                 }
                 conn.commit();
-                result = Success.of(event.getHostId() + "|" + event.getInstanceId() + "|" + event.getConfigId() + "|" + event.getPropertyName()); // Composite key
+                result = Success.of(event.getEventId().getHostId() + "|" + event.getInstanceId() + "|" + event.getConfigId() + "|" + event.getPropertyName()); // Composite key
                 insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
 
 
@@ -7795,19 +7795,19 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setTimestamp(4, timestamp);
 
                 // WHERE clause parameters (from the event, NOT the JSON)
-                statement.setString(5, event.getHostId());
+                statement.setString(5, event.getEventId().getHostId());
                 statement.setString(6, event.getInstanceId());
                 statement.setString(7, event.getConfigId());
                 statement.setString(8, event.getPropertyName());
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("Failed to update instance property. No rows affected for host_id: " + event.getHostId() +
+                    throw new SQLException("Failed to update instance property. No rows affected for host_id: " + event.getEventId().getHostId() +
                             ", instance_id: " + event.getInstanceId() + ", config_id: " + event.getConfigId() +
                             ", property_name: " + event.getPropertyName());
                 }
                 conn.commit();
-                result = Success.of(event.getHostId() + "|" + event.getInstanceId() + "|" + event.getConfigId() + "|" + event.getPropertyName()); // Composite key
+                result = Success.of(event.getEventId().getHostId() + "|" + event.getInstanceId() + "|" + event.getConfigId() + "|" + event.getPropertyName()); // Composite key
 
                 insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
 
@@ -7840,19 +7840,19 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, event.getHostId());
+                statement.setString(1, event.getEventId().getHostId());
                 statement.setString(2, event.getInstanceId());
                 statement.setString(3, event.getConfigId());
                 statement.setString(4, event.getPropertyName());
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("Failed to delete instance property. No rows affected for host_id: " + event.getHostId() +
+                    throw new SQLException("Failed to delete instance property. No rows affected for host_id: " + event.getEventId().getHostId() +
                             ", instance_id: " + event.getInstanceId() + ", config_id: " + event.getConfigId() +
                             ", property_name: " + event.getPropertyName());
                 }
                 conn.commit();
-                result = Success.of(event.getHostId() + "|" + event.getInstanceId() + "|" + event.getConfigId() + "|" + event.getPropertyName()); // Composite key
+                result = Success.of(event.getEventId().getHostId() + "|" + event.getInstanceId() + "|" + event.getConfigId() + "|" + event.getPropertyName()); // Composite key
                 insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
 
             } catch (SQLException e) {
@@ -8221,7 +8221,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, event.getHostId());
+                statement.setString(1, event.getEventId().getHostId());
                 statement.setString(2, event.getProductId());
                 statement.setString(3, event.getProductVersion());
                 statement.setString(4, event.getConfigId());
@@ -8246,12 +8246,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("Failed to insert product version property for host_id: " + event.getHostId() +
+                    throw new SQLException("Failed to insert product version property for host_id: " + event.getEventId().getHostId() +
                             ", product_id: " + event.getProductId() + ", product_version: " + event.getProductVersion() +
                             ", config_id: " + event.getConfigId() + ", property_name: " + event.getPropertyName());
                 }
                 conn.commit();
-                result = Success.of(event.getHostId() + "|" + event.getProductId() + "|" + event.getProductVersion() + "|" + event.getConfigId() + "|" + event.getPropertyName()); // Composite key
+                result = Success.of(event.getEventId().getHostId() + "|" + event.getProductId() + "|" + event.getProductVersion() + "|" + event.getConfigId() + "|" + event.getPropertyName()); // Composite key
                 insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
 
             } catch (SQLException e) {
@@ -8305,7 +8305,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setTimestamp(4, timestamp);
 
                 // WHERE clause parameters (from the event, NOT the JSON)
-                statement.setString(5, event.getHostId());
+                statement.setString(5, event.getEventId().getHostId());
                 statement.setString(6, event.getProductId());
                 statement.setString(7, event.getProductVersion());
                 statement.setString(8, event.getConfigId());
@@ -8313,12 +8313,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("Failed to update product version property. No rows affected for host_id: " + event.getHostId() +
+                    throw new SQLException("Failed to update product version property. No rows affected for host_id: " + event.getEventId().getHostId() +
                             ", product_id: " + event.getProductId() + ", product_version: " + event.getProductVersion() +
                             ", config_id: " + event.getConfigId() + ", property_name: " + event.getPropertyName());
                 }
                 conn.commit();
-                result = Success.of(event.getHostId() + "|" + event.getProductId() + "|" + event.getProductVersion() + "|" + event.getConfigId() + "|" + event.getPropertyName());
+                result = Success.of(event.getEventId().getHostId() + "|" + event.getProductId() + "|" + event.getProductVersion() + "|" + event.getConfigId() + "|" + event.getPropertyName());
                 insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
 
             } catch (SQLException e) {
@@ -8351,7 +8351,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, event.getHostId());
+                statement.setString(1, event.getEventId().getHostId());
                 statement.setString(2, event.getProductId());
                 statement.setString(3, event.getProductVersion());
                 statement.setString(4, event.getConfigId());
@@ -8359,12 +8359,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("Failed to delete product version property. No rows affected for host_id: " + event.getHostId() +
+                    throw new SQLException("Failed to delete product version property. No rows affected for host_id: " + event.getEventId().getHostId() +
                             ", product_id: " + event.getProductId() + ", product_version: " + event.getProductVersion() +
                             ", config_id: " + event.getConfigId() + ", property_name: " + event.getPropertyName());
                 }
                 conn.commit();
-                result = Success.of(event.getHostId() + "|" + event.getProductId() + "|" + event.getProductVersion() + "|" + event.getConfigId() + "|" + event.getPropertyName()); // Composite key
+                result = Success.of(event.getEventId().getHostId() + "|" + event.getProductId() + "|" + event.getProductVersion() + "|" + event.getConfigId() + "|" + event.getPropertyName()); // Composite key
                 insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);

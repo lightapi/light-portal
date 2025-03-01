@@ -46,11 +46,6 @@
       }
     },
     {
-      "name": "hostId",
-      "type": "string",
-      "doc": "host id"
-    },
-    {
       "name": "instanceId",
       "type": "string",
       "doc": "instance id"

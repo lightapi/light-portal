@@ -13,10 +13,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -5811977216008996686L;
+  private static final long serialVersionUID = 5177171202338225131L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ConfigInstanceAppCreatedEvent\",\"namespace\":\"net.lightapi.portal.config\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"instanceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"instance id\"},{\"name\":\"appId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"app id\"},{\"name\":\"appVersion\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"app version\"},{\"name\":\"configId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"config id\"},{\"name\":\"propertyName\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"property name\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"optional fields in json\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ConfigInstanceAppCreatedEvent\",\"namespace\":\"net.lightapi.portal.config\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"instanceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"instance id\"},{\"name\":\"appId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"app id\"},{\"name\":\"appVersion\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"app version\"},{\"name\":\"configId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"config id\"},{\"name\":\"propertyName\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"property name\"},{\"name\":\"value\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"optional fields in json\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -73,8 +73,6 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
   }
 
   private com.networknt.kafka.common.EventId EventId;
-  /** host id */
-  private java.lang.String hostId;
   /** instance id */
   private java.lang.String instanceId;
   /** app id */
@@ -98,7 +96,6 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
   /**
    * All-args constructor.
    * @param EventId The new value for EventId
-   * @param hostId host id
    * @param instanceId instance id
    * @param appId app id
    * @param appVersion app version
@@ -106,9 +103,8 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
    * @param propertyName property name
    * @param value optional fields in json
    */
-  public ConfigInstanceAppCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String instanceId, java.lang.String appId, java.lang.String appVersion, java.lang.String configId, java.lang.String propertyName, java.lang.String value) {
+  public ConfigInstanceAppCreatedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String instanceId, java.lang.String appId, java.lang.String appVersion, java.lang.String configId, java.lang.String propertyName, java.lang.String value) {
     this.EventId = EventId;
-    this.hostId = hostId;
     this.instanceId = instanceId;
     this.appId = appId;
     this.appVersion = appVersion;
@@ -128,13 +124,12 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return EventId;
-    case 1: return hostId;
-    case 2: return instanceId;
-    case 3: return appId;
-    case 4: return appVersion;
-    case 5: return configId;
-    case 6: return propertyName;
-    case 7: return value;
+    case 1: return instanceId;
+    case 2: return appId;
+    case 3: return appVersion;
+    case 4: return configId;
+    case 5: return propertyName;
+    case 6: return value;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -145,13 +140,12 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
-    case 1: hostId = value$ != null ? value$.toString() : null; break;
-    case 2: instanceId = value$ != null ? value$.toString() : null; break;
-    case 3: appId = value$ != null ? value$.toString() : null; break;
-    case 4: appVersion = value$ != null ? value$.toString() : null; break;
-    case 5: configId = value$ != null ? value$.toString() : null; break;
-    case 6: propertyName = value$ != null ? value$.toString() : null; break;
-    case 7: value = value$ != null ? value$.toString() : null; break;
+    case 1: instanceId = value$ != null ? value$.toString() : null; break;
+    case 2: appId = value$ != null ? value$.toString() : null; break;
+    case 3: appVersion = value$ != null ? value$.toString() : null; break;
+    case 4: configId = value$ != null ? value$.toString() : null; break;
+    case 5: propertyName = value$ != null ? value$.toString() : null; break;
+    case 6: value = value$ != null ? value$.toString() : null; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -171,24 +165,6 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
    */
   public void setEventId(com.networknt.kafka.common.EventId value) {
     this.EventId = value;
-  }
-
-  /**
-   * Gets the value of the 'hostId' field.
-   * @return host id
-   */
-  public java.lang.String getHostId() {
-    return hostId;
-  }
-
-
-  /**
-   * Sets the value of the 'hostId' field.
-   * host id
-   * @param value the value to set.
-   */
-  public void setHostId(java.lang.String value) {
-    this.hostId = value;
   }
 
   /**
@@ -342,8 +318,6 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
-    /** host id */
-    private java.lang.String hostId;
     /** instance id */
     private java.lang.String instanceId;
     /** app id */
@@ -375,33 +349,29 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
       if (other.hasEventIdBuilder()) {
         this.EventIdBuilder = com.networknt.kafka.common.EventId.newBuilder(other.getEventIdBuilder());
       }
-      if (isValidValue(fields()[1], other.hostId)) {
-        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
+      if (isValidValue(fields()[1], other.instanceId)) {
+        this.instanceId = data().deepCopy(fields()[1].schema(), other.instanceId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
-      if (isValidValue(fields()[2], other.instanceId)) {
-        this.instanceId = data().deepCopy(fields()[2].schema(), other.instanceId);
+      if (isValidValue(fields()[2], other.appId)) {
+        this.appId = data().deepCopy(fields()[2].schema(), other.appId);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.appId)) {
-        this.appId = data().deepCopy(fields()[3].schema(), other.appId);
+      if (isValidValue(fields()[3], other.appVersion)) {
+        this.appVersion = data().deepCopy(fields()[3].schema(), other.appVersion);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
       }
-      if (isValidValue(fields()[4], other.appVersion)) {
-        this.appVersion = data().deepCopy(fields()[4].schema(), other.appVersion);
+      if (isValidValue(fields()[4], other.configId)) {
+        this.configId = data().deepCopy(fields()[4].schema(), other.configId);
         fieldSetFlags()[4] = other.fieldSetFlags()[4];
       }
-      if (isValidValue(fields()[5], other.configId)) {
-        this.configId = data().deepCopy(fields()[5].schema(), other.configId);
+      if (isValidValue(fields()[5], other.propertyName)) {
+        this.propertyName = data().deepCopy(fields()[5].schema(), other.propertyName);
         fieldSetFlags()[5] = other.fieldSetFlags()[5];
       }
-      if (isValidValue(fields()[6], other.propertyName)) {
-        this.propertyName = data().deepCopy(fields()[6].schema(), other.propertyName);
+      if (isValidValue(fields()[6], other.value)) {
+        this.value = data().deepCopy(fields()[6].schema(), other.value);
         fieldSetFlags()[6] = other.fieldSetFlags()[6];
-      }
-      if (isValidValue(fields()[7], other.value)) {
-        this.value = data().deepCopy(fields()[7].schema(), other.value);
-        fieldSetFlags()[7] = other.fieldSetFlags()[7];
       }
     }
 
@@ -416,33 +386,29 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
         fieldSetFlags()[0] = true;
       }
       this.EventIdBuilder = null;
-      if (isValidValue(fields()[1], other.hostId)) {
-        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
+      if (isValidValue(fields()[1], other.instanceId)) {
+        this.instanceId = data().deepCopy(fields()[1].schema(), other.instanceId);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.instanceId)) {
-        this.instanceId = data().deepCopy(fields()[2].schema(), other.instanceId);
+      if (isValidValue(fields()[2], other.appId)) {
+        this.appId = data().deepCopy(fields()[2].schema(), other.appId);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.appId)) {
-        this.appId = data().deepCopy(fields()[3].schema(), other.appId);
+      if (isValidValue(fields()[3], other.appVersion)) {
+        this.appVersion = data().deepCopy(fields()[3].schema(), other.appVersion);
         fieldSetFlags()[3] = true;
       }
-      if (isValidValue(fields()[4], other.appVersion)) {
-        this.appVersion = data().deepCopy(fields()[4].schema(), other.appVersion);
+      if (isValidValue(fields()[4], other.configId)) {
+        this.configId = data().deepCopy(fields()[4].schema(), other.configId);
         fieldSetFlags()[4] = true;
       }
-      if (isValidValue(fields()[5], other.configId)) {
-        this.configId = data().deepCopy(fields()[5].schema(), other.configId);
+      if (isValidValue(fields()[5], other.propertyName)) {
+        this.propertyName = data().deepCopy(fields()[5].schema(), other.propertyName);
         fieldSetFlags()[5] = true;
       }
-      if (isValidValue(fields()[6], other.propertyName)) {
-        this.propertyName = data().deepCopy(fields()[6].schema(), other.propertyName);
+      if (isValidValue(fields()[6], other.value)) {
+        this.value = data().deepCopy(fields()[6].schema(), other.value);
         fieldSetFlags()[6] = true;
-      }
-      if (isValidValue(fields()[7], other.value)) {
-        this.value = data().deepCopy(fields()[7].schema(), other.value);
-        fieldSetFlags()[7] = true;
       }
     }
 
@@ -523,50 +489,6 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
     }
 
     /**
-      * Gets the value of the 'hostId' field.
-      * host id
-      * @return The value.
-      */
-    public java.lang.String getHostId() {
-      return hostId;
-    }
-
-
-    /**
-      * Sets the value of the 'hostId' field.
-      * host id
-      * @param value The value of 'hostId'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.config.ConfigInstanceAppCreatedEvent.Builder setHostId(java.lang.String value) {
-      validate(fields()[1], value);
-      this.hostId = value;
-      fieldSetFlags()[1] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'hostId' field has been set.
-      * host id
-      * @return True if the 'hostId' field has been set, false otherwise.
-      */
-    public boolean hasHostId() {
-      return fieldSetFlags()[1];
-    }
-
-
-    /**
-      * Clears the value of the 'hostId' field.
-      * host id
-      * @return This builder.
-      */
-    public net.lightapi.portal.config.ConfigInstanceAppCreatedEvent.Builder clearHostId() {
-      hostId = null;
-      fieldSetFlags()[1] = false;
-      return this;
-    }
-
-    /**
       * Gets the value of the 'instanceId' field.
       * instance id
       * @return The value.
@@ -583,9 +505,9 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
       * @return This builder.
       */
     public net.lightapi.portal.config.ConfigInstanceAppCreatedEvent.Builder setInstanceId(java.lang.String value) {
-      validate(fields()[2], value);
+      validate(fields()[1], value);
       this.instanceId = value;
-      fieldSetFlags()[2] = true;
+      fieldSetFlags()[1] = true;
       return this;
     }
 
@@ -595,7 +517,7 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
       * @return True if the 'instanceId' field has been set, false otherwise.
       */
     public boolean hasInstanceId() {
-      return fieldSetFlags()[2];
+      return fieldSetFlags()[1];
     }
 
 
@@ -606,7 +528,7 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
       */
     public net.lightapi.portal.config.ConfigInstanceAppCreatedEvent.Builder clearInstanceId() {
       instanceId = null;
-      fieldSetFlags()[2] = false;
+      fieldSetFlags()[1] = false;
       return this;
     }
 
@@ -627,9 +549,9 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
       * @return This builder.
       */
     public net.lightapi.portal.config.ConfigInstanceAppCreatedEvent.Builder setAppId(java.lang.String value) {
-      validate(fields()[3], value);
+      validate(fields()[2], value);
       this.appId = value;
-      fieldSetFlags()[3] = true;
+      fieldSetFlags()[2] = true;
       return this;
     }
 
@@ -639,7 +561,7 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
       * @return True if the 'appId' field has been set, false otherwise.
       */
     public boolean hasAppId() {
-      return fieldSetFlags()[3];
+      return fieldSetFlags()[2];
     }
 
 
@@ -650,7 +572,7 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
       */
     public net.lightapi.portal.config.ConfigInstanceAppCreatedEvent.Builder clearAppId() {
       appId = null;
-      fieldSetFlags()[3] = false;
+      fieldSetFlags()[2] = false;
       return this;
     }
 
@@ -671,9 +593,9 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
       * @return This builder.
       */
     public net.lightapi.portal.config.ConfigInstanceAppCreatedEvent.Builder setAppVersion(java.lang.String value) {
-      validate(fields()[4], value);
+      validate(fields()[3], value);
       this.appVersion = value;
-      fieldSetFlags()[4] = true;
+      fieldSetFlags()[3] = true;
       return this;
     }
 
@@ -683,7 +605,7 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
       * @return True if the 'appVersion' field has been set, false otherwise.
       */
     public boolean hasAppVersion() {
-      return fieldSetFlags()[4];
+      return fieldSetFlags()[3];
     }
 
 
@@ -694,7 +616,7 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
       */
     public net.lightapi.portal.config.ConfigInstanceAppCreatedEvent.Builder clearAppVersion() {
       appVersion = null;
-      fieldSetFlags()[4] = false;
+      fieldSetFlags()[3] = false;
       return this;
     }
 
@@ -715,9 +637,9 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
       * @return This builder.
       */
     public net.lightapi.portal.config.ConfigInstanceAppCreatedEvent.Builder setConfigId(java.lang.String value) {
-      validate(fields()[5], value);
+      validate(fields()[4], value);
       this.configId = value;
-      fieldSetFlags()[5] = true;
+      fieldSetFlags()[4] = true;
       return this;
     }
 
@@ -727,7 +649,7 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
       * @return True if the 'configId' field has been set, false otherwise.
       */
     public boolean hasConfigId() {
-      return fieldSetFlags()[5];
+      return fieldSetFlags()[4];
     }
 
 
@@ -738,7 +660,7 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
       */
     public net.lightapi.portal.config.ConfigInstanceAppCreatedEvent.Builder clearConfigId() {
       configId = null;
-      fieldSetFlags()[5] = false;
+      fieldSetFlags()[4] = false;
       return this;
     }
 
@@ -759,9 +681,9 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
       * @return This builder.
       */
     public net.lightapi.portal.config.ConfigInstanceAppCreatedEvent.Builder setPropertyName(java.lang.String value) {
-      validate(fields()[6], value);
+      validate(fields()[5], value);
       this.propertyName = value;
-      fieldSetFlags()[6] = true;
+      fieldSetFlags()[5] = true;
       return this;
     }
 
@@ -771,7 +693,7 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
       * @return True if the 'propertyName' field has been set, false otherwise.
       */
     public boolean hasPropertyName() {
-      return fieldSetFlags()[6];
+      return fieldSetFlags()[5];
     }
 
 
@@ -782,7 +704,7 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
       */
     public net.lightapi.portal.config.ConfigInstanceAppCreatedEvent.Builder clearPropertyName() {
       propertyName = null;
-      fieldSetFlags()[6] = false;
+      fieldSetFlags()[5] = false;
       return this;
     }
 
@@ -803,9 +725,9 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
       * @return This builder.
       */
     public net.lightapi.portal.config.ConfigInstanceAppCreatedEvent.Builder setValue(java.lang.String value) {
-      validate(fields()[7], value);
+      validate(fields()[6], value);
       this.value = value;
-      fieldSetFlags()[7] = true;
+      fieldSetFlags()[6] = true;
       return this;
     }
 
@@ -815,7 +737,7 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
       * @return True if the 'value' field has been set, false otherwise.
       */
     public boolean hasValue() {
-      return fieldSetFlags()[7];
+      return fieldSetFlags()[6];
     }
 
 
@@ -826,7 +748,7 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
       */
     public net.lightapi.portal.config.ConfigInstanceAppCreatedEvent.Builder clearValue() {
       value = null;
-      fieldSetFlags()[7] = false;
+      fieldSetFlags()[6] = false;
       return this;
     }
 
@@ -845,13 +767,12 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
         } else {
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
-        record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
-        record.instanceId = fieldSetFlags()[2] ? this.instanceId : (java.lang.String) defaultValue(fields()[2]);
-        record.appId = fieldSetFlags()[3] ? this.appId : (java.lang.String) defaultValue(fields()[3]);
-        record.appVersion = fieldSetFlags()[4] ? this.appVersion : (java.lang.String) defaultValue(fields()[4]);
-        record.configId = fieldSetFlags()[5] ? this.configId : (java.lang.String) defaultValue(fields()[5]);
-        record.propertyName = fieldSetFlags()[6] ? this.propertyName : (java.lang.String) defaultValue(fields()[6]);
-        record.value = fieldSetFlags()[7] ? this.value : (java.lang.String) defaultValue(fields()[7]);
+        record.instanceId = fieldSetFlags()[1] ? this.instanceId : (java.lang.String) defaultValue(fields()[1]);
+        record.appId = fieldSetFlags()[2] ? this.appId : (java.lang.String) defaultValue(fields()[2]);
+        record.appVersion = fieldSetFlags()[3] ? this.appVersion : (java.lang.String) defaultValue(fields()[3]);
+        record.configId = fieldSetFlags()[4] ? this.configId : (java.lang.String) defaultValue(fields()[4]);
+        record.propertyName = fieldSetFlags()[5] ? this.propertyName : (java.lang.String) defaultValue(fields()[5]);
+        record.value = fieldSetFlags()[6] ? this.value : (java.lang.String) defaultValue(fields()[6]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -886,8 +807,6 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
   {
     this.EventId.customEncode(out);
 
-    out.writeString(this.hostId);
-
     out.writeString(this.instanceId);
 
     out.writeString(this.appId);
@@ -912,8 +831,6 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
       }
       this.EventId.customDecode(in);
 
-      this.hostId = in.readString();
-
       this.instanceId = in.readString();
 
       this.appId = in.readString();
@@ -927,7 +844,7 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
       this.value = in.readString();
 
     } else {
-      for (int i = 0; i < 8; i++) {
+      for (int i = 0; i < 7; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -937,30 +854,26 @@ public class ConfigInstanceAppCreatedEvent extends org.apache.avro.specific.Spec
           break;
 
         case 1:
-          this.hostId = in.readString();
-          break;
-
-        case 2:
           this.instanceId = in.readString();
           break;
 
-        case 3:
+        case 2:
           this.appId = in.readString();
           break;
 
-        case 4:
+        case 3:
           this.appVersion = in.readString();
           break;
 
-        case 5:
+        case 4:
           this.configId = in.readString();
           break;
 
-        case 6:
+        case 5:
           this.propertyName = in.readString();
           break;
 
-        case 7:
+        case 6:
           this.value = in.readString();
           break;
 

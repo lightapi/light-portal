@@ -46,11 +46,6 @@
       }
     },
     {
-      "name": "hostId",
-      "type": "string",
-      "doc": "host id"
-    },
-    {
       "name": "productId",
       "type": "string",
       "doc": "product id"

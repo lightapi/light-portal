@@ -13,10 +13,10 @@ import org.apache.avro.message.SchemaStore;
 
 @org.apache.avro.specific.AvroGenerated
 public class ConfigInstanceDeletedEvent extends org.apache.avro.specific.SpecificRecordBase implements org.apache.avro.specific.SpecificRecord {
-  private static final long serialVersionUID = -5798794430284542188L;
+  private static final long serialVersionUID = 6068278640257463896L;
 
 
-  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ConfigInstanceDeletedEvent\",\"namespace\":\"net.lightapi.portal.config\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"host id\"},{\"name\":\"instanceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"instance id\"},{\"name\":\"configId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"config id\"},{\"name\":\"propertyName\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"property name\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ = new org.apache.avro.Schema.Parser().parse("{\"type\":\"record\",\"name\":\"ConfigInstanceDeletedEvent\",\"namespace\":\"net.lightapi.portal.config\",\"fields\":[{\"name\":\"EventId\",\"type\":{\"type\":\"record\",\"name\":\"EventId\",\"namespace\":\"com.networknt.kafka.common\",\"fields\":[{\"name\":\"id\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"a unique identifier for the event\"},{\"name\":\"userId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the user who creates the event\"},{\"name\":\"hostId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"the host which is the event is created\"},{\"name\":\"nonce\",\"type\":\"long\",\"doc\":\"the number of the transactions for the user\"},{\"name\":\"timestamp\",\"type\":\"long\",\"doc\":\"time the event is recorded\",\"default\":0},{\"name\":\"derived\",\"type\":\"boolean\",\"doc\":\"indicate if the event is derived from event processor\",\"default\":false}]}},{\"name\":\"instanceId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"instance id\"},{\"name\":\"configId\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"config id\"},{\"name\":\"propertyName\",\"type\":{\"type\":\"string\",\"avro.java.string\":\"String\"},\"doc\":\"property name\"}]}");
   public static org.apache.avro.Schema getClassSchema() { return SCHEMA$; }
 
   private static final SpecificData MODEL$ = new SpecificData();
@@ -73,8 +73,6 @@ public class ConfigInstanceDeletedEvent extends org.apache.avro.specific.Specifi
   }
 
   private com.networknt.kafka.common.EventId EventId;
-  /** host id */
-  private java.lang.String hostId;
   /** instance id */
   private java.lang.String instanceId;
   /** config id */
@@ -92,14 +90,12 @@ public class ConfigInstanceDeletedEvent extends org.apache.avro.specific.Specifi
   /**
    * All-args constructor.
    * @param EventId The new value for EventId
-   * @param hostId host id
    * @param instanceId instance id
    * @param configId config id
    * @param propertyName property name
    */
-  public ConfigInstanceDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String hostId, java.lang.String instanceId, java.lang.String configId, java.lang.String propertyName) {
+  public ConfigInstanceDeletedEvent(com.networknt.kafka.common.EventId EventId, java.lang.String instanceId, java.lang.String configId, java.lang.String propertyName) {
     this.EventId = EventId;
-    this.hostId = hostId;
     this.instanceId = instanceId;
     this.configId = configId;
     this.propertyName = propertyName;
@@ -116,10 +112,9 @@ public class ConfigInstanceDeletedEvent extends org.apache.avro.specific.Specifi
   public java.lang.Object get(int field$) {
     switch (field$) {
     case 0: return EventId;
-    case 1: return hostId;
-    case 2: return instanceId;
-    case 3: return configId;
-    case 4: return propertyName;
+    case 1: return instanceId;
+    case 2: return configId;
+    case 3: return propertyName;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -130,10 +125,9 @@ public class ConfigInstanceDeletedEvent extends org.apache.avro.specific.Specifi
   public void put(int field$, java.lang.Object value$) {
     switch (field$) {
     case 0: EventId = (com.networknt.kafka.common.EventId)value$; break;
-    case 1: hostId = value$ != null ? value$.toString() : null; break;
-    case 2: instanceId = value$ != null ? value$.toString() : null; break;
-    case 3: configId = value$ != null ? value$.toString() : null; break;
-    case 4: propertyName = value$ != null ? value$.toString() : null; break;
+    case 1: instanceId = value$ != null ? value$.toString() : null; break;
+    case 2: configId = value$ != null ? value$.toString() : null; break;
+    case 3: propertyName = value$ != null ? value$.toString() : null; break;
     default: throw new IndexOutOfBoundsException("Invalid index: " + field$);
     }
   }
@@ -153,24 +147,6 @@ public class ConfigInstanceDeletedEvent extends org.apache.avro.specific.Specifi
    */
   public void setEventId(com.networknt.kafka.common.EventId value) {
     this.EventId = value;
-  }
-
-  /**
-   * Gets the value of the 'hostId' field.
-   * @return host id
-   */
-  public java.lang.String getHostId() {
-    return hostId;
-  }
-
-
-  /**
-   * Sets the value of the 'hostId' field.
-   * host id
-   * @param value the value to set.
-   */
-  public void setHostId(java.lang.String value) {
-    this.hostId = value;
   }
 
   /**
@@ -270,8 +246,6 @@ public class ConfigInstanceDeletedEvent extends org.apache.avro.specific.Specifi
 
     private com.networknt.kafka.common.EventId EventId;
     private com.networknt.kafka.common.EventId.Builder EventIdBuilder;
-    /** host id */
-    private java.lang.String hostId;
     /** instance id */
     private java.lang.String instanceId;
     /** config id */
@@ -297,21 +271,17 @@ public class ConfigInstanceDeletedEvent extends org.apache.avro.specific.Specifi
       if (other.hasEventIdBuilder()) {
         this.EventIdBuilder = com.networknt.kafka.common.EventId.newBuilder(other.getEventIdBuilder());
       }
-      if (isValidValue(fields()[1], other.hostId)) {
-        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
+      if (isValidValue(fields()[1], other.instanceId)) {
+        this.instanceId = data().deepCopy(fields()[1].schema(), other.instanceId);
         fieldSetFlags()[1] = other.fieldSetFlags()[1];
       }
-      if (isValidValue(fields()[2], other.instanceId)) {
-        this.instanceId = data().deepCopy(fields()[2].schema(), other.instanceId);
+      if (isValidValue(fields()[2], other.configId)) {
+        this.configId = data().deepCopy(fields()[2].schema(), other.configId);
         fieldSetFlags()[2] = other.fieldSetFlags()[2];
       }
-      if (isValidValue(fields()[3], other.configId)) {
-        this.configId = data().deepCopy(fields()[3].schema(), other.configId);
+      if (isValidValue(fields()[3], other.propertyName)) {
+        this.propertyName = data().deepCopy(fields()[3].schema(), other.propertyName);
         fieldSetFlags()[3] = other.fieldSetFlags()[3];
-      }
-      if (isValidValue(fields()[4], other.propertyName)) {
-        this.propertyName = data().deepCopy(fields()[4].schema(), other.propertyName);
-        fieldSetFlags()[4] = other.fieldSetFlags()[4];
       }
     }
 
@@ -326,21 +296,17 @@ public class ConfigInstanceDeletedEvent extends org.apache.avro.specific.Specifi
         fieldSetFlags()[0] = true;
       }
       this.EventIdBuilder = null;
-      if (isValidValue(fields()[1], other.hostId)) {
-        this.hostId = data().deepCopy(fields()[1].schema(), other.hostId);
+      if (isValidValue(fields()[1], other.instanceId)) {
+        this.instanceId = data().deepCopy(fields()[1].schema(), other.instanceId);
         fieldSetFlags()[1] = true;
       }
-      if (isValidValue(fields()[2], other.instanceId)) {
-        this.instanceId = data().deepCopy(fields()[2].schema(), other.instanceId);
+      if (isValidValue(fields()[2], other.configId)) {
+        this.configId = data().deepCopy(fields()[2].schema(), other.configId);
         fieldSetFlags()[2] = true;
       }
-      if (isValidValue(fields()[3], other.configId)) {
-        this.configId = data().deepCopy(fields()[3].schema(), other.configId);
+      if (isValidValue(fields()[3], other.propertyName)) {
+        this.propertyName = data().deepCopy(fields()[3].schema(), other.propertyName);
         fieldSetFlags()[3] = true;
-      }
-      if (isValidValue(fields()[4], other.propertyName)) {
-        this.propertyName = data().deepCopy(fields()[4].schema(), other.propertyName);
-        fieldSetFlags()[4] = true;
       }
     }
 
@@ -421,50 +387,6 @@ public class ConfigInstanceDeletedEvent extends org.apache.avro.specific.Specifi
     }
 
     /**
-      * Gets the value of the 'hostId' field.
-      * host id
-      * @return The value.
-      */
-    public java.lang.String getHostId() {
-      return hostId;
-    }
-
-
-    /**
-      * Sets the value of the 'hostId' field.
-      * host id
-      * @param value The value of 'hostId'.
-      * @return This builder.
-      */
-    public net.lightapi.portal.config.ConfigInstanceDeletedEvent.Builder setHostId(java.lang.String value) {
-      validate(fields()[1], value);
-      this.hostId = value;
-      fieldSetFlags()[1] = true;
-      return this;
-    }
-
-    /**
-      * Checks whether the 'hostId' field has been set.
-      * host id
-      * @return True if the 'hostId' field has been set, false otherwise.
-      */
-    public boolean hasHostId() {
-      return fieldSetFlags()[1];
-    }
-
-
-    /**
-      * Clears the value of the 'hostId' field.
-      * host id
-      * @return This builder.
-      */
-    public net.lightapi.portal.config.ConfigInstanceDeletedEvent.Builder clearHostId() {
-      hostId = null;
-      fieldSetFlags()[1] = false;
-      return this;
-    }
-
-    /**
       * Gets the value of the 'instanceId' field.
       * instance id
       * @return The value.
@@ -481,9 +403,9 @@ public class ConfigInstanceDeletedEvent extends org.apache.avro.specific.Specifi
       * @return This builder.
       */
     public net.lightapi.portal.config.ConfigInstanceDeletedEvent.Builder setInstanceId(java.lang.String value) {
-      validate(fields()[2], value);
+      validate(fields()[1], value);
       this.instanceId = value;
-      fieldSetFlags()[2] = true;
+      fieldSetFlags()[1] = true;
       return this;
     }
 
@@ -493,7 +415,7 @@ public class ConfigInstanceDeletedEvent extends org.apache.avro.specific.Specifi
       * @return True if the 'instanceId' field has been set, false otherwise.
       */
     public boolean hasInstanceId() {
-      return fieldSetFlags()[2];
+      return fieldSetFlags()[1];
     }
 
 
@@ -504,7 +426,7 @@ public class ConfigInstanceDeletedEvent extends org.apache.avro.specific.Specifi
       */
     public net.lightapi.portal.config.ConfigInstanceDeletedEvent.Builder clearInstanceId() {
       instanceId = null;
-      fieldSetFlags()[2] = false;
+      fieldSetFlags()[1] = false;
       return this;
     }
 
@@ -525,9 +447,9 @@ public class ConfigInstanceDeletedEvent extends org.apache.avro.specific.Specifi
       * @return This builder.
       */
     public net.lightapi.portal.config.ConfigInstanceDeletedEvent.Builder setConfigId(java.lang.String value) {
-      validate(fields()[3], value);
+      validate(fields()[2], value);
       this.configId = value;
-      fieldSetFlags()[3] = true;
+      fieldSetFlags()[2] = true;
       return this;
     }
 
@@ -537,7 +459,7 @@ public class ConfigInstanceDeletedEvent extends org.apache.avro.specific.Specifi
       * @return True if the 'configId' field has been set, false otherwise.
       */
     public boolean hasConfigId() {
-      return fieldSetFlags()[3];
+      return fieldSetFlags()[2];
     }
 
 
@@ -548,7 +470,7 @@ public class ConfigInstanceDeletedEvent extends org.apache.avro.specific.Specifi
       */
     public net.lightapi.portal.config.ConfigInstanceDeletedEvent.Builder clearConfigId() {
       configId = null;
-      fieldSetFlags()[3] = false;
+      fieldSetFlags()[2] = false;
       return this;
     }
 
@@ -569,9 +491,9 @@ public class ConfigInstanceDeletedEvent extends org.apache.avro.specific.Specifi
       * @return This builder.
       */
     public net.lightapi.portal.config.ConfigInstanceDeletedEvent.Builder setPropertyName(java.lang.String value) {
-      validate(fields()[4], value);
+      validate(fields()[3], value);
       this.propertyName = value;
-      fieldSetFlags()[4] = true;
+      fieldSetFlags()[3] = true;
       return this;
     }
 
@@ -581,7 +503,7 @@ public class ConfigInstanceDeletedEvent extends org.apache.avro.specific.Specifi
       * @return True if the 'propertyName' field has been set, false otherwise.
       */
     public boolean hasPropertyName() {
-      return fieldSetFlags()[4];
+      return fieldSetFlags()[3];
     }
 
 
@@ -592,7 +514,7 @@ public class ConfigInstanceDeletedEvent extends org.apache.avro.specific.Specifi
       */
     public net.lightapi.portal.config.ConfigInstanceDeletedEvent.Builder clearPropertyName() {
       propertyName = null;
-      fieldSetFlags()[4] = false;
+      fieldSetFlags()[3] = false;
       return this;
     }
 
@@ -611,10 +533,9 @@ public class ConfigInstanceDeletedEvent extends org.apache.avro.specific.Specifi
         } else {
           record.EventId = fieldSetFlags()[0] ? this.EventId : (com.networknt.kafka.common.EventId) defaultValue(fields()[0]);
         }
-        record.hostId = fieldSetFlags()[1] ? this.hostId : (java.lang.String) defaultValue(fields()[1]);
-        record.instanceId = fieldSetFlags()[2] ? this.instanceId : (java.lang.String) defaultValue(fields()[2]);
-        record.configId = fieldSetFlags()[3] ? this.configId : (java.lang.String) defaultValue(fields()[3]);
-        record.propertyName = fieldSetFlags()[4] ? this.propertyName : (java.lang.String) defaultValue(fields()[4]);
+        record.instanceId = fieldSetFlags()[1] ? this.instanceId : (java.lang.String) defaultValue(fields()[1]);
+        record.configId = fieldSetFlags()[2] ? this.configId : (java.lang.String) defaultValue(fields()[2]);
+        record.propertyName = fieldSetFlags()[3] ? this.propertyName : (java.lang.String) defaultValue(fields()[3]);
         return record;
       } catch (org.apache.avro.AvroMissingFieldException e) {
         throw e;
@@ -649,8 +570,6 @@ public class ConfigInstanceDeletedEvent extends org.apache.avro.specific.Specifi
   {
     this.EventId.customEncode(out);
 
-    out.writeString(this.hostId);
-
     out.writeString(this.instanceId);
 
     out.writeString(this.configId);
@@ -669,8 +588,6 @@ public class ConfigInstanceDeletedEvent extends org.apache.avro.specific.Specifi
       }
       this.EventId.customDecode(in);
 
-      this.hostId = in.readString();
-
       this.instanceId = in.readString();
 
       this.configId = in.readString();
@@ -678,7 +595,7 @@ public class ConfigInstanceDeletedEvent extends org.apache.avro.specific.Specifi
       this.propertyName = in.readString();
 
     } else {
-      for (int i = 0; i < 5; i++) {
+      for (int i = 0; i < 4; i++) {
         switch (fieldOrder[i].pos()) {
         case 0:
           if (this.EventId == null) {
@@ -688,18 +605,14 @@ public class ConfigInstanceDeletedEvent extends org.apache.avro.specific.Specifi
           break;
 
         case 1:
-          this.hostId = in.readString();
-          break;
-
-        case 2:
           this.instanceId = in.readString();
           break;
 
-        case 3:
+        case 2:
           this.configId = in.readString();
           break;
 
-        case 4:
+        case 3:
           this.propertyName = in.readString();
           break;
 
