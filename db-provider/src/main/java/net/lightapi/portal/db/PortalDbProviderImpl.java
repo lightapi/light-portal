@@ -7044,9 +7044,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> updateConfigInstanceApi(ConfigInstanceApiUpdatedEvent event) {
         Logger logger = LoggerFactory.getLogger(getClass());
-        final String sql = "UPDATE instance_api_property_t SET config_id = ?, property_name = ?, " +
+        final String sql = "UPDATE instance_api_property_t SET " +
                 "property_value = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? AND instance_id = ? AND api_id = ? AND api_version = ?";
+                "WHERE host_id = ? AND instance_id = ? AND api_id = ? AND api_version = ? AND config_id = ? AND property_name = ?";
         Result<String> result;
         Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
         String value = event.getValue();
@@ -7055,19 +7055,19 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, event.getConfigId());
-                statement.setString(2, event.getPropertyName());
                 if (map.containsKey("propertyValue")) {
-                    statement.setString(3, (String)map.get("propertyValue"));
+                    statement.setString(1, (String)map.get("propertyValue"));
                 } else {
-                    statement.setNull(3, Types.VARCHAR);
+                    statement.setNull(1, Types.VARCHAR);
                 }
-                statement.setString(4, event.getEventId().getUserId());
-                statement.setTimestamp(5, timestamp);
-                statement.setString(6, event.getEventId().getHostId());
-                statement.setString(7, event.getInstanceId());
-                statement.setString(8, event.getApiId());
-                statement.setString(9, event.getApiVersion());
+                statement.setString(2, event.getEventId().getUserId());
+                statement.setTimestamp(3, timestamp);
+                statement.setString(4, event.getEventId().getHostId());
+                statement.setString(5, event.getInstanceId());
+                statement.setString(6, event.getApiId());
+                statement.setString(7, event.getApiVersion());
+                statement.setString(8, event.getConfigId());
+                statement.setString(9, event.getPropertyName());
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -7155,7 +7155,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "INNER JOIN instance_t i ON ia.host_id =i.host_id AND ia.instance_id = i.instance_id \n" +
                 "INNER JOIN instance_api_property_t iap ON ia.host_id = iap.host_id AND ia.instance_id = iap.instance_id AND ia.api_id = iap.api_id AND ia.api_version = iap.api_version\n" +
                 "INNER JOIN config_t c ON iap.config_id = c.config_id\n" +
-                "WHERE 1=1");
+                "WHERE 1=1\n");
 
         List<Object> parameters = new ArrayList<>();
 
