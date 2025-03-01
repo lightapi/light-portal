@@ -95,6 +95,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> createApp(AppCreatedEvent event);
     Result<String> updateApp(AppUpdatedEvent event);
     Result<String> deleteApp(AppDeletedEvent event);
+    Result<String> getAppIdLabel(String hostId);
     Result<String> createClient(ClientCreatedEvent event);
     Result<String> updateClient(ClientUpdatedEvent event);
     Result<String> deleteClient(ClientDeletedEvent event);

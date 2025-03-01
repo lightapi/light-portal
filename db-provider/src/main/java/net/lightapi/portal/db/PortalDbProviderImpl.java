@@ -2949,6 +2949,34 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
+    public Result<String> getAppIdLabel(String hostId) {
+        Result<String> result = null;
+        String sql = "SELECT app_id, app_name FROM app_t WHERE host_id = ?";
+        List<Map<String, Object>> labels = new ArrayList<>();
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, hostId);
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", resultSet.getString("app_id"));
+                    map.put("label", resultSet.getString("app_name"));
+                    labels.add(map);
+                }
+            }
+            result = Success.of(JsonMapper.toJson(labels));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
     public Result<String> createClient(ClientCreatedEvent event) {
         final String insertUser = "INSERT INTO auth_client_t (host_id, app_id, api_id, client_name, client_id, " +
                 "client_type, client_profile, client_secret, client_scope, custom_claim, redirect_uri, " +
