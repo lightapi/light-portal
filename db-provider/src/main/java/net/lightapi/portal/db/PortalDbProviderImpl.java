@@ -7607,20 +7607,20 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> getConfigInstanceApp(int offset, int limit, String hostId, String instanceId, String appId, String appVersion,
-                                               String configId, String configName,
+    public Result<String> getConfigInstanceApp(int offset, int limit, String hostId, String instanceId, String instanceName,
+                                               String appId, String appVersion, String configId, String configName,
                                                String propertyName, String propertyValue, String propertyFile) {
         Logger logger = LoggerFactory.getLogger(getClass());
         Result<String> result = null;
 
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "ia.host_id, ia.instance_id, ia.app_id, ia.app_version, ia.active, ia.update_user, ia.update_ts, \n" +
-                "iap.config_id, iap.property_name, iap.property_value, iap.property_file, \n" +
-                "c.config_name \n" +
+                "ia.host_id, ia.instance_id, i.instance_name, ia.app_id, ia.app_version, ia.active, ia.update_user, ia.update_ts,\n" +
+                "iap.config_id, iap.property_name, iap.property_value, iap.property_file, c.config_name\n" +
                 "FROM instance_app_t ia\n" +
-                "LEFT JOIN instance_app_property_t iap ON ia.host_id = iap.host_id AND ia.instance_id = iap.instance_id AND ia.app_id = iap.app_id AND ia.app_version = iap.app_version\n" + // Left join for properties
-                "LEFT JOIN config_t c ON iap.config_id = c.config_id\n" +
+                "INNER JOIN instance_t i ON ia.host_id =i.host_id AND ia.instance_id = i.instance_id \n" +
+                "INNER JOIN instance_app_property_t iap ON ia.host_id = iap.host_id AND ia.instance_id = iap.instance_id AND ia.app_id = iap.app_id AND ia.app_version = iap.app_version\n" +
+                "INNER JOIN config_t c ON iap.config_id = c.config_id\n" +
                 "WHERE 1=1\n");
 
         List<Object> parameters = new ArrayList<>();
@@ -7628,6 +7628,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         StringBuilder whereClause = new StringBuilder();
         addCondition(whereClause, parameters, "ia.host_id", hostId);
         addCondition(whereClause, parameters, "ia.instance_id", instanceId);
+        addCondition(whereClause, parameters, "i.instance_name", instanceName);
         addCondition(whereClause, parameters, "ia.app_id", appId);
         addCondition(whereClause, parameters, "ia.app_version", appVersion);
         addCondition(whereClause, parameters, "iap.config_id", configId);
@@ -7669,6 +7670,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                     map.put("hostId", resultSet.getString("host_id"));
                     map.put("instanceId", resultSet.getString("instance_id"));
+                    map.put("instanceName", resultSet.getString("instance_name"));
                     map.put("appId", resultSet.getString("app_id"));
                     map.put("appVersion", resultSet.getString("app_version"));
                     map.put("configId", resultSet.getString("config_id"));
