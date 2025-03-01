@@ -7667,8 +7667,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                     map.put("hostId", resultSet.getString("host_id"));
                     map.put("instanceId", resultSet.getString("instance_id"));
-                    map.put("apiId", resultSet.getString("api_id"));
-                    map.put("apiVersion", resultSet.getString("api_version"));
+                    map.put("appId", resultSet.getString("app_id"));
+                    map.put("appVersion", resultSet.getString("app_version"));
                     map.put("configId", resultSet.getString("config_id"));
                     map.put("configName", resultSet.getString("config_name")); // Get from joined table
                     map.put("propertyName", resultSet.getString("property_name"));
