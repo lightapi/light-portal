@@ -7141,27 +7141,28 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> getConfigInstanceApi(int offset, int limit, String hostId, String instanceId, String apiId, String apiVersion,
-                                               String configId, String configName,
+    public Result<String> getConfigInstanceApi(int offset, int limit, String hostId, String instanceId, String instanceName,
+                                               String apiId, String apiVersion, String configId, String configName,
                                                String propertyName, String propertyValue, String propertyFile) {
         Logger logger = LoggerFactory.getLogger(getClass());
         Result<String> result = null;
 
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "ia.host_id, ia.instance_id, ia.api_id, ia.api_version, ia.active, ia.update_user, ia.update_ts, \n" +
-                "iap.config_id, iap.property_name, iap.property_value, iap.property_file, \n" +
-                "c.config_name \n" +
+                "ia.host_id, ia.instance_id, i.instance_name, ia.api_id, ia.api_version, ia.active, ia.update_user, ia.update_ts,\n" +
+                "iap.config_id, c.config_name, iap.property_name, iap.property_value, iap.property_file\n" +
                 "FROM instance_api_t ia\n" +
-                "LEFT JOIN instance_api_property_t iap ON ia.host_id = iap.host_id AND ia.instance_id = iap.instance_id AND ia.api_id = iap.api_id AND ia.api_version = iap.api_version\n" + // Left join with properties
-                "LEFT JOIN config_t c ON iap.config_id = c.config_id\n" +
-                "WHERE 1=1\n");
+                "INNER JOIN instance_t i ON ia.host_id =i.host_id AND ia.instance_id = i.instance_id \n" +
+                "INNER JOIN instance_api_property_t iap ON ia.host_id = iap.host_id AND ia.instance_id = iap.instance_id AND ia.api_id = iap.api_id AND ia.api_version = iap.api_version\n" +
+                "INNER JOIN config_t c ON iap.config_id = c.config_id\n" +
+                "WHERE 1=1");
 
         List<Object> parameters = new ArrayList<>();
 
         StringBuilder whereClause = new StringBuilder();
         addCondition(whereClause, parameters, "ia.host_id", hostId);
         addCondition(whereClause, parameters, "ia.instance_id", instanceId);
+        addCondition(whereClause, parameters, "i.instance_name", instanceName);
         addCondition(whereClause, parameters, "ia.api_id", apiId);
         addCondition(whereClause, parameters, "ia.api_version", apiVersion);
         addCondition(whereClause, parameters, "iap.config_id", configId);
@@ -7203,10 +7204,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
                     map.put("hostId", resultSet.getString("host_id"));
                     map.put("instanceId", resultSet.getString("instance_id"));
+                    map.put("instanceName", resultSet.getString("instance_name"));
                     map.put("apiId", resultSet.getString("api_id"));
                     map.put("apiVersion", resultSet.getString("api_version"));
                     map.put("configId", resultSet.getString("config_id"));
-                    map.put("configName", resultSet.getString("config_name")); // Get from joined table
+                    map.put("configName", resultSet.getString("config_name"));
                     map.put("propertyName", resultSet.getString("property_name"));
                     map.put("propertyValue", resultSet.getString("property_value"));
                     map.put("propertyFile", resultSet.getString("property_file"));
