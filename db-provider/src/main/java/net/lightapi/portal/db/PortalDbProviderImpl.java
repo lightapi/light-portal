@@ -7072,10 +7072,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("Failed to update instance API. No rows affected for host_id: " + event.getEventId().getHostId() +
-                            ", instance_id: " + event.getInstanceId() + ", api_id: " + event.getApiId() + ", api_version: " + event.getApiVersion());
+                            ", instance_id: " + event.getInstanceId() + ", api_id: " + event.getApiId() + ", api_version: " + event.getApiVersion() +
+                            ", config_id: " + event.getConfigId() + ", property_name: " + event.getPropertyName());
                 }
                 conn.commit();
-                result = Success.of(event.getEventId().getHostId() + "|" + event.getInstanceId() + "|" + event.getApiId() + "|" + event.getApiVersion()); // Composite key
+                result = Success.of(event.getEventId().getHostId() + "|" + event.getInstanceId() + "|" + event.getApiId() + "|" + event.getApiVersion() + "|" + event.getConfigId() + "|" + event.getPropertyName());
                 insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
 
             } catch (SQLException e) {
@@ -7508,10 +7509,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> updateConfigInstanceApp(ConfigInstanceAppUpdatedEvent event) {
         Logger logger = LoggerFactory.getLogger(getClass());
-
-        final String sql = "UPDATE instance_app_t SET config_id = ?, property_name = ?, " +
+        final String sql = "UPDATE instance_app_property_t SET " +
                 "property_value = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? AND instance_id = ? AND app_id = ? AND app_version = ?";
+                "WHERE host_id = ? AND instance_id = ? AND app_id = ? AND app_version = ? AND config_id = ? AND property_name = ?";
+
         Result<String> result;
         Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
         String value = event.getValue();  // 'value' contains fields like 'active'
@@ -7520,27 +7521,28 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, event.getConfigId());
-                statement.setString(2, event.getPropertyName());
                 if (map.containsKey("propertyValue")) {
-                    statement.setString(3, (String)map.get("propertyValue"));
+                    statement.setString(1, (String)map.get("propertyValue"));
                 } else {
-                    statement.setNull(3, Types.VARCHAR);
+                    statement.setNull(1, Types.VARCHAR);
                 }
-                statement.setString(4, event.getEventId().getUserId());
-                statement.setTimestamp(5, timestamp);
-                statement.setString(6, event.getEventId().getHostId());
-                statement.setString(7, event.getInstanceId());
-                statement.setString(8, event.getAppId());
-                statement.setString(9, event.getAppVersion());
+                statement.setString(2, event.getEventId().getUserId());
+                statement.setTimestamp(3, timestamp);
+                statement.setString(4, event.getEventId().getHostId());
+                statement.setString(5, event.getInstanceId());
+                statement.setString(6, event.getAppId());
+                statement.setString(7, event.getAppVersion());
+                statement.setString(8, event.getConfigId());
+                statement.setString(9, event.getPropertyName());
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("Failed to update instance app.  No rows affected for host_id: " + event.getEventId().getHostId() +
-                            ", instance_id: " + event.getInstanceId() + ", app_id: " + event.getAppId() + ", app_version: " + event.getAppVersion());
+                            ", instance_id: " + event.getInstanceId() + ", app_id: " + event.getAppId() + ", app_version: " + event.getAppVersion() +
+                            ", config_id: " + event.getConfigId() + ", property_name: " + event.getPropertyName());
                 }
                 conn.commit();
-                result = Success.of(event.getEventId().getHostId() + "|" + event.getInstanceId() + "|" + event.getAppId() + "|" + event.getAppVersion()); // Composite key
+                result = Success.of(event.getEventId().getHostId() + "|" + event.getInstanceId() + "|" + event.getAppId() + "|" + event.getAppVersion() + "|" +  event.getConfigId() + "|" + event.getPropertyName()); // Composite key
                 insertNotification(event.getEventId(), event.getClass().getName(), AvroConverter.toJson(event, false), true, null);
 
             } catch (SQLException e) {
