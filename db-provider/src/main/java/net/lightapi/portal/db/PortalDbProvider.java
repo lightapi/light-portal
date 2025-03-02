@@ -151,6 +151,8 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> queryConfigById(String configId);
     Result<String> getConfigIdLabel();
     Result<String> getPropertyNameLabel(String configId);
+    Result<String> getConfigIdApiAppLabel(String resourceType);
+    Result<String> getPropertyNameApiAppLabel(String configId, String resourceType);
 
     Result<String> createConfigProperty(ConfigPropertyCreatedEvent event);
     Result<String> updateConfigProperty(ConfigPropertyUpdatedEvent event);
