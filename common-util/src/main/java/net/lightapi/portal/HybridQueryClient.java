@@ -1426,4 +1426,21 @@ public class HybridQueryClient {
         return callQueryExchangeUrl(s, exchange, url);
     }
 
+    /**
+     * Get config property by configId and propertyName
+     *
+     * @param exchange HttpServerExchange
+     * @param configId config id
+     * @param propertyName property name
+     * @return Result the config property object in JSON
+     */
+    public static Result<String> getConfigPropertyByIdName(HttpServerExchange exchange, String configId, String propertyName) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"config\",\"action\":\"getConfigPropertyByIdName\",\"version\":\"0.1.0\",\"data\":{\"configId\":\"%s\",\"propertyName\":\"%s\"}}", configId, propertyName);
+        if (config.isPortalByServiceUrl()) {
+            return callQueryExchangeUrl(s, exchange, config.getPortalQueryServiceUrl());
+        } else {
+            return callQueryExchange(s, exchange);
+        }
+    }
+
 }
