@@ -6595,7 +6595,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "c.config_name " +
                 "FROM config_property_t cp " +
                 "INNER JOIN config_t c ON cp.config_id = c.config_id " +
-                "WHERE cp.config_id = ?" +
+                "WHERE cp.config_id = ? " +
                 "AND cp.property_name = ?";
 
 
