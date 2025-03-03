@@ -162,6 +162,7 @@ public interface PortalDbProvider extends DbProvider {
                                                   String propertyDesc, String propertyValue, String valueType, String propertyFile,
                                                   String resourceType);
     Result<String> queryConfigPropertyById(String configId);
+    Result<String> queryConfigPropertyByIdName(String configId, String propertyName);
 
     Result<String> createConfigEnvironment(ConfigEnvironmentCreatedEvent event);
     Result<String> updateConfigEnvironment(ConfigEnvironmentUpdatedEvent event);

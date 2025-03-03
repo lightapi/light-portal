@@ -6181,7 +6181,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createConfigProperty(ConfigPropertyCreatedEvent event) {
-        Logger logger = LoggerFactory.getLogger(getClass());
         final String sql = "INSERT INTO config_property_t (config_id, property_name, property_type, property_value, property_file, " +
                 "resource_type, value_type, display_order, required, property_desc, light4j_version, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -6287,7 +6286,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateConfigProperty(ConfigPropertyUpdatedEvent event) {
-        Logger logger = LoggerFactory.getLogger(getClass());
         final String sql = "UPDATE config_property_t SET property_type = ?, property_value = ?, property_file = ?, " +
                 "resource_type = ?, value_type = ?, display_order = ?, required = ?, property_desc = ?, " +
                 "light4j_version = ?, update_user = ?, update_ts = ? " +
@@ -6399,7 +6397,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> deleteConfigProperty(ConfigPropertyDeletedEvent event) {
-        Logger logger = LoggerFactory.getLogger(getClass());
         final String sql = "DELETE FROM config_property_t WHERE config_id = ? AND property_name = ?";
         Result<String> result;
 
@@ -6442,7 +6439,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                                             String propertyType, String light4jVersion, Integer displayOrder, Boolean required,
                                             String propertyDesc, String propertyValue, String valueType, String propertyFile,
                                             String resourceType) {
-        Logger logger = LoggerFactory.getLogger(getClass());
         Result<String> result = null;
 
         StringBuilder sqlBuilder = new StringBuilder();
@@ -6536,7 +6532,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> queryConfigPropertyById(String configId) {
-        Logger logger = LoggerFactory.getLogger(getClass());
         Result<String> result = null;
 
         String sql = "SELECT cp.config_id, cp.property_name, cp.property_type, cp.light4j_version, cp.display_order, cp.required, " +
@@ -6592,8 +6587,61 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
+    public Result<String> queryConfigPropertyByIdName(String configId, String propertyName) {
+        Result<String> result = null;
+
+        String sql = "SELECT cp.config_id, cp.property_name, cp.property_type, cp.light4j_version, cp.display_order, cp.required, " +
+                "cp.property_desc, cp.property_value, cp.value_type, cp.property_file, cp.resource_type, cp.update_user, cp.update_ts, " +
+                "c.config_name " +
+                "FROM config_property_t cp " +
+                "INNER JOIN config_t c ON cp.config_id = c.config_id " +
+                "WHERE cp.config_id = ?" +
+                "AND cp.property_name = ?";
+
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            preparedStatement.setString(1, configId);
+            preparedStatement.setString(2, propertyName);
+
+            Map<String, Object> map = new HashMap<>();
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("configId", resultSet.getString("config_id"));
+                    map.put("configName", resultSet.getString("config_name"));
+                    map.put("propertyName", resultSet.getString("property_name"));
+                    map.put("propertyType", resultSet.getString("property_type"));
+                    map.put("light4jVersion", resultSet.getString("light4j_version"));
+                    map.put("displayOrder", resultSet.getInt("display_order"));
+                    map.put("required", resultSet.getBoolean("required"));
+                    map.put("propertyDesc", resultSet.getString("property_desc"));
+                    map.put("propertyValue", resultSet.getString("property_value"));
+                    map.put("valueType", resultSet.getString("value_type"));
+                    map.put("propertyFile", resultSet.getString("property_file"));
+                    map.put("resourceType", resultSet.getString("resource_type"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getTimestamp("update_ts") != null ? resultSet.getTimestamp("update_ts").toString() : null);
+                }
+            }
+
+            if (map.isEmpty()) {
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "config property", "configId = " + configId + " propertyName = " + propertyName));
+            } else {
+                result = Success.of(JsonMapper.toJson(map));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
     public Result<String> createConfigEnvironment(ConfigEnvironmentCreatedEvent event) {
-        Logger logger = LoggerFactory.getLogger(getClass());
         final String sql = "INSERT INTO environment_property_t (environment, config_id, property_name, " +
                 "property_value, property_file, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?)";
@@ -6657,7 +6705,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateConfigEnvironment(ConfigEnvironmentUpdatedEvent event) {
-        Logger logger = LoggerFactory.getLogger(getClass());
         final String sql = "UPDATE environment_property_t SET property_value = ?, property_file = ?, update_user = ?, update_ts = ? " +
                 "WHERE environment = ? AND config_id = ? AND property_name = ?";
         Result<String> result;
@@ -6721,7 +6768,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> deleteConfigEnvironment(ConfigEnvironmentDeletedEvent event) {
-        Logger logger = LoggerFactory.getLogger(getClass());
         final String sql = "DELETE FROM environment_property_t WHERE environment = ? AND config_id = ? AND property_name = ?";
         Result<String> result;
 
@@ -6762,7 +6808,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> getConfigEnvironment(int offset, int limit, String environment, String configId, String configName,
                                                String propertyName, String propertyValue, String propertyFile) {
-        Logger logger = LoggerFactory.getLogger(getClass());
         Result<String> result = null;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
@@ -7061,8 +7106,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createConfigInstanceApi(ConfigInstanceApiCreatedEvent event) {
-        Logger logger = LoggerFactory.getLogger(getClass());
-
         final String sql = "INSERT INTO instance_api_property_t (host_id, instance_id, api_id, api_version, config_id, " +
                 "property_name, property_value, update_user, update_ts) VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?)";
         Result<String> result;
@@ -7116,7 +7159,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateConfigInstanceApi(ConfigInstanceApiUpdatedEvent event) {
-        Logger logger = LoggerFactory.getLogger(getClass());
         final String sql = "UPDATE instance_api_property_t SET " +
                 "property_value = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? AND instance_id = ? AND api_id = ? AND api_version = ? AND config_id = ? AND property_name = ?";
@@ -7172,7 +7214,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> deleteConfigInstanceApi(ConfigInstanceApiDeletedEvent event) {
-        Logger logger = LoggerFactory.getLogger(getClass());
         final String sql = "DELETE FROM instance_api_property_t " +
                 "WHERE host_id = ? AND instance_id = ? AND api_id = ? AND api_version = ? AND config_id = ? AND property_name = ?";
         Result<String> result;
@@ -7218,7 +7259,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> getConfigInstanceApi(int offset, int limit, String hostId, String instanceId, String instanceName,
                                                String apiId, String apiVersion, String configId, String configName,
                                                String propertyName, String propertyValue, String propertyFile) {
-        Logger logger = LoggerFactory.getLogger(getClass());
         Result<String> result = null;
 
         StringBuilder sqlBuilder = new StringBuilder();
@@ -7524,8 +7564,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createConfigInstanceApp(ConfigInstanceAppCreatedEvent event) {
-        Logger logger = LoggerFactory.getLogger(getClass());
-
         final String sql = "INSERT INTO instance_app_property_t (host_id, instance_id, app_id, app_version, config_id, property_name, property_value, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?)";
         Result<String> result;
@@ -7581,7 +7619,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateConfigInstanceApp(ConfigInstanceAppUpdatedEvent event) {
-        Logger logger = LoggerFactory.getLogger(getClass());
         final String sql = "UPDATE instance_app_property_t SET " +
                 "property_value = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? AND instance_id = ? AND app_id = ? AND app_version = ? AND config_id = ? AND property_name = ?";
@@ -7639,7 +7676,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> deleteConfigInstanceApp(ConfigInstanceAppDeletedEvent event) {
-        Logger logger = LoggerFactory.getLogger(getClass());
         final String sql = "DELETE FROM instance_app_property_t " +
                 "WHERE host_id = ? AND instance_id = ? AND app_id = ? AND app_version = ? AND config_id = ? AND property_name = ?";
         Result<String> result;
@@ -7685,7 +7721,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> getConfigInstanceApp(int offset, int limit, String hostId, String instanceId, String instanceName,
                                                String appId, String appVersion, String configId, String configName,
                                                String propertyName, String propertyValue, String propertyFile) {
-        Logger logger = LoggerFactory.getLogger(getClass());
         Result<String> result = null;
 
         StringBuilder sqlBuilder = new StringBuilder();
@@ -7776,8 +7811,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createConfigInstance(ConfigInstanceCreatedEvent event) {
-        Logger logger = LoggerFactory.getLogger(getClass());
-
         // The table is now instance_property_t, NOT instance_t
         final String sql = "INSERT INTO instance_property_t (host_id, instance_id, config_id, property_name, " +
                 "property_value, property_file, update_user, update_ts) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
@@ -7843,8 +7876,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateConfigInstance(ConfigInstanceUpdatedEvent event) {
-        Logger logger = LoggerFactory.getLogger(getClass());
-
         final String sql = "UPDATE instance_property_t SET property_value = ?, property_file = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? AND instance_id = ? AND config_id = ? AND property_name = ?";
         Result<String> result;
@@ -7911,8 +7942,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> deleteConfigInstance(ConfigInstanceDeletedEvent event) {
-        Logger logger = LoggerFactory.getLogger(getClass());
-
         final String sql = "DELETE FROM instance_property_t WHERE host_id = ? AND instance_id = ? AND config_id = ? AND property_name = ?";
         Result<String> result;
 
@@ -7956,7 +7985,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> getConfigInstance(int offset, int limit, String hostId, String instanceId,
                                             String configId, String configName,
                                             String propertyName, String propertyValue, String propertyFile) {
-        Logger logger = LoggerFactory.getLogger(getClass());
         Result<String> result = null;
 
         StringBuilder sqlBuilder = new StringBuilder();
@@ -8039,8 +8067,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createConfigProduct(ConfigProductCreatedEvent event) {
-        Logger logger = LoggerFactory.getLogger(getClass());
-
         final String sql = "INSERT INTO product_property_t (product_id, config_id, property_name, property_value, property_file, update_user, update_ts) VALUES (?, ?, ?, ?, ?, ?, ?)";
         Result<String> result;
         Timestamp timestamp = new Timestamp(event.getEventId().getTimestamp());
@@ -8100,8 +8126,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateConfigProduct(ConfigProductUpdatedEvent event) {
-        Logger logger = LoggerFactory.getLogger(getClass());
-
         final String sql = "UPDATE product_property_t SET property_value = ?, property_file = ?, update_user = ?, update_ts = ? " +
                 "WHERE product_id = ? AND config_id = ? AND property_name = ?";
         Result<String> result;
@@ -8164,8 +8188,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> deleteConfigProduct(ConfigProductDeletedEvent event) {
-        Logger logger = LoggerFactory.getLogger(getClass());
-
         final String sql = "DELETE FROM product_property_t WHERE product_id = ? AND config_id = ? AND property_name = ?";
         Result<String> result;
 
@@ -8207,7 +8229,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> getConfigProduct(int offset, int limit, String productId,
                                            String configId, String configName,
                                            String propertyName, String propertyValue, String propertyFile) {
-        Logger logger = LoggerFactory.getLogger(getClass());
         Result<String> result = null;
 
         StringBuilder sqlBuilder = new StringBuilder();
@@ -8287,8 +8308,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createConfigProductVersion(ConfigProductVersionCreatedEvent event) {
-        Logger logger = LoggerFactory.getLogger(getClass());
-
         final String sql = "INSERT INTO product_version_property_t (host_id, product_id, product_version, " +
                 "config_id, property_name, property_value, property_file, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -8353,8 +8372,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateConfigProductVersion(ConfigProductVersionUpdatedEvent event) {
-        Logger logger = LoggerFactory.getLogger(getClass());
-
         final String sql = "UPDATE product_version_property_t SET property_value = ?, property_file = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? AND product_id = ? AND product_version = ? AND config_id = ? AND property_name = ?";
         Result<String> result;
@@ -8421,8 +8438,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> deleteConfigProductVersion(ConfigProductVersionDeletedEvent event) {
-        Logger logger = LoggerFactory.getLogger(getClass());
-
         final String sql = "DELETE FROM product_version_property_t WHERE host_id = ? AND product_id = ? " +
                 "AND product_version = ? AND config_id = ? AND property_name = ?";
         Result<String> result;
@@ -8468,7 +8483,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> getConfigProductVersion(int offset, int limit, String hostId, String productId, String productVersion,
                                                   String configId, String configName,
                                                   String propertyName, String propertyValue, String propertyFile) {
-        Logger logger = LoggerFactory.getLogger(getClass());
         Result<String> result = null;
 
         StringBuilder sqlBuilder = new StringBuilder();
