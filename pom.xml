@@ -95,7 +95,7 @@
     </repositories>
 
     <properties>
-        <java.version>11</java.version>
+        <java.version>17</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <version.light-4j>2.2.2-SNAPSHOT</version.light-4j>
         <version.kafka>3.7.2</version.kafka>
