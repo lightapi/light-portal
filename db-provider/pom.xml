@@ -40,6 +40,10 @@
             <artifactId>portal-event</artifactId>
         </dependency>
         <dependency>
+            <groupId>net.lightapi</groupId>
+            <artifactId>common-util</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.networknt</groupId>
             <artifactId>cache-manager</artifactId>
         </dependency>
@@ -81,6 +85,15 @@
             <groupId>io.confluent</groupId>
             <artifactId>kafka-schema-registry-client</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.cloudevents</groupId>
+            <artifactId>cloudevents-kafka</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.cloudevents</groupId>
+            <artifactId>cloudevents-json-jackson</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>

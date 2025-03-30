@@ -31,6 +31,10 @@
 
     <dependencies>
         <dependency>
+            <groupId>net.lightapi</groupId>
+            <artifactId>common-util</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.networknt</groupId>
             <artifactId>client</artifactId>
         </dependency>
@@ -54,6 +58,10 @@
             <groupId>com.networknt</groupId>
             <artifactId>kafka-producer</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.networknt</groupId>
+            <artifactId>rpc-router</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -71,6 +79,15 @@
             <groupId>io.confluent</groupId>
             <artifactId>kafka-schema-registry-client</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.cloudevents</groupId>
+            <artifactId>cloudevents-kafka</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.cloudevents</groupId>
+            <artifactId>cloudevents-json-jackson</artifactId>
+        </dependency>
+
     </dependencies>
 
 </project>

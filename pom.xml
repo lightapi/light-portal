@@ -115,6 +115,7 @@
         <version.confluent>7.6.0</version.confluent>
         <version.jcommander>1.82</version.jcommander>
         <version.avroConverter>0.2.9</version.avroConverter>
+        <version.cloudevents>4.0.1</version.cloudevents>
         <versions.maven-version>2.4</versions.maven-version>
         <version.javadoc-packagelist-plugin>1.0.0</version.javadoc-packagelist-plugin>
         <version.maven-javadoc>3.4.1</version.maven-javadoc>
@@ -185,6 +186,11 @@
             <dependency>
                 <groupId>com.networknt</groupId>
                 <artifactId>monad-result</artifactId>
+                <version>${version.light-4j}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.networknt</groupId>
+                <artifactId>rpc-router</artifactId>
                 <version>${version.light-4j}</version>
             </dependency>
 
@@ -291,6 +297,17 @@
                 <artifactId>jackson-databind</artifactId>
                 <version>${version.jackson}</version>
             </dependency>
+            <dependency>
+                <groupId>io.cloudevents</groupId>
+                <artifactId>cloudevents-kafka</artifactId>
+                <version>${version.cloudevents}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.cloudevents</groupId>
+                <artifactId>cloudevents-json-jackson</artifactId>
+                <version>${version.cloudevents}</version>
+            </dependency>
+
             <dependency>
                 <groupId>org.junit.jupiter</groupId>
                 <artifactId>junit-jupiter-api</artifactId>
