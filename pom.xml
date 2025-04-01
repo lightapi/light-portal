@@ -306,6 +306,16 @@
                 <groupId>io.cloudevents</groupId>
                 <artifactId>cloudevents-json-jackson</artifactId>
                 <version>${version.cloudevents}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>com.fasterxml.jackson.core</groupId>
+                        <artifactId>jackson-core</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>com.fasterxml.jackson.core</groupId>
+                        <artifactId>jackson-databind</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
 
             <dependency>
