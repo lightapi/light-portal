@@ -736,7 +736,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             statement.setString(1, (String)event.get(CloudEventV1.ID));
             statement.setString(2, (String)event.get(Constants.HOST));
             statement.setString(3, (String)event.get(Constants.USER));
-            statement.setLong(4, (Long)event.get(PortalConstants.NONCE));
+            statement.setLong(4, ((Number)event.get(PortalConstants.NONCE)).longValue());
             statement.setString(5, (String)event.get(CloudEventV1.TYPE));
             statement.setString(6, JsonMapper.toJson(event));
             statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
@@ -980,7 +980,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     if (resultSet.next()) {
                         // found the token record, update user_t for token, verified flog and nonce, write a success notification.
                         try (PreparedStatement updateStatement = conn.prepareStatement(updateUserByEmail)) {
-                            updateStatement.setLong(1, (Long)event.get(PortalConstants.NONCE) + 1);
+                            updateStatement.setLong(1, ((Number)event.get(PortalConstants.NONCE)).longValue() + 1);
                             updateStatement.setString(2, (String)event.get(Constants.USER));
                             updateStatement.execute();
                         }
@@ -1349,7 +1349,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteUserByEmail)) {
                 statement.setString(1, (String)map.get("token"));
-                statement.setLong(2, (Long)event.get(PortalConstants.NONCE) + 1);
+                statement.setLong(2, ((Number)event.get(PortalConstants.NONCE)).longValue() + 1);
                 statement.setString(3, (String)map.get("email"));
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -1392,7 +1392,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteUserByEmail)) {
                 statement.setString(1, (String)map.get("token"));
-                statement.setLong(2, (Long)event.get(PortalConstants.NONCE) + 1);
+                statement.setLong(2, ((Number)event.get(PortalConstants.NONCE)).longValue() + 1);
                 statement.setString(3, (String)map.get("email"));
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -1435,7 +1435,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(updatePasswordByEmail)) {
                 statement.setString(1, (String)map.get("password"));
-                statement.setLong(2, (Long)event.get(PortalConstants.NONCE) + 1);
+                statement.setLong(2, ((Number)event.get(PortalConstants.NONCE)).longValue() + 1);
                 statement.setString(3, (String)map.get("email"));
                 statement.setString(4, (String)map.get("oldPassword"));
                 int count = statement.executeUpdate();
@@ -1505,7 +1505,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(insertMessage)) {
                 statement.setString(1, (String)map.get("fromId"));
-                statement.setLong(2, (Long)event.get(PortalConstants.NONCE));
+                statement.setLong(2, ((Number)event.get(PortalConstants.NONCE)).longValue());
                 statement.setString(3, (String)map.get("toEmail"));
                 statement.setString(4, (String)map.get("subject"));
                 statement.setString(5, (String)map.get("content"));
