@@ -2736,7 +2736,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)map.get("hostId"));
+                statement.setString(1, (String)event.get(Constants.HOST));
                 statement.setString(2, (String)map.get("appId"));
                 statement.setString(3, (String)map.get("appName"));
                 if (map.containsKey("appDesc")) {
@@ -2930,7 +2930,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
-                statement.setString(1, (String)map.get("hostId"));
+                statement.setString(1, (String)event.get(Constants.HOST));
                 if (map.get("appId") != null) {
                     statement.setString(2, (String) map.get("appId"));
                 } else {

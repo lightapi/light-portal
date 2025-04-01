@@ -10,7 +10,10 @@ import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 
 public class CloudEventTest {
     private static final JsonFormat jsonFormat = new JsonFormat();
@@ -34,5 +37,15 @@ public class CloudEventTest {
         byte[] bytes = jsonFormat.serialize(event);
         String json = new String(bytes, StandardCharsets.UTF_8);
         System.out.println("json = " + json);
+    }
+
+    @Test
+    public void testMilliSecond2OffsetDateTime() {
+        long time = 1740003720000L;
+        Instant instant = Instant.ofEpochMilli(time);
+        OffsetDateTime odtUtc = instant.atOffset(ZoneOffset.UTC);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
+        String formatted = odtUtc.format(formatter);
+        System.out.println("offsetDateTime = " + formatted);
     }
 }
