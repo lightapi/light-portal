@@ -2,17 +2,21 @@ package net.lightapi.portal.command;
 import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
 import com.networknt.httpstring.AttachmentConstants;
+import com.networknt.monad.Failure;
 import com.networknt.monad.Result;
 import com.networknt.monad.Success;
+import com.networknt.status.Status;
 import com.networknt.utility.Constants;
 import com.networknt.utility.NioUtils;
 import com.networknt.rpc.HybridHandler;
 import com.networknt.utility.Util;
 import io.cloudevents.CloudEvent;
 import io.cloudevents.core.builder.CloudEventBuilder;
+import io.cloudevents.jackson.JsonFormat;
 import io.undertow.server.HttpServerExchange;
 import net.lightapi.portal.HybridQueryClient;
 import net.lightapi.portal.PortalConfig;
+import net.lightapi.portal.PortalConstants;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
 
@@ -36,6 +40,10 @@ public abstract class AbstractCommandHandler implements HybridHandler {
 
     // Make config and constants protected or private static final
     protected static final PortalConfig config = (PortalConfig) Config.getInstance().getJsonObjectConfig(PortalConfig.CONFIG_NAME, PortalConfig.class);
+    private static final JsonFormat jsonFormat = new JsonFormat();
+    public static final String USER_ID = "userId";
+    public static final String HOST_ID = "hostId";
+
     protected static final String INCORRECT_TOKEN_TYPE = "ERR11601";
     protected static final String SEND_MESSAGE_EXCEPTION = "ERR11605";
     public static final URI EVENT_SOURCE = URI.create("https://github.com/lightapi/light-portal");
@@ -75,20 +83,40 @@ public abstract class AbstractCommandHandler implements HybridHandler {
         return JsonMapper.toJson(map);
     }
 
+    /**
+     * Subclasses can override this to return customized status to the caller. By default, it validates
+     * the token as authorization code token as most portal command services require a login user. However,
+     * some service like createAuthCode does not require a login user and the token type is client credentials token.
+     */
+    protected Result<Map<String, Object>> validateTokenType(String userId, Map<String, Object> map) {
+        if (userId == null) {
+            getLogger().error("Incorrect token type: userId is null. Must be Authorization Code Token.");
+            return Failure.of(new Status(INCORRECT_TOKEN_TYPE, "Authorization Code Token"));
+        }
+        return Success.of(map);
+    }
+
     @Override
     public ByteBuffer handle(HttpServerExchange exchange, Object input) {
-        Logger logger = getLogger(); // Get logger specific to subclass
+        Logger logger = getLogger();
+        System.out.println(logger.getName());
         if(logger.isTraceEnabled()) logger.trace("input = {}", input);
 
         // --- 1. Input Validation and Audit Info ---
         Map<String, Object> map = (Map<String, Object>) input;
         Map<String, Object> auditInfo = exchange.getAttachment(AttachmentConstants.AUDIT_INFO);
         String userId = (String) auditInfo.get(Constants.USER_ID_STRING);
-        if (userId == null) {
-            logger.error("Incorrect token type: userId is null. Must be Authorization Code Token.");
-            return NioUtils.toByteBuffer(getStatus(exchange, INCORRECT_TOKEN_TYPE, "Authorization Code Token"));
+        Result<Map<String, Object>> tokenTypeResult = validateTokenType(userId, map);
+        if (tokenTypeResult.isFailure()) {
+            return NioUtils.toByteBuffer(getStatus(exchange, tokenTypeResult.getError()));
         }
         String host = (String) auditInfo.get(Constants.HOST);
+        if (host == null) {
+            host = (String) map.get(HOST_ID);
+        }
+        if(userId == null) {
+            userId = (String) map.get(USER_ID);
+        }
         if(logger.isTraceEnabled()) logger.trace("userId = {}, host = {}", userId, host);
 
         // Validate input map
@@ -109,12 +137,13 @@ public abstract class AbstractCommandHandler implements HybridHandler {
             return NioUtils.toByteBuffer(getStatus(exchange, result.getError()));
         }
         long nonce = Long.parseLong(result.getResult());
+        if(logger.isTraceEnabled()) logger.trace("nonce = {}", nonce);
 
         // --- 3. Build CloudEvent ---
         CloudEvent event = buildCloudEvent(map, userId, host, nonce);
 
         // --- 4. Send to Kafka ---
-        ProducerRecord<String, CloudEvent> record = new ProducerRecord<>(config.getTopic(), (config.isMultitenancy() ? host : userId), event);
+        ProducerRecord<String, byte[]> record = new ProducerRecord<>(config.getTopic(), (config.isMultitenancy() ? host : userId), jsonFormat.serialize(event));
         final CountDownLatch latch = new CountDownLatch(1);
         try {
             HybridCommandStartup.producer.send(record, (recordMetadata, e) -> {
@@ -145,16 +174,16 @@ public abstract class AbstractCommandHandler implements HybridHandler {
 
         CloudEventBuilder eventTemplate = CloudEventBuilder.v1()
                 .withSource(EVENT_SOURCE)
-                .withType(getCloudEventType()); // Use the abstract method
+                .withType(getCloudEventType());
 
         String data = JsonMapper.toJson(map);
-
+        if(getLogger().isTraceEnabled()) getLogger().trace("event user = {} host = {} type = {} and data = {}", userId, host, getCloudEventType(), data);
         return eventTemplate.newBuilder()
                 .withId(Util.getUUID())
                 .withTime(OffsetDateTime.now())
-                .withExtension("user", userId) // Use correct casing
-                .withExtension("nonce", nonce)
-                .withExtension("host", host)   // Use correct casing
+                .withExtension(Constants.USER, userId)
+                .withExtension(PortalConstants.NONCE, nonce)
+                .withExtension(Constants.HOST, host)
                 .withData("application/json", data.getBytes(StandardCharsets.UTF_8))
                 .build();
     }

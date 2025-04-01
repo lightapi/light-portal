@@ -1,0 +1,38 @@
+package net.lightapi.db;
+
+import com.networknt.utility.Constants;
+import com.networknt.utility.Util;
+import io.cloudevents.CloudEvent;
+import io.cloudevents.core.builder.CloudEventBuilder;
+import io.cloudevents.jackson.JsonFormat;
+import net.lightapi.portal.PortalConstants;
+import org.junit.jupiter.api.Test;
+
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.time.OffsetDateTime;
+
+public class CloudEventTest {
+    private static final JsonFormat jsonFormat = new JsonFormat();
+
+    @Test
+    public void testJsonFormat() {
+        CloudEventBuilder eventTemplate = CloudEventBuilder.v1()
+                .withSource(URI.create("https://github.com/lightapi/light-portal"))
+                .withType(PortalConstants.AUTH_CODE_CREATED_EVENT);
+
+        String data = "{\"redirectUri\":\"https://localhost:3000/authorization\",\"authCode\":\"dTT0hjYBS7aZwF0gipqxnA\",\"roles\":\"admin user\",\"hostId\":\"N2CMw0HGQXeLvC1wBfln2A\",\"groups\":\"delete insert select update\",\"entityId\":\"sh35\",\"positions\":\"APIPlatformDelivery\",\"userId\":\"utgdG50vRVOX3mL1Kf83aA\",\"remember\":\"Y\",\"providerId\":\"EF3wqhfWQti2DUVrvYNM7g\",\"attributes\":\"country^=^CAN~peranent_employee^=^true~security_clearance_level^=^2\",\"userType\":\"E\",\"email\":\"steve.hu@lightapi.net\"}";
+        CloudEvent event = eventTemplate.newBuilder()
+                .withId(Util.getUUID())
+                .withTime(OffsetDateTime.now())
+                .withExtension(Constants.USER, "user123")
+                .withExtension(PortalConstants.NONCE, 1)
+                .withExtension(Constants.HOST, "host123")
+                .withData("application/json", data.getBytes(StandardCharsets.UTF_8))
+                .build();
+
+        byte[] bytes = jsonFormat.serialize(event);
+        String json = new String(bytes, StandardCharsets.UTF_8);
+        System.out.println("json = " + json);
+    }
+}
