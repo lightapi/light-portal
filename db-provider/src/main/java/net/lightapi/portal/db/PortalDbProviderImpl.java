@@ -14791,5 +14791,1430 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         return result;
     }
 
+    @Override
+    public Result<String> createCategory(Map<String, Object> event) {
+        final String sql = "INSERT INTO category_t(host_id, category_id, entity_type, category_name, " +
+                "category_desc, parent_category_id, sort_order, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                if (map.get("hostId") != null) {
+                    statement.setString(1, (String) map.get("hostId"));
+                } else {
+                    statement.setNull(1, Types.VARCHAR);
+                }
+
+                statement.setString(2, (String)map.get("categoryId")); // Required
+                statement.setString(3, (String)map.get("entityType")); // Required
+                statement.setString(4, (String)map.get("categoryName")); // Required
+
+                if (map.get("categoryDesc") != null) {
+                    statement.setString(5, (String) map.get("categoryDesc"));
+                } else {
+                    statement.setNull(5, Types.VARCHAR);
+                }
+                if (map.get("parentCategoryId") != null) {
+                    statement.setString(6, (String) map.get("parentCategoryId"));
+                } else {
+                    statement.setNull(6, Types.VARCHAR);
+                }
+                if (map.get("sortOrder") instanceof Number) {
+                    statement.setInt(7, ((Number) map.get("sortOrder")).intValue());
+                } else {
+                    statement.setNull(7, Types.INTEGER); // Let DB default handle it if column default is set
+                    // Or set explicit default: statement.setInt(7, 0);
+                }
+                statement.setString(8, (String)event.get(Constants.USER));
+                statement.setObject(9, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert the category with id " + map.get("categoryId"));
+                }
+                conn.commit();
+                result =  Success.of((String)map.get("categoryId")); // Return categoryId
+                insertNotification(event, true, null);
+
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) { // Catch other potential runtime exceptions
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> updateCategory(Map<String, Object> event) {
+        final String sql = "UPDATE category_t SET category_name = ?, category_desc = ?, parent_category_id = ?, " +
+                "sort_order = ?, update_user = ?, update_ts = ? WHERE category_id = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, (String)map.get("categoryName"));
+
+                if (map.get("categoryDesc") != null) {
+                    statement.setString(2, (String) map.get("categoryDesc"));
+                } else {
+                    statement.setNull(2, Types.VARCHAR);
+                }
+                if (map.get("parentCategoryId") != null) {
+                    statement.setString(3, (String) map.get("parentCategoryId"));
+                } else {
+                    statement.setNull(3, Types.VARCHAR);
+                }
+                if (map.get("sortOrder") instanceof Number) {
+                    statement.setInt(4, ((Number) map.get("sortOrder")).intValue());
+                } else {
+                    statement.setNull(4, Types.INTEGER); // Let DB default handle it if column default is set
+                    // Or set explicit default: statement.setInt(4, 0);
+                }
+                statement.setString(5, (String)event.get(Constants.USER));
+                statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setString(7, (String)map.get("categoryId"));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to update the category with id " + map.get("categoryId"));
+                }
+                conn.commit();
+                result =  Success.of((String)map.get("categoryId")); // Return categoryId
+                insertNotification(event, true, null);
+
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) { // Catch other potential runtime exceptions
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deleteCategory(Map<String, Object> event) {
+        final String sql = "DELETE FROM category_t WHERE category_id = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String categoryId = (String) map.get("categoryId");
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, categoryId);
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to delete the category with id " + categoryId);
+                }
+                conn.commit();
+                result =  Success.of(categoryId); // Return categoryId
+                insertNotification(event, true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) { // Catch other potential runtime exceptions
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getCategory(int offset, int limit, String hostId, String categoryId, String entityType,
+                                      String categoryName, String categoryDesc, String parentCategoryId,
+                                      String parentCategoryName, Integer sortOrder) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
+                "cat.category_id, cat.host_id, cat.entity_type, cat.category_name, cat.category_desc, cat.parent_category_id, \n" +
+                "cat.sort_order, cat.update_user, cat.update_ts,\n" +
+                "parent_cat.category_name AS parent_category_name\n" + // Select parent category name
+                "FROM category_t cat\n" +
+                "LEFT JOIN category_t parent_cat ON cat.parent_category_id = parent_cat.category_id\n" + // Self-join
+                "WHERE 1=1\n");
+
+        List<Object> parameters = new ArrayList<>();
+        StringBuilder whereClause = new StringBuilder();
+
+        // --- Modified host_id condition to include global categories ---
+        if (hostId != null && !hostId.isEmpty()) {
+            whereClause.append("("); // Start OR group
+            addCondition(whereClause, parameters, "cat.host_id", hostId); // Tenant-specific categories
+            whereClause.append(" OR cat.host_id IS NULL)"); // Include global categories
+        } else {
+            // If hostId is null or empty, only fetch global categories
+            addCondition(whereClause, parameters, "cat.host_id", null); // Fetch only global
+        }
+        // --- Rest of the conditions remain the same ---
+        addCondition(whereClause, parameters, "cat.category_id", categoryId); // Use table alias "cat"
+        addCondition(whereClause, parameters, "cat.entity_type", entityType);
+        addCondition(whereClause, parameters, "cat.category_name", categoryName);
+        addCondition(whereClause, parameters, "cat.category_desc", categoryDesc);
+        addCondition(whereClause, parameters, "cat.parent_category_id", parentCategoryId);
+        // parentCategoryName is still ignored in WHERE as it's derived from join
+        addCondition(whereClause, parameters, "cat.sort_order", sortOrder); // Use table alias "cat"
+
+
+        if (!whereClause.isEmpty()) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append(" ORDER BY cat.category_name\n" + // Use table alias in ORDER BY
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> categories = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("categoryId", resultSet.getString("category_id"));
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("entityType", resultSet.getString("entity_type"));
+                    map.put("categoryName", resultSet.getString("category_name"));
+                    map.put("categoryDesc", resultSet.getString("category_desc"));
+                    map.put("parentCategoryId", resultSet.getString("parent_category_id"));
+                    map.put("parentCategoryName", resultSet.getString("parent_category_name")); // Get parent category name from join
+                    map.put("sortOrder", resultSet.getInt("sort_order"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    categories.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("categories", categories);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getCategoryLabel(String hostId) {
+        Result<String> result = null;
+        String sql = "SELECT category_id, category_name FROM category_t WHERE host_id = ? OR host_id IS NULL";
+        List<Map<String, Object>> labels = new ArrayList<>();
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, hostId);
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", resultSet.getString("category_id"));
+                    map.put("label", resultSet.getString("category_name"));
+                    labels.add(map);
+                }
+            }
+            result = Success.of(JsonMapper.toJson(labels));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getCategoryById(String categoryId) {
+        Result<String> result = null;
+        String sql = "SELECT category_id, host_id, entity_type, category_name, category_desc, parent_category_id, " +
+                "sort_order, update_user, update_ts FROM category_t WHERE category_id = ?";
+        Map<String, Object> map = null;
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, categoryId);
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    map = new HashMap<>();
+                    map.put("categoryId", resultSet.getString("category_id"));
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("entityType", resultSet.getString("entity_type"));
+                    map.put("categoryName", resultSet.getString("category_name"));
+                    map.put("categoryDesc", resultSet.getString("category_desc"));
+                    map.put("parentCategoryId", resultSet.getString("parent_category_id"));
+                    map.put("sortOrder", resultSet.getInt("sort_order"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                }
+            }
+            if (map != null) {
+                result = Success.of(JsonMapper.toJson(map));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getCategoryByName(String hostId, String categoryName) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT category_id, host_id, entity_type, category_name, category_desc, parent_category_id, \n" +
+                "sort_order, update_user, update_ts\n" +
+                "FROM category_t\n" +
+                "WHERE category_name = ?\n"); // Filter by category_name
+
+        if (hostId != null && !hostId.isEmpty()) {
+            sqlBuilder.append("AND (host_id = ? OR host_id IS NULL)"); // Tenant-specific OR Global
+        } else {
+            sqlBuilder.append("AND host_id IS NULL"); // Only Global if hostId is null/empty
+        }
+
+        String sql = sqlBuilder.toString();
+        Map<String, Object> map = null;
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            int parameterIndex = 1;
+            preparedStatement.setString(parameterIndex++, categoryName); // 1. categoryName
+
+            if (hostId != null && !hostId.isEmpty()) {
+                preparedStatement.setString(parameterIndex++, hostId); // 2. hostId (for tenant-specific OR global)
+            }
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    map = new HashMap<>();
+                    map.put("categoryId", resultSet.getString("category_id"));
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("entityType", resultSet.getString("entity_type"));
+                    map.put("categoryName", resultSet.getString("category_name"));
+                    map.put("categoryDesc", resultSet.getString("category_desc"));
+                    map.put("parentCategoryId", resultSet.getString("parent_category_id"));
+                    map.put("sortOrder", resultSet.getInt("sort_order"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                }
+            }
+            if (map != null) {
+                result = Success.of(JsonMapper.toJson(map));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getCategoryByType(String hostId, String entityType) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT category_id, host_id, entity_type, category_name, category_desc, parent_category_id, \n" +
+                "sort_order, update_user, update_ts\n" +
+                "FROM category_t\n" +
+                "WHERE entity_type = ?\n"); // Filter by entity_type
+
+        if (hostId != null && !hostId.isEmpty()) {
+            sqlBuilder.append("AND (host_id = ? OR host_id IS NULL)"); // Tenant-specific OR Global
+        } else {
+            sqlBuilder.append("AND host_id IS NULL"); // Only Global if hostId is null/empty
+        }
+
+        String sql = sqlBuilder.toString();
+        List<Map<String, Object>> categories = new ArrayList<>();
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            int parameterIndex = 1;
+            preparedStatement.setString(parameterIndex++, entityType); // 1. entityType
+            if (hostId != null && !hostId.isEmpty()) {
+                preparedStatement.setString(parameterIndex++, hostId); // 2. hostId (for tenant-specific OR global)
+            }
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("categoryId", resultSet.getString("category_id"));
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("entityType", resultSet.getString("entity_type"));
+                    map.put("categoryName", resultSet.getString("category_name"));
+                    map.put("categoryDesc", resultSet.getString("category_desc"));
+                    map.put("parentCategoryId", resultSet.getString("parent_category_id"));
+                    map.put("sortOrder", resultSet.getInt("sort_order"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    categories.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("categories", categories);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getCategoryTree(String hostId, String entityType) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT cat.category_id, cat.host_id, cat.entity_type, cat.category_name, cat.category_desc, cat.parent_category_id, \n" +
+                "cat.sort_order, cat.update_user, cat.update_ts\n" +
+                "FROM category_t cat\n" +
+                "WHERE cat.entity_type = ?\n"); // Filter by entity_type
+
+        if (hostId != null && !hostId.isEmpty()) {
+            sqlBuilder.append("AND (cat.host_id = ? OR cat.host_id IS NULL)"); // Tenant-specific OR Global
+        } else {
+            sqlBuilder.append("AND cat.host_id IS NULL"); // Only Global if hostId is null/empty
+        }
+
+        sqlBuilder.append(" ORDER BY cat.sort_order, cat.category_name"); // Order for tree consistency
+
+        String sql = sqlBuilder.toString();
+        List<Map<String, Object>> categoryList = new ArrayList<>(); // Flat list initially
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            int parameterIndex = 1;
+            preparedStatement.setString(parameterIndex++, entityType); // 1. entityType
+            if (hostId != null && !hostId.isEmpty()) {
+                preparedStatement.setString(parameterIndex++, hostId); // 2. hostId (for tenant-specific OR global)
+            }
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("categoryId", resultSet.getString("category_id"));
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("entityType", resultSet.getString("entity_type"));
+                    map.put("categoryName", resultSet.getString("category_name"));
+                    map.put("categoryDesc", resultSet.getString("category_desc"));
+                    map.put("parentCategoryId", resultSet.getString("parent_category_id"));
+                    map.put("sortOrder", resultSet.getInt("sort_order"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("children", new ArrayList<>()); // Initialize children list for tree structure
+
+                    categoryList.add(map);
+                }
+            }
+
+            // Build the category tree structure
+            List<Map<String, Object>> categoryTree = buildCategoryTree(categoryList);
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("categories", categoryTree);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    /**
+     * Helper method to build the category tree from a flat list of categories.
+     *
+     * @param categoryList Flat list of category maps.
+     * @return List of root category maps representing the tree structure.
+     */
+    private List<Map<String, Object>> buildCategoryTree(List<Map<String, Object>> categoryList) {
+        Map<String, Map<String, Object>> categoryLookup = new HashMap<>(); // For quick lookup by categoryId
+        List<Map<String, Object>> rootCategories = new ArrayList<>();
+
+        // 1. Populate the lookup map for efficient access by categoryId
+        for (Map<String, Object> category : categoryList) {
+            categoryLookup.put((String) category.get("categoryId"), category);
+        }
+
+        // 2. Iterate again to build the tree structure
+        for (Map<String, Object> category : categoryList) {
+            String parentCategoryId = (String) category.get("parentCategoryId");
+            if (parentCategoryId != null) {
+                // If it has a parent, add it as a child to the parent category
+                Map<String, Object> parentCategory = categoryLookup.get(parentCategoryId);
+                if (parentCategory != null) {
+                    ((List<Map<String, Object>>) parentCategory.get("children")).add(category);
+                } else {
+                    logger.warn("Parent category not found for categoryId: {}, parentCategoryId: {}", category.get("categoryId"), parentCategoryId);
+                    // Handle missing parent category (e.g., log warning, add to root, skip, etc.)
+                    rootCategories.add(category); // Add to root as fallback if parent is missing?
+                }
+            } else {
+                // If no parent, it's a root category
+                rootCategories.add(category);
+            }
+        }
+        return rootCategories;
+    }
+
+    @Override
+    public Result<String> createSchema(Map<String, Object> event) {
+        final String sql = "INSERT INTO schema_t(host_id, schema_id, schema_version, schema_type, spec_version, schema_source, schema_name, schema_desc, schema_body, schema_owner, schema_status, tags, example, comment_status, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        final String insertSchemaCategorySql = "INSERT INTO entity_category_t (entity_id, entity_type, category_id) VALUES (?, ?, ?)"; // Added SQL for entity_category_t
+        final String insertSchemaTagSql = "INSERT INTO entity_tag_t (entity_id, entity_type, tag_id) VALUES (?, ?, ?)"; // Added SQL for entity_tag_t
+
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String schemaId = (String) map.get("schemaId"); // Get schemaId for return/logging/error
+        List<String> categoryIds = (List<String>) map.get("categoryId"); // Get categoryIds from event data if present
+        List<String> tagIds = (List<String>) map.get("tagIds"); // Get tagIds from event data if present
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                if (map.get("hostId") != null) {
+                    statement.setString(1, (String) map.get("hostId"));
+                } else {
+                    statement.setNull(1, Types.VARCHAR);
+                }
+
+                statement.setString(2, schemaId); // Required
+                statement.setString(3, (String)map.get("schemaVersion")); // Required
+                statement.setString(4, (String)map.get("schemaType")); // Required
+                statement.setString(5, (String)map.get("specVersion")); // Required
+                statement.setString(6, (String)map.get("schemaSource")); // Required
+                statement.setString(7, (String)map.get("schemaName")); // Required
+
+
+                if (map.get("schemaDesc") != null) {
+                    statement.setString(8, (String) map.get("schemaDesc"));
+                } else {
+                    statement.setNull(8, Types.VARCHAR);
+                }
+                statement.setString(9, (String)map.get("schemaBody")); // Required
+                statement.setString(10, (String)map.get("schemaOwner")); // Required
+                statement.setString(11, (String)map.get("schemaStatus")); // Required
+
+
+                if (map.get("tags") != null) {
+                    statement.setString(12, (String) map.get("tags"));
+                } else {
+                    statement.setNull(12, Types.VARCHAR);
+                }
+                if (map.get("example") != null) {
+                    statement.setString(13, (String) map.get("example"));
+                } else {
+                    statement.setNull(13, Types.VARCHAR);
+                }
+                statement.setString(14, (String)map.get("commentStatus")); // Required
+                statement.setString(15, (String)event.get(Constants.USER));
+                statement.setObject(16, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert the schema with id " + map.get("schemaId"));
+                }
+
+                // Insert into entity_categories_t if categoryId is present
+                if (categoryIds != null && !categoryIds.isEmpty()) {
+                    try (PreparedStatement insertCategoryStatement = conn.prepareStatement(insertSchemaCategorySql)) {
+                        for (String categoryId : categoryIds) {
+                            insertCategoryStatement.setString(1, schemaId);
+                            insertCategoryStatement.setString(2, "schema"); // entity_type = "schema"
+                            insertCategoryStatement.setString(3, categoryId);
+                            insertCategoryStatement.addBatch(); // Batch inserts for efficiency
+                        }
+                        insertCategoryStatement.executeBatch(); // Execute batch insert
+                    }
+                }
+                // Insert into entity_tag_t if tagIds are present
+                if (tagIds != null && !tagIds.isEmpty()) {
+                    try (PreparedStatement insertTagStatement = conn.prepareStatement(insertSchemaTagSql)) {
+                        for (String tagId : tagIds) {
+                            insertTagStatement.setString(1, schemaId);
+                            insertTagStatement.setString(2, "schema"); // entity_type = "schema"
+                            insertTagStatement.setString(3, tagId);
+                            insertTagStatement.addBatch(); // Batch inserts for efficiency
+                        }
+                        insertTagStatement.executeBatch(); // Execute batch insert
+                    }
+                }
+
+                conn.commit();
+                result =  Success.of((String)map.get("schemaId")); // Return schemaId
+                insertNotification(event, true, null);
+
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) { // Catch other potential runtime exceptions
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> updateSchema(Map<String, Object> event) {
+        final String sql = "UPDATE schema_t SET schema_version = ?, schema_type = ?, spec_version = ?, schema_source = ?, schema_name = ?, schema_desc = ?, schema_body = ?, schema_owner = ?, schema_status = ?, tags = ?, example = ?, comment_status = ?, update_user = ?, update_ts = ? WHERE schema_id = ?";
+        final String deleteSchemaCategorySql = "DELETE FROM entity_category_t WHERE entity_id = ? AND entity_type = ?";
+        final String insertSchemaCategorySql = "INSERT INTO entity_category_t (entity_id, entity_type, category_id) VALUES (?, ?, ?)";
+        final String deleteSchemaTagSql = "DELETE FROM entity_tag_t WHERE entity_id = ? AND entity_type = ?";
+        final String insertSchemaTagSql = "INSERT INTO entity_tag_t (entity_id, entity_type, tag_id) VALUES (?, ?, ?)";
+
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String schemaId = (String) map.get("schemaId");
+        List<String> categoryIds = (List<String>) map.get("categoryIds");
+        List<String> tagIds = (List<String>) map.get("tagIds");
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, (String)map.get("schemaVersion"));
+                statement.setString(2, (String)map.get("schemaType"));
+                statement.setString(3, (String)map.get("specVersion"));
+                statement.setString(4, (String)map.get("schemaSource"));
+                statement.setString(5, (String)map.get("schemaName"));
+
+                if (map.get("schemaDesc") != null) {
+                    statement.setString(6, (String) map.get("schemaDesc"));
+                } else {
+                    statement.setNull(6, Types.VARCHAR);
+                }
+                statement.setString(7, (String)map.get("schemaBody"));
+                statement.setString(8, (String)map.get("schemaOwner"));
+                statement.setString(9, (String)map.get("schemaStatus"));
+
+                if (map.get("tags") != null) {
+                    statement.setString(10, (String) map.get("tags"));
+                } else {
+                    statement.setNull(10, Types.VARCHAR);
+                }
+                if (map.get("example") != null) {
+                    statement.setString(11, (String) map.get("example"));
+                } else {
+                    statement.setNull(11, Types.VARCHAR);
+                }
+                statement.setString(12, (String)map.get("commentStatus"));
+                statement.setString(13, (String)event.get(Constants.USER));
+                statement.setObject(14, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setString(15, schemaId);
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to update the schema with id " + schemaId);
+                }
+                // --- Replace Category Associations ---
+                // 1. Delete existing links for this schema
+                try (PreparedStatement deleteCategoryStatement = conn.prepareStatement(deleteSchemaCategorySql)) {
+                    deleteCategoryStatement.setString(1, schemaId);
+                    deleteCategoryStatement.setString(2, "schema"); // entity_type = "schema"
+                    deleteCategoryStatement.executeUpdate(); // Execute delete (no need to check count for DELETE)
+                }
+
+                // 2. Insert new links if categoryIds are provided in the event
+                if (categoryIds != null && !categoryIds.isEmpty()) {
+                    try (PreparedStatement insertCategoryStatement = conn.prepareStatement(insertSchemaCategorySql)) {
+                        for (String categoryId : categoryIds) {
+                            insertCategoryStatement.setString(1, schemaId);
+                            insertCategoryStatement.setString(2, "schema"); // entity_type = "schema"
+                            insertCategoryStatement.setString(3, categoryId);
+                            insertCategoryStatement.addBatch(); // Batch inserts for efficiency
+                        }
+                        insertCategoryStatement.executeBatch(); // Execute batch insert
+                    }
+                }
+                // --- End Replace Category Associations ---
+
+                // --- Replace Tag Associations ---
+                // 1. Delete existing links for this schema
+                try (PreparedStatement deleteTagStatement = conn.prepareStatement(deleteSchemaTagSql)) {
+                    deleteTagStatement.setString(1, schemaId);
+                    deleteTagStatement.setString(2, "schema"); // entity_type = "schema"
+                    deleteTagStatement.executeUpdate();
+                }
+
+                // 2. Insert new links if tagIds are provided in the event
+                if (tagIds != null && !tagIds.isEmpty()) {
+                    try (PreparedStatement insertTagStatement = conn.prepareStatement(insertSchemaTagSql)) {
+                        for (String tagId : tagIds) {
+                            insertTagStatement.setString(1, schemaId);
+                            insertTagStatement.setString(2, "schema"); // entity_type = "schema"
+                            insertTagStatement.setString(3, tagId);
+                            insertTagStatement.addBatch(); // Batch inserts for efficiency
+                        }
+                        insertTagStatement.executeBatch(); // Execute batch insert
+                    }
+                }
+                // --- End Replace Tag Associations ---
+
+                conn.commit();
+                result =  Success.of(schemaId); // Return schemaId
+                insertNotification(event, true, null);
+
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) { // Catch other potential runtime exceptions
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deleteSchema(Map<String, Object> event) {
+        final String sql = "DELETE FROM schema_t WHERE schema_id = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String schemaId = (String) map.get("schemaId");
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, schemaId);
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to delete the schema with id " + schemaId);
+                }
+                conn.commit();
+                result =  Success.of(schemaId); // Return schemaId
+                insertNotification(event, true, null);
+
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) { // Catch other potential runtime exceptions
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getSchema(int offset, int limit, String hostId, String schemaId, String schemaVersion, String schemaType,
+                                    String specVersion, String schemaSource, String schemaName, String schemaDesc, String schemaBody,
+                                    String schemaOwner, String schemaStatus, String categoryId, String tags, String example,
+                                    String commentStatus) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
+                "schema_id, host_id, schema_version, schema_type, spec_version, schema_source, schema_name, schema_desc, schema_body, \n" +
+                "schema_owner, schema_status, tags, example, comment_status, update_user, update_ts\n" +
+                "FROM schema_t\n" +
+                "WHERE 1=1\n");
+
+        List<Object> parameters = new ArrayList<>();
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "host_id", hostId);
+        addCondition(whereClause, parameters, "schema_id", schemaId);
+        addCondition(whereClause, parameters, "schema_version", schemaVersion);
+        addCondition(whereClause, parameters, "schema_type", schemaType);
+        addCondition(whereClause, parameters, "spec_version", specVersion);
+        addCondition(whereClause, parameters, "schema_source", schemaSource);
+        addCondition(whereClause, parameters, "schema_name", schemaName);
+        addCondition(whereClause, parameters, "schema_desc", schemaDesc);
+        // schemaBody is usually not used in get list query for performance reasons
+        addCondition(whereClause, parameters, "schema_owner", schemaOwner);
+        addCondition(whereClause, parameters, "schema_status", schemaStatus);
+        // categoryId is not a column in schema_t table, so it is ignored in WHERE clause
+        addCondition(whereClause, parameters, "tags", tags);
+        addCondition(whereClause, parameters, "example", example);
+        addCondition(whereClause, parameters, "comment_status", commentStatus);
+
+
+        if (!whereClause.isEmpty()) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append(" ORDER BY schema_name\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> schemas = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("schemaId", resultSet.getString("schema_id"));
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("schemaVersion", resultSet.getString("schema_version"));
+                    map.put("schemaType", resultSet.getString("schema_type"));
+                    map.put("specVersion", resultSet.getString("spec_version"));
+                    map.put("schemaSource", resultSet.getString("schema_source"));
+                    map.put("schemaName", resultSet.getString("schema_name"));
+                    map.put("schemaDesc", resultSet.getString("schema_desc"));
+                    // schemaBody is usually not returned in get list query for performance reasons
+                    // map.put("schemaBody", resultSet.getString("schema_body"));
+                    map.put("schemaOwner", resultSet.getString("schema_owner"));
+                    map.put("schemaStatus", resultSet.getString("schema_status"));
+                    map.put("tags", resultSet.getString("tags"));
+                    map.put("example", resultSet.getString("example"));
+                    map.put("commentStatus", resultSet.getString("comment_status"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    schemas.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("schemas", schemas);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getSchemaLabel(String hostId) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT schema_id, schema_name FROM schema_t WHERE 1=1 "); // Base query
+
+        if (hostId != null && !hostId.isEmpty()) {
+            sqlBuilder.append("AND (host_id = ? OR host_id IS NULL)"); // Tenant-specific OR Global
+        } else {
+            sqlBuilder.append("AND host_id IS NULL"); // Only Global if hostId is null/empty
+        }
+
+        String sql = sqlBuilder.toString();
+        List<Map<String, Object>> labels = new ArrayList<>();
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            if (hostId != null && !hostId.isEmpty()) {
+                preparedStatement.setString(1, hostId); // Set hostId parameter if provided
+            }
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", resultSet.getString("schema_id"));
+                    map.put("label", resultSet.getString("schema_name"));
+                    labels.add(map);
+                }
+            }
+            result = Success.of(JsonMapper.toJson(labels));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+
+    @Override
+    public Result<String> getSchemaById(String schemaId) {
+        Result<String> result = null;
+        String sql = "SELECT schema_id, host_id, schema_version, schema_type, spec_version, schema_source, schema_name, schema_desc, schema_body, " +
+                "schema_owner, schema_status, tags, example, comment_status, update_user, update_ts FROM schema_t WHERE schema_id = ?";
+        Map<String, Object> map = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, schemaId);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        map = new HashMap<>();
+                        map.put("schemaId", resultSet.getString("schema_id"));
+                        map.put("hostId", resultSet.getString("host_id"));
+                        map.put("schemaVersion", resultSet.getString("schema_version"));
+                        map.put("schemaType", resultSet.getString("schema_type"));
+                        map.put("specVersion", resultSet.getString("spec_version"));
+                        map.put("schemaSource", resultSet.getString("schema_source"));
+                        map.put("schemaName", resultSet.getString("schema_name"));
+                        map.put("schemaDesc", resultSet.getString("schema_desc"));
+                        map.put("schemaBody", resultSet.getString("schema_body"));
+                        map.put("schemaOwner", resultSet.getString("schema_owner"));
+                        map.put("schemaStatus", resultSet.getString("schema_status"));
+                        map.put("tags", resultSet.getString("tags"));
+                        map.put("example", resultSet.getString("example"));
+                        map.put("commentStatus", resultSet.getString("comment_status"));
+                        map.put("updateUser", resultSet.getString("update_user"));
+                        map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    }
+                }
+                if (map != null) {
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Success.of(null); // Or perhaps Failure.of(NOT_FOUND Status) if schema must exist
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getSchemaByCategory(String categoryId) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT schema_t.schema_id, schema_t.host_id, schema_t.schema_version, schema_t.schema_type, schema_t.spec_version, schema_t.schema_source, \n" +
+                "schema_t.schema_name, schema_t.schema_desc, schema_t.schema_body, \n" +
+                "schema_t.schema_owner, schema_t.schema_status, schema_t.tags, schema_t.example, schema_t.comment_status, schema_t.update_user, schema_t.update_ts\n" +
+                "FROM schema_t\n" +
+                "INNER JOIN entity_category_t ON schema_t.schema_id = entity_category_t.entity_id\n" + // Join with entity_category_t
+                "WHERE entity_type = 'schema' AND entity_category_t.category_id = ?"); // Filter by categoryId using join table
+
+        List<Map<String, Object>> schemas = new ArrayList<>();
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder.toString())) {
+
+            preparedStatement.setString(1, categoryId); // Set categoryId parameter
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("schemaId", resultSet.getString("schema_id"));
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("schemaVersion", resultSet.getString("schema_version"));
+                    map.put("schemaType", resultSet.getString("schema_type"));
+                    map.put("specVersion", resultSet.getString("spec_version"));
+                    map.put("schemaSource", resultSet.getString("schema_source"));
+                    map.put("schemaName", resultSet.getString("schema_name"));
+                    map.put("schemaDesc", resultSet.getString("schema_desc"));
+                    map.put("schemaBody", resultSet.getString("schema_body"));
+                    map.put("schemaOwner", resultSet.getString("schema_owner"));
+                    map.put("schemaStatus", resultSet.getString("schema_status"));
+                    map.put("tags", resultSet.getString("tags"));
+                    map.put("example", resultSet.getString("example"));
+                    map.put("commentStatus", resultSet.getString("comment_status"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    schemas.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("schemas", schemas);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+
+    @Override
+    public Result<String> createTag(Map<String, Object> event) {
+        final String sql = "INSERT INTO tag_t(host_id, tag_id, entity_type, tag_name, " +
+                "tag_desc, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String tagId = (String) map.get("tagId"); // Get tagId for return/logging/error
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                if (map.get("hostId") != null) {
+                    statement.setString(1, (String) map.get("hostId"));
+                } else {
+                    statement.setNull(1, Types.VARCHAR);
+                }
+
+                statement.setString(2, tagId); // Required
+                statement.setString(3, (String)map.get("entityType")); // Required
+                statement.setString(4, (String)map.get("tagName")); // Required
+
+
+                if (map.get("tagDesc") != null) {
+                    statement.setString(5, (String) map.get("tagDesc"));
+                } else {
+                    statement.setNull(5, Types.VARCHAR);
+                }
+
+                statement.setString(6, (String)event.get(Constants.USER));
+                statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert the tag with id " + tagId);
+                }
+                conn.commit();
+                result =  Success.of(tagId); // Return tagId
+                insertNotification(event, true, null);
+
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) { // Catch other potential runtime exceptions
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> updateTag(Map<String, Object> event) {
+        final String sql = "UPDATE tag_t SET tag_name = ?, tag_desc = ?, update_user = ?, update_ts = ? WHERE tag_id = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String tagId = (String) map.get("tagId");
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, (String)map.get("tagName"));
+
+                if (map.get("tagDesc") != null) {
+                    statement.setString(2, (String) map.get("tagDesc"));
+                } else {
+                    statement.setNull(2, Types.VARCHAR);
+                }
+                statement.setString(3, (String)event.get(Constants.USER));
+                statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setString(5, tagId);
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to update the tag with id " + map.get("tagId"));
+                }
+                conn.commit();
+                result =  Success.of((String)map.get("tagId")); // Return tagId
+                insertNotification(event, true, null);
+
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) { // Catch other potential runtime exceptions
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deleteTag(Map<String, Object> event) {
+        final String sql = "DELETE FROM tag_t WHERE tag_id = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String tagId = (String) map.get("tagId");
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, tagId);
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to delete the tag with id " + map.get("tagId"));
+                }
+                conn.commit();
+                result =  Success.of(tagId); // Return tagId
+                insertNotification(event, true, null);
+
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) { // Catch other potential runtime exceptions
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getTag(int offset, int limit, String hostId, String tagId, String entityType, String tagName, String tagDesc) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
+                "tag_id, host_id, entity_type, tag_name, tag_desc, update_user, update_ts\n" +
+                "FROM tag_t\n" +
+                "WHERE 1=1\n");
+
+        List<Object> parameters = new ArrayList<>();
+        StringBuilder whereClause = new StringBuilder();
+
+        // --- Modified host_id condition to include global tags ---
+        if (hostId != null && !hostId.isEmpty()) {
+            whereClause.append("("); // Start OR group
+            addCondition(whereClause, parameters, "host_id", hostId); // Tenant-specific tags
+            whereClause.append(" OR host_id IS NULL)");         // Include global tags
+        } else {
+            // If hostId is null or empty, only fetch global tags
+            addCondition(whereClause, parameters, "host_id", null); // Fetch only global
+        }
+        // --- Rest of the conditions ---
+        addCondition(whereClause, parameters, "tag_id", tagId);
+        addCondition(whereClause, parameters, "entity_type", entityType);
+        addCondition(whereClause, parameters, "tag_name", tagName);
+        addCondition(whereClause, parameters, "tag_desc", tagDesc);
+
+        if (!whereClause.isEmpty()) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append(" ORDER BY tag_name\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> tags = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("tagId", resultSet.getString("tag_id"));
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("entityType", resultSet.getString("entity_type"));
+                    map.put("tagName", resultSet.getString("tag_name"));
+                    map.put("tagDesc", resultSet.getString("tag_desc"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    tags.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("tags", tags);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getTagLabel(String hostId) {
+        Result<String> result = null;
+        String sql = "SELECT tag_id, tag_name FROM tag_t WHERE host_id = ? OR host_id IS NULL";
+        List<Map<String, Object>> labels = new ArrayList<>();
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setString(1, hostId);
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", resultSet.getString("tag_id"));
+                    map.put("label", resultSet.getString("tag_name"));
+                    labels.add(map);
+                }
+            }
+            result = Success.of(JsonMapper.toJson(labels));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getTagById(String tagId) {
+        Result<String> result = null;
+        String sql = "SELECT tag_id, host_id, entity_type, tag_name, tag_desc, update_user, update_ts FROM tag_t WHERE tag_id = ?";
+        Map<String, Object> map = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false); // Although not strictly needed for SELECT, keeping template consistent
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, tagId);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        map = new HashMap<>();
+                        map.put("tagId", resultSet.getString("tag_id"));
+                        map.put("hostId", resultSet.getString("host_id"));
+                        map.put("entityType", resultSet.getString("entity_type"));
+                        map.put("tagName", resultSet.getString("tag_name"));
+                        map.put("tagDesc", resultSet.getString("tag_desc"));
+                        map.put("updateUser", resultSet.getString("update_user"));
+                        map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    }
+                }
+                if (map != null) {
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Success.of(null); // Or perhaps Failure.of(NOT_FOUND Status) if tag must exist
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+
+    @Override
+    public Result<String> getTagByName(String hostId, String tagName) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT tag_id, host_id, entity_type, tag_name, tag_desc, update_user, update_ts\n" +
+                "FROM tag_t\n" +
+                "WHERE tag_name = ?\n"); // Filter by tagName
+
+        if (hostId != null && !hostId.isEmpty()) {
+            sqlBuilder.append("AND (host_id = ? OR host_id IS NULL)"); // Tenant-specific OR Global
+        } else {
+            sqlBuilder.append("AND host_id IS NULL"); // Only Global if hostId is null/empty
+        }
+
+        String sql = sqlBuilder.toString();
+        Map<String, Object> map = null;
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false); // Although not strictly needed for SELECT, keeping template consistent
+            try (PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+
+                int parameterIndex = 1;
+                preparedStatement.setString(parameterIndex++, tagName); // 1. tagName
+
+                if (hostId != null && !hostId.isEmpty()) {
+                    preparedStatement.setString(parameterIndex++, hostId); // 2. hostId (for tenant-specific OR global)
+                }
+
+                try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                    if (resultSet.next()) {
+                        map = new HashMap<>();
+                        map.put("tagId", resultSet.getString("tag_id"));
+                        map.put("hostId", resultSet.getString("host_id"));
+                        map.put("entityType", resultSet.getString("entity_type"));
+                        map.put("tagName", resultSet.getString("tag_name"));
+                        map.put("tagDesc", resultSet.getString("tag_desc"));
+                        map.put("updateUser", resultSet.getString("update_user"));
+                        map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    }
+                }
+                if (map != null) {
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Success.of(null); // Or perhaps Failure.of(NOT_FOUND Status) if tag must exist
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+
+    @Override
+    public Result<String> getTagByType(String hostId, String entityType) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT tag_id, host_id, entity_type, tag_name, tag_desc, update_user, update_ts\n" +
+                "FROM tag_t\n" +
+                "WHERE entity_type = ?\n"); // Filter by entityType
+
+        if (hostId != null && !hostId.isEmpty()) {
+            sqlBuilder.append("AND (host_id = ? OR host_id IS NULL)"); // Tenant-specific OR Global
+        } else {
+            sqlBuilder.append("AND host_id IS NULL"); // Only Global if hostId is null/empty
+        }
+
+        String sql = sqlBuilder.toString();
+        List<Map<String, Object>> tags = new ArrayList<>();
+        try (Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            int parameterIndex = 1;
+            preparedStatement.setString(parameterIndex++, entityType); // 1. entityType
+
+            if (hostId != null && !hostId.isEmpty()) {
+                preparedStatement.setString(parameterIndex++, hostId); // 2. hostId (for tenant-specific OR global)
+            }
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("tagId", resultSet.getString("tag_id"));
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("entityType", resultSet.getString("entity_type"));
+                    map.put("tagName", resultSet.getString("tag_name"));
+                    map.put("tagDesc", resultSet.getString("tag_desc"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    tags.add(map);
+                }
+            }
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("tags", tags);
+            result = Success.of(JsonMapper.toJson(resultMap));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
 
 }

@@ -350,4 +350,35 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> deleteDeployment(Map<String, Object> event);
     Result<String> getDeployment(int offset, int limit, String hostId, String deploymentId, String instanceId, String deploymentStatus,
                                  String deploymentType, String platformJobId);
+
+    Result<String> createCategory(Map<String, Object> event);
+    Result<String> updateCategory(Map<String, Object> event);
+    Result<String> deleteCategory(Map<String, Object> event);
+    Result<String> getCategory(int offset, int limit, String hostId, String categoryId, String entityType, String categoryName, String categoryDesc,
+                               String parentCategoryId, String parentCategoryName, Integer sortOrder);
+    Result<String> getCategoryLabel(String hostId);
+    Result<String> getCategoryById(String categoryId);
+    Result<String> getCategoryByName(String hostId, String categoryName);
+    Result<String> getCategoryByType(String hostId, String entityType);
+    Result<String> getCategoryTree(String hostId, String entityType);
+
+    Result<String> createSchema(Map<String, Object> event);
+    Result<String> updateSchema(Map<String, Object> event);
+    Result<String> deleteSchema(Map<String, Object> event);
+    Result<String> getSchema(int offset, int limit, String hostId, String schemaId, String schemaVersion, String schemaType,
+                             String specVersion, String schemaSource, String schemaName, String schemaDesc, String schemaBody,
+                             String schemaOwner, String schemaStatus, String categoryId, String tags, String example, String commentStatus);
+    Result<String> getSchemaLabel(String hostId);
+    Result<String> getSchemaById(String schemaId);
+    Result<String> getSchemaByCategory(String categoryId);
+
+    Result<String> createTag(Map<String, Object> event);
+    Result<String> updateTag(Map<String, Object> event);
+    Result<String> deleteTag(Map<String, Object> event);
+    Result<String> getTag(int offset, int limit, String hostId, String tagId, String entityType, String tagName, String tagDesc);
+    Result<String> getTagLabel(String hostId);
+    Result<String> getTagById(String tagId);
+    Result<String> getTagByName(String hostId, String tagName);
+    Result<String> getTagByType(String hostId, String entityType);
+
 }

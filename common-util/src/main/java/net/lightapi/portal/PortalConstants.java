@@ -7,6 +7,17 @@ public class PortalConstants {
     public static final String ORDER_CANCELLED = "Cancelled";
     public static final String ORDER_DELIVERED = "Delivered";
 
+    // fields
+    public static final String GLOBAL_FLAG = "globalFlag";
+    public static final String HOST_ID = "hostId";
+
+    // roles
+    public static final String ADMIN_ROLE = "admin";
+    public static final String USER_ROLE = "user";
+    public static final String GUEST_ROLE = "guest";
+    public static final String ANONYMOUS_ROLE = "anonymous";
+    public static final String HOST_ADMIN_ROLE = "hostAdmin";
+
     // event types
     public static final String DATA = "data";
     public static final String NONCE = "nonce";
@@ -101,10 +112,22 @@ public class PortalConstants {
     public static final String POSITION_COL_FILTER_CREATED_EVENT = "PositionColFilterCreatedEvent";
     public static final String POSITION_COL_FILTER_UPDATED_EVENT = "PositionColFilterUpdatedEvent";
     public static final String POSITION_COL_FILTER_DELETED_EVENT = "PositionColFilterDeletedEvent";
+
     // --- Rule Events ---
     public static final String RULE_CREATED_EVENT = "RuleCreatedEvent";
     public static final String RULE_UPDATED_EVENT = "RuleUpdatedEvent";
     public static final String RULE_DELETED_EVENT = "RuleDeletedEvent";
+
+    // --- Category Events ---
+    public static final String CATEGORY_CREATED_EVENT = "CategoryCreatedEvent";
+    public static final String CATEGORY_UPDATED_EVENT = "CategoryUpdatedEvent";
+    public static final String CATEGORY_DELETED_EVENT = "CategoryDeletedEvent";
+
+    // --- Category Events ---
+    public static final String TAG_CREATED_EVENT = "TagCreatedEvent";
+    public static final String TAG_UPDATED_EVENT = "TagUpdatedEvent";
+    public static final String TAG_DELETED_EVENT = "TagDeletedEvent";
+
     // --- Schema Events ---
     public static final String SCHEMA_CREATED_EVENT = "SchemaCreatedEvent";
     public static final String SCHEMA_UPDATED_EVENT = "SchemaUpdatedEvent";
