@@ -110,6 +110,19 @@ public abstract class AbstractCommandHandler implements HybridHandler {
         if (tokenTypeResult.isFailure()) {
             return NioUtils.toByteBuffer(getStatus(exchange, tokenTypeResult.getError()));
         }
+
+        // handle the admin to create global entity for some commands.
+        String role = (String) auditInfo.get(Constants.ROLE);
+        if(role != null && role.contains(PortalConstants.ADMIN_ROLE)) {
+            Boolean globalFlag = (Boolean)map.get(PortalConstants.GLOBAL_FLAG);
+            if(globalFlag != null && globalFlag) {
+                // remove the hostId from the map to allow the admin to create global entity.
+                // It means the table row will have null for hostId.
+                map.remove(PortalConstants.HOST_ID);
+                map.remove(PortalConstants.GLOBAL_FLAG);
+            }
+        }
+
         String host = (String) auditInfo.get(Constants.HOST);
         if (host == null) {
             host = (String) map.get(HOST_ID);
@@ -193,6 +206,4 @@ public abstract class AbstractCommandHandler implements HybridHandler {
      * Must be implemented by subclasses.
      */
     protected abstract Logger getLogger();
-
-
 }
