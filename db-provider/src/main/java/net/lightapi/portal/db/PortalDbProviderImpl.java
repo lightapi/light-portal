@@ -15319,7 +15319,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createSchema(Map<String, Object> event) {
-        final String sql = "INSERT INTO schema_t(host_id, schema_id, schema_version, schema_type, spec_version, schema_source, schema_name, schema_desc, schema_body, schema_owner, schema_status, tags, example, comment_status, update_user, update_ts) " +
+        final String sql = "INSERT INTO schema_t(host_id, schema_id, schema_version, schema_type, spec_version, schema_source, schema_name, schema_desc, schema_body, schema_owner, schema_status, example, comment_status, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         final String insertSchemaCategorySql = "INSERT INTO entity_category_t (entity_id, entity_type, category_id) VALUES (?, ?, ?)"; // Added SQL for entity_category_t
         final String insertSchemaTagSql = "INSERT INTO entity_tag_t (entity_id, entity_type, tag_id) VALUES (?, ?, ?)"; // Added SQL for entity_tag_t
@@ -15357,19 +15357,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(11, (String)map.get("schemaStatus")); // Required
 
 
-                if (map.get("tags") != null) {
-                    statement.setString(12, (String) map.get("tags"));
+                if (map.get("example") != null) {
+                    statement.setString(12, (String) map.get("example"));
                 } else {
                     statement.setNull(12, Types.VARCHAR);
                 }
-                if (map.get("example") != null) {
-                    statement.setString(13, (String) map.get("example"));
-                } else {
-                    statement.setNull(13, Types.VARCHAR);
-                }
-                statement.setString(14, (String)map.get("commentStatus")); // Required
-                statement.setString(15, (String)event.get(Constants.USER));
-                statement.setObject(16, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setString(13, (String)map.get("commentStatus")); // Required
+                statement.setString(14, (String)event.get(Constants.USER));
+                statement.setObject(15, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -15425,7 +15420,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateSchema(Map<String, Object> event) {
-        final String sql = "UPDATE schema_t SET schema_version = ?, schema_type = ?, spec_version = ?, schema_source = ?, schema_name = ?, schema_desc = ?, schema_body = ?, schema_owner = ?, schema_status = ?, tags = ?, example = ?, comment_status = ?, update_user = ?, update_ts = ? WHERE schema_id = ?";
+        final String sql = "UPDATE schema_t SET schema_version = ?, schema_type = ?, spec_version = ?, schema_source = ?, schema_name = ?, schema_desc = ?, schema_body = ?, schema_owner = ?, schema_status = ?, example = ?, comment_status = ?, update_user = ?, update_ts = ? WHERE schema_id = ?";
         final String deleteSchemaCategorySql = "DELETE FROM entity_category_t WHERE entity_id = ? AND entity_type = ?";
         final String insertSchemaCategorySql = "INSERT INTO entity_category_t (entity_id, entity_type, category_id) VALUES (?, ?, ?)";
         final String deleteSchemaTagSql = "DELETE FROM entity_tag_t WHERE entity_id = ? AND entity_type = ?";
@@ -15455,20 +15450,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(8, (String)map.get("schemaOwner"));
                 statement.setString(9, (String)map.get("schemaStatus"));
 
-                if (map.get("tags") != null) {
-                    statement.setString(10, (String) map.get("tags"));
+                if (map.get("example") != null) {
+                    statement.setString(10, (String) map.get("example"));
                 } else {
                     statement.setNull(10, Types.VARCHAR);
                 }
-                if (map.get("example") != null) {
-                    statement.setString(11, (String) map.get("example"));
-                } else {
-                    statement.setNull(11, Types.VARCHAR);
-                }
-                statement.setString(12, (String)map.get("commentStatus"));
-                statement.setString(13, (String)event.get(Constants.USER));
-                statement.setObject(14, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(15, schemaId);
+                statement.setString(11, (String)map.get("commentStatus"));
+                statement.setString(12, (String)event.get(Constants.USER));
+                statement.setObject(13, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setString(14, schemaId);
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -15580,13 +15570,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> getSchema(int offset, int limit, String hostId, String schemaId, String schemaVersion, String schemaType,
                                     String specVersion, String schemaSource, String schemaName, String schemaDesc, String schemaBody,
-                                    String schemaOwner, String schemaStatus, String categoryId, String tags, String example,
-                                    String commentStatus) {
+                                    String schemaOwner, String schemaStatus, String example, String commentStatus) {
         Result<String> result = null;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
                 "schema_id, host_id, schema_version, schema_type, spec_version, schema_source, schema_name, schema_desc, schema_body, \n" +
-                "schema_owner, schema_status, tags, example, comment_status, update_user, update_ts\n" +
+                "schema_owner, schema_status, example, comment_status, update_user, update_ts\n" +
                 "FROM schema_t\n" +
                 "WHERE 1=1\n");
 
@@ -15605,7 +15594,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         addCondition(whereClause, parameters, "schema_owner", schemaOwner);
         addCondition(whereClause, parameters, "schema_status", schemaStatus);
         // categoryId is not a column in schema_t table, so it is ignored in WHERE clause
-        addCondition(whereClause, parameters, "tags", tags);
         addCondition(whereClause, parameters, "example", example);
         addCondition(whereClause, parameters, "comment_status", commentStatus);
 
@@ -15651,7 +15639,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     // map.put("schemaBody", resultSet.getString("schema_body"));
                     map.put("schemaOwner", resultSet.getString("schema_owner"));
                     map.put("schemaStatus", resultSet.getString("schema_status"));
-                    map.put("tags", resultSet.getString("tags"));
                     map.put("example", resultSet.getString("example"));
                     map.put("commentStatus", resultSet.getString("comment_status"));
                     map.put("updateUser", resultSet.getString("update_user"));
@@ -15721,7 +15708,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> getSchemaById(String schemaId) {
         Result<String> result = null;
         String sql = "SELECT schema_id, host_id, schema_version, schema_type, spec_version, schema_source, schema_name, schema_desc, schema_body, " +
-                "schema_owner, schema_status, tags, example, comment_status, update_user, update_ts FROM schema_t WHERE schema_id = ?";
+                "schema_owner, schema_status, example, comment_status, update_user, update_ts FROM schema_t WHERE schema_id = ?";
         Map<String, Object> map = null;
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
@@ -15741,7 +15728,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("schemaBody", resultSet.getString("schema_body"));
                         map.put("schemaOwner", resultSet.getString("schema_owner"));
                         map.put("schemaStatus", resultSet.getString("schema_status"));
-                        map.put("tags", resultSet.getString("tags"));
                         map.put("example", resultSet.getString("example"));
                         map.put("commentStatus", resultSet.getString("comment_status"));
                         map.put("updateUser", resultSet.getString("update_user"));
@@ -15765,12 +15751,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> getSchemaByCategory(String categoryId) {
+    public Result<String> getSchemaByCategoryId(String categoryId) {
         Result<String> result = null;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT schema_t.schema_id, schema_t.host_id, schema_t.schema_version, schema_t.schema_type, schema_t.spec_version, schema_t.schema_source, \n" +
                 "schema_t.schema_name, schema_t.schema_desc, schema_t.schema_body, \n" +
-                "schema_t.schema_owner, schema_t.schema_status, schema_t.tags, schema_t.example, schema_t.comment_status, schema_t.update_user, schema_t.update_ts\n" +
+                "schema_t.schema_owner, schema_t.schema_status, schema_t.example, schema_t.comment_status, schema_t.update_user, schema_t.update_ts\n" +
                 "FROM schema_t\n" +
                 "INNER JOIN entity_category_t ON schema_t.schema_id = entity_category_t.entity_id\n" + // Join with entity_category_t
                 "WHERE entity_type = 'schema' AND entity_category_t.category_id = ?"); // Filter by categoryId using join table
@@ -15795,7 +15781,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("schemaBody", resultSet.getString("schema_body"));
                     map.put("schemaOwner", resultSet.getString("schema_owner"));
                     map.put("schemaStatus", resultSet.getString("schema_status"));
-                    map.put("tags", resultSet.getString("tags"));
                     map.put("example", resultSet.getString("example"));
                     map.put("commentStatus", resultSet.getString("comment_status"));
                     map.put("updateUser", resultSet.getString("update_user"));
@@ -15819,6 +15804,59 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         return result;
     }
 
+    @Override
+    public Result<String> getSchemaByTagId(String tagId) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT schema_t.schema_id, schema_t.host_id, schema_t.schema_version, schema_t.schema_type, schema_t.spec_version, schema_t.schema_source, \n" +
+                "schema_t.schema_name, schema_t.schema_desc, schema_t.schema_body, \n" +
+                "schema_t.schema_owner, schema_t.schema_status, schema_t.example, schema_t.comment_status, schema_t.update_user, schema_t.update_ts\n" +
+                "FROM schema_t\n" +
+                "INNER JOIN entity_tag_t ON schema_t.schema_id = entity_tag_t.entity_id\n" +
+                "WHERE entity_type = 'schema' AND entity_tag_t.tag_id = ?");
+
+        List<Map<String, Object>> schemas = new ArrayList<>();
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder.toString())) {
+
+            preparedStatement.setString(1, tagId); // Set categoryId parameter
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("schemaId", resultSet.getString("schema_id"));
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("schemaVersion", resultSet.getString("schema_version"));
+                    map.put("schemaType", resultSet.getString("schema_type"));
+                    map.put("specVersion", resultSet.getString("spec_version"));
+                    map.put("schemaSource", resultSet.getString("schema_source"));
+                    map.put("schemaName", resultSet.getString("schema_name"));
+                    map.put("schemaDesc", resultSet.getString("schema_desc"));
+                    map.put("schemaBody", resultSet.getString("schema_body"));
+                    map.put("schemaOwner", resultSet.getString("schema_owner"));
+                    map.put("schemaStatus", resultSet.getString("schema_status"));
+                    map.put("example", resultSet.getString("example"));
+                    map.put("commentStatus", resultSet.getString("comment_status"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    schemas.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("schemas", schemas);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
 
     @Override
     public Result<String> createTag(Map<String, Object> event) {

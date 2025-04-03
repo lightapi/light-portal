@@ -367,10 +367,11 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> deleteSchema(Map<String, Object> event);
     Result<String> getSchema(int offset, int limit, String hostId, String schemaId, String schemaVersion, String schemaType,
                              String specVersion, String schemaSource, String schemaName, String schemaDesc, String schemaBody,
-                             String schemaOwner, String schemaStatus, String categoryId, String tags, String example, String commentStatus);
+                             String schemaOwner, String schemaStatus, String example, String commentStatus);
     Result<String> getSchemaLabel(String hostId);
     Result<String> getSchemaById(String schemaId);
-    Result<String> getSchemaByCategory(String categoryId);
+    Result<String> getSchemaByCategoryId(String categoryId);
+    Result<String> getSchemaByTagId(String tagId);
 
     Result<String> createTag(Map<String, Object> event);
     Result<String> updateTag(Map<String, Object> event);
