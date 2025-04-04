@@ -47,10 +47,26 @@ public class PortalConstants {
     public static final String ORDER_CREATED_EVENT = "OrderCreatedEvent";
     public static final String ORDER_CANCELLED_EVENT = "OrderCancelledEvent";
     public static final String ORDER_DELIVERED_EVENT = "OrderDeliveredEvent";
-    public static final String REFERENCE_CREATED_EVENT = "ReferenceCreatedEvent";
-    public static final String REFERENCE_UPDATED_EVENT = "ReferenceUpdatedEvent";
-    public static final String REFERENCE_DELETED_EVENT = "ReferenceDeletedEvent";
     public static final String PRIVATE_MESSAGE_SENT_EVENT = "PrivateMessageSentEvent";
+
+    // --- Reference Table Events ---
+    public static final String REF_TABLE_CREATED_EVENT = "RefTableCreatedEvent";
+    public static final String REF_TABLE_UPDATED_EVENT = "RefTableUpdatedEvent";
+    public static final String REF_TABLE_DELETED_EVENT = "RefTableDeletedEvent";
+    public static final String REF_VALUE_CREATED_EVENT = "RefValueCreatedEvent";
+    public static final String REF_VALUE_UPDATED_EVENT = "RefValueUpdatedEvent";
+    public static final String REF_VALUE_DELETED_EVENT = "RefValueDeletedEvent";
+    public static final String REF_LOCALE_CREATED_EVENT = "RefLocaleCreatedEvent";
+    public static final String REF_LOCALE_UPDATED_EVENT = "RefLocaleUpdatedEvent";
+    public static final String REF_LOCALE_DELETED_EVENT = "RefLocaleDeletedEvent";
+    public static final String REF_RELATION_TYPE_CREATED_EVENT = "RefRelationTypeCreatedEvent";
+    public static final String REF_RELATION_TYPE_UPDATED_EVENT = "RefRelationTypeUpdatedEvent";
+    public static final String REF_RELATION_TYPE_DELETED_EVENT = "RefRelationTypeDeletedEvent";
+    public static final String REF_RELATION_CREATED_EVENT = "RefRelationCreatedEvent";
+    public static final String REF_RELATION_UPDATED_EVENT = "RefRelationUpdatedEvent";
+    public static final String REF_RELATION_DELETED_EVENT = "RefRelationDeletedEvent";
+
+
     // --- Attribute Events ---
     public static final String ATTRIBUTE_CREATED_EVENT = "AttributeCreatedEvent";
     public static final String ATTRIBUTE_UPDATED_EVENT = "AttributeUpdatedEvent";

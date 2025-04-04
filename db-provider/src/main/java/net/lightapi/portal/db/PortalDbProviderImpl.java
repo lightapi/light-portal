@@ -32,6 +32,1651 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             "is_processed, error) VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?)";
 
     @Override
+    public Result<String> createRefTable(Map<String, Object> event) {
+        final String sql = "INSERT INTO ref_table_t(table_id, host_id, table_name, table_desc, active, editable, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String tableId = (String) map.get("tableId"); // Get tableId for return/logging/error
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+
+                // 1. table_id (Required)
+                statement.setString(1, tableId);
+
+                // 2. host_id (Optional - NULL means global)
+                if (map.get("hostId") != null) {
+                    statement.setString(2, (String) map.get("hostId"));
+                } else {
+                    statement.setNull(2, Types.VARCHAR);
+                }
+
+                // 3. table_name (Required)
+                statement.setString(3, (String)map.get("tableName"));
+
+                // 4. table_desc (Optional)
+                if (map.get("tableDesc") != null) {
+                    statement.setString(4, (String) map.get("tableDesc"));
+                } else {
+                    statement.setNull(4, Types.VARCHAR);
+                }
+
+                // 5. active (Optional - handle default)
+                if (map.containsKey("active") && map.get("active") instanceof Boolean) {
+                    statement.setBoolean(5, (Boolean) map.get("active"));
+                } else {
+                    statement.setBoolean(5, true); // Default value
+                }
+
+                // 6. editable (Optional - handle default)
+                if (map.containsKey("editable") && map.get("editable") instanceof Boolean) {
+                    statement.setBoolean(6, (Boolean) map.get("editable"));
+                } else {
+                    statement.setBoolean(6, true); // Default value
+                }
+
+                // 7. update_user (From event metadata)
+                statement.setString(7, (String)event.get(Constants.USER));
+
+                // 8. update_ts (From event metadata)
+                statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+                // Execute insert
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert the reference table with id " + tableId);
+                }
+
+                // Success path
+                conn.commit();
+                result =  Success.of(tableId); // Return tableId
+                insertNotification(event, true, null);
+
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) { // Catch other potential runtime exceptions
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> updateRefTable(Map<String, Object> event) {
+        // Note: host_id and table_name uniqueness/changes are usually handled
+        // at the service layer, potentially requiring delete/create or careful checks.
+        // This update focuses on mutable fields like desc, active, editable.
+        final String sql = "UPDATE ref_table_t SET table_name = ?, table_desc = ?, active = ?, editable = ?, " +
+                "update_user = ?, update_ts = ? WHERE table_id = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String tableId = (String) map.get("tableId"); // Get tableId for WHERE clause and return
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+
+                // 1. table_name (Required in update payload)
+                statement.setString(1, (String)map.get("tableName"));
+
+                // 2. table_desc (Optional)
+                if (map.get("tableDesc") != null) {
+                    statement.setString(2, (String) map.get("tableDesc"));
+                } else {
+                    statement.setNull(2, Types.VARCHAR);
+                }
+
+                // 3. active (Optional - handle default/presence)
+                // Assume if not present in update payload, it doesn't change.
+                // If it *must* be provided in update, remove containsKey check.
+                if (map.containsKey("active") && map.get("active") instanceof Boolean) {
+                    statement.setBoolean(3, (Boolean) map.get("active"));
+                } else {
+                    // What to do if missing? Keep current value? Need to fetch first,
+                    // or assume update payload is complete for fields being updated.
+                    // For simplicity here, setting based on payload or defaulting.
+                    // A more robust update might fetch existing record first.
+                    statement.setBoolean(3, true); // Or handle based on requirements
+                }
+
+                // 4. editable (Optional - handle default/presence)
+                if (map.containsKey("editable") && map.get("editable") instanceof Boolean) {
+                    statement.setBoolean(4, (Boolean) map.get("editable"));
+                } else {
+                    statement.setBoolean(4, true); // Or handle based on requirements
+                }
+
+                // 5. update_user (From event metadata)
+                statement.setString(5, (String)event.get(Constants.USER));
+
+                // 6. update_ts (From event metadata)
+                statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+                // 7. table_id (For WHERE clause - Required)
+                statement.setString(7, tableId);
+
+                // Execute update
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to update the reference table with id " + tableId + " - record not found.");
+                }
+
+                // Success path
+                conn.commit();
+                result =  Success.of(tableId); // Return tableId
+                insertNotification(event, true, null);
+
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) { // Catch other potential runtime exceptions
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deleteRefTable(Map<String, Object> event) {
+        final String sql = "DELETE FROM ref_table_t WHERE table_id = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String tableId = (String) map.get("tableId"); // Get tableId for WHERE clause and return
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, tableId);
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to delete the reference table with id " + tableId + " - record not found.");
+                }
+                conn.commit();
+                result =  Success.of(tableId); // Return tableId
+                insertNotification(event, true, null);
+
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) { // Catch other potential runtime exceptions
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getRefTable(int offset, int limit, String hostId, String tableId, String tableName, String tableDesc,
+                                      Boolean active, Boolean editable) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
+                "table_id, host_id, table_name, table_desc, active, editable, update_user, update_ts\n" +
+                "FROM ref_table_t\n" +
+                "WHERE 1=1\n");
+
+        List<Object> parameters = new ArrayList<>();
+        StringBuilder whereClause = new StringBuilder();
+
+        // --- Modified host_id condition to include global tables ---
+        if (hostId != null && !hostId.isEmpty()) {
+            whereClause.append("("); // Start OR group
+            addCondition(whereClause, parameters, "host_id", hostId); // Tenant-specific tables
+            whereClause.append(" OR host_id IS NULL)");         // Include global tables
+        } else {
+            // If hostId is null or empty, only fetch global tables
+            addCondition(whereClause, parameters, "host_id", null); // Fetch only global
+        }
+        // --- Rest of the conditions ---
+        addCondition(whereClause, parameters, "table_id", tableId);
+        addCondition(whereClause, parameters, "table_name", tableName);
+        addCondition(whereClause, parameters, "table_desc", tableDesc); // Might need LIKE for descriptions
+        addCondition(whereClause, parameters, "active", active);
+        addCondition(whereClause, parameters, "editable", editable);
+
+
+        if (!whereClause.isEmpty()) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append(" ORDER BY table_name\n" +  // Order by table_name as default
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> refTables = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("tableId", resultSet.getString("table_id"));
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("tableName", resultSet.getString("table_name"));
+                    map.put("tableDesc", resultSet.getString("table_desc"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("editable", resultSet.getBoolean("editable"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    refTables.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("refTables", refTables); // Use a descriptive key for the list
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+
+    @Override
+    public Result<String> getRefTableById(String tableId) {
+        Result<String> result = null;
+        // Select all columns from ref_table_t for the given table_id
+        final String sql = "SELECT table_id, host_id, table_name, table_desc, active, editable, " +
+                "update_user, update_ts FROM ref_table_t WHERE table_id = ?";
+        Map<String, Object> map = null; // Initialize map to null
+
+        try (Connection conn = ds.getConnection()) {
+            // No need for setAutoCommit(false) for a SELECT
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, tableId); // Set the tableId parameter
+
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    // Check if a row was found
+                    if (resultSet.next()) {
+                        map = new HashMap<>(); // Create map only if found
+                        map.put("tableId", resultSet.getString("table_id"));
+                        map.put("hostId", resultSet.getString("host_id"));
+                        map.put("tableName", resultSet.getString("table_name"));
+                        map.put("tableDesc", resultSet.getString("table_desc"));
+                        map.put("active", resultSet.getBoolean("active"));
+                        map.put("editable", resultSet.getBoolean("editable"));
+                        map.put("updateUser", resultSet.getString("update_user"));
+                        map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    }
+                }
+                // Check if map was populated (i.e., record found)
+                if (map != null) {
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    // Record not found
+                    result = Success.of(null); // Or Failure with NOT_FOUND status
+                }
+            }
+            // No commit/rollback needed for SELECT
+        } catch (SQLException e) {
+            logger.error("SQLException getting reference table by id {}:", tableId, e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) { // Catch other potential runtime exceptions
+            logger.error("Unexpected exception getting reference table by id {}:", tableId, e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+
+    @Override
+    public Result<String> getRefTableLabel(String hostId) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        // Select only the ID and name columns needed for labels
+        sqlBuilder.append("SELECT table_id, table_name FROM ref_table_t WHERE 1=1 "); // Base query
+
+        // Apply host filtering (tenant-specific + global, or global only)
+        if (hostId != null && !hostId.isEmpty()) {
+            sqlBuilder.append("AND (host_id = ? OR host_id IS NULL)"); // Tenant-specific OR Global
+        } else {
+            sqlBuilder.append("AND host_id IS NULL"); // Only Global if hostId is null/empty
+        }
+
+        // Optionally add ordering
+        sqlBuilder.append(" ORDER BY table_name");
+
+        String sql = sqlBuilder.toString();
+        List<Map<String, Object>> labels = new ArrayList<>(); // Initialize list for labels
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            // Set the hostId parameter only if it's part of the query
+            if (hostId != null && !hostId.isEmpty()) {
+                preparedStatement.setString(1, hostId);
+            }
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                // Iterate through results and build the label map list
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", resultSet.getString("table_id"));    // Key "id"
+                    map.put("label", resultSet.getString("table_name")); // Key "label"
+                    labels.add(map);
+                }
+            }
+            // Serialize the list of labels to JSON and return Success
+            result = Success.of(JsonMapper.toJson(labels));
+
+        } catch (SQLException e) {
+            logger.error("SQLException getting reference table labels for hostId {}:", hostId, e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) { // Catch other potential runtime exceptions
+            logger.error("Unexpected exception getting reference table labels for hostId {}:", hostId, e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> createRefValue(Map<String, Object> event) {
+        final String sql = "INSERT INTO ref_value_t(value_id, table_id, value_code, value_desc, " +
+                "start_time, end_time, display_order, active, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String valueId = (String) map.get("valueId"); // Get valueId for return/logging/error
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+
+                // 1. value_id (Required)
+                statement.setString(1, valueId);
+                // 2. table_id (Required)
+                statement.setString(2, (String)map.get("tableId"));
+                // 3. value_code (Required)
+                statement.setString(3, (String)map.get("valueCode"));
+
+                // 4. value_desc (Optional)
+                if (map.get("valueDesc") != null) {
+                    statement.setString(4, (String) map.get("valueDesc"));
+                } else {
+                    statement.setNull(4, Types.VARCHAR);
+                }
+
+                // 5. start_time (Optional OffsetDateTime)
+                if (map.get("startTime") != null && map.get("startTime") instanceof String) {
+                    try {
+                        statement.setObject(5, OffsetDateTime.parse((String)map.get("startTime")));
+                    } catch (java.time.format.DateTimeParseException e) {
+                        logger.warn("Invalid format for startTime '{}', setting NULL.", map.get("startTime"), e);
+                        statement.setNull(5, Types.TIMESTAMP_WITH_TIMEZONE);
+                    }
+                } else {
+                    statement.setNull(5, Types.TIMESTAMP_WITH_TIMEZONE);
+                }
+
+                // 6. end_time (Optional OffsetDateTime)
+                if (map.get("endTime") != null && map.get("endTime") instanceof String) {
+                    try {
+                        statement.setObject(6, OffsetDateTime.parse((String)map.get("endTime")));
+                    } catch (java.time.format.DateTimeParseException e) {
+                        logger.warn("Invalid format for endTime '{}', setting NULL.", map.get("endTime"), e);
+                        statement.setNull(6, Types.TIMESTAMP_WITH_TIMEZONE);
+                    }
+                } else {
+                    statement.setNull(6, Types.TIMESTAMP_WITH_TIMEZONE);
+                }
+
+                // 7. display_order (Optional Integer)
+                if (map.get("displayOrder") instanceof Number) {
+                    statement.setInt(7, ((Number) map.get("displayOrder")).intValue());
+                } else {
+                    statement.setNull(7, Types.INTEGER); // Or set explicit default: statement.setInt(7, 0);
+                }
+
+                // 8. active (Optional Boolean - handle default)
+                if (map.containsKey("active") && map.get("active") instanceof Boolean) {
+                    statement.setBoolean(8, (Boolean) map.get("active"));
+                } else {
+                    statement.setBoolean(8, true); // Default value
+                }
+
+                // 9. update_user (From event metadata)
+                statement.setString(9, (String)event.get(Constants.USER));
+
+                // 10. update_ts (From event metadata)
+                statement.setObject(10, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+
+                // Execute insert
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert the reference value with id " + valueId);
+                }
+
+                // Success path
+                conn.commit();
+                result =  Success.of(valueId); // Return valueId
+                insertNotification(event, true, null);
+
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) { // Catch other potential runtime exceptions like parsing errors if not caught earlier
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> updateRefValue(Map<String, Object> event) {
+        // Define the UPDATE SQL statement
+        // Assuming table_id might be updatable, though potentially less common
+        final String sql = "UPDATE ref_value_t SET table_id = ?, value_code = ?, value_desc = ?, start_time = ?, " +
+                "end_time = ?, display_order = ?, active = ?, update_user = ?, update_ts = ? " +
+                "WHERE value_id = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String valueId = (String) map.get("valueId"); // Get valueId for WHERE clause and return
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+
+                // 1. table_id (Required in update payload?) - Assuming it might change
+                statement.setString(1, (String)map.get("tableId"));
+                // 2. value_code (Required in update payload)
+                statement.setString(2, (String)map.get("valueCode"));
+
+                // 3. value_desc (Optional)
+                if (map.get("valueDesc") != null) {
+                    statement.setString(3, (String) map.get("valueDesc"));
+                } else {
+                    statement.setNull(3, Types.VARCHAR);
+                }
+
+                // 4. start_time (Optional OffsetDateTime)
+                if (map.get("startTime") != null && map.get("startTime") instanceof String) {
+                    try {
+                        statement.setObject(4, OffsetDateTime.parse((String)map.get("startTime")));
+                    } catch (java.time.format.DateTimeParseException e) {
+                        logger.warn("Invalid format for startTime '{}', setting NULL.", map.get("startTime"), e);
+                        statement.setNull(4, Types.TIMESTAMP_WITH_TIMEZONE);
+                    }
+                } else {
+                    statement.setNull(4, Types.TIMESTAMP_WITH_TIMEZONE);
+                }
+
+                // 5. end_time (Optional OffsetDateTime)
+                if (map.get("endTime") != null && map.get("endTime") instanceof String) {
+                    try {
+                        statement.setObject(5, OffsetDateTime.parse((String)map.get("endTime")));
+                    } catch (java.time.format.DateTimeParseException e) {
+                        logger.warn("Invalid format for endTime '{}', setting NULL.", map.get("endTime"), e);
+                        statement.setNull(5, Types.TIMESTAMP_WITH_TIMEZONE);
+                    }
+                } else {
+                    statement.setNull(5, Types.TIMESTAMP_WITH_TIMEZONE);
+                }
+
+                // 6. display_order (Optional Integer)
+                if (map.get("displayOrder") instanceof Number) {
+                    statement.setInt(6, ((Number) map.get("displayOrder")).intValue());
+                } else {
+                    statement.setNull(6, Types.INTEGER);
+                }
+
+                // 7. active (Optional Boolean)
+                if (map.containsKey("active") && map.get("active") instanceof Boolean) {
+                    statement.setBoolean(7, (Boolean) map.get("active"));
+                } else {
+                    // Decide update behavior: set default? Or assume not changing if missing?
+                    // Setting default like template here:
+                    statement.setBoolean(7, true);
+                }
+
+                // 8. update_user (From event metadata)
+                statement.setString(8, (String)event.get(Constants.USER));
+
+                // 9. update_ts (From event metadata)
+                statement.setObject(9, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+                // 10. value_id (For WHERE clause - Required)
+                statement.setString(10, valueId);
+
+                // Execute update
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to update the reference value with id " + valueId + " - record not found.");
+                }
+
+                // Success path
+                conn.commit();
+                result =  Success.of(valueId); // Return valueId
+                insertNotification(event, true, null);
+
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) { // Catch other potential runtime exceptions
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deleteRefValue(Map<String, Object> event) {
+        final String sql = "DELETE FROM ref_value_t WHERE value_id = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String valueId = (String) map.get("valueId"); // Get valueId for WHERE clause and return
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, valueId);
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    // Record not found to delete. Following template by throwing,
+                    // but you might consider this a success case in DELETE.
+                    throw new SQLException("failed to delete the reference value with id " + valueId + " - record not found.");
+                }
+                conn.commit();
+                result =  Success.of(valueId); // Return valueId
+                insertNotification(event, true, null);
+
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) { // Catch other potential runtime exceptions
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getRefValue(int offset, int limit, String valueId, String tableId, String valueCode, String valueDesc,
+                                      Integer displayOrder, Boolean active) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
+                "value_id, table_id, value_code, value_desc, start_time, end_time, " +
+                "display_order, active, update_user, update_ts\n" +
+                "FROM ref_value_t\n" +
+                "WHERE 1=1\n");
+
+        List<Object> parameters = new ArrayList<>();
+        StringBuilder whereClause = new StringBuilder();
+
+        // Add conditions based on input parameters
+        addCondition(whereClause, parameters, "value_id", valueId);
+        addCondition(whereClause, parameters, "table_id", tableId);
+        addCondition(whereClause, parameters, "value_code", valueCode);
+        addCondition(whereClause, parameters, "value_desc", valueDesc); // Might need LIKE for descriptions
+        addCondition(whereClause, parameters, "display_order", displayOrder);
+        addCondition(whereClause, parameters, "active", active);
+
+        if (!whereClause.isEmpty()) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        // Add ordering and pagination
+        sqlBuilder.append(" ORDER BY display_order, value_code\n" + // Default order
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> refValues = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            // Bind parameters
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                // Process results
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("valueId", resultSet.getString("value_id"));
+                    map.put("tableId", resultSet.getString("table_id"));
+                    map.put("valueCode", resultSet.getString("value_code"));
+                    map.put("valueDesc", resultSet.getString("value_desc"));
+                    map.put("startTime", resultSet.getObject("start_time") != null ? resultSet.getObject("start_time", OffsetDateTime.class) : null);
+                    map.put("endTime", resultSet.getObject("end_time") != null ? resultSet.getObject("end_time", OffsetDateTime.class) : null);
+                    map.put("displayOrder", resultSet.getInt("display_order"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    refValues.add(map);
+                }
+            }
+
+            // Prepare final result map
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("refValues", refValues); // Use a descriptive key
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getRefValueById(String valueId) {
+        Result<String> result = null;
+        // Select all columns from ref_value_t for the given value_id
+        final String sql = "SELECT value_id, table_id, value_code, value_desc, start_time, end_time, " +
+                "display_order, active, update_user, update_ts " +
+                "FROM ref_value_t WHERE value_id = ?";
+        Map<String, Object> refValueMap = null; // Initialize map to null
+
+        try (Connection conn = ds.getConnection()) {
+            // No setAutoCommit(false) needed for SELECT
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, valueId); // Set the valueId parameter
+
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    // Check if a row was found
+                    if (resultSet.next()) {
+                        refValueMap = new HashMap<>(); // Create map only if found
+                        refValueMap.put("valueId", resultSet.getString("value_id"));
+                        refValueMap.put("tableId", resultSet.getString("table_id"));
+                        refValueMap.put("valueCode", resultSet.getString("value_code"));
+                        refValueMap.put("valueDesc", resultSet.getString("value_desc"));
+                        refValueMap.put("startTime", resultSet.getObject("start_time") != null ? resultSet.getObject("start_time", OffsetDateTime.class) : null);
+                        refValueMap.put("endTime", resultSet.getObject("end_time") != null ? resultSet.getObject("end_time", OffsetDateTime.class) : null);
+                        refValueMap.put("displayOrder", resultSet.getInt("display_order"));
+                        refValueMap.put("active", resultSet.getBoolean("active"));
+                        refValueMap.put("updateUser", resultSet.getString("update_user"));
+                        refValueMap.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    }
+                }
+                // Check if map was populated (i.e., record found)
+                if (refValueMap != null) {
+                    result = Success.of(JsonMapper.toJson(refValueMap));
+                } else {
+                    // Record not found
+                    result = Success.of(null); // Or Failure with NOT_FOUND status
+                }
+            }
+            // No commit/rollback needed for SELECT
+        } catch (SQLException e) {
+            logger.error("SQLException getting reference value by id {}:", valueId, e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) { // Catch other potential runtime exceptions
+            logger.error("Unexpected exception getting reference value by id {}:", valueId, e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getRefValueLabel(String tableId) {
+        Result<String> result = null;
+        // Select value_id (for 'id') and value_code (for 'label')
+        // Filter by table_id and only include active values, order for display
+        final String sql = "SELECT value_id, value_code FROM ref_value_t " +
+                "WHERE table_id = ? AND active = TRUE " +
+                "ORDER BY display_order, value_code";
+        List<Map<String, Object>> labels = new ArrayList<>(); // Initialize list for labels
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            preparedStatement.setString(1, tableId); // Set the tableId parameter
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                // Iterate through results and build the label map list
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", resultSet.getString("value_id"));    // Key "id"
+                    map.put("label", resultSet.getString("value_code")); // Key "label"
+                    labels.add(map);
+                }
+            }
+            // Serialize the list of labels to JSON and return Success
+            result = Success.of(JsonMapper.toJson(labels));
+
+        } catch (SQLException e) {
+            logger.error("SQLException getting reference value labels for tableId {}:", tableId, e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) { // Catch other potential runtime exceptions
+            logger.error("Unexpected exception getting reference value labels for tableId {}:", tableId, e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> createRefLocale(Map<String, Object> event) {
+        // SQL statement for inserting into value_locale_t
+        final String sql = "INSERT INTO value_locale_t(value_id, language, value_label) " +
+                "VALUES (?, ?, ?)";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String valueId = (String) map.get("valueId");   // Get valueId for FK and return
+        String language = (String) map.get("language"); // Get language for PK and return
+
+        // Basic check for required fields (Primary Key parts)
+        if (valueId == null || language == null) {
+            logger.error("Missing required fields (valueId, language) in data payload for createRefLocale: {}", map);
+            return Failure.of(new Status("ERR_MISSING_LOCALE_FIELDS", "valueId or language missing in createRefLocale data"));
+        }
+        // Construct a unique identifier string for the success result
+        String createdId = valueId + ":" + language;
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+
+                // 1. value_id (Required, part of PK)
+                statement.setString(1, valueId);
+
+                // 2. language (Required, part of PK)
+                statement.setString(2, language);
+
+                // 3. value_label (Optional)
+                if (map.get("valueLabel") != null) {
+                    statement.setString(3, (String) map.get("valueLabel"));
+                } else {
+                    statement.setNull(3, Types.VARCHAR);
+                }
+
+                // Execute insert
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert the value locale with id " + createdId);
+                }
+
+                // Success path
+                conn.commit();
+                result =  Success.of(createdId); // Return composite identifier
+                insertNotification(event, true, null);
+
+            } catch (SQLException e) {
+                // Check for duplicate key violation (PK = value_id, language)
+                if ("23505".equals(e.getSQLState())) { // Standard SQLState for unique violation
+                    logger.error("Duplicate value locale entry for {}: {}", createdId, e.getMessage());
+                    conn.rollback(); // Rollback on duplicate
+                    insertNotification(event, false, "Duplicate entry for " + createdId);
+                    result = Failure.of(new Status("ERR_DUPLICATE_LOCALE", "Value locale already exists for " + createdId, e.getMessage()));
+                } else {
+                    logger.error("SQLException during value locale creation transaction for {}:", createdId, e);
+                    conn.rollback();
+                    insertNotification(event, false, e.getMessage());
+                    result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+                }
+            } catch (Exception e) { // Catch other potential runtime exceptions
+                logger.error("Unexpected exception during value locale creation transaction for {}:", createdId, e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) { // Errors getting connection or setting auto-commit
+            logger.error("SQLException setting up connection/transaction for value locale creation:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> updateRefLocale(Map<String, Object> event) {
+        // SQL statement for updating value_locale_t
+        final String sql = "UPDATE value_locale_t SET value_label = ? " +
+                "WHERE value_id = ? AND language = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String valueId = (String) map.get("valueId");   // Get valueId for WHERE clause and return
+        String language = (String) map.get("language"); // Get language for WHERE clause and return
+
+        // Basic check for required fields (Primary Key parts)
+        if (valueId == null || language == null) {
+            logger.error("Missing required fields (valueId, language) in data payload for updateRefLocale: {}", map);
+            return Failure.of(new Status("ERR_MISSING_LOCALE_KEYS", "valueId or language missing in updateRefLocale data"));
+        }
+        String updatedId = valueId + ":" + language; // Identifier for logging/return
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+
+                // 1. value_label (Optional - Set if present, otherwise NULL)
+                if (map.get("valueLabel") != null) {
+                    statement.setString(1, (String) map.get("valueLabel"));
+                } else {
+                    statement.setNull(1, Types.VARCHAR);
+                }
+
+                // 2. value_id (For WHERE clause)
+                statement.setString(2, valueId);
+
+                // 3. language (For WHERE clause)
+                statement.setString(3, language);
+
+
+                // Execute update
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    // Record not found to update
+                    throw new SQLException("failed to update the value locale with id " + updatedId + " - record not found.");
+                }
+
+                // Success path
+                conn.commit();
+                result =  Success.of(updatedId); // Return composite identifier
+                insertNotification(event, true, null);
+
+            } catch (SQLException e) {
+                logger.error("SQLException during value locale update transaction for {}:", updatedId, e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) { // Catch other potential runtime exceptions
+                logger.error("Unexpected exception during value locale update transaction for {}:", updatedId, e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) { // Errors getting connection or setting auto-commit
+            logger.error("SQLException setting up connection/transaction for value locale update:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deleteRefLocale(Map<String, Object> event) {
+        // SQL statement for deleting from value_locale_t using the composite key
+        final String sql = "DELETE FROM value_locale_t WHERE value_id = ? AND language = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String valueId = (String) map.get("valueId");   // Get valueId for WHERE clause and return
+        String language = (String) map.get("language"); // Get language for WHERE clause and return
+
+        // Basic check for required fields (Primary Key parts)
+        if (valueId == null || language == null) {
+            logger.error("Missing required fields (valueId, language) in data payload for deleteRefLocale: {}", map);
+            return Failure.of(new Status("ERR_MISSING_LOCALE_KEYS", "valueId or language missing in deleteRefLocale data"));
+        }
+        String deletedId = valueId + ":" + language; // Identifier for logging/return
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+
+                // Set parameters for the WHERE clause
+                statement.setString(1, valueId);
+                statement.setString(2, language);
+
+                // Execute delete
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    // Record not found to delete. Following template by throwing.
+                    throw new SQLException("failed to delete the value locale with id " + deletedId + " - record not found.");
+                }
+
+                // Success path
+                conn.commit();
+                result =  Success.of(deletedId); // Return composite identifier
+                insertNotification(event, true, null);
+
+            } catch (SQLException e) {
+                logger.error("SQLException during value locale delete transaction for {}:", deletedId, e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) { // Catch other potential runtime exceptions
+                logger.error("Unexpected exception during value locale delete transaction for {}:", deletedId, e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) { // Errors getting connection or setting auto-commit
+            logger.error("SQLException setting up connection/transaction for value locale delete:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getRefLocale(int offset, int limit, String valueId, String language, String valueLabel) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        // Include COUNT for total and select columns from value_locale_t
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
+                "value_id, language, value_label\n" +
+                "FROM value_locale_t\n" +
+                "WHERE 1=1\n"); // Start WHERE clause
+
+        List<Object> parameters = new ArrayList<>();
+        StringBuilder whereClause = new StringBuilder();
+
+        // Add conditions based on input parameters using the helper
+        addCondition(whereClause, parameters, "value_id", valueId);
+        addCondition(whereClause, parameters, "language", language);
+        addCondition(whereClause, parameters, "value_label", valueLabel); // Might need LIKE for labels
+
+        // Append the dynamic WHERE conditions if any were added
+        if (!whereClause.isEmpty()) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        // Add ordering and pagination
+        sqlBuilder.append(" ORDER BY value_id, language\n" + // Sensible default order
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);  // Add limit parameter
+        parameters.add(offset); // Add offset parameter
+
+        String sql = sqlBuilder.toString();
+        int total = 0; // Variable to store total count
+        List<Map<String, Object>> locales = new ArrayList<>(); // List to hold results
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            // Bind all collected parameters
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+            boolean isFirstRow = true; // Flag to get total count only once
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                // Process the results
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total"); // Get total count
+                        isFirstRow = false;
+                    }
+                    // Populate map with data for the current row
+                    map.put("valueId", resultSet.getString("value_id"));
+                    map.put("language", resultSet.getString("language"));
+                    map.put("valueLabel", resultSet.getString("value_label"));
+
+                    locales.add(map); // Add map to the list
+                }
+            }
+
+            // Prepare the final result map containing total count and the list of locales
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("locales", locales); // Use a descriptive key
+            result = Success.of(JsonMapper.toJson(resultMap)); // Serialize and return Success
+
+        } catch (SQLException e) {
+            logger.error("SQLException getting reference locales:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) { // Catch other potential runtime exceptions
+            logger.error("Unexpected exception getting reference locales:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+
+    @Override
+    public Result<String> createRefRelationType(Map<String, Object> event) {
+        // SQL statement for inserting into relation_type_t
+        final String sql = "INSERT INTO relation_type_t(relation_id, relation_name, relation_desc, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?)";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String relationId = (String) map.get("relationId"); // Get relationId for PK, return, logging
+
+        // Basic check for required fields from the table definition
+        if (relationId == null || map.get("relationName") == null || map.get("relationDesc") == null) {
+            logger.error("Missing required fields (relationId, relationName, relationDesc) in data payload for createRefRelationType: {}", map);
+            return Failure.of(new Status("ERR_MISSING_REL_TYPE_FIELDS", "relationId, relationName, or relationDesc missing in createRefRelationType data"));
+        }
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+
+                // 1. relation_id (Required)
+                statement.setString(1, relationId);
+                // 2. relation_name (Required)
+                statement.setString(2, (String)map.get("relationName"));
+                // 3. relation_desc (Required)
+                statement.setString(3, (String)map.get("relationDesc"));
+
+                // 4. update_user (From event metadata)
+                statement.setString(4, (String)event.get(Constants.USER));
+
+                // 5. update_ts (From event metadata)
+                statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+
+                // Execute insert
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert the relation type with id " + relationId);
+                }
+
+                // Success path
+                conn.commit();
+                result =  Success.of(relationId); // Return relationId
+                insertNotification(event, true, null);
+
+            } catch (SQLException e) {
+                // Check for duplicate key violation (PK = relation_id OR unique relation_name)
+                if ("23505".equals(e.getSQLState())) { // Standard SQLState for unique violation
+                    logger.error("Duplicate relation type entry for ID {} or Name '{}': {}", relationId, map.get("relationName"), e.getMessage());
+                    conn.rollback(); // Rollback on duplicate
+                    insertNotification(event, false, "Duplicate entry for relation type " + relationId + " or name " + map.get("relationName"));
+                    result = Failure.of(new Status("ERR_DUPLICATE_REL_TYPE", "Relation type already exists with ID " + relationId + " or name " + map.get("relationName"), e.getMessage()));
+                } else {
+                    logger.error("SQLException during relation type creation transaction for {}:", relationId, e);
+                    conn.rollback();
+                    insertNotification(event, false, e.getMessage());
+                    result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+                }
+            } catch (Exception e) { // Catch other potential runtime exceptions
+                logger.error("Unexpected exception during relation type creation transaction for {}:", relationId, e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) { // Errors getting connection or setting auto-commit
+            logger.error("SQLException setting up connection/transaction for relation type creation:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> updateRefRelationType(Map<String, Object> event) {
+        // SQL statement for updating relation_type_t
+        final String sql = "UPDATE relation_type_t SET relation_name = ?, relation_desc = ?, " +
+                "update_user = ?, update_ts = ? WHERE relation_id = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String relationId = (String) map.get("relationId"); // Get relationId for WHERE clause and return
+
+        // Basic check for required fields needed for update
+        if (relationId == null || map.get("relationName") == null || map.get("relationDesc") == null) {
+            logger.error("Missing required fields (relationId, relationName, relationDesc) in data payload for updateRefRelationType: {}", map);
+            return Failure.of(new Status("ERR_MISSING_REL_TYPE_UPDATE_FIELDS", "relationId, relationName, or relationDesc missing in updateRefRelationType data"));
+        }
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+
+                // Set parameters for the UPDATE statement
+                // 1. relation_name (Required)
+                statement.setString(1, (String)map.get("relationName"));
+                // 2. relation_desc (Required)
+                statement.setString(2, (String)map.get("relationDesc"));
+
+                // 3. update_user (From event metadata)
+                statement.setString(3, (String)event.get(Constants.USER));
+
+                // 4. update_ts (From event metadata)
+                statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+                // 5. relation_id (For WHERE clause - Required)
+                statement.setString(5, relationId);
+
+
+                // Execute update
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    // Record not found to update
+                    throw new SQLException("failed to update the relation type with id " + relationId + " - record not found.");
+                }
+
+                // Success path
+                conn.commit();
+                result =  Success.of(relationId); // Return relationId
+                insertNotification(event, true, null);
+
+            } catch (SQLException e) {
+                // Check for duplicate key violation (unique relation_name)
+                if ("23505".equals(e.getSQLState())) {
+                    logger.error("Duplicate relation type name '{}' conflict for ID {}: {}", map.get("relationName"), relationId, e.getMessage());
+                    conn.rollback();
+                    insertNotification(event, false, "Duplicate entry for relation type name " + map.get("relationName"));
+                    result = Failure.of(new Status("ERR_DUPLICATE_REL_TYPE_NAME", "Relation type name '" + map.get("relationName") + "' already exists.", e.getMessage()));
+                } else {
+                    logger.error("SQLException during relation type update transaction for {}:", relationId, e);
+                    conn.rollback();
+                    insertNotification(event, false, e.getMessage());
+                    result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+                }
+            } catch (Exception e) { // Catch other potential runtime exceptions
+                logger.error("Unexpected exception during relation type update transaction for {}:", relationId, e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) { // Errors getting connection or setting auto-commit
+            logger.error("SQLException setting up connection/transaction for relation type update:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deleteRefRelationType(Map<String, Object> event) {
+        // SQL statement for deleting from relation_type_t
+        final String sql = "DELETE FROM relation_type_t WHERE relation_id = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String relationId = (String) map.get("relationId"); // Get relationId for WHERE clause and return
+
+        // Basic check for required field
+        if (relationId == null) {
+            logger.error("Missing required field 'relationId' in data payload for deleteRefRelationType: {}", map);
+            return Failure.of(new Status("ERR_MISSING_REL_TYPE_DELETE_ID", "'relationId' missing in deleteRefRelationType data"));
+        }
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+
+                // Set parameter for the WHERE clause
+                statement.setString(1, relationId);
+
+                // Execute delete
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    // Record not found to delete. Following template by throwing.
+                    throw new SQLException("failed to delete the relation type with id " + relationId + " - record not found.");
+                }
+
+                // Success path
+                conn.commit();
+                result =  Success.of(relationId); // Return relationId
+                insertNotification(event, true, null);
+
+            } catch (SQLException e) {
+                logger.error("SQLException during relation type delete transaction for {}:", relationId, e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) { // Catch other potential runtime exceptions
+                logger.error("Unexpected exception during relation type delete transaction for {}:", relationId, e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) { // Errors getting connection or setting auto-commit
+            logger.error("SQLException setting up connection/transaction for relation type delete:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getRefRelationType(int offset, int limit, String relationId, String relationName,
+                                             String relationDesc) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        // Select all columns from relation_type_t and include total count
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
+                "relation_id, relation_name, relation_desc, update_user, update_ts\n" +
+                "FROM relation_type_t\n" +
+                "WHERE 1=1\n"); // Start WHERE clause
+
+        List<Object> parameters = new ArrayList<>();
+        StringBuilder whereClause = new StringBuilder();
+
+        // Add conditions based on input parameters using the helper
+        addCondition(whereClause, parameters, "relation_id", relationId);
+        addCondition(whereClause, parameters, "relation_name", relationName);
+        addCondition(whereClause, parameters, "relation_desc", relationDesc); // Might need LIKE
+
+        // Append the dynamic WHERE conditions if any were added
+        if (!whereClause.isEmpty()) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        // Add ordering and pagination
+        sqlBuilder.append(" ORDER BY relation_name\n" + // Sensible default order
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);  // Add limit parameter
+        parameters.add(offset); // Add offset parameter
+
+        String sql = sqlBuilder.toString();
+        int total = 0; // Variable to store total count
+        List<Map<String, Object>> relationTypes = new ArrayList<>(); // List to hold results
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            // Bind all collected parameters
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+            boolean isFirstRow = true; // Flag to get total count only once
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                // Process the results
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total"); // Get total count
+                        isFirstRow = false;
+                    }
+                    // Populate map with data for the current row
+                    map.put("relationId", resultSet.getString("relation_id"));
+                    map.put("relationName", resultSet.getString("relation_name"));
+                    map.put("relationDesc", resultSet.getString("relation_desc"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    relationTypes.add(map); // Add map to the list
+                }
+            }
+
+            // Prepare the final result map containing total count and the list of relation types
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("relationTypes", relationTypes); // Use a descriptive key
+            result = Success.of(JsonMapper.toJson(resultMap)); // Serialize and return Success
+
+        } catch (SQLException e) {
+            logger.error("SQLException getting reference relation types:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) { // Catch other potential runtime exceptions
+            logger.error("Unexpected exception getting reference relation types:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+
+    @Override
+    public Result<String> createRefRelation(Map<String, Object> event) {
+        // SQL statement for inserting into relation_t
+        final String sql = "INSERT INTO relation_t(relation_id, value_id_from, value_id_to, active, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?)";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String relationId = (String) map.get("relationId");     // Part of PK
+        String valueIdFrom = (String) map.get("valueIdFrom"); // Part of PK
+        String valueIdTo = (String) map.get("valueIdTo");     // Part of PK
+
+        // Basic check for required fields (Primary Key parts)
+        if (relationId == null || valueIdFrom == null || valueIdTo == null) {
+            logger.error("Missing required fields (relationId, valueIdFrom, valueIdTo) in data payload for createRefRelation: {}", map);
+            return Failure.of(new Status("ERR_MISSING_REL_KEYS", "relationId, valueIdFrom, or valueIdTo missing in createRefRelation data"));
+        }
+        // Construct a unique identifier string for the success result/logging
+        String createdId = relationId + ":" + valueIdFrom + ":" + valueIdTo;
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+
+                // 1. relation_id (Required, part of PK)
+                statement.setString(1, relationId);
+                // 2. value_id_from (Required, part of PK)
+                statement.setString(2, valueIdFrom);
+                // 3. value_id_to (Required, part of PK)
+                statement.setString(3, valueIdTo);
+
+                // 4. active (Optional Boolean - handle default)
+                if (map.containsKey("active") && map.get("active") instanceof Boolean) {
+                    statement.setBoolean(4, (Boolean) map.get("active"));
+                } else {
+                    statement.setBoolean(4, true); // Default value from schema is TRUE
+                }
+
+                // 5. update_user (From event metadata)
+                statement.setString(5, (String)event.get(Constants.USER));
+
+                // 6. update_ts (From event metadata)
+                statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+
+                // Execute insert
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert the relation with id " + createdId);
+                }
+
+                // Success path
+                conn.commit();
+                result =  Success.of(createdId); // Return composite identifier
+                insertNotification(event, true, null);
+
+            } catch (SQLException e) {
+                // Check for duplicate key violation (PK = relation_id, value_id_from, value_id_to)
+                if ("23505".equals(e.getSQLState())) { // Standard SQLState for unique violation
+                    logger.error("Duplicate relation entry for {}: {}", createdId, e.getMessage());
+                    conn.rollback(); // Rollback on duplicate
+                    insertNotification(event, false, "Duplicate entry for relation " + createdId);
+                    result = Failure.of(new Status("ERR_DUPLICATE_RELATION", "Relation already exists for " + createdId, e.getMessage()));
+                } else {
+                    logger.error("SQLException during relation creation transaction for {}:", createdId, e);
+                    conn.rollback();
+                    insertNotification(event, false, e.getMessage());
+                    result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+                }
+            } catch (Exception e) { // Catch other potential runtime exceptions
+                logger.error("Unexpected exception during relation creation transaction for {}:", createdId, e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) { // Errors getting connection or setting auto-commit
+            logger.error("SQLException setting up connection/transaction for relation creation:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> updateRefRelation(Map<String, Object> event) {
+        // SQL statement for updating relation_t
+        // Only active, update_user, update_ts are typically mutable for a relation
+        final String sql = "UPDATE relation_t SET active = ?, update_user = ?, update_ts = ? " +
+                "WHERE relation_id = ? AND value_id_from = ? AND value_id_to = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String relationId = (String) map.get("relationId");     // Part of PK for WHERE
+        String valueIdFrom = (String) map.get("valueIdFrom"); // Part of PK for WHERE
+        String valueIdTo = (String) map.get("valueIdTo");     // Part of PK for WHERE
+
+        // Basic check for required fields (Primary Key parts)
+        if (relationId == null || valueIdFrom == null || valueIdTo == null) {
+            logger.error("Missing required fields (relationId, valueIdFrom, valueIdTo) in data payload for updateRefRelation: {}", map);
+            return Failure.of(new Status("ERR_MISSING_REL_KEYS_UPDATE", "relationId, valueIdFrom, or valueIdTo missing in updateRefRelation data"));
+        }
+        // Construct a unique identifier string for the success result/logging
+        String updatedId = relationId + ":" + valueIdFrom + ":" + valueIdTo;
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+
+                // Set parameters for the UPDATE statement
+                // 1. active (Optional Boolean - handle default/presence)
+                if (map.containsKey("active") && map.get("active") instanceof Boolean) {
+                    statement.setBoolean(1, (Boolean) map.get("active"));
+                } else {
+                    // Decide update behavior: set default? Or assume not changing if missing?
+                    // Setting default like template here:
+                    statement.setBoolean(1, true);
+                }
+
+                // 2. update_user (From event metadata)
+                statement.setString(2, (String)event.get(Constants.USER));
+
+                // 3. update_ts (From event metadata)
+                statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+                // Set parameters for the WHERE clause (PK parts)
+                // 4. relation_id
+                statement.setString(4, relationId);
+                // 5. value_id_from
+                statement.setString(5, valueIdFrom);
+                // 6. value_id_to
+                statement.setString(6, valueIdTo);
+
+
+                // Execute update
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    // Record not found to update
+                    throw new SQLException("failed to update the relation with id " + updatedId + " - record not found.");
+                }
+
+                // Success path
+                conn.commit();
+                result =  Success.of(updatedId); // Return composite identifier
+                insertNotification(event, true, null);
+
+            } catch (SQLException e) {
+                logger.error("SQLException during relation update transaction for {}:", updatedId, e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) { // Catch other potential runtime exceptions
+                logger.error("Unexpected exception during relation update transaction for {}:", updatedId, e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) { // Errors getting connection or setting auto-commit
+            logger.error("SQLException setting up connection/transaction for relation update:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deleteRefRelation(Map<String, Object> event) {
+        // SQL statement for deleting from relation_t using the composite key
+        final String sql = "DELETE FROM relation_t WHERE relation_id = ? AND value_id_from = ? AND value_id_to = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String relationId = (String) map.get("relationId");     // Part of PK for WHERE
+        String valueIdFrom = (String) map.get("valueIdFrom"); // Part of PK for WHERE
+        String valueIdTo = (String) map.get("valueIdTo");     // Part of PK for WHERE
+
+        // Basic check for required fields (Primary Key parts)
+        if (relationId == null || valueIdFrom == null || valueIdTo == null) {
+            logger.error("Missing required fields (relationId, valueIdFrom, valueIdTo) in data payload for deleteRefRelation: {}", map);
+            return Failure.of(new Status("ERR_MISSING_REL_KEYS_DELETE", "relationId, valueIdFrom, or valueIdTo missing in deleteRefRelation data"));
+        }
+        // Construct a unique identifier string for the success result/logging
+        String deletedId = relationId + ":" + valueIdFrom + ":" + valueIdTo;
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+
+                // Set parameters for the WHERE clause (PK parts)
+                statement.setString(1, relationId);
+                statement.setString(2, valueIdFrom);
+                statement.setString(3, valueIdTo);
+
+                // Execute delete
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    // Record not found to delete. Following template by throwing.
+                    throw new SQLException("failed to delete the relation with id " + deletedId + " - record not found.");
+                }
+
+                // Success path
+                conn.commit();
+                result =  Success.of(deletedId); // Return composite identifier
+                insertNotification(event, true, null);
+
+            } catch (SQLException e) {
+                logger.error("SQLException during relation delete transaction for {}:", deletedId, e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) { // Catch other potential runtime exceptions
+                logger.error("Unexpected exception during relation delete transaction for {}:", deletedId, e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) { // Errors getting connection or setting auto-commit
+            logger.error("SQLException setting up connection/transaction for relation delete:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getRefRelation(int offset, int limit, String relationId, String valueIdFrom, String valueIdTo,
+                                         Boolean active) {
+        Result<String> result = null;
+        StringBuilder sqlBuilder = new StringBuilder();
+        // Select all columns from relation_t and include total count
+        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
+                "relation_id, value_id_from, value_id_to, active, update_user, update_ts\n" +
+                "FROM relation_t\n" +
+                "WHERE 1=1\n"); // Start WHERE clause
+
+        List<Object> parameters = new ArrayList<>();
+        StringBuilder whereClause = new StringBuilder();
+
+        // Add conditions based on input parameters using the helper
+        addCondition(whereClause, parameters, "relation_id", relationId);
+        addCondition(whereClause, parameters, "value_id_from", valueIdFrom);
+        addCondition(whereClause, parameters, "value_id_to", valueIdTo);
+        addCondition(whereClause, parameters, "active", active);
+
+
+        // Append the dynamic WHERE conditions if any were added
+        if (!whereClause.isEmpty()) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        // Add ordering and pagination
+        sqlBuilder.append(" ORDER BY relation_id, value_id_from, value_id_to\n" + // Order by PK
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);  // Add limit parameter
+        parameters.add(offset); // Add offset parameter
+
+        String sql = sqlBuilder.toString();
+        int total = 0; // Variable to store total count
+        List<Map<String, Object>> relations = new ArrayList<>(); // List to hold results
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            // Bind all collected parameters
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+            boolean isFirstRow = true; // Flag to get total count only once
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                // Process the results
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total"); // Get total count
+                        isFirstRow = false;
+                    }
+                    // Populate map with data for the current row
+                    map.put("relationId", resultSet.getString("relation_id"));
+                    map.put("valueIdFrom", resultSet.getString("value_id_from"));
+                    map.put("valueIdTo", resultSet.getString("value_id_to"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    relations.add(map); // Add map to the list
+                }
+            }
+
+            // Prepare the final result map containing total count and the list of relations
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("relations", relations); // Use a descriptive key
+            result = Success.of(JsonMapper.toJson(resultMap)); // Serialize and return Success
+
+        } catch (SQLException e) {
+            logger.error("SQLException getting reference relations:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) { // Catch other potential runtime exceptions
+            logger.error("Unexpected exception getting reference relations:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
     public Result<String> queryRefTable(int offset, int limit, String hostId, String tableName, String tableDesc, String active, String editable, String common) {
         Result<String> result;
         String sql = """
