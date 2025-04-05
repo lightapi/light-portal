@@ -1770,106 +1770,57 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> loginUserByEmail(String email) {
         Result<String> result;
-        /*
-        SELECT
-        uh.host_id,
-        u.user_id,
-        u.email,
-        u.user_type,
-        u.password,
-        u.verified,
-        CASE
-            WHEN u.user_type = 'E' THEN e.employee_id
-            WHEN u.user_type = 'C' THEN c.customer_id
-            ELSE NULL
-        END AS entity_id,
-        CASE WHEN u.user_type = 'E' THEN string_agg(DISTINCT p.position_id, ' ' ORDER BY p.position_id) ELSE NULL END AS positions,
-        string_agg(DISTINCT r.role_id, ' ' ORDER BY r.role_id) AS roles,
-        string_agg(DISTINCT g.group_id, ' ' ORDER BY g.group_id) AS groups,
-        CASE
-            WHEN COUNT(DISTINCT at.attribute_id || '^=^' || aut.attribute_value) > 0 THEN string_agg(DISTINCT at.attribute_id || '^=^' || aut.attribute_value, '~' ORDER BY at.attribute_id || '^=^' || aut.attribute_value)
-            ELSE NULL
-        END AS attributes
-        FROM
-            user_t AS u
-        LEFT JOIN
-             user_host_t AS uh ON u.user_id = uh.user_id
-        LEFT JOIN
-            role_user_t AS ru ON u.user_id = ru.user_id
-        LEFT JOIN
-            role_t AS r ON ru.host_id = r.host_id AND ru.role_id = r.role_id
-        LEFT JOIN
-            attribute_user_t AS aut ON u.user_id = aut.user_id
-        LEFT JOIN
-            attribute_t AS at ON aut.host_id = at.host_id AND aut.attribute_id = at.attribute_id
-        LEFT JOIN
-            group_user_t AS gu ON u.user_id = gu.user_id
-        LEFT JOIN
-            group_t AS g ON gu.host_id = g.host_id AND gu.group_id = g.group_id
-        LEFT JOIN
-            employee_t AS e ON uh.host_id = e.host_id AND u.user_id = e.user_id
-        LEFT JOIN
-            customer_t AS c ON uh.host_id = c.host_id AND u.user_id = c.user_id
-        LEFT JOIN
-            employee_position_t AS ep ON e.host_id = ep.host_id AND e.employee_id = ep.employee_id
-        LEFT JOIN
-            position_t AS p ON ep.host_id = p.host_id AND ep.position_id = p.position_id
-        WHERE
-            u.email = 'steve.hu@networknt.com'
-            AND u.locked = FALSE
-            AND u.verified = TRUE
-        GROUP BY
-            uh.host_id, u.user_id, u.user_type, e.employee_id, c.customer_id;         */
-
-        String sql = "SELECT\n" +
-                "    uh.host_id,\n" +
-                "    u.user_id,\n" +
-                "    u.email, \n" +
-                "    u.user_type,\n" +
-                "    u.password,\n" +
-                "    u.verified,\n" +
-                "    CASE\n" +
-                "        WHEN u.user_type = 'E' THEN e.employee_id\n" +
-                "        WHEN u.user_type = 'C' THEN c.customer_id\n" +
-                "        ELSE NULL\n" +
-                "    END AS entity_id,\n" +
-                "    CASE WHEN u.user_type = 'E' THEN string_agg(DISTINCT p.position_id, ' ' ORDER BY p.position_id) ELSE NULL END AS positions,\n" +
-                "    string_agg(DISTINCT r.role_id, ' ' ORDER BY r.role_id) AS roles,\n" +
-                "    string_agg(DISTINCT g.group_id, ' ' ORDER BY g.group_id) AS groups,\n" +
-                "     CASE\n" +
-                "        WHEN COUNT(DISTINCT at.attribute_id || '^=^' || aut.attribute_value) > 0 THEN string_agg(DISTINCT at.attribute_id || '^=^' || aut.attribute_value, '~' ORDER BY at.attribute_id || '^=^' || aut.attribute_value)\n" +
-                "        ELSE NULL\n" +
-                "    END AS attributes\n" +
-                "FROM\n" +
-                "    user_t AS u\n" +
-                "LEFT JOIN\n" +
-                "    user_host_t AS uh ON u.user_id = uh.user_id\n" +
-                "LEFT JOIN\n" +
-                "    role_user_t AS ru ON u.user_id = ru.user_id\n" +
-                "LEFT JOIN\n" +
-                "    role_t AS r ON ru.host_id = r.host_id AND ru.role_id = r.role_id\n" +
-                "LEFT JOIN\n" +
-                "    attribute_user_t AS aut ON u.user_id = aut.user_id\n" +
-                "LEFT JOIN\n" +
-                "    attribute_t AS at ON aut.host_id = at.host_id AND aut.attribute_id = at.attribute_id\n" +
-                "LEFT JOIN\n" +
-                "    group_user_t AS gu ON u.user_id = gu.user_id\n" +
-                "LEFT JOIN\n" +
-                "    group_t AS g ON gu.host_id = g.host_id AND gu.group_id = g.group_id\n" +
-                "LEFT JOIN\n" +
-                "    employee_t AS e ON uh.host_id = e.host_id AND u.user_id = e.user_id\n" +
-                "LEFT JOIN\n" +
-                "    customer_t AS c ON uh.host_id = c.host_id AND u.user_id = c.user_id\n" +
-                "LEFT JOIN\n" +
-                "    employee_position_t AS ep ON e.host_id = ep.host_id AND e.employee_id = ep.employee_id\n" +
-                "LEFT JOIN\n" +
-                "    position_t AS p ON ep.host_id = p.host_id AND ep.position_id = p.position_id\n" +
-                "WHERE\n" +
-                "    u.email = ?\n" +
-                "    AND u.locked = FALSE\n" +
-                "    AND u.verified = TRUE\n" +
-                "GROUP BY\n" +
-                "    uh.host_id, u.user_id, u.user_type, e.employee_id, c.customer_id;\n";
+        String sql = """
+                SELECT
+                    uh.host_id,
+                    u.user_id,
+                    u.email,
+                    u.user_type,
+                    u.password,
+                    u.verified,
+                    CASE
+                        WHEN u.user_type = 'E' THEN e.employee_id
+                        WHEN u.user_type = 'C' THEN c.customer_id
+                        ELSE NULL
+                    END AS entity_id,
+                    CASE WHEN u.user_type = 'E' THEN string_agg(DISTINCT p.position_id, ' ' ORDER BY p.position_id) ELSE NULL END AS positions,
+                    string_agg(DISTINCT r.role_id, ' ' ORDER BY r.role_id) AS roles,
+                    string_agg(DISTINCT g.group_id, ' ' ORDER BY g.group_id) AS groups,
+                     CASE
+                        WHEN COUNT(DISTINCT at.attribute_id || '^=^' || aut.attribute_value) > 0 THEN string_agg(DISTINCT at.attribute_id || '^=^' || aut.attribute_value, '~' ORDER BY at.attribute_id || '^=^' || aut.attribute_value)
+                        ELSE NULL
+                    END AS attributes
+                FROM
+                    user_t AS u
+                LEFT JOIN
+                    user_host_t AS uh ON u.user_id = uh.user_id
+                LEFT JOIN
+                    role_user_t AS ru ON u.user_id = ru.user_id
+                LEFT JOIN
+                    role_t AS r ON ru.host_id = r.host_id AND ru.role_id = r.role_id
+                LEFT JOIN
+                    attribute_user_t AS aut ON u.user_id = aut.user_id
+                LEFT JOIN
+                    attribute_t AS at ON aut.host_id = at.host_id AND aut.attribute_id = at.attribute_id
+                LEFT JOIN
+                    group_user_t AS gu ON u.user_id = gu.user_id
+                LEFT JOIN
+                    group_t AS g ON gu.host_id = g.host_id AND gu.group_id = g.group_id
+                LEFT JOIN
+                    employee_t AS e ON uh.host_id = e.host_id AND u.user_id = e.user_id
+                LEFT JOIN
+                    customer_t AS c ON uh.host_id = c.host_id AND u.user_id = c.user_id
+                LEFT JOIN
+                    employee_position_t AS ep ON e.host_id = ep.host_id AND e.employee_id = ep.employee_id
+                LEFT JOIN
+                    position_t AS p ON ep.host_id = p.host_id AND ep.position_id = p.position_id
+                WHERE
+                    u.email = ?
+                    AND u.locked = FALSE
+                    AND u.verified = TRUE
+                GROUP BY
+                    uh.host_id, u.user_id, u.user_type, e.employee_id, c.customer_id;
+                """;
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
@@ -1964,14 +1915,17 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> queryUserById(String userId) {
         Result<String> result = null;
-        String sql =
-                "SELECT h.host_id, u.user_id, u.email, u.password, u.language, \n" +
-                        "u.first_name, u.last_name, u.user_type, u.phone_number, u.gender,\n" +
-                        "u.birthday, u.country, u.province, u.city, u.address,\n" +
-                        "u.post_code, u.verified, u.token, u.locked, u.nonce \n" +
-                        "FROM user_t u, user_host_t h\n" +
-                        "WHERE u.user_id = h.user_id\n" +
-                        "AND u.user_id = ?";
+
+        String sql = """
+                SELECT h.host_id, u.user_id, u.email, u.password, u.language,
+                u.first_name, u.last_name, u.user_type, u.phone_number, u.gender,
+                u.birthday, u.country, u.province, u.city, u.address,
+                u.post_code, u.verified, u.token, u.locked, u.nonce
+                FROM user_t u, user_host_t h
+                WHERE u.user_id = h.user_id
+                AND u.user_id = ?
+                """;
+
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
@@ -2021,28 +1975,32 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> queryUserByTypeEntityId(String userType, String entityId) {
         Result<String> result = null;
-        String sqlEmployee =
-                "SELECT h.host_id, u.user_id, e.employee_id as entity_id, u.email, u.password, \n" +
-                        "u.language, u.first_name, u.last_name, u.user_type, u.phone_number, \n" +
-                        "u.gender, u.birthday, u.country, u.province, u.city, \n" +
-                        "u.address, u.post_code, u.verified, u.token, u.locked, \n" +
-                        "u.nonce\n" +
-                        "FROM user_t u, user_host_t h, employee_t e\n" +
-                        "WHERE u.user_id = h.user_id\n" +
-                        "AND h.host_id = e.host_id\n" +
-                        "AND h.user_id = e.user_id\n" +
-                        "AND e.employee_id = ? \n";
+
+        String sqlEmployee = """
+                SELECT h.host_id, u.user_id, e.employee_id as entity_id, u.email, u.password,
+                u.language, u.first_name, u.last_name, u.user_type, u.phone_number,
+                u.gender, u.birthday, u.country, u.province, u.city,
+                u.address, u.post_code, u.verified, u.token, u.locked,
+                u.nonce
+                FROM user_t u, user_host_t h, employee_t e
+                WHERE u.user_id = h.user_id
+                AND h.host_id = e.host_id
+                AND h.user_id = e.user_id
+                AND e.employee_id = ?
+                """;
+
         String sqlCustomer =
                 "SELECT h.host_id, u.user_id, c.customer_id as entity_id, u.email, u.password, \n" +
-                        "u.language, u.first_name, u.last_name, u.user_type, u.phone_number, \n" +
-                        "u.gender, u.birthday, u.country, u.province, u.city, \n" +
-                        "u.address, u.post_code, u.verified, u.token, u.locked, \n" +
-                        "u.nonce\n" +
-                        "FROM user_t u, user_host_t h, customer_t c\n" +
-                        "WHERE u.user_id = h.user_id\n" +
-                        "AND h.host_id = c.host_id\n" +
-                        "AND h.user_id = c.user_id\n" +
-                        "AND c.customer_id = ? \n";
+                "u.language, u.first_name, u.last_name, u.user_type, u.phone_number, \n" +
+                "u.gender, u.birthday, u.country, u.province, u.city, \n" +
+                "u.address, u.post_code, u.verified, u.token, u.locked, \n" +
+                "u.nonce\n" +
+                "FROM user_t u, user_host_t h, customer_t c\n" +
+                "WHERE u.user_id = h.user_id\n" +
+                "AND h.host_id = c.host_id\n" +
+                "AND h.user_id = c.user_id\n" +
+                "AND c.customer_id = ? \n";
+
         String sql = userType.equals("E") ? sqlEmployee : sqlCustomer;
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
@@ -2187,7 +2145,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         addCondition(whereClause, parameters, "u.verified", verified);
         addCondition(whereClause, parameters, "u.locked", locked);
 
-        if (whereClause.length() > 0) {
+        if (!whereClause.isEmpty()) {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
@@ -2344,11 +2302,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> queryEmailByWallet(String cryptoType, String cryptoAddress) {
         Result<String> result = null;
-        String sql = "SELECT email \n" +
-                "FROM user_t u, user_crypto_wallet_t w \n" +
-                "WHERE u.user_id = w.user_id\n" +
-                "AND w.crypto_type = ?\n" +
-                "AND w.crypto_address = ?\n";
+        String sql = """
+                SELECT email
+                FROM user_t u, user_crypto_wallet_t w
+                WHERE u.user_id = w.user_id
+                AND w.crypto_type = ?
+                AND w.crypto_address = ?
+                """;
         try (final Connection conn = ds.getConnection()) {
             String email = null;
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
@@ -2414,32 +2374,32 @@ public class PortalDbProviderImpl implements PortalDbProvider {
      */
     @Override
     public Result<String> createUser(Map<String, Object> event) {
-        final String queryEmailEntityId = "SELECT\n" +
-                "    u.user_id,\n" +
-                "    u.email,\n" +
-                "    COALESCE(c.customer_id, e.employee_id) AS entity_id\n" +
-                "FROM\n" +
-                "    user_t u\n" +
-                "LEFT JOIN\n" +
-                "    user_host_t uh ON u.user_id = uh.user_id\n" +
-                "LEFT JOIN\n" +
-                "    customer_t c ON uh.host_id = c.host_id AND u.user_id = c.user_id\n" +
-                "LEFT JOIN\n" +
-                "    employee_t e ON uh.host_id = e.host_id AND u.user_id = e.user_id\n" +
-                "WHERE\n" +
-                "    (u.email = ? OR COALESCE(c.customer_id, e.employee_id) = ?)\n" +
-                "    AND u.user_type IN ('C', 'E')";
+
+        final String queryEmailEntityId = """
+                SELECT u.user_id, u.email, COALESCE(c.customer_id, e.employee_id) AS entity_id
+                FROM user_t u
+                LEFT JOIN user_host_t uh ON u.user_id = uh.user_id
+                LEFT JOIN customer_t c ON uh.host_id = c.host_id AND u.user_id = c.user_id
+                LEFT JOIN employee_t e ON uh.host_id = e.host_id AND u.user_id = e.user_id
+                WHERE
+                    (u.email = ? OR COALESCE(c.customer_id, e.employee_id) = ?)
+                    AND u.user_type IN ('C', 'E')
+                """;
 
         final String insertUser = "INSERT INTO user_t (user_id, email, password, language, first_name, " +
                 "last_name, user_type, phone_number, gender, birthday, " +
                 "country, province, city, address, post_code, " +
                 "verified, token, locked) " +
                 "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,  ?, ?, ?)";
+
         final String insertUserHost = "INSERT INTO user_host_t (user_id, host_id) VALUES (?, ?)";
+
         final String insertCustomer = "INSERT INTO customer_t (host_id, customer_id, user_id, referral_id) " +
                 "VALUES (?, ?, ?, ?)";
+
         final String insertEmployee = "INSERT INTO employee_t (host_id, employee_id, user_id, manager_id) " +
                 "VALUES (?, ?, ?, ?)";
+
 
         Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
