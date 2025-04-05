@@ -47,20 +47,22 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, tableId);
 
                 // 2. host_id (Optional - NULL means global)
-                if (map.get("hostId") != null) {
-                    statement.setString(2, (String) map.get("hostId"));
+                String hostId = (String) map.get("hostId");
+                if (hostId != null && !hostId.isEmpty()) {
+                    statement.setString(2, hostId);
                 } else {
-                    statement.setNull(2, Types.VARCHAR);
+                    statement.setNull(2, Types.VARCHAR); // NULL for global
                 }
 
                 // 3. table_name (Required)
                 statement.setString(3, (String)map.get("tableName"));
 
                 // 4. table_desc (Optional)
-                if (map.get("tableDesc") != null) {
-                    statement.setString(4, (String) map.get("tableDesc"));
+                String tableDesc = (String) map.get("tableDesc");
+                if (tableDesc != null && !tableDesc.isEmpty()) {
+                    statement.setString(4, tableDesc);
                 } else {
-                    statement.setNull(4, Types.VARCHAR);
+                    statement.setNull(4, Types.VARCHAR); // NULL for no description
                 }
 
                 // 5. active (Optional - handle default)
@@ -131,10 +133,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, (String)map.get("tableName"));
 
                 // 2. table_desc (Optional)
-                if (map.get("tableDesc") != null) {
-                    statement.setString(2, (String) map.get("tableDesc"));
+                String tableDesc = (String) map.get("tableDesc");
+                if (tableDesc != null && !tableDesc.isEmpty()) {
+                    statement.setString(2, tableDesc);
                 } else {
-                    statement.setNull(2, Types.VARCHAR);
+                    statement.setNull(2, Types.VARCHAR); // NULL for no description
                 }
 
                 // 3. active (Optional - handle default/presence)
@@ -147,14 +150,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     // or assume update payload is complete for fields being updated.
                     // For simplicity here, setting based on payload or defaulting.
                     // A more robust update might fetch existing record first.
-                    statement.setBoolean(3, true); // Or handle based on requirements
+                    statement.setBoolean(3, true);
                 }
 
                 // 4. editable (Optional - handle default/presence)
                 if (map.containsKey("editable") && map.get("editable") instanceof Boolean) {
                     statement.setBoolean(4, (Boolean) map.get("editable"));
                 } else {
-                    statement.setBoolean(4, true); // Or handle based on requirements
+                    statement.setBoolean(4, true);
                 }
 
                 // 5. update_user (From event metadata)
@@ -439,10 +442,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(3, (String)map.get("valueCode"));
 
                 // 4. value_desc (Optional)
-                if (map.get("valueDesc") != null) {
-                    statement.setString(4, (String) map.get("valueDesc"));
+                String valueDesc = (String) map.get("valueDesc");
+                if (valueDesc != null && !valueDesc.isEmpty()) {
+                    statement.setString(4, valueDesc);
                 } else {
-                    statement.setNull(4, Types.VARCHAR);
+                    statement.setNull(4, Types.VARCHAR); // NULL for no description
                 }
 
                 // 5. start_time (Optional OffsetDateTime)
@@ -540,10 +544,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(2, (String)map.get("valueCode"));
 
                 // 3. value_desc (Optional)
-                if (map.get("valueDesc") != null) {
-                    statement.setString(3, (String) map.get("valueDesc"));
+                String valueDesc = (String) map.get("valueDesc");
+                if (valueDesc != null && !valueDesc.isEmpty()) {
+                    statement.setString(3, valueDesc);
                 } else {
-                    statement.setNull(3, Types.VARCHAR);
+                    statement.setNull(3, Types.VARCHAR); // NULL for no description
                 }
 
                 // 4. start_time (Optional OffsetDateTime)
@@ -864,10 +869,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(2, language);
 
                 // 3. value_label (Optional)
-                if (map.get("valueLabel") != null) {
-                    statement.setString(3, (String) map.get("valueLabel"));
+                String valueLabel = (String) map.get("valueLabel");
+                if (valueLabel != null && !valueLabel.isEmpty()) {
+                    statement.setString(3, valueLabel);
                 } else {
-                    statement.setNull(3, Types.VARCHAR);
+                    statement.setNull(3, Types.VARCHAR); // NULL for no label
                 }
 
                 // Execute insert
@@ -929,10 +935,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
 
                 // 1. value_label (Optional - Set if present, otherwise NULL)
-                if (map.get("valueLabel") != null) {
-                    statement.setString(1, (String) map.get("valueLabel"));
+                String valueLabel = (String) map.get("valueLabel");
+                if (valueLabel != null && !valueLabel.isEmpty()) {
+                    statement.setString(1, valueLabel);
                 } else {
-                    statement.setNull(1, Types.VARCHAR);
+                    statement.setNull(1, Types.VARCHAR); // NULL for no label
                 }
 
                 // 2. value_id (For WHERE clause)
@@ -16446,7 +16453,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                if (map.get("hostId") != null) {
+                String hostId = (String)map.get("hostId");
+                if (hostId != null && !hostId.isBlank()) {
                     statement.setString(1, (String) map.get("hostId"));
                 } else {
                     statement.setNull(1, Types.VARCHAR);
@@ -16456,21 +16464,23 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(3, (String)map.get("entityType")); // Required
                 statement.setString(4, (String)map.get("categoryName")); // Required
 
-                if (map.get("categoryDesc") != null) {
+                String categoryDesc = (String)map.get("categoryDesc");
+                if (categoryDesc != null && !categoryDesc.isBlank()) {
                     statement.setString(5, (String) map.get("categoryDesc"));
                 } else {
                     statement.setNull(5, Types.VARCHAR);
                 }
-                if (map.get("parentCategoryId") != null) {
+                String parentCategoryId = (String)map.get("parentCategoryId");
+                if (parentCategoryId != null && !parentCategoryId.isBlank()) {
                     statement.setString(6, (String) map.get("parentCategoryId"));
                 } else {
                     statement.setNull(6, Types.VARCHAR);
                 }
-                if (map.get("sortOrder") instanceof Number) {
-                    statement.setInt(7, ((Number) map.get("sortOrder")).intValue());
+                Number sortOrder = (Number)map.get("sortOrder");
+                if (sortOrder != null) {
+                    statement.setInt(7, sortOrder.intValue());
                 } else {
-                    statement.setNull(7, Types.INTEGER); // Let DB default handle it if column default is set
-                    // Or set explicit default: statement.setInt(7, 0);
+                    statement.setNull(7, Types.INTEGER);
                 }
                 statement.setString(8, (String)event.get(Constants.USER));
                 statement.setObject(9, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
@@ -16512,21 +16522,23 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, (String)map.get("categoryName"));
 
-                if (map.get("categoryDesc") != null) {
-                    statement.setString(2, (String) map.get("categoryDesc"));
+                String categoryDesc = (String)map.get("categoryDesc");
+                if (categoryDesc != null && !categoryDesc.isBlank()) {
+                    statement.setString(2, categoryDesc);
                 } else {
                     statement.setNull(2, Types.VARCHAR);
                 }
-                if (map.get("parentCategoryId") != null) {
+                String parentCategoryId = (String)map.get("parentCategoryId");
+                if (parentCategoryId != null && !parentCategoryId.isBlank()) {
                     statement.setString(3, (String) map.get("parentCategoryId"));
                 } else {
                     statement.setNull(3, Types.VARCHAR);
                 }
-                if (map.get("sortOrder") instanceof Number) {
-                    statement.setInt(4, ((Number) map.get("sortOrder")).intValue());
+                Number sortOrder = (Number)map.get("sortOrder");
+                if (sortOrder != null) {
+                    statement.setInt(4, sortOrder.intValue());
                 } else {
-                    statement.setNull(4, Types.INTEGER); // Let DB default handle it if column default is set
-                    // Or set explicit default: statement.setInt(4, 0);
+                    statement.setNull(4, Types.INTEGER);
                 }
                 statement.setString(5, (String)event.get(Constants.USER));
                 statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
@@ -16605,41 +16617,42 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "parent_cat.category_name AS parent_category_name\n" + // Select parent category name
                 "FROM category_t cat\n" +
                 "LEFT JOIN category_t parent_cat ON cat.parent_category_id = parent_cat.category_id\n" + // Self-join
-                "WHERE 1=1\n");
+                "WHERE ");
 
         List<Object> parameters = new ArrayList<>();
-        StringBuilder whereClause = new StringBuilder();
+        // Use a separate list to build condition strings to manage AND correctly
+        List<String> conditions = new ArrayList<>();
 
-        // --- Modified host_id condition to include global categories ---
+        // --- Handle host_id condition first ---
         if (hostId != null && !hostId.isEmpty()) {
-            whereClause.append("("); // Start OR group
-            addCondition(whereClause, parameters, "cat.host_id", hostId); // Tenant-specific categories
-            whereClause.append(" OR cat.host_id IS NULL)"); // Include global categories
+            conditions.add("(cat.host_id = ? OR cat.host_id IS NULL)");
+            parameters.add(hostId);
         } else {
-            // If hostId is null or empty, only fetch global categories
-            addCondition(whereClause, parameters, "cat.host_id", null); // Fetch only global
-        }
-        // --- Rest of the conditions remain the same ---
-        addCondition(whereClause, parameters, "cat.category_id", categoryId); // Use table alias "cat"
-        addCondition(whereClause, parameters, "cat.entity_type", entityType);
-        addCondition(whereClause, parameters, "cat.category_name", categoryName);
-        addCondition(whereClause, parameters, "cat.category_desc", categoryDesc);
-        addCondition(whereClause, parameters, "cat.parent_category_id", parentCategoryId);
-        // parentCategoryName is still ignored in WHERE as it's derived from join
-        addCondition(whereClause, parameters, "cat.sort_order", sortOrder); // Use table alias "cat"
-
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
+            conditions.add("cat.host_id IS NULL");
+            // No parameter for IS NULL
         }
 
-        sqlBuilder.append(" ORDER BY cat.category_name\n" + // Use table alias in ORDER BY
+        // --- Add other conditions using the helper ---
+        addConditionToList(conditions, parameters, "cat.category_id", categoryId);
+        addConditionToList(conditions, parameters, "cat.entity_type", entityType);
+        addConditionToList(conditions, parameters, "cat.category_name", categoryName);
+        addConditionToList(conditions, parameters, "cat.category_desc", categoryDesc); // Consider LIKE here if needed
+        addConditionToList(conditions, parameters, "cat.parent_category_id", parentCategoryId);
+        // parentCategoryName is derived, not filtered here
+        addConditionToList(conditions, parameters, "cat.sort_order", sortOrder);
+
+        // --- Join conditions with AND ---
+        sqlBuilder.append(String.join(" AND ", conditions));
+
+        // --- Add ORDER BY, LIMIT, OFFSET ---
+        sqlBuilder.append(" ORDER BY cat.category_name\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
         parameters.add(offset);
 
         String sql = sqlBuilder.toString();
+        // if(logger.isTraceEnabled()) logger.trace("sql = {}", sql);
         int total = 0;
         List<Map<String, Object>> categories = new ArrayList<>();
 
@@ -16686,6 +16699,25 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
         return result;
+    }
+
+    /**
+     * Helper method to add a condition string and parameter to lists
+     * if the value is not null.
+     * @param conditions List of condition strings (e.g., "col = ?")
+     * @param parameters List of parameters for PreparedStatement
+     * @param columnName Database column name
+     * @param columnValue Column value from method parameters
+     */
+    private void addConditionToList(List<String> conditions, List<Object> parameters, String columnName, Object columnValue) {
+        if (columnValue != null) {
+            // Treat empty strings as no filter for VARCHAR columns if desired
+            if (columnValue instanceof String && ((String) columnValue).isEmpty()) {
+                return; // Skip empty string filters
+            }
+            conditions.add(columnName + " LIKE ?");
+            parameters.add("%" + columnValue + "%");
+        }
     }
 
     @Override

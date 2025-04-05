@@ -223,4 +223,24 @@ public class PortalDbProviderImplTest {
         }
     }
 
+    @Test
+    void testGetCategory() {
+        Result<String> result = dbProvider.getCategory(0, 2, "N2CMw0HGQXeLvC1wBfln2A", null, null, null, null, null, null, null);
+        if(result.isFailure()) {
+            System.out.println(result.getError());
+        } else {
+            System.out.println(result.getResult());
+        }
+    }
+
+    @Test
+    void testGetCategoryWithoutHostId() {
+        Result<String> result = dbProvider.getCategory(0, 2, null, null, null, null, null, null, null, null);
+        if(result.isFailure()) {
+            System.out.println(result.getError());
+        } else {
+            System.out.println(result.getResult());
+        }
+    }
+
 }
