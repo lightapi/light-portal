@@ -352,11 +352,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                 }
                 // Check if map was populated (i.e., record found)
-                if (map != null) {
+                if (map != null && !map.isEmpty()) {
                     result = Success.of(JsonMapper.toJson(map));
                 } else {
                     // Record not found
-                    result = Success.of(null); // Or Failure with NOT_FOUND status
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, tableId));
                 }
             }
             // No commit/rollback needed for SELECT
@@ -785,11 +785,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                 }
                 // Check if map was populated (i.e., record found)
-                if (refValueMap != null) {
+                if (refValueMap != null && !refValueMap.isEmpty()) {
                     result = Success.of(JsonMapper.toJson(refValueMap));
                 } else {
                     // Record not found
-                    result = Success.of(null); // Or Failure with NOT_FOUND status
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "valueId = " + valueId));
                 }
             }
             // No commit/rollback needed for SELECT
@@ -2353,7 +2353,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             statement.setString(6, JsonMapper.toJson(event));
             statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
             statement.setBoolean(8, flag);
-            if (error != null) {
+            if (error != null && !error.isEmpty()) {
                 statement.setString(9, error);
             } else {
                 statement.setNull(9, NULL);
@@ -2424,61 +2424,71 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     statement.setString(2, (String)map.get("email"));
                     statement.setString(3, (String)map.get("password"));
                     statement.setString(4, (String)map.get("language"));
-                    if (map.get("firstName") != null)
-                        statement.setString(5, (String)map.get("firstName"));
+                    String firstName = (String)map.get("firstName");
+                    if (firstName != null && !firstName.isEmpty())
+                        statement.setString(5, firstName);
                     else
                         statement.setNull(5, NULL);
 
-                    if (map.get("lastName") != null)
-                        statement.setString(6, (String)map.get("lastName"));
+                    String lastName = (String)map.get("lastName");
+                    if (lastName != null && !lastName.isEmpty())
+                        statement.setString(6, lastName);
                     else
                         statement.setNull(6, NULL);
 
                     statement.setString(7, (String)map.get("userType"));
 
-                    if (map.get("phoneNumber") != null)
-                        statement.setString(8, (String)map.get("phoneNumber"));
+                    String phoneNumber = (String)map.get("phoneNumber");
+                    if (phoneNumber != null && !phoneNumber.isEmpty())
+                        statement.setString(8, phoneNumber);
                     else
                         statement.setNull(8, NULL);
 
-                    if (map.get("gender") != null) {
-                        statement.setString(9, (String)map.get("gender"));
+                    String gender = (String) map.get("gender");
+                    if (gender != null && !gender.isEmpty()) {
+                        statement.setString(9, gender);
                     } else {
                         statement.setNull(9, NULL);
                     }
+
                     java.util.Date birthday = (java.util.Date)map.get("birthday");
                     if (birthday != null) {
                         statement.setDate(10, new java.sql.Date(birthday.getTime()));
                     } else {
                         statement.setNull(10, NULL);
                     }
-                    Object countryObject = map.get("country");
-                    if (countryObject != null) {
-                        statement.setString(11, (String)countryObject);
+
+                    String country = (String)map.get("country");
+                    if (country != null && !country.isEmpty()) {
+                        statement.setString(11, country);
                     } else {
                         statement.setNull(11, NULL);
                     }
-                    Object provinceObject = map.get("province");
-                    if (provinceObject != null) {
-                        statement.setString(12, (String)provinceObject);
+
+                    String province = (String)map.get("province");
+                    if (province != null && !province.isEmpty()) {
+                        statement.setString(12, province);
                     } else {
                         statement.setNull(12, NULL);
                     }
-                    Object cityObject = map.get("city");
-                    if (cityObject != null) {
-                        statement.setString(13, (String)cityObject);
+
+                    String city = (String)map.get("city");
+                    if (city != null && !city.isEmpty()) {
+                        statement.setString(13, city);
                     } else {
                         statement.setNull(13, NULL);
                     }
-                    Object addressObject = map.get("address");
-                    if (addressObject != null) {
-                        statement.setString(14, (String)addressObject);
+
+                    String address = (String)map.get("address");
+                    if (address != null && !address.isEmpty()) {
+                        statement.setString(14, address);
                     } else {
                         statement.setNull(14, NULL);
                     }
-                    Object postCodeObject = map.get("postCode");
-                    if (postCodeObject != null) {
-                        statement.setString(15, (String)postCodeObject);
+
+                    String postCode = (String)map.get("postCode");
+                    if (postCode != null && !postCode.isEmpty()) {
+                        statement.setString(15, postCode);
                     } else {
                         statement.setNull(15, NULL);
                     }
@@ -2498,8 +2508,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         statement.setString(1, (String)map.get("hostId"));
                         statement.setString(2, (String)map.get("entityId"));
                         statement.setString(3, (String)map.get("userId"));
-                        if(map.get("managerId") != null) {
-                            statement.setString(4, (String)map.get("managerId"));
+                        String managerId = (String)map.get("managerId");
+                        if(map.get("managerId") != null && !managerId.isEmpty()) {
+                            statement.setString(4, managerId);
                         } else {
                             statement.setNull(4, NULL);
                         }
@@ -2510,8 +2521,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         statement.setString(1, (String)map.get("hostId"));
                         statement.setString(2, (String)map.get("entityId"));
                         statement.setString(3, (String)map.get("userId"));
-                        if(map.get("referralId") != null) {
-                            statement.setString(4, (String)map.get("referralId"));
+                        String referralId = (String)map.get("referralId");
+                        if(referralId != null && !referralId.isEmpty()) {
+                            statement.setString(4, referralId);
                         } else {
                             statement.setNull(4, NULL);
                         }
@@ -2692,19 +2704,23 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
                     statement.setString(1, (String)map.get("hostId"));
                     statement.setString(2, (String)map.get("userId"));
-                    if (map.get("firstName") != null)
-                        statement.setString(3, (String)map.get("firstName"));
+                    String firstName = (String)map.get("firstName");
+                    if (firstName != null && !firstName.isEmpty())
+                        statement.setString(3, firstName);
                     else
                         statement.setNull(3, NULL);
-                    if (map.get("lastName") != null)
-                        statement.setString(4, (String)map.get("lastName"));
+                    String lastName = (String)map.get("lastName");
+                    if (lastName != null && !lastName.isEmpty())
+                        statement.setString(4, lastName);
                     else
                         statement.setNull(4, NULL);
+
                     statement.setString(5, (String)map.get("email"));
                     statement.setString(6, (String)map.get("language"));
                     statement.setBoolean(7, (Boolean)map.get("verified"));
-                    if (map.get("gender") != null) {
-                        statement.setString(8, (String)map.get("gender"));
+                    String gender = (String)map.get("gender");
+                    if (gender != null && !gender.isEmpty()) {
+                        statement.setString(8, gender);
                     } else {
                         statement.setNull(8, NULL);
                     }
@@ -2714,33 +2730,33 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     } else {
                         statement.setNull(9, NULL);
                     }
-                    Object countryObject = map.get("country");
-                    if (countryObject != null) {
-                        statement.setString(10, (String) countryObject);
+                    String country = (String)map.get("country");
+                    if (country != null && !country.isEmpty()) {
+                        statement.setString(10, country);
                     } else {
                         statement.setNull(10, NULL);
                     }
-                    Object provinceObject = map.get("province");
-                    if (provinceObject != null) {
-                        statement.setString(11, (String) provinceObject);
+                    String province = (String)map.get("province");
+                    if (province != null && !province.isEmpty()) {
+                        statement.setString(11, province);
                     } else {
                         statement.setNull(11, NULL);
                     }
-                    Object cityObject = map.get("city");
-                    if (cityObject != null) {
-                        statement.setString(12, (String) cityObject);
+                    String city = (String)map.get("city");
+                    if (city != null && !city.isEmpty()) {
+                        statement.setString(12, city);
                     } else {
                         statement.setNull(12, NULL);
                     }
-                    Object postCodeObject = map.get("postCode");
-                    if (postCodeObject != null) {
-                        statement.setString(13, (String) postCodeObject);
+                    String postCode = (String)map.get("postCode");
+                    if (postCode != null && !postCode.isEmpty()) {
+                        statement.setString(13, postCode);
                     } else {
                         statement.setNull(13, NULL);
                     }
-                    Object addressObject = map.get("address");
-                    if (addressObject != null) {
-                        statement.setString(14, (String) addressObject);
+                    String address = (String)map.get("address");
+                    if (address != null && !address.isEmpty()) {
+                        statement.setString(14, address);
                     } else {
                         statement.setNull(14, NULL);
                     }
@@ -2788,22 +2804,24 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(updateUser)) {
                 statement.setString(1, (String)map.get("language"));
-                if (map.get("firstName") != null)
-                    statement.setString(2, (String) map.get("firstName"));
+                String firstName = (String)map.get("firstName");
+                if (firstName != null && !firstName.isEmpty())
+                    statement.setString(2, firstName);
                 else
                     statement.setNull(2, NULL);
-                if (map.get("lastName") != null)
-                    statement.setString(3, (String) map.get("lastName"));
+                String lastName = (String)map.get("lastName");
+                if (lastName != null && !lastName.isEmpty())
+                    statement.setString(3, lastName);
                 else
                     statement.setNull(3, NULL);
-
-                if (map.get("phoneNumber") != null)
-                    statement.setString(4, (String) map.get("phoneNumber"));
+                String phoneNumber = (String)map.get("phoneNumber");
+                if (phoneNumber != null && !phoneNumber.isEmpty())
+                    statement.setString(4, phoneNumber);
                 else
                     statement.setNull(4, NULL);
-
-                if(map.get("gender") != null) {
-                    statement.setString(5, (String) map.get("gender"));
+                String gender = (String)map.get("gender");
+                if(gender != null && !gender.isEmpty()) {
+                    statement.setString(5, gender);
                 } else {
                     statement.setNull(5, NULL);
                 }
@@ -2815,37 +2833,37 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     statement.setNull(6, NULL);
                 }
 
-                Object countryObject = map.get("country");
-                if (countryObject != null) {
-                    statement.setString(7, (String) countryObject);
+                String country = (String)map.get("country");
+                if (country != null && !country.isEmpty()) {
+                    statement.setString(7, country);
                 } else {
                     statement.setNull(7, NULL);
                 }
 
-                Object provinceObject = map.get("province");
-                if (provinceObject != null) {
-                    statement.setString(8, (String)provinceObject);
+                String province = (String)map.get("province");
+                if (province != null && !province.isEmpty()) {
+                    statement.setString(8, province);
                 } else {
                     statement.setNull(8, NULL);
                 }
 
-                Object cityObject = map.get("city");
-                if (cityObject != null) {
-                    statement.setString(9, (String)cityObject);
+                String city = (String)map.get("city");
+                if (city != null && !city.isEmpty()) {
+                    statement.setString(9, city);
                 } else {
                     statement.setNull(9, NULL);
                 }
 
-                Object addressObject = map.get("address");
-                if (addressObject != null) {
-                    statement.setString(10, (String)addressObject);
+                String address = (String)map.get("address");
+                if (address != null && !address.isEmpty()) {
+                    statement.setString(10, address);
                 } else {
                     statement.setNull(10, NULL);
                 }
 
-                Object postCodeObject = map.get("postCode");
-                if (postCodeObject != null) {
-                    statement.setString(11, (String)postCodeObject);
+                String postCode = (String)map.get("postCode");
+                if (postCode != null && !postCode.isEmpty()) {
+                    statement.setString(11, postCode);
                 } else {
                     statement.setNull(11, NULL);
                 }
@@ -2859,8 +2877,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 // update customer or employee based on user_type
                 if(map.get("userType").equals("E")) {
                     try (PreparedStatement updateStatement = conn.prepareStatement(updateEmployee)) {
-                        if(map.get("managerId") != null) {
-                            updateStatement.setString(1, (String) map.get("managerId"));
+                        String managerId = (String)map.get("managerId");
+                        if(managerId != null && !managerId.isEmpty()) {
+                            updateStatement.setString(1, managerId);
                         } else {
                             updateStatement.setNull(1, NULL);
                         }
@@ -2870,8 +2889,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                 } else if(map.get("userType").equals("C")) {
                     try (PreparedStatement updateStatement = conn.prepareStatement(updateCustomer)) {
-                        if(map.get("referralId") != null) {
-                            updateStatement.setString(1, (String) map.get("referralId"));
+                        String referralId = (String)map.get("referralId");
+                        if(referralId != null && !referralId.isEmpty()) {
+                            updateStatement.setString(1, referralId);
                         } else {
                             updateStatement.setNull(1, NULL);
                         }
@@ -3191,44 +3211,45 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(5, (String)map.get("entityId"));
                 statement.setString(6, (String)map.get("userType"));
                 statement.setString(7, (String)map.get("email"));
-
-                if (map.get("roles") != null)
-                    statement.setString(8, (String)map.get("roles"));
+                String roles = (String)map.get("roles");
+                if (roles != null && !roles.isEmpty())
+                    statement.setString(8, roles);
                 else
                     statement.setNull(8, NULL);
-
-                if (map.get("groups") != null)
-                    statement.setString(9, (String) map.get("groups"));
+                String groups = (String)map.get("groups");
+                if (groups != null && !groups.isEmpty())
+                    statement.setString(9, groups);
                 else
                     statement.setNull(9, NULL);
-
-                if (map.get("positions") != null)
-                    statement.setString(10, (String) map.get("positions"));
+                String positions = (String)map.get("positions");
+                if (positions != null && !positions.isEmpty())
+                    statement.setString(10, positions);
                 else
                     statement.setNull(10, NULL);
-
-                if (map.get("attributes") != null)
-                    statement.setString(11, (String) map.get("attributes"));
+                String attributes = (String)map.get("attributes");
+                if (attributes != null && !attributes.isEmpty())
+                    statement.setString(11, attributes);
                 else
                     statement.setNull(11, NULL);
-
-                if (map.get("clientId") != null)
-                    statement.setString(12, (String) map.get("clientId"));
+                String clientId = (String)map.get("clientId");
+                if (clientId != null && !clientId.isEmpty())
+                    statement.setString(12, clientId);
                 else
                     statement.setNull(12, NULL);
-
-                if (map.get("scope") != null)
-                    statement.setString(13, (String) map.get("scope"));
+                String scope = (String)map.get("scope");
+                if (scope != null && !scope.isEmpty())
+                    statement.setString(13, scope);
                 else
                     statement.setNull(13, NULL);
-
-                if (map.get("csrf") != null)
-                    statement.setString(14, (String) map.get("csrf"));
+                String csrf = (String)map.get("csrf");
+                if (csrf != null && !csrf.isEmpty())
+                    statement.setString(14, csrf);
                 else
                     statement.setNull(14, NULL);
 
-                if (map.get("customClaim") != null)
-                    statement.setString(15, (String) map.get("customClaim"));
+                String customClaim  = (String)map.get("customClaim");
+                if (customClaim != null && !customClaim.isEmpty())
+                    statement.setString(15, customClaim);
                 else
                     statement.setNull(15, NULL);
 
@@ -4543,13 +4564,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
                 statement.setString(1, (String)event.get(Constants.HOST));
-                if (map.get("appId") != null) {
-                    statement.setString(2, (String) map.get("appId"));
+                String appId = (String)map.get("appId");
+                if (appId != null && !appId.isEmpty()) {
+                    statement.setString(2, appId);
                 } else {
                     statement.setNull(2, NULL);
                 }
-                if (map.get("apiId") != null) {
-                    statement.setString(3, (String) map.get("apiId"));
+                String apiId = (String)map.get("apiId");
+                if (apiId != null && !apiId.isEmpty()) {
+                    statement.setString(3, apiId);
                 } else {
                     statement.setNull(3, NULL);
                 }
@@ -4558,28 +4581,34 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(6, (String)map.get("clientType"));
                 statement.setString(7, (String)map.get("clientProfile"));
                 statement.setString(8, (String)map.get("clientSecret"));
-                if (map.get("clientScope") != null) {
-                    statement.setString(9, (String) map.get("clientScope"));
+
+                String clientScope = (String)map.get("clientScope");
+                if (clientScope != null && !clientScope.isEmpty()) {
+                    statement.setString(9, clientScope);
                 } else {
                     statement.setNull(9, NULL);
                 }
-                if (map.get("customClaim") != null) {
-                    statement.setString(10, (String) map.get("customClaim"));
+                String customClaim = (String)map.get("customClaim");
+                if (customClaim != null && !customClaim.isEmpty()) {
+                    statement.setString(10, customClaim);
                 } else {
                     statement.setNull(10, NULL);
                 }
-                if (map.get("redirectUri") != null) {
-                    statement.setString(11, (String) map.get("redirectUri"));
+                String redirectUri = (String)map.get("redirectUri");
+                if (redirectUri != null && !redirectUri.isEmpty()) {
+                    statement.setString(11, redirectUri);
                 } else {
                     statement.setNull(11, NULL);
                 }
-                if (map.get("authenticateClass") != null) {
-                    statement.setString(12, (String) map.get("authenticateClass"));
+                String authenticateClass = (String)map.get("authenticateClass");
+                if (authenticateClass != null && !authenticateClass.isEmpty()) {
+                    statement.setString(12, authenticateClass);
                 } else {
                     statement.setNull(12, NULL);
                 }
-                if (map.get("deRefClientId") != null) {
-                    statement.setString(13, (String) map.get("deRefClientId"));
+                String deRefClientId = (String)map.get("deRefClientId");
+                if (deRefClientId != null && !deRefClientId.isEmpty()) {
+                    statement.setString(13, deRefClientId);
                 } else {
                     statement.setNull(13, NULL);
                 }
@@ -4624,41 +4653,48 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
 
             try (PreparedStatement statement = conn.prepareStatement(updateApplication)) {
-                if (map.get("appId") != null) {
-                    statement.setString(1, (String) map.get("appId"));
+                String appId = (String)map.get("appId");
+                if (appId != null && !appId.isEmpty()) {
+                    statement.setString(1, appId);
                 } else {
                     statement.setNull(1, NULL);
                 }
-                if (map.get("apiId") != null) {
-                    statement.setString(2, (String) map.get("apiId"));
+                String apiId = (String)map.get("apiId");
+                if (apiId != null && !apiId.isEmpty()) {
+                    statement.setString(2, apiId);
                 } else {
                     statement.setNull(2, NULL);
                 }
                 statement.setString(3, (String)map.get("clientName"));
                 statement.setString(4, (String)map.get("clientType"));
                 statement.setString(5, (String)map.get("clientProfile"));
-                if (map.get("clientScope") != null) {
-                    statement.setString(6, (String) map.get("clientScope"));
+                String clientScope = (String)map.get("clientScope");
+                if (clientScope != null && !clientScope.isEmpty()) {
+                    statement.setString(6, clientScope);
                 } else {
                     statement.setNull(6, NULL);
                 }
-                if (map.get("customClaim") != null) {
-                    statement.setString(7, (String) map.get("customClaim"));
+                String customClaim = (String)map.get("customClaim");
+                if (customClaim != null && !customClaim.isEmpty()) {
+                    statement.setString(7, customClaim);
                 } else {
                     statement.setNull(7, NULL);
                 }
-                if (map.get("redirectUri") != null) {
-                    statement.setString(8, (String) map.get("redirectUri"));
+                String redirectUri = (String)map.get("redirectUri");
+                if (redirectUri != null && !redirectUri.isEmpty()) {
+                    statement.setString(8, redirectUri);
                 } else {
                     statement.setNull(8, NULL);
                 }
-                if (map.get("authenticateClass") != null) {
-                    statement.setString(9, (String) map.get("authenticateClass"));
+                String authenticateClass = (String)map.get("authenticateClass");
+                if (authenticateClass != null && !authenticateClass.isEmpty()) {
+                    statement.setString(9, authenticateClass);
                 } else {
                     statement.setNull(9, NULL);
                 }
-                if (map.get("deRefClientId") != null) {
-                    statement.setString(10, (String) map.get("deRefClientId"));
+                String deRefClientId = (String)map.get("deRefClientId");
+                if (deRefClientId != null && !deRefClientId.isEmpty()) {
+                    statement.setString(10, deRefClientId);
                 } else {
                     statement.setNull(10, NULL);
                 }
@@ -5472,7 +5508,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         }
                         // insert scopes
                         List<String> scopes = (List<String>) endpoint.get("scopes");
-                        if(scopes != null) {
+                        if(scopes != null && !scopes.isEmpty()) {
                             for (String scope : scopes) {
                                 String[] scopeDesc = scope.split(":");
                                 try (PreparedStatement statementScope = conn.prepareStatement(insertScope)) {
@@ -5619,7 +5655,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         }
                         // insert scopes
                         List<String> scopes = (List<String>) endpoint.get("scopes");
-                        if (scopes != null) {
+                        if (scopes != null && !scopes.isEmpty()) {
                             for (String scope : scopes) {
                                 String[] scopeDesc = scope.split(":");
                                 try (PreparedStatement statementScope = conn.prepareStatement(insertScope)) {
@@ -5755,7 +5791,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     private void addCondition(StringBuilder whereClause, List<Object> parameters, String columnName, Object value) {
         if (value != null) {
-            if (whereClause.length() > 0) {
+            if (!whereClause.isEmpty()) {
                 whereClause.append(" AND ");
             }
             whereClause.append(columnName).append(" = ?");
@@ -5838,7 +5874,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                     // insert scopes
                     List<String> scopes = (List<String>) endpoint.get("scopes");
-                    if(scopes != null) {
+                    if(scopes != null && !scopes.isEmpty()) {
                         for (String scope : scopes) {
                             String[] scopeDesc = scope.split(":");
                             try (PreparedStatement statement = conn.prepareStatement(insertScope)) {
@@ -6735,18 +6771,21 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(updateHost)) {
-                if ((String)map.get("orgName") != null) {
-                    statement.setString(1, (String)map.get("orgName"));
+                String orgName = (String)map.get("orgName");
+                if (orgName != null && !orgName.isEmpty()) {
+                    statement.setString(1, orgName);
                 } else {
                     statement.setNull(1, NULL);
                 }
-                if ((String)map.get("orgDesc") != null) {
-                    statement.setString(2, (String)map.get("orgDesc"));
+                String orgDesc = (String)map.get("orgDesc");
+                if (orgDesc != null && !orgDesc.isEmpty()) {
+                    statement.setString(2, orgDesc);
                 } else {
                     statement.setNull(2, NULL);
                 }
-                if ((String)map.get("orgOwner") != null) {
-                    statement.setString(3, (String)map.get("orgOwner"));
+                String orgOwner = (String)map.get("orgOwner");
+                if (orgOwner != null && !orgOwner.isEmpty()) {
+                    statement.setString(3, orgOwner);
                 } else {
                     statement.setNull(3, NULL);
                 }
@@ -6868,18 +6907,21 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
             try (PreparedStatement statement = conn.prepareStatement(updateHost)) {
                 statement.setString(1, (String)map.get("domain"));
-                if ((String)map.get("subDomain") != null) {
-                    statement.setString(2, (String)map.get("subDomain"));
+                String subDomain = (String)map.get("subDomain");
+                if (subDomain != null && !subDomain.isEmpty()) {
+                    statement.setString(2, subDomain);
                 } else {
                     statement.setNull(2, NULL);
                 }
-                if ((String)map.get("hostDesc") != null) {
-                    statement.setString(3, (String)map.get("hostDesc"));
+                String hostDesc = (String)map.get("hostDesc");
+                if (hostDesc != null && !hostDesc.isEmpty()) {
+                    statement.setString(3, hostDesc);
                 } else {
                     statement.setNull(3, NULL);
                 }
-                if ((String)map.get("hostOwner") != null) {
-                    statement.setString(4, (String)map.get("hostOwner"));
+                String hostOwner = (String)map.get("hostOwner");
+                if (hostOwner != null && !hostOwner.isEmpty()) {
+                    statement.setString(4, hostOwner);
                 } else {
                     statement.setNull(4, NULL);
                 }
@@ -10166,13 +10208,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     statement.setString(2, (String)map.get("ruleName"));
                     statement.setString(3, (String)map.get("ruleVersion"));
                     statement.setString(4, (String)map.get("ruleType"));
-                    if (map.get("ruleGroup") != null)
-                        statement.setString(5, (String)map.get("ruleGroup"));
+                    String ruleGroup = (String)map.get("ruleGroup");
+                    if (ruleGroup != null && !ruleGroup.isEmpty())
+                        statement.setString(5, ruleGroup);
                     else
                         statement.setNull(5, NULL);
-
-                    if (map.get("ruleDesc") != null)
-                        statement.setString(6, (String)map.get("ruleDesc"));
+                    String ruleDesc = (String)map.get("ruleDesc");
+                    if (ruleDesc != null && !ruleDesc.isEmpty())
+                        statement.setString(6, ruleDesc);
                     else
                         statement.setNull(6, NULL);
                     statement.setString(7, (String)map.get("ruleBody"));
@@ -10228,43 +10271,51 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
 
             try (PreparedStatement statement = conn.prepareStatement(updateRule)) {
-                if(map.get("ruleName") != null) {
-                    statement.setString(1, (String)map.get("ruleName"));
+                String ruleName = (String)map.get("ruleName");
+                if(ruleName != null && !ruleName.isEmpty()) {
+                    statement.setString(1, ruleName);
                 } else {
                     statement.setNull(1, NULL);
                 }
-                if (map.get("ruleVersion") != null) {
-                    statement.setString(2, (String)map.get("ruleVersion"));
+                String ruleVersion = (String)map.get("ruleVersion");
+                if (ruleVersion != null && !ruleVersion.isEmpty()) {
+                    statement.setString(2, ruleVersion);
                 } else {
                     statement.setNull(2, NULL);
                 }
-                if (map.get("ruleType") != null) {
-                    statement.setString(3, (String)map.get("ruleType"));
+                String ruleType = (String)map.get("ruleType");
+                if (ruleType != null && !ruleType.isEmpty()) {
+                    statement.setString(3, ruleType);
                 } else {
                     statement.setNull(3, NULL);
                 }
-                if (map.get("ruleGroup") != null) {
-                    statement.setString(4, (String)map.get("ruleGroup"));
+                String ruleGroup = (String)map.get("ruleGroup");
+                if (ruleGroup != null && !ruleGroup.isEmpty()) {
+                    statement.setString(4, ruleGroup);
                 } else {
                     statement.setNull(4, NULL);
                 }
-                if (map.get("ruleDesc") != null) {
-                    statement.setString(5, (String)map.get("ruleDesc"));
+                String ruleDesc = (String)map.get("ruleDesc");
+                if (ruleDesc != null && !ruleDesc.isEmpty()) {
+                    statement.setString(5, ruleDesc);
                 } else {
                     statement.setNull(5, NULL);
                 }
-                if(map.get("ruleBody") != null) {
-                    statement.setString(6, (String)map.get("ruleBody"));
+                String ruleBody = (String)map.get("ruleBody");
+                if(ruleBody != null && !ruleBody.isEmpty()) {
+                    statement.setString(6, ruleBody);
                 } else {
                     statement.setNull(6, NULL);
                 }
-                if(map.get("ruleOwner") != null) {
-                    statement.setString(7, (String)map.get("ruleOwner"));
+                String ruleOwner = (String)map.get("ruleOwner");
+                if(ruleOwner != null && !ruleOwner.isEmpty()) {
+                    statement.setString(7, ruleOwner);
                 } else {
                     statement.setNull(7, NULL);
                 }
-                if(map.get("common") != null) {
-                    statement.setString(8, (String)map.get("common"));
+                String common = (String)map.get("common");
+                if(common != null && !common.isEmpty()) {
+                    statement.setString(8, common);
                 } else {
                     statement.setNull(8, NULL);
                 }
@@ -10713,8 +10764,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(insertRole)) {
                 statement.setString(1, (String)event.get(Constants.HOST));
                 statement.setString(2, (String)map.get("roleId"));
-                if (map.get("roleDesc") != null)
-                    statement.setString(3, (String)map.get("roleDesc"));
+                String roleDesc = (String)map.get("roleDesc");
+                if (roleDesc != null && !roleDesc.isEmpty())
+                    statement.setString(3, roleDesc);
                 else
                     statement.setNull(3, NULL);
 
@@ -10757,8 +10809,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
 
             try (PreparedStatement statement = conn.prepareStatement(updateRole)) {
-                if(map.get("roleDesc") != null) {
-                    statement.setString(1, (String)map.get("roleDesc"));
+                String roleDesc = (String)map.get("roleDesc");
+                if(roleDesc != null && !roleDesc.isEmpty()) {
+                    statement.setString(1, roleDesc);
                 } else {
                     statement.setNull(1, NULL);
                 }
@@ -11204,13 +11257,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(2, (String)map.get("roleId"));
                 statement.setString(3, (String)event.get(Constants.USER));
 
-                if(map.get("startTs") != null)
-                    statement.setObject(4, OffsetDateTime.parse((String)map.get("startTs")));
+                String startTs = (String)map.get("startTs");
+                if(startTs != null && !startTs.isEmpty())
+                    statement.setObject(4, OffsetDateTime.parse(startTs));
                 else
                     statement.setNull(4, NULL);
-
-                if (map.get("endTs") != null) {
-                    statement.setObject(5, OffsetDateTime.parse((String)map.get("endTs")));
+                String endTs = (String)map.get("endTs");
+                if (endTs != null && !endTs.isEmpty()) {
+                    statement.setObject(5, OffsetDateTime.parse(endTs));
                 } else {
                     statement.setNull(5, NULL);
                 }
@@ -11254,13 +11308,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
 
             try (PreparedStatement statement = conn.prepareStatement(updateRole)) {
-                if(map.get("startTs") != null)
-                    statement.setObject(1, OffsetDateTime.parse((String)map.get("startTs")));
+                String startTs = (String)map.get("startTs");
+                if(startTs != null && !startTs.isEmpty())
+                    statement.setObject(1, OffsetDateTime.parse(startTs));
                 else
                     statement.setNull(1, NULL);
-
-                if (map.get("endTs") != null) {
-                    statement.setObject(2, OffsetDateTime.parse((String)map.get("endTs")));
+                String endTs = (String)map.get("endTs");
+                if (endTs != null && !endTs.isEmpty()) {
+                    statement.setObject(2, OffsetDateTime.parse(endTs));
                 } else {
                     statement.setNull(2, NULL);
                 }
@@ -11757,8 +11812,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
                 statement.setString(1, (String)event.get(Constants.HOST));
                 statement.setString(2, (String)map.get("groupId"));
-                if (map.get("groupDesc") != null)
-                    statement.setString(3, (String)map.get("groupDesc"));
+                String groupDesc = (String)map.get("groupDesc");
+                if (groupDesc != null && !groupDesc.isEmpty())
+                    statement.setString(3, groupDesc);
                 else
                     statement.setNull(3, NULL);
 
@@ -11800,8 +11856,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
-                if(map.get("groupDesc") != null) {
-                    statement.setString(1, (String)map.get("groupDesc"));
+                String groupDesc = (String)map.get("groupDesc");
+                if(groupDesc != null && !groupDesc.isEmpty()) {
+                    statement.setString(1, groupDesc);
                 } else {
                     statement.setNull(1, NULL);
                 }
@@ -12233,14 +12290,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, (String)event.get(Constants.HOST));
                 statement.setString(2, (String)map.get("groupId"));
                 statement.setString(3, (String)event.get(Constants.USER));
-
-                if(map.get("startTs") != null)
-                    statement.setObject(4, OffsetDateTime.parse((String)map.get("startTs")));
+                String startTs = (String)map.get("startTs");
+                if(startTs != null && !startTs.isEmpty())
+                    statement.setObject(4, OffsetDateTime.parse(startTs));
                 else
                     statement.setNull(4, NULL);
-
-                if (map.get("endTs") != null) {
-                    statement.setObject(5, OffsetDateTime.parse((String)map.get("endTs")));
+                String endTs = (String)map.get("endTs");
+                if (endTs != null && !endTs.isEmpty()) {
+                    statement.setObject(5, OffsetDateTime.parse(endTs));
                 } else {
                     statement.setNull(5, NULL);
                 }
@@ -12283,13 +12340,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
 
             try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
-                if(map.get("startTs") != null)
-                    statement.setObject(1, OffsetDateTime.parse((String)map.get("startTs")));
+                String startTs = (String)map.get("startTs");
+                if(startTs != null && !startTs.isEmpty())
+                    statement.setObject(1, OffsetDateTime.parse(startTs));
                 else
                     statement.setNull(1, NULL);
-
-                if (map.get("endTs") != null) {
-                    statement.setObject(2, OffsetDateTime.parse((String)map.get("endTs")));
+                String endTs = (String)map.get("endTs");
+                if (endTs != null && !endTs.isEmpty()) {
+                    statement.setObject(2, OffsetDateTime.parse(endTs));
                 } else {
                     statement.setNull(2, NULL);
                 }
@@ -12787,16 +12845,19 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(insertPosition)) {
                 statement.setString(1, (String)event.get(Constants.HOST));
                 statement.setString(2, (String)map.get("positionId"));
-                if (map.get("positionDesc") != null)
-                    statement.setString(3, (String)map.get("positionDesc"));
+                String positionDesc = (String)map.get("positionDesc");
+                if (positionDesc != null && !positionDesc.isEmpty())
+                    statement.setString(3, positionDesc);
                 else
                     statement.setNull(3, NULL);
-                if(map.get("inheritToAncestor") != null)
-                    statement.setString(4, (String)map.get("inheritToAncestor"));
+                String inheritToAncestor = (String)map.get("inheritToAncestor");
+                if(inheritToAncestor != null && !inheritToAncestor.isEmpty())
+                    statement.setString(4, inheritToAncestor);
                 else
                     statement.setNull(4, NULL);
-                if(map.get("inheritToSibling") != null)
-                    statement.setString(5, (String)map.get("inheritToSibling"));
+                String inheritToSibling = (String)map.get("inheritToSibling");
+                if(inheritToSibling != null && !inheritToSibling.isEmpty())
+                    statement.setString(5, inheritToSibling);
                 else
                     statement.setNull(5, NULL);
 
@@ -12839,18 +12900,21 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(updatePosition)) {
-                if(map.get("positionDesc") != null) {
-                    statement.setString(1, (String)map.get("positionDesc"));
+                String positionDesc = (String)map.get("positionDesc");
+                if(positionDesc != null && !positionDesc.isEmpty()) {
+                    statement.setString(1, positionDesc);
                 } else {
                     statement.setNull(1, NULL);
                 }
-                if(map.get("inheritToAncestor") != null) {
-                    statement.setString(2, (String)map.get("inheritToAncestor"));
+                String inheritToAncestor = (String)map.get("inheritToAncestor");
+                if(inheritToAncestor != null && !inheritToAncestor.isEmpty()) {
+                    statement.setString(2, inheritToAncestor);
                 } else {
                     statement.setNull(2, NULL);
                 }
-                if(map.get("inheritToSibling") != null) {
-                    statement.setString(3, (String)map.get("inheritToSibling"));
+                String inheritToSibling = (String)map.get("inheritToSibling");
+                if(inheritToSibling != null && !inheritToSibling.isEmpty()) {
+                    statement.setString(3, inheritToSibling);
                 } else {
                     statement.setNull(3, NULL);
                 }
@@ -13291,14 +13355,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, (String)event.get(Constants.HOST));
                 statement.setString(2, (String)map.get("positionId"));
                 statement.setString(3, (String)event.get(Constants.USER));
-
-                if(map.get("startTs") != null)
-                    statement.setObject(4, map.get("startTs"));
+                String startTs = (String)map.get("startTs");
+                if(startTs != null && !startTs.isEmpty())
+                    statement.setObject(4, OffsetDateTime.parse(startTs));
                 else
                     statement.setNull(4, NULL);
-
-                if (map.get("endTs") != null) {
-                    statement.setObject(5, map.get("endTs"));
+                String endTs = (String)map.get("endTs");
+                if (endTs != null && !endTs.isEmpty()) {
+                    statement.setObject(5, OffsetDateTime.parse(endTs));
                 } else {
                     statement.setNull(5, NULL);
                 }
@@ -13307,7 +13371,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("failed to insert position user " + (String)map.get("positionId"));
+                    throw new SQLException("failed to insert position user " + map.get("positionId"));
                 }
                 conn.commit();
                 result = Success.of((String)map.get("positionId"));
@@ -13342,13 +13406,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
 
             try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
-                if(map.get("startTs") != null)
-                    statement.setObject(1, map.get("startTs"));
+                String startTs = (String)map.get("startTs");
+                if(startTs != null && !startTs.isEmpty())
+                    statement.setObject(1, OffsetDateTime.parse(startTs));
                 else
                     statement.setNull(1, NULL);
-
-                if (map.get("endTs") != null) {
-                    statement.setObject(2, map.get("endTs"));
+                String endTs = (String)map.get("endTs");
+                if (endTs != null && !endTs.isEmpty()) {
+                    statement.setObject(2, OffsetDateTime.parse(endTs));
                 } else {
                     statement.setNull(2, NULL);
                 }
@@ -13844,14 +13909,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(insertAttribute)) {
                 statement.setString(1, (String)event.get(Constants.HOST));
                 statement.setString(2, (String)map.get("attributeId"));
-
-                if(map.get("attributeType") != null)
-                    statement.setString(3, (String)map.get("attributeType"));
+                String attributeType = (String)map.get("attributeType");
+                if(attributeType != null && !attributeType.isEmpty())
+                    statement.setString(3, attributeType);
                 else
                     statement.setNull(3, NULL);
-
-                if (map.get("attributeDesc") != null)
-                    statement.setString(4, (String)map.get("attributeDesc"));
+                String attributeDesc = (String)map.get("attributeDesc");
+                if (attributeDesc != null && !attributeDesc.isEmpty())
+                    statement.setString(4, attributeDesc);
                 else
                     statement.setNull(4, NULL);
 
@@ -13860,7 +13925,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("failed to insert attribute " + (String)map.get("attributeId"));
+                    throw new SQLException("failed to insert attribute " + map.get("attributeId"));
                 }
                 conn.commit();
                 result = Success.of((String)map.get("attributeId"));
@@ -13894,13 +13959,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(updateAttribute)) {
-                if(map.get("attributeDesc") != null) {
-                    statement.setString(1, (String)map.get("attributeDesc"));
+                String attributeDesc = (String)map.get("attributeDesc");
+                if(attributeDesc != null && !attributeDesc.isEmpty()) {
+                    statement.setString(1, attributeDesc);
                 } else {
                     statement.setNull(1, NULL);
                 }
-                if(map.get("attributeType") != null) {
-                    statement.setString(2, (String)map.get("attributeType"));
+                String attributeType = (String)map.get("attributeType");
+                if(attributeType != null && !attributeType.isEmpty()) {
+                    statement.setString(2, attributeType);
                 } else {
                     statement.setNull(2, NULL);
                 }
@@ -13908,14 +13975,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
                 statement.setString(5, (String)event.get(Constants.HOST));
-                statement.setString(6, (String)map.get("attributeId"));
+                String attributeId = (String)map.get("attributeId");
+                statement.setString(6, attributeId);
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("no record is updated for attribute " + (String)map.get("attributeId"));
+                    throw new SQLException("no record is updated for attribute " + attributeId);
                 }
                 conn.commit();
-                result = Success.of((String)map.get("attributeId"));
+                result = Success.of(attributeId);
                 insertNotification(event, true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
@@ -14396,16 +14464,17 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
                 statement.setString(1, (String)event.get(Constants.HOST));
-                statement.setString(2, (String)map.get("attributeId"));
+                String attributeId = (String)map.get("attributeId");
+                statement.setString(2, attributeId);
                 statement.setString(3, (String)map.get("attributeValue"));
-
-                if(map.get("startTs") != null)
-                    statement.setObject(4, map.get("startTs"));
+                String startTs = (String)map.get("startTs");
+                if(startTs != null && !startTs.isEmpty())
+                    statement.setObject(4, OffsetDateTime.parse(startTs));
                 else
                     statement.setNull(4, NULL);
-
-                if (map.get("endTs") != null) {
-                    statement.setObject(5, map.get("endTs"));
+                String endTs = (String)map.get("endTs");
+                if (endTs != null && !endTs.isEmpty()) {
+                    statement.setObject(5, OffsetDateTime.parse(endTs));
                 } else {
                     statement.setNull(5, NULL);
                 }
@@ -14414,10 +14483,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("failed to insert attribute user " + (String)map.get("attributeId"));
+                    throw new SQLException("failed to insert attribute user " + attributeId);
                 }
                 conn.commit();
-                result = Success.of((String)map.get("attributeId"));
+                result = Success.of(attributeId);
                 insertNotification(event, true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
@@ -14450,28 +14519,30 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
             try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
                 statement.setString(1, (String)map.get("attributeValue"));
-                if(map.get("startTs") != null)
-                    statement.setObject(2, map.get("startTs"));
+                String startTs = (String)map.get("startTs");
+                if(startTs != null && !startTs.isEmpty())
+                    statement.setObject(2, OffsetDateTime.parse(startTs));
                 else
                     statement.setNull(2, NULL);
-
-                if (map.get("endTs") != null) {
-                    statement.setObject(3, map.get("endTs"));
+                String endTs = (String)map.get("endTs");
+                if (endTs != null && !endTs.isEmpty()) {
+                    statement.setObject(3, OffsetDateTime.parse(endTs));
                 } else {
                     statement.setNull(3, NULL);
                 }
                 statement.setString(4, (String)event.get(Constants.USER));
                 statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
                 statement.setString(6, (String)event.get(Constants.HOST));
-                statement.setString(7, (String)map.get("attributeId"));
+                String attributeId = (String)map.get("attributeId");
+                statement.setString(7, attributeId);
                 statement.setString(8, (String)event.get(Constants.USER));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("no record is updated for attribute user " + (String)map.get("attributeId"));
+                    throw new SQLException("no record is updated for attribute user " + attributeId);
                 }
                 conn.commit();
-                result = Success.of((String)map.get("attributeId"));
+                result = Success.of(attributeId);
                 insertNotification(event, true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
@@ -16730,7 +16801,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                 }
             }
-            if (map != null) {
+            if (map != null && !map.isEmpty()) {
                 result = Success.of(JsonMapper.toJson(map));
             }
         } catch (SQLException e) {
@@ -16784,7 +16855,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                 }
             }
-            if (map != null) {
+            if (map != null && !map.isEmpty()) {
                 result = Success.of(JsonMapper.toJson(map));
             }
         } catch (SQLException e) {
@@ -16936,10 +17007,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         // 2. Iterate again to build the tree structure
         for (Map<String, Object> category : categoryList) {
             String parentCategoryId = (String) category.get("parentCategoryId");
-            if (parentCategoryId != null) {
+            if (parentCategoryId != null && !parentCategoryId.isEmpty()) {
                 // If it has a parent, add it as a child to the parent category
                 Map<String, Object> parentCategory = categoryLookup.get(parentCategoryId);
-                if (parentCategory != null) {
+                if (parentCategory != null && !parentCategory.isEmpty()) {
                     ((List<Map<String, Object>>) parentCategory.get("children")).add(category);
                 } else {
                     logger.warn("Parent category not found for categoryId: {}, parentCategoryId: {}", category.get("categoryId"), parentCategoryId);
@@ -16970,8 +17041,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                if (map.get("hostId") != null) {
-                    statement.setString(1, (String) map.get("hostId"));
+                String hostId = (String)map.get("hostId");
+                if (hostId != null && !hostId.isBlank()) {
+                    statement.setString(1, hostId);
                 } else {
                     statement.setNull(1, Types.VARCHAR);
                 }
@@ -16983,9 +17055,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(6, (String)map.get("schemaSource")); // Required
                 statement.setString(7, (String)map.get("schemaName")); // Required
 
-
-                if (map.get("schemaDesc") != null) {
-                    statement.setString(8, (String) map.get("schemaDesc"));
+                String schemaDesc = (String)map.get("schemaDesc");
+                if (schemaDesc != null && !schemaDesc.isBlank()) {
+                    statement.setString(8, schemaDesc);
                 } else {
                     statement.setNull(8, Types.VARCHAR);
                 }
@@ -16993,9 +17065,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(10, (String)map.get("schemaOwner")); // Required
                 statement.setString(11, (String)map.get("schemaStatus")); // Required
 
-
-                if (map.get("example") != null) {
-                    statement.setString(12, (String) map.get("example"));
+                String example = (String)map.get("example");
+                if (example != null && !example.isBlank()) {
+                    statement.setString(12, example);
                 } else {
                     statement.setNull(12, Types.VARCHAR);
                 }
@@ -17077,18 +17149,18 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(3, (String)map.get("specVersion"));
                 statement.setString(4, (String)map.get("schemaSource"));
                 statement.setString(5, (String)map.get("schemaName"));
-
-                if (map.get("schemaDesc") != null) {
-                    statement.setString(6, (String) map.get("schemaDesc"));
+                String schemaDesc = (String)map.get("schemaDesc");
+                if (schemaDesc != null && !schemaDesc.isBlank()) {
+                    statement.setString(6, schemaDesc);
                 } else {
                     statement.setNull(6, Types.VARCHAR);
                 }
                 statement.setString(7, (String)map.get("schemaBody"));
                 statement.setString(8, (String)map.get("schemaOwner"));
                 statement.setString(9, (String)map.get("schemaStatus"));
-
-                if (map.get("example") != null) {
-                    statement.setString(10, (String) map.get("example"));
+                String example = (String)map.get("example");
+                if (example != null && !example.isBlank()) {
+                    statement.setString(10, example);
                 } else {
                     statement.setNull(10, Types.VARCHAR);
                 }
@@ -17371,7 +17443,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     }
                 }
-                if (map != null) {
+                if (map != null && !map.isEmpty()) {
                     result = Success.of(JsonMapper.toJson(map));
                 } else {
                     result = Success.of(null); // Or perhaps Failure.of(NOT_FOUND Status) if schema must exist
@@ -17507,8 +17579,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                if (map.get("hostId") != null) {
-                    statement.setString(1, (String) map.get("hostId"));
+                String hostId = (String)map.get("hostId");
+                if (hostId != null && !hostId.isEmpty()) {
+                    statement.setString(1, hostId);
                 } else {
                     statement.setNull(1, Types.VARCHAR);
                 }
@@ -17517,9 +17590,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(3, (String)map.get("entityType")); // Required
                 statement.setString(4, (String)map.get("tagName")); // Required
 
-
-                if (map.get("tagDesc") != null) {
-                    statement.setString(5, (String) map.get("tagDesc"));
+                String tagDesc = (String)map.get("tagDesc");
+                if (tagDesc != null && !tagDesc.isBlank()) {
+                    statement.setString(5, tagDesc);
                 } else {
                     statement.setNull(5, Types.VARCHAR);
                 }
@@ -17564,9 +17637,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, (String)map.get("tagName"));
-
-                if (map.get("tagDesc") != null) {
-                    statement.setString(2, (String) map.get("tagDesc"));
+                String tagDesc = (String)map.get("tagDesc");
+                if (tagDesc != null && !tagDesc.isBlank()) {
+                    statement.setString(2, tagDesc);
                 } else {
                     statement.setNull(2, Types.VARCHAR);
                 }
@@ -17768,7 +17841,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     }
                 }
-                if (map != null) {
+                if (map != null && !map.isEmpty()) {
                     result = Success.of(JsonMapper.toJson(map));
                 } else {
                     result = Success.of(null); // Or perhaps Failure.of(NOT_FOUND Status) if tag must exist
@@ -17824,10 +17897,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     }
                 }
-                if (map != null) {
+                if (map != null && !map.isEmpty()) {
                     result = Success.of(JsonMapper.toJson(map));
                 } else {
-                    result = Success.of(null); // Or perhaps Failure.of(NOT_FOUND Status) if tag must exist
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, tagName));
                 }
             }
         } catch (SQLException e) {
