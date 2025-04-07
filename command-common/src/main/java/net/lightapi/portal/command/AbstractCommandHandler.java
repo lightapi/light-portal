@@ -98,6 +98,18 @@ public abstract class AbstractCommandHandler implements HybridHandler {
         return Success.of(map);
     }
 
+    /**
+     * Subclasses can override this to invoke additional action(s) before returning. For example, send an email after
+     * the password reset event is sent. Invoke the Ansible executor in the createDeployment handler, etc.
+     * If there is no additional action, just return the input map.
+     *
+     * @param exchange The HTTP server exchange.
+     *
+     */
+    protected Result<Map<String, Object>> additionalAction(HttpServerExchange exchange, Map<String, Object> map, String userId, String host) {
+        return Success.of(map);
+    }
+
     @Override
     public ByteBuffer handle(HttpServerExchange exchange, Object input) {
         Logger logger = getLogger();
@@ -175,7 +187,10 @@ public abstract class AbstractCommandHandler implements HybridHandler {
             logger.error("Exception:", e);
             return NioUtils.toByteBuffer(getStatus(exchange, SEND_MESSAGE_EXCEPTION, e.getMessage(), config.isMultitenancy() ? host : userId));
         }
-
+        Result<Map<String, Object>> additionalActionResult = additionalAction(exchange, map, userId, host);
+        if (additionalActionResult.isFailure()) {
+            return NioUtils.toByteBuffer(getStatus(exchange, additionalActionResult.getError()));
+        }
         // --- 5. Return Success Response ---
         // Return the original input map as confirmation, serialized to JSON
         return NioUtils.toByteBuffer(customizeOutput(map));
