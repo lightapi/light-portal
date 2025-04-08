@@ -22,7 +22,7 @@ public class PortalConstants {
     public static final String DATA = "data";
     public static final String NONCE = "nonce";
 
-
+    // --- User Events ---
     public static final String USER_CREATED_EVENT = "UserCreatedEvent";
     public static final String SOCIAL_USER_CREATED_EVENT = "SocialUserCreatedEvent";
     public static final String USER_CONFIRMED_EVENT = "UserConfirmedEvent";
@@ -35,6 +35,14 @@ public class PortalConstants {
     public static final String USER_ROLES_UPDATED_EVENT = "UserRolesUpdatedEvent";
     public static final String USER_LOCKED_EVENT = "UserLockedEvent";
     public static final String USER_UNLOCKED_EVENT = "UserUnlockedEvent";
+    public static final String PRIVATE_MESSAGE_SENT_EVENT = "PrivateMessageSentEvent";
+    public static final String PAYMENT_UPDATED_EVENT = "PaymentUpdatedEvent";
+    public static final String PAYMENT_DELETED_EVENT = "PaymentDeletedEvent";
+    public static final String ORDER_CREATED_EVENT = "OrderCreatedEvent";
+    public static final String ORDER_CANCELLED_EVENT = "OrderCancelledEvent";
+    public static final String ORDER_DELIVERED_EVENT = "OrderDeliveredEvent";
+
+    // --- Host Events ---
     public static final String ORG_CREATED_EVENT = "OrgCreatedEvent";
     public static final String ORG_UPDATED_EVENT = "OrgUpdatedEvent";
     public static final String ORG_DELETED_EVENT = "OrgDeletedEvent";
@@ -42,12 +50,7 @@ public class PortalConstants {
     public static final String HOST_UPDATED_EVENT = "HostUpdatedEvent";
     public static final String HOST_DELETED_EVENT = "HostDeletedEvent";
     public static final String HOST_SWITCHED_EVENT = "HostSwitchedEvent";
-    public static final String PAYMENT_UPDATED_EVENT = "PaymentUpdatedEvent";
-    public static final String PAYMENT_DELETED_EVENT = "PaymentDeletedEvent";
-    public static final String ORDER_CREATED_EVENT = "OrderCreatedEvent";
-    public static final String ORDER_CANCELLED_EVENT = "OrderCancelledEvent";
-    public static final String ORDER_DELIVERED_EVENT = "OrderDeliveredEvent";
-    public static final String PRIVATE_MESSAGE_SENT_EVENT = "PrivateMessageSentEvent";
+
 
     // --- Reference Table Events ---
     public static final String REF_TABLE_CREATED_EVENT = "RefTableCreatedEvent";
@@ -139,7 +142,7 @@ public class PortalConstants {
     public static final String CATEGORY_UPDATED_EVENT = "CategoryUpdatedEvent";
     public static final String CATEGORY_DELETED_EVENT = "CategoryDeletedEvent";
 
-    // --- Category Events ---
+    // --- Tag Events ---
     public static final String TAG_CREATED_EVENT = "TagCreatedEvent";
     public static final String TAG_UPDATED_EVENT = "TagUpdatedEvent";
     public static final String TAG_DELETED_EVENT = "TagDeletedEvent";
@@ -170,18 +173,22 @@ public class PortalConstants {
     public static final String AUTH_PROVIDER_ROTATED_EVENT = "AuthProviderRotatedEvent";
     public static final String AUTH_PROVIDER_UPDATED_EVENT = "AuthProviderUpdatedEvent";
     public static final String AUTH_PROVIDER_DELETED_EVENT = "AuthProviderDeletedEvent";
+
     // --- Product Events ---
     public static final String PRODUCT_CREATED_EVENT = "ProductCreatedEvent";
     public static final String PRODUCT_UPDATED_EVENT = "ProductUpdatedEvent";
     public static final String PRODUCT_DELETED_EVENT = "ProductDeletedEvent";
+
     // --- Pipeline Events ---
     public static final String PIPELINE_CREATED_EVENT = "PipelineCreatedEvent";
     public static final String PIPELINE_UPDATED_EVENT = "PipelineUpdatedEvent";
     public static final String PIPELINE_DELETED_EVENT = "PipelineDeletedEvent";
+
     // --- Platform Events ---
     public static final String PLATFORM_CREATED_EVENT = "PlatformCreatedEvent";
     public static final String PLATFORM_UPDATED_EVENT = "PlatformUpdatedEvent";
     public static final String PLATFORM_DELETED_EVENT = "PlatformDeletedEvent";
+
     // --- Instance Events ---
     public static final String INSTANCE_CREATED_EVENT = "InstanceCreatedEvent";
     public static final String INSTANCE_UPDATED_EVENT = "InstanceUpdatedEvent";
@@ -192,10 +199,12 @@ public class PortalConstants {
     public static final String INSTANCE_APP_CREATED_EVENT = "InstanceAppCreatedEvent";
     public static final String INSTANCE_APP_UPDATED_EVENT = "InstanceAppUpdatedEvent";
     public static final String INSTANCE_APP_DELETED_EVENT = "InstanceAppDeletedEvent";
+
     // --- Deployment Events ---
     public static final String DEPLOYMENT_CREATED_EVENT = "DeploymentCreatedEvent";
     public static final String DEPLOYMENT_UPDATED_EVENT = "DeploymentUpdatedEvent";
     public static final String DEPLOYMENT_DELETED_EVENT = "DeploymentDeletedEvent";
+
     // --- Config Events ---
     public static final String CONFIG_CREATED_EVENT = "ConfigCreatedEvent";
     public static final String CONFIG_UPDATED_EVENT = "ConfigUpdatedEvent";
@@ -221,10 +230,12 @@ public class PortalConstants {
     public static final String CONFIG_PRODUCT_VERSION_CREATED_EVENT = "ConfigProductVersionCreatedEvent";
     public static final String CONFIG_PRODUCT_VERSION_UPDATED_EVENT = "ConfigProductVersionUpdatedEvent";
     public static final String CONFIG_PRODUCT_VERSION_DELETED_EVENT = "ConfigProductVersionDeletedEvent";
+
     // --- App Events ---
     public static final String APP_CREATED_EVENT = "AppCreatedEvent";
     public static final String APP_UPDATED_EVENT = "AppUpdatedEvent";
     public static final String APP_DELETED_EVENT = "AppDeletedEvent";
+
     // --- Client Events ---
     public static final String CLIENT_CREATED_EVENT = "ClientCreatedEvent";
     public static final String CLIENT_UPDATED_EVENT = "ClientUpdatedEvent";
