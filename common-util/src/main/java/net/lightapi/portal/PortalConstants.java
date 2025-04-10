@@ -241,5 +241,9 @@ public class PortalConstants {
     public static final String CLIENT_UPDATED_EVENT = "ClientUpdatedEvent";
     public static final String CLIENT_DELETED_EVENT = "ClientDeletedEvent";
 
+    // --- Schedule Events ---
+    public static final String SCHEDULE_CREATED_EVENT = "ScheduleCreatedEvent";
+    public static final String SCHEDULE_UPDATED_EVENT = "ScheduleUpdatedEvent";
+    public static final String SCHEDULE_DELETED_EVENT = "ScheduleDeletedEvent";
 
 }
