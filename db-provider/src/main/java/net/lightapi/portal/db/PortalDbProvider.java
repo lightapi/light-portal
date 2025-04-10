@@ -411,4 +411,12 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> getTagByName(String hostId, String tagName);
     Result<String> getTagByType(String hostId, String entityType);
 
+    Result<String> createSchedule(Map<String, Object> event);
+    Result<String> updateSchedule(Map<String, Object> event);
+    Result<String> deleteSchedule(Map<String, Object> event);
+    Result<String> getSchedule(int offset, int limit, String hostId, String scheduleId, String scheduleName, String frequencyUnit,
+                             Integer frequencyTime, String eventTopic, String eventType, String eventData);
+    Result<String> getScheduleLabel(String hostId);
+    Result<String> getScheduleById(String scheduleId);
+
 }
