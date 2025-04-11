@@ -47,3 +47,9 @@ marketApplicationId: ${portal.marketApplication:market}
 # Maproot Streams
 # Kafka Streams Maproot application.id which is the consumer group.id
 maprootApplicationId: ${portal.maprootApplication:maproot}
+
+# Schedule Streams
+# Kafka Streams Schedule application.id which is the consumer group.id
+scheduleApplicationId: ${portal.scheduleApplication:schedule}
+# Kafka Streams Schedule topic
+scheduleTopic: ${portal.scheduleTopic:light-scheduler}

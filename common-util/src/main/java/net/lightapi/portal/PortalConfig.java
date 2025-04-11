@@ -30,6 +30,8 @@ public class PortalConfig {
     String nonceTopic;
     String marketApplicationId;
     String maprootApplicationId;
+    String scheduleApplicationId;
+    String scheduleTopic;
 
 
     public PortalConfig() {
@@ -185,5 +187,21 @@ public class PortalConfig {
 
     public void setMaprootApplicationId(String maprootApplicationId) {
         this.maprootApplicationId = maprootApplicationId;
+    }
+
+    public String getScheduleApplicationId() {
+        return scheduleApplicationId;
+    }
+
+    public void setScheduleApplicationId(String scheduleApplicationId) {
+        this.scheduleApplicationId = scheduleApplicationId;
+    }
+
+    public String getScheduleTopic() {
+        return scheduleTopic;
+    }
+
+    public void setScheduleTopic(String scheduleTopic) {
+        this.scheduleTopic = scheduleTopic;
     }
 }
