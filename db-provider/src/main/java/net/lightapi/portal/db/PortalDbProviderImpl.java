@@ -17968,8 +17968,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> createSchedule(Map<String, Object> event) {
         final String sql = "INSERT INTO schedule_t(schedule_id, host_id, schedule_name, frequency_unit, frequency_time, " +
-                "event_topic, event_type, event_data, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                "start_ts, event_topic, event_type, event_data, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String scheduleId = (String) map.get("scheduleId"); // Get scheduleId for PK, return, logging
@@ -17988,18 +17988,19 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(4, (String)map.get("frequencyUnit"));
                 // 5. frequency_time (Required, Integer)
                 statement.setInt(5, ((Number) map.get("frequencyTime")).intValue());
+                statement.setObject(6, OffsetDateTime.parse((String)map.get("startTs")));
                 // 6. event_topic (Required)
-                statement.setString(6, (String)map.get("eventTopic"));
+                statement.setString(7, (String)map.get("eventTopic"));
                 // 7. event_type (Required)
-                statement.setString(7, (String)map.get("eventType"));
+                statement.setString(8, (String)map.get("eventType"));
                 // 8. event_data (Required, TEXT - assuming JSON stored as string)
-                statement.setString(8, (String)map.get("eventData"));
+                statement.setString(9, (String)map.get("eventData"));
 
                 // 9. update_user (From event metadata)
-                statement.setString(9, (String)event.get(Constants.USER));
+                statement.setString(10, (String)event.get(Constants.USER));
 
                 // 10. update_ts (From event metadata)
-                statement.setObject(10, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setObject(11, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
 
                 // Execute insert
@@ -18044,7 +18045,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         // SQL statement for updating schedule_t
         // Assuming host_id might not be typically updated, focusing on schedule details
         final String sql = "UPDATE schedule_t SET schedule_name = ?, frequency_unit = ?, frequency_time = ?, " +
-                "event_topic = ?, event_type = ?, event_data = ?, update_user = ?, update_ts = ? " +
+                "start_ts = ?, event_topic = ?, event_type = ?, event_data = ?, update_user = ?, update_ts = ? " +
                 "WHERE schedule_id = ?";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -18061,21 +18062,22 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(2, (String)map.get("frequencyUnit"));
                 // 3. frequency_time (Required, Integer)
                 statement.setInt(3, ((Number) map.get("frequencyTime")).intValue());
+                statement.setObject(4, OffsetDateTime.parse((String)map.get("startTs")));
                 // 4. event_topic (Required)
-                statement.setString(4, (String)map.get("eventTopic"));
+                statement.setString(5, (String)map.get("eventTopic"));
                 // 5. event_type (Required)
-                statement.setString(5, (String)map.get("eventType"));
+                statement.setString(6, (String)map.get("eventType"));
                 // 6. event_data (Required, TEXT - assuming JSON stored as string)
-                statement.setString(6, (String)map.get("eventData"));
+                statement.setString(7, (String)map.get("eventData"));
 
                 // 7. update_user (From event metadata)
-                statement.setString(7, (String)event.get(Constants.USER));
+                statement.setString(8, (String)event.get(Constants.USER));
 
                 // 8. update_ts (From event metadata)
-                statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setObject(9, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
                 // 9. schedule_id (For WHERE clause - Required)
-                statement.setString(9, scheduleId);
+                statement.setString(10, scheduleId);
 
 
                 // Execute update
@@ -18163,12 +18165,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> getSchedule(int offset, int limit, String hostId, String scheduleId, String scheduleName, String frequencyUnit,
-                                      Integer frequencyTime, String eventTopic, String eventType, String eventData) {
+                                      Integer frequencyTime, String startTs, String eventTopic, String eventType, String eventData) {
         Result<String> result = null;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
                 "schedule_id, host_id, schedule_name, frequency_unit, frequency_time, " +
-                "event_topic, event_type, event_data, update_user, update_ts\n" +
+                "start_ts, event_topic, event_type, event_data, update_user, update_ts\n" +
                 "FROM schedule_t\n" +
                 "WHERE 1=1\n"); // Start WHERE clause
 
@@ -18226,6 +18228,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("scheduleName", resultSet.getString("schedule_name"));
                     map.put("frequencyUnit", resultSet.getString("frequency_unit"));
                     map.put("frequencyTime", resultSet.getInt("frequency_time"));
+                    map.put("startTs", resultSet.getObject("start_ts") != null ? resultSet.getObject("start_ts", OffsetDateTime.class) : null);
                     map.put("eventTopic", resultSet.getString("event_topic"));
                     map.put("eventType", resultSet.getString("event_type"));
                     map.put("eventData", resultSet.getString("event_data")); // Assuming TEXT -> String
@@ -18311,6 +18314,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         scheduleMap.put("scheduleName", resultSet.getString("schedule_name"));
                         scheduleMap.put("frequencyUnit", resultSet.getString("frequency_unit"));
                         scheduleMap.put("frequencyTime", resultSet.getInt("frequency_time"));
+                        scheduleMap.put("startTs", resultSet.getObject("start_ts") != null ? resultSet.getObject("start_ts", OffsetDateTime.class) : null);
                         scheduleMap.put("eventTopic", resultSet.getString("event_topic"));
                         scheduleMap.put("eventType", resultSet.getString("event_type"));
                         scheduleMap.put("eventData", resultSet.getString("event_data")); // Assuming TEXT -> String
