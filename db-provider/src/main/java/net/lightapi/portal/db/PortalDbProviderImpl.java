@@ -16356,6 +16356,87 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
+    public Result<String> updateDeploymentJobId(Map<String, Object> event) {
+        final String sql = "UPDATE deployment_t SET platform_job_id = ?, update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? and deployment_id = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, (String)map.get("platformJobId"));
+                statement.setString(2, (String)event.get(Constants.USER));
+                statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setString(4, (String)event.get(Constants.HOST));
+                statement.setString(5, (String)map.get("deploymentId"));
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to update the platform job id with deploymentId " + map.get("deploymentId"));
+                }
+                conn.commit();
+                result = Success.of((String)map.get("deploymentId"));
+                insertNotification(event, true, null);
+            }  catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            }  catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        }   catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
+    public Result<String> updateDeploymentStatus(Map<String, Object> event) {
+        final String sql = "UPDATE deployment_t SET deployment_status = ?, update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? and deployment_id = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, (String)map.get("deploymentStatus"));
+                statement.setString(2, (String)event.get(Constants.USER));
+                statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setString(4, (String)event.get(Constants.HOST));
+                statement.setString(5, (String)map.get("deploymentId"));
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to update the deployment status with deploymentId " + map.get("deploymentId"));
+                }
+                conn.commit();
+                result = Success.of((String)map.get("deploymentId"));
+                insertNotification(event, true, null);
+            }  catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            }  catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        }   catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
     public Result<String> deleteDeployment(Map<String, Object> event) {
         final String sql = "DELETE FROM deployment_t WHERE host_id = ? AND deployment_id = ?";
         Result<String> result;

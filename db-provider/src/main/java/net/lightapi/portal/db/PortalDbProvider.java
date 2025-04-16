@@ -376,6 +376,8 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> getPlatformLabel(String hostId);
     Result<String> createDeployment(Map<String, Object> event);
     Result<String> updateDeployment(Map<String, Object> event);
+    Result<String> updateDeploymentJobId(Map<String, Object> event);
+    Result<String> updateDeploymentStatus(Map<String, Object> event);
     Result<String> deleteDeployment(Map<String, Object> event);
     Result<String> getDeployment(int offset, int limit, String hostId, String deploymentId, String instanceId, String deploymentStatus,
                                  String deploymentType, String platformJobId);
