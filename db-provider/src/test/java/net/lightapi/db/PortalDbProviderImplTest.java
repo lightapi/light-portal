@@ -1,20 +1,14 @@
 package net.lightapi.db;
 
-import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
 import com.networknt.db.provider.DbProvider;
-import com.networknt.db.provider.DbProviderConfig;
 import com.networknt.db.provider.SqlDbStartupHook;
 import com.networknt.monad.Result;
 import com.networknt.service.SingletonServiceFactory;
-import com.networknt.utility.NioUtils;
-import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
 import net.lightapi.portal.db.PortalDbProvider;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import scala.Int;
 
 import java.util.List;
 import java.util.Map;

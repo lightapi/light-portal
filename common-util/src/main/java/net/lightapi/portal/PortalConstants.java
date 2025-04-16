@@ -18,9 +18,10 @@ public class PortalConstants {
     public static final String ANONYMOUS_ROLE = "anonymous";
     public static final String HOST_ADMIN_ROLE = "hostAdmin";
 
-    // event types
+    // Cloud Event
     public static final String DATA = "data";
     public static final String NONCE = "nonce";
+    public static final String TOPIC = "topic"; // target topic name as an CloudEvent extension.
 
     // --- User Events ---
     public static final String USER_CREATED_EVENT = "UserCreatedEvent";
@@ -246,4 +247,6 @@ public class PortalConstants {
     public static final String SCHEDULE_UPDATED_EVENT = "ScheduleUpdatedEvent";
     public static final String SCHEDULE_DELETED_EVENT = "ScheduleDeletedEvent";
 
+    // --- Platform Queried Events ---
+    public static final String PLATFORM_QUERIED_EVENT = "PlatformQueriedEvent";
 }
