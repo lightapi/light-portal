@@ -623,13 +623,3 @@ public class PeerStatusUpdatedEvent extends org.apache.avro.specific.SpecificRec
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
