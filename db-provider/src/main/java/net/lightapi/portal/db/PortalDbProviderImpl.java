@@ -14,10 +14,7 @@ import org.slf4j.LoggerFactory;
 
 import java.sql.*;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static com.networknt.db.provider.SqlDbStartupHook.ds;
 import static java.sql.Types.NULL;
@@ -44,12 +41,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
 
                 // 1. table_id (Required)
-                statement.setString(1, tableId);
+                statement.setObject(1, UUID.fromString(tableId));
 
                 // 2. host_id (Optional - NULL means global)
                 String hostId = (String) map.get("hostId");
                 if (hostId != null && !hostId.isEmpty()) {
-                    statement.setString(2, hostId);
+                    statement.setObject(2, UUID.fromString(hostId));
                 } else {
                     statement.setNull(2, Types.VARCHAR); // NULL for global
                 }
@@ -167,7 +164,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
                 // 7. table_id (For WHERE clause - Required)
-                statement.setString(7, tableId);
+                statement.setObject(7, UUID.fromString(tableId));
 
                 // Execute update
                 int count = statement.executeUpdate();
@@ -208,7 +205,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, tableId);
+                statement.setObject(1, UUID.fromString(tableId));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -252,14 +249,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         // --- Modified host_id condition to include global tables ---
         if (hostId != null && !hostId.isEmpty()) {
             whereClause.append("("); // Start OR group
-            addCondition(whereClause, parameters, "host_id", hostId); // Tenant-specific tables
+            addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
             whereClause.append(" OR host_id IS NULL)");         // Include global tables
         } else {
             // If hostId is null or empty, only fetch global tables
             addCondition(whereClause, parameters, "host_id", null); // Fetch only global
         }
         // --- Rest of the conditions ---
-        addCondition(whereClause, parameters, "table_id", tableId);
+        addCondition(whereClause, parameters, "table_id", tableId != null ? UUID.fromString(tableId) : null);
         addCondition(whereClause, parameters, "table_name", tableName);
         addCondition(whereClause, parameters, "table_desc", tableDesc); // Might need LIKE for descriptions
         addCondition(whereClause, parameters, "active", active);
@@ -295,8 +292,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("tableId", resultSet.getString("table_id"));
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("tableId", resultSet.getObject("table_id", UUID.class));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("tableName", resultSet.getString("table_name"));
                     map.put("tableDesc", resultSet.getString("table_desc"));
                     map.put("active", resultSet.getBoolean("active"));
@@ -335,14 +332,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             // No need for setAutoCommit(false) for a SELECT
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, tableId); // Set the tableId parameter
+                statement.setObject(1, UUID.fromString(tableId)); // Set the tableId parameter
 
                 try (ResultSet resultSet = statement.executeQuery()) {
                     // Check if a row was found
                     if (resultSet.next()) {
                         map = new HashMap<>(); // Create map only if found
-                        map.put("tableId", resultSet.getString("table_id"));
-                        map.put("hostId", resultSet.getString("host_id"));
+                        map.put("tableId", resultSet.getObject("table_id", UUID.class));
+                        map.put("hostId", resultSet.getObject("host_id", UUID.class));
                         map.put("tableName", resultSet.getString("table_name"));
                         map.put("tableDesc", resultSet.getString("table_desc"));
                         map.put("active", resultSet.getBoolean("active"));
@@ -396,7 +393,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
             // Set the hostId parameter only if it's part of the query
             if (hostId != null && !hostId.isEmpty()) {
-                preparedStatement.setString(1, hostId);
+                preparedStatement.setObject(1, UUID.fromString(hostId));
             }
 
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -435,9 +432,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
 
                 // 1. value_id (Required)
-                statement.setString(1, valueId);
+                statement.setObject(1, UUID.fromString(valueId));
                 // 2. table_id (Required)
-                statement.setString(2, (String)map.get("tableId"));
+                statement.setObject(2, UUID.fromString((String)map.get("tableId")));
                 // 3. value_code (Required)
                 statement.setString(3, (String)map.get("valueCode"));
 
@@ -502,7 +499,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
                 // Success path
                 conn.commit();
-                result =  Success.of(valueId); // Return valueId
+                result =  Success.of(valueId);
                 insertNotification(event, true, null);
 
             } catch (SQLException e) {
@@ -539,7 +536,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
 
                 // 1. table_id (Required in update payload?) - Assuming it might change
-                statement.setString(1, (String)map.get("tableId"));
+                statement.setObject(1, UUID.fromString((String)map.get("tableId")));
                 // 2. value_code (Required in update payload)
                 statement.setString(2, (String)map.get("valueCode"));
 
@@ -598,7 +595,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setObject(9, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
                 // 10. value_id (For WHERE clause - Required)
-                statement.setString(10, valueId);
+                statement.setObject(10, UUID.fromString(valueId));
 
                 // Execute update
                 int count = statement.executeUpdate();
@@ -608,7 +605,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
                 // Success path
                 conn.commit();
-                result =  Success.of(valueId); // Return valueId
+                result =  Success.of(valueId);
                 insertNotification(event, true, null);
 
             } catch (SQLException e) {
@@ -639,7 +636,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, valueId);
+                statement.setObject(1, UUID.fromString(valueId));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -648,7 +645,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     throw new SQLException("failed to delete the reference value with id " + valueId + " - record not found.");
                 }
                 conn.commit();
-                result =  Success.of(valueId); // Return valueId
+                result =  Success.of(valueId);
                 insertNotification(event, true, null);
 
             } catch (SQLException e) {
@@ -684,8 +681,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         StringBuilder whereClause = new StringBuilder();
 
         // Add conditions based on input parameters
-        addCondition(whereClause, parameters, "value_id", valueId);
-        addCondition(whereClause, parameters, "table_id", tableId);
+        addCondition(whereClause, parameters, "value_id", valueId != null ? UUID.fromString(valueId) : null);
+        addCondition(whereClause, parameters, "table_id", tableId != null ? UUID.fromString(tableId) : null);
         addCondition(whereClause, parameters, "value_code", valueCode);
         addCondition(whereClause, parameters, "value_desc", valueDesc); // Might need LIKE for descriptions
         addCondition(whereClause, parameters, "display_order", displayOrder);
@@ -723,8 +720,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("valueId", resultSet.getString("value_id"));
-                    map.put("tableId", resultSet.getString("table_id"));
+                    map.put("valueId", resultSet.getObject("value_id", UUID.class));
+                    map.put("tableId", resultSet.getObject("table_id", UUID.class));
                     map.put("valueCode", resultSet.getString("value_code"));
                     map.put("valueDesc", resultSet.getString("value_desc"));
                     map.put("startTime", resultSet.getObject("start_time") != null ? resultSet.getObject("start_time", OffsetDateTime.class) : null);
@@ -766,14 +763,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             // No setAutoCommit(false) needed for SELECT
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, valueId); // Set the valueId parameter
+                statement.setObject(1, UUID.fromString(valueId));
 
                 try (ResultSet resultSet = statement.executeQuery()) {
                     // Check if a row was found
                     if (resultSet.next()) {
                         refValueMap = new HashMap<>(); // Create map only if found
-                        refValueMap.put("valueId", resultSet.getString("value_id"));
-                        refValueMap.put("tableId", resultSet.getString("table_id"));
+                        refValueMap.put("valueId", resultSet.getObject("value_id", UUID.class));
+                        refValueMap.put("tableId", resultSet.getObject("table_id", UUID.class));
                         refValueMap.put("valueCode", resultSet.getString("value_code"));
                         refValueMap.put("valueDesc", resultSet.getString("value_desc"));
                         refValueMap.put("startTime", resultSet.getObject("start_time") != null ? resultSet.getObject("start_time", OffsetDateTime.class) : null);
@@ -816,7 +813,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
 
-            preparedStatement.setString(1, tableId); // Set the tableId parameter
+            preparedStatement.setObject(1, UUID.fromString(tableId));
 
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 // Iterate through results and build the label map list
@@ -863,7 +860,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
 
                 // 1. value_id (Required, part of PK)
-                statement.setString(1, valueId);
+                statement.setObject(1, UUID.fromString(valueId));
 
                 // 2. language (Required, part of PK)
                 statement.setString(2, language);
@@ -943,7 +940,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
 
                 // 2. value_id (For WHERE clause)
-                statement.setString(2, valueId);
+                statement.setObject(2, UUID.fromString(valueId));
 
                 // 3. language (For WHERE clause)
                 statement.setString(3, language);
@@ -1000,7 +997,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
 
                 // Set parameters for the WHERE clause
-                statement.setString(1, valueId);
+                statement.setObject(1, UUID.fromString(valueId));
                 statement.setString(2, language);
 
                 // Execute delete
@@ -1047,7 +1044,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         StringBuilder whereClause = new StringBuilder();
 
         // Add conditions based on input parameters using the helper
-        addCondition(whereClause, parameters, "value_id", valueId);
+        addCondition(whereClause, parameters, "value_id", valueId != null ? UUID.fromString(valueId) : null);
         addCondition(whereClause, parameters, "language", language);
         addCondition(whereClause, parameters, "value_label", valueLabel); // Might need LIKE for labels
 
@@ -1085,7 +1082,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         isFirstRow = false;
                     }
                     // Populate map with data for the current row
-                    map.put("valueId", resultSet.getString("value_id"));
+                    map.put("valueId", resultSet.getObject("value_id", UUID.class));
                     map.put("language", resultSet.getString("language"));
                     map.put("valueLabel", resultSet.getString("value_label"));
 
@@ -1130,7 +1127,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
 
                 // 1. relation_id (Required)
-                statement.setString(1, relationId);
+                statement.setObject(1, UUID.fromString(relationId));
                 // 2. relation_name (Required)
                 statement.setString(2, (String)map.get("relationName"));
                 // 3. relation_desc (Required)
@@ -1212,7 +1209,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
                 // 5. relation_id (For WHERE clause - Required)
-                statement.setString(5, relationId);
+                statement.setObject(5, UUID.fromString(relationId));
 
 
                 // Execute update
@@ -1272,7 +1269,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
 
                 // Set parameter for the WHERE clause
-                statement.setString(1, relationId);
+                statement.setObject(1, UUID.fromString(relationId));
 
                 // Execute delete
                 int count = statement.executeUpdate();
@@ -1319,7 +1316,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         StringBuilder whereClause = new StringBuilder();
 
         // Add conditions based on input parameters using the helper
-        addCondition(whereClause, parameters, "relation_id", relationId);
+        addCondition(whereClause, parameters, "relation_id", relationId != null ? UUID.fromString(relationId) : null);
         addCondition(whereClause, parameters, "relation_name", relationName);
         addCondition(whereClause, parameters, "relation_desc", relationDesc); // Might need LIKE
 
@@ -1357,7 +1354,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         isFirstRow = false;
                     }
                     // Populate map with data for the current row
-                    map.put("relationId", resultSet.getString("relation_id"));
+                    map.put("relationId", resultSet.getObject("relation_id", UUID.class));
                     map.put("relationName", resultSet.getString("relation_name"));
                     map.put("relationDesc", resultSet.getString("relation_desc"));
                     map.put("updateUser", resultSet.getString("update_user"));
@@ -1408,11 +1405,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
 
                 // 1. relation_id (Required, part of PK)
-                statement.setString(1, relationId);
+                statement.setObject(1, UUID.fromString(relationId));
                 // 2. value_id_from (Required, part of PK)
-                statement.setString(2, valueIdFrom);
+                statement.setObject(2, UUID.fromString(valueIdFrom));
                 // 3. value_id_to (Required, part of PK)
-                statement.setString(3, valueIdTo);
+                statement.setObject(3, UUID.fromString(valueIdTo));
 
                 // 4. active (Optional Boolean - handle default)
                 if (map.containsKey("active") && map.get("active") instanceof Boolean) {
@@ -1507,11 +1504,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
                 // Set parameters for the WHERE clause (PK parts)
                 // 4. relation_id
-                statement.setString(4, relationId);
+                statement.setObject(4, UUID.fromString(relationId));
                 // 5. value_id_from
-                statement.setString(5, valueIdFrom);
+                statement.setObject(5, UUID.fromString(valueIdFrom));
                 // 6. value_id_to
-                statement.setString(6, valueIdTo);
+                statement.setObject(6, UUID.fromString(valueIdTo));
 
 
                 // Execute update
@@ -1567,9 +1564,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
 
                 // Set parameters for the WHERE clause (PK parts)
-                statement.setString(1, relationId);
-                statement.setString(2, valueIdFrom);
-                statement.setString(3, valueIdTo);
+                statement.setObject(1, UUID.fromString(relationId));
+                statement.setObject(2, UUID.fromString(valueIdFrom));
+                statement.setObject(3, UUID.fromString(valueIdTo));
 
                 // Execute delete
                 int count = statement.executeUpdate();
@@ -1616,9 +1613,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         StringBuilder whereClause = new StringBuilder();
 
         // Add conditions based on input parameters using the helper
-        addCondition(whereClause, parameters, "relation_id", relationId);
-        addCondition(whereClause, parameters, "value_id_from", valueIdFrom);
-        addCondition(whereClause, parameters, "value_id_to", valueIdTo);
+        addCondition(whereClause, parameters, "relation_id", relationId != null ? UUID.fromString(relationId) : null);
+        addCondition(whereClause, parameters, "value_id_from", valueIdFrom != null ? UUID.fromString(valueIdFrom) : null);
+        addCondition(whereClause, parameters, "value_id_to", valueIdTo != null ? UUID.fromString(valueIdTo) : null);
         addCondition(whereClause, parameters, "active", active);
 
 
@@ -1656,9 +1653,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         isFirstRow = false;
                     }
                     // Populate map with data for the current row
-                    map.put("relationId", resultSet.getString("relation_id"));
-                    map.put("valueIdFrom", resultSet.getString("value_id_from"));
-                    map.put("valueIdTo", resultSet.getString("value_id_to"));
+                    map.put("relationId", resultSet.getObject("relation_id", UUID.class));
+                    map.put("valueIdFrom", resultSet.getObject("value_id_from", UUID.class));
+                    map.put("valueIdTo", resultSet.getObject("value_id_to", UUID.class));
                     map.put("active", resultSet.getBoolean("active"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
@@ -1718,11 +1715,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, hostId);
+            preparedStatement.setObject(1, UUID.fromString(hostId));
             preparedStatement.setString(2, active);
             preparedStatement.setString(3, editable);
             preparedStatement.setString(4, common);
-            preparedStatement.setString(5, hostId);
+            preparedStatement.setObject(5, UUID.fromString(hostId));
             preparedStatement.setString(6, tableName);
             preparedStatement.setString(7, tableName);
             preparedStatement.setString(8, tableName);
@@ -1742,13 +1739,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         isFirstRow = false;
                     }
 
-                    map.put("tableId", resultSet.getString("table_id"));
+                    map.put("tableId", resultSet.getObject("table_id", UUID.class));
                     map.put("tableName", resultSet.getString("table_name"));
                     map.put("tableDesc", resultSet.getString("table_desc"));
                     map.put("active", resultSet.getString("active"));
                     map.put("editable", resultSet.getString("editable"));
                     map.put("common", resultSet.getString("common"));
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     tables.add(map);
                 }
             }
@@ -1827,8 +1824,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, email);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
-                        map.put("hostId", resultSet.getString("host_id"));
-                        map.put("userId", resultSet.getString("user_id"));
+                        map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                        map.put("userId", resultSet.getObject("user_id", UUID.class));
                         map.put("email", resultSet.getString("email"));
                         map.put("userType", resultSet.getString("user_type"));
                         map.put("entityId", resultSet.getString("entity_id"));
@@ -1872,8 +1869,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, email);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
-                        map.put("hostId", resultSet.getString("host_id"));
-                        map.put("userId", resultSet.getString("user_id"));
+                        map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                        map.put("userId", resultSet.getObject("user_id", UUID.class));
                         map.put("email", resultSet.getString("email"));
                         map.put("password", resultSet.getString("password"));
                         map.put("language", resultSet.getString("language"));
@@ -1929,11 +1926,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, userId);
+                statement.setObject(1, UUID.fromString(userId));
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
-                        map.put("hostId", resultSet.getString("host_id"));
-                        map.put("userId", resultSet.getString("user_id"));
+                        map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                        map.put("userId", resultSet.getObject("user_id", UUID.class));
                         map.put("email", resultSet.getString("email"));
                         map.put("password", resultSet.getString("password"));
                         map.put("language", resultSet.getString("language"));
@@ -2008,8 +2005,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, entityId);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
-                        map.put("hostId", resultSet.getString("host_id"));
-                        map.put("userId", resultSet.getString("user_id"));
+                        map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                        map.put("userId", resultSet.getObject("user_id", UUID.class));
                         map.put("entityId", resultSet.getString("entity_id"));
                         map.put("email", resultSet.getString("email"));
                         map.put("password", resultSet.getString("password"));
@@ -2070,8 +2067,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(2, cryptoAddress);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
-                        map.put("hostId", resultSet.getInt("host_id"));
-                        map.put("userId", resultSet.getString("user_id"));
+                        map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                        map.put("userId", resultSet.getObject("user_id", UUID.class));
                         map.put("firstName", resultSet.getInt("first_name"));
                         map.put("lastName", resultSet.getString("last_name"));
                         map.put("email", resultSet.getString("email"));
@@ -2176,8 +2173,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
-                    map.put("userId", resultSet.getString("user_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("userId", resultSet.getObject("user_id", UUID.class));
                     map.put("email", resultSet.getString("email"));
                     map.put("language", resultSet.getString("language"));
                     map.put("userType", resultSet.getString("user_type"));
@@ -2232,7 +2229,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "user_id", userId);
+        addCondition(whereClause, parameters, "user_id", userId != null ? UUID.fromString(userId) : null);
         addCondition(whereClause, parameters, "nonce", nonce);
         addCondition(whereClause, parameters, "event_class", eventClass);
         addCondition(whereClause, parameters, "is_processed", successFlag);
@@ -2269,8 +2266,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
-                    map.put("userId", resultSet.getString("user_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("userId", resultSet.getObject("user_id", UUID.class));
                     map.put("nonce", resultSet.getLong("nonce"));
                     map.put("eventClass", resultSet.getString("event_class"));
                     map.put("processFlag", resultSet.getBoolean("is_processed"));
@@ -2420,7 +2417,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
                 // no duplicate record, insert the user into database and write a success notification.
                 try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
-                    statement.setString(1, (String)map.get("userId"));
+                    statement.setObject(1, UUID.fromString((String)map.get("userId")));
                     statement.setString(2, (String)map.get("email"));
                     statement.setString(3, (String)map.get("password"));
                     statement.setString(4, (String)map.get("language"));
@@ -2498,16 +2495,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     statement.execute();
                 }
                 try (PreparedStatement statement = conn.prepareStatement(insertUserHost)) {
-                    statement.setString(1, (String)map.get("userId"));
-                    statement.setString(2, (String)map.get("hostId"));
+                    statement.setObject(1, UUID.fromString((String)map.get("userId")));
+                    statement.setObject(2, UUID.fromString((String)map.get("hostId")));
                     statement.execute();
                 }
                 // insert customer or employee based on user_type
                 if(map.get("userType").equals("E")) {
                     try (PreparedStatement statement = conn.prepareStatement(insertEmployee)) {
-                        statement.setString(1, (String)map.get("hostId"));
+                        statement.setObject(1, UUID.fromString((String)map.get("hostId")));
                         statement.setString(2, (String)map.get("entityId"));
-                        statement.setString(3, (String)map.get("userId"));
+                        statement.setObject(3, UUID.fromString((String)map.get("userId")));
                         String managerId = (String)map.get("managerId");
                         if(map.get("managerId") != null && !managerId.isEmpty()) {
                             statement.setString(4, managerId);
@@ -2518,9 +2515,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                 } else if(map.get("userType").equals("C")) {
                     try (PreparedStatement statement = conn.prepareStatement(insertCustomer)) {
-                        statement.setString(1, (String)map.get("hostId"));
+                        statement.setObject(1, UUID.fromString((String)map.get("hostId")));
                         statement.setString(2, (String)map.get("entityId"));
-                        statement.setString(3, (String)map.get("userId"));
+                        statement.setObject(3, UUID.fromString((String)map.get("userId")));
                         String referralId = (String)map.get("referralId");
                         if(referralId != null && !referralId.isEmpty()) {
                             statement.setString(4, referralId);
@@ -2561,7 +2558,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection connection = ds.getConnection();
              PreparedStatement statement = connection.prepareStatement(updateNonceSql)) {
             Integer nonce = null;
-            statement.setString(1, userId);
+            statement.setObject(1, UUID.fromString(userId));
             try (ResultSet resultSet = statement.executeQuery()) {
                 if(resultSet.next()){
                     nonce = resultSet.getInt(1);
@@ -2648,7 +2645,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()){
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(updateUserByUserId)) {
-                statement.setString(1, (String)map.get("userId"));
+                statement.setObject(1, UUID.fromString((String)map.get("userId")));
                 statement.execute();
                 conn.commit();
                 result = Success.of((String)map.get("userId"));
@@ -2691,7 +2688,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             try {
                 try (PreparedStatement statement = conn.prepareStatement(queryIdEmail)) {
-                    statement.setString(1, (String)map.get("userId"));
+                    statement.setObject(1, UUID.fromString((String)map.get("userId")));
                     statement.setString(2, (String)map.get("email"));
                     try (ResultSet resultSet = statement.executeQuery()) {
                         if (resultSet.next()) {
@@ -2702,8 +2699,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 // no duplicate record, insert the user into database and write a success notification.
                 try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
-                    statement.setString(1, (String)map.get("hostId"));
-                    statement.setString(2, (String)map.get("userId"));
+                    statement.setObject(1, UUID.fromString((String)map.get("hostId")));
+                    statement.setObject(2, UUID.fromString((String)map.get("userId")));
                     String firstName = (String)map.get("firstName");
                     if (firstName != null && !firstName.isEmpty())
                         statement.setString(3, firstName);
@@ -2867,7 +2864,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 } else {
                     statement.setNull(11, NULL);
                 }
-                statement.setString(12, (String)map.get("userId"));
+                statement.setObject(12, UUID.fromString((String)map.get("userId")));
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     // no record is updated, write an error notification.
@@ -2883,7 +2880,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         } else {
                             updateStatement.setNull(1, NULL);
                         }
-                        updateStatement.setString(2, (String)map.get("hostId"));
+                        updateStatement.setObject(2, UUID.fromString((String)map.get("hostId")));
                         updateStatement.setString(3, (String)map.get("entityId"));
                         updateStatement.execute();
                     }
@@ -2895,7 +2892,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         } else {
                             updateStatement.setNull(1, NULL);
                         }
-                        updateStatement.setString(2, (String)map.get("hostId"));
+                        updateStatement.setObject(2, UUID.fromString((String)map.get("hostId")));
                         updateStatement.setString(3, (String)map.get("entityId"));
                         updateStatement.execute();
                     }
@@ -2939,7 +2936,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteUserById)) {
-                statement.setString(1, (String)map.get("userId"));
+                statement.setObject(1, UUID.fromString((String)map.get("userId")));
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     // no record is deleted, write an error notification.
@@ -3173,7 +3170,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, hostId);
+            preparedStatement.setObject(1, UUID.fromString(hostId));
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
@@ -3204,10 +3201,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
-                statement.setString(1, (String)map.get("refreshToken"));
-                statement.setString(2, (String)map.get("hostId"));
-                statement.setString(3, (String)map.get("providerId"));
-                statement.setString(4, (String)map.get("userId"));
+                statement.setObject(1, UUID.fromString((String)map.get("refreshToken")));
+                statement.setObject(2, UUID.fromString((String)map.get("hostId")));
+                statement.setObject(3, UUID.fromString((String)map.get("providerId")));
+                statement.setObject(4, UUID.fromString((String)map.get("userId")));
                 statement.setString(5, (String)map.get("entityId"));
                 statement.setString(6, (String)map.get("userType"));
                 statement.setString(7, (String)map.get("email"));
@@ -3233,7 +3230,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     statement.setNull(11, NULL);
                 String clientId = (String)map.get("clientId");
                 if (clientId != null && !clientId.isEmpty())
-                    statement.setString(12, clientId);
+                    statement.setObject(12, UUID.fromString(clientId));
                 else
                     statement.setNull(12, NULL);
                 String scope = (String)map.get("scope");
@@ -3289,8 +3286,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteApp)) {
-                statement.setString(1, (String)map.get("refreshToken"));
-                statement.setString(2, (String)map.get("userId"));
+                statement.setObject(1, UUID.fromString((String)map.get("refreshToken")));
+                statement.setObject(2, UUID.fromString((String)map.get("userId")));
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     // no record is deleted, write an error notification.
@@ -3337,14 +3334,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "r.refresh_token", refreshToken);
-        addCondition(whereClause, parameters, "r.user_id", userId);
+        addCondition(whereClause, parameters, "r.refresh_token", refreshToken != null ? UUID.fromString(refreshToken) : null);
+        addCondition(whereClause, parameters, "r.user_id", userId != null ? UUID.fromString(userId) : null);
         addCondition(whereClause, parameters, "r.user_type", userType);
         addCondition(whereClause, parameters, "u.entity_id", entityId);
         addCondition(whereClause, parameters, "u.email", email);
         addCondition(whereClause, parameters, "r.first_name", firstName);
         addCondition(whereClause, parameters, "r.last_name", lastName);
-        addCondition(whereClause, parameters, "r.client_id", clientId);
+        addCondition(whereClause, parameters, "r.client_id", clientId != null ? UUID.fromString(clientId) : null);
         addCondition(whereClause, parameters, "a.app_id", appId);
         addCondition(whereClause, parameters, "a.app_name", appName);
         addCondition(whereClause, parameters, "r.scope", scope);
@@ -3389,15 +3386,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         isFirstRow = false;
                     }
 
-                    map.put("hostId", resultSet.getString("host_id"));
-                    map.put("refreshToken", resultSet.getString("refresh_token"));
-                    map.put("userId", resultSet.getString("user_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("refreshToken", resultSet.getObject("refresh_token", UUID.class));
+                    map.put("userId", resultSet.getObject("user_id", UUID.class));
                     map.put("userType", resultSet.getString("user_type"));
                     map.put("entityId", resultSet.getString("entity_id"));
                     map.put("email", resultSet.getString("email"));
                     map.put("firstName", resultSet.getString("first_name"));
                     map.put("lastName", resultSet.getString("last_name"));
-                    map.put("clientId", resultSet.getString("client_id"));
+                    map.put("clientId", resultSet.getObject("client_id", UUID.class));
                     map.put("appId", resultSet.getString("app_id"));
                     map.put("appName", resultSet.getString("app_name"));
                     map.put("scope", resultSet.getString("scope"));
@@ -3440,13 +3437,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, refreshToken);
+                statement.setObject(1, UUID.fromString(refreshToken));
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
-                        map.put("refreshToken", resultSet.getString("refresh_token"));
-                        map.put("hostId", resultSet.getString("host_id"));
-                        map.put("providerId", resultSet.getString("provider_id"));
-                        map.put("userId", resultSet.getString("user_id"));
+                        map.put("refreshToken", resultSet.getObject("refresh_token", UUID.class));
+                        map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                        map.put("providerId", resultSet.getObject("provider_id", UUID.class));
+                        map.put("userId", resultSet.getObject("user_id", UUID.class));
                         map.put("entityId", resultSet.getString("entity_id"));
                         map.put("userType", resultSet.getString("user_type"));
                         map.put("email", resultSet.getString("email"));
@@ -3454,7 +3451,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("groups", resultSet.getString("groups"));
                         map.put("positions", resultSet.getString("positions"));
                         map.put("attributes", resultSet.getString("attributes"));
-                        map.put("clientId", resultSet.getString("client_id"));
+                        map.put("clientId", resultSet.getObject("client_id", UUID.class));
                         map.put("scope", resultSet.getString("scope"));
                         map.put("csrf", resultSet.getString("csrf"));
                         map.put("customClaim", resultSet.getString("custom_claim"));
@@ -3487,11 +3484,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)map.get("hostId"));
-                statement.setString(2, (String)map.get("providerId"));
-                statement.setString(3, (String)map.get("authCode"));
+                statement.setObject(1, UUID.fromString((String)map.get("hostId")));
+                statement.setObject(2, UUID.fromString((String)map.get("providerId")));
+                statement.setObject(3, UUID.fromString((String)map.get("authCode")));
                 if(map.containsKey("userId")) {
-                    statement.setString(4, (String)map.get("userId"));
+                    statement.setObject(4, UUID.fromString((String)map.get("userId")));
                 } else {
                     statement.setNull(4, Types.VARCHAR);
                 }
@@ -3575,8 +3572,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)map.get("hostId"));
-                statement.setString(2, (String)map.get("authCode"));
+                statement.setObject(1, UUID.fromString((String)map.get("hostId")));
+                statement.setObject(2, UUID.fromString((String)map.get("authCode")));
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     // no record is deleted, write an error notification.
@@ -3616,10 +3613,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 if (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
-                    map.put("hostId", resultSet.getString("host_id"));
-                    map.put("providerId", resultSet.getString("provider_id"));
-                    map.put("authCode", resultSet.getString("auth_code"));
-                    map.put("userId", resultSet.getString("user_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("providerId", resultSet.getObject("provider_id", UUID.class));
+                    map.put("authCode", resultSet.getObject("auth_code", UUID.class));
+                    map.put("userId", resultSet.getObject("user_id", UUID.class));
                     map.put("entityId", resultSet.getString("entity_id"));
                     map.put("userType", resultSet.getString("user_type"));
                     map.put("email", resultSet.getString("email"));
@@ -3663,8 +3660,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "auth_code", authCode);
-        addCondition(whereClause, parameters, "user_id", userId);
+        addCondition(whereClause, parameters, "auth_code", authCode != null ? UUID.fromString(authCode) : null);
+        addCondition(whereClause, parameters, "user_id", userId != null ? UUID.fromString(userId) : null);
         addCondition(whereClause, parameters, "entity_id", entityId);
         addCondition(whereClause, parameters, "user_type", userType);
         addCondition(whereClause, parameters, "email", email);
@@ -3707,9 +3704,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         isFirstRow = false;
                     }
 
-                    map.put("hostId", resultSet.getString("host_id"));
-                    map.put("authCode", resultSet.getString("auth_code"));
-                    map.put("userId", resultSet.getString("user_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("authCode", resultSet.getObject("auth_code", UUID.class));
+                    map.put("userId", resultSet.getObject("user_id", UUID.class));
                     map.put("entityId", resultSet.getString("entity_id"));
                     map.put("userType", resultSet.getString("user_type"));
                     map.put("email", resultSet.getString("email"));
@@ -3749,11 +3746,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, providerId);
+                statement.setObject(1, UUID.fromString(providerId));
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
-                        map.put("hostId", resultSet.getString("host_id"));
-                        map.put("providerId", resultSet.getString("provider_id"));
+                        map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                        map.put("providerId", resultSet.getObject("provider_id", UUID.class));
                         map.put("providerName", resultSet.getString("provider_name"));
                         map.put("jwk", resultSet.getString("jwk"));
                     }
@@ -3788,7 +3785,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "provider_id", providerId);
+        addCondition(whereClause, parameters, "provider_id", providerId != null ? UUID.fromString(providerId) : null);
         addCondition(whereClause, parameters, "provider_name", providerName);
         addCondition(whereClause, parameters, "provider_desc", providerDesc);
         addCondition(whereClause, parameters, "operation_owner", operationOwner);
@@ -3824,8 +3821,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
-                    map.put("providerId", resultSet.getString("provider_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("providerId", resultSet.getObject("provider_id", UUID.class));
                     map.put("providerName", resultSet.getString("provider_name"));
                     map.put("providerDesc", resultSet.getString("provider_desc"));
                     map.put("operationOwner", resultSet.getString("operation_owner"));
@@ -3863,8 +3860,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)map.get("hostId"));
-                statement.setString(2, (String)map.get("providerId"));
+                statement.setObject(1, UUID.fromString((String)map.get("hostId")));
+                statement.setObject(2, UUID.fromString((String)map.get("providerId")));
                 statement.setString(3, (String)map.get("providerName"));
 
                 if(map.containsKey("providerDesc")) {
@@ -3902,7 +3899,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 try (PreparedStatement keyStatement = conn.prepareStatement(keySql)) {
                     Map<String, Object> keys = (Map<String, Object>) map.get("keys");
 
-                    keyStatement.setString(1, (String)map.get("providerId"));
+                    keyStatement.setObject(1, UUID.fromString((String)map.get("providerId")));
 
                     Map<String, Object> lcMap = (Map<String, Object>) keys.get("LC");
                     // add long live current key
@@ -3989,7 +3986,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, jwk);
                 statement.setString(2, (String)event.get(Constants.USER));
                 statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(4, (String)map.get("providerId"));
+                statement.setObject(4, UUID.fromString((String)map.get("providerId")));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -3998,7 +3995,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
                 try (PreparedStatement statementInsert = conn.prepareStatement(sqlInsert)) {
                     Map<String, Object> insertMap = (Map<String, Object>) map.get("insert");
-                    statementInsert.setString(1, (String)map.get("providerId"));
+                    statementInsert.setObject(1, UUID.fromString((String)map.get("providerId")));
                     statementInsert.setString(2, (String) insertMap.get("kid"));
                     statementInsert.setString(3, (String) insertMap.get("publicKey"));
                     statementInsert.setString(4, (String) insertMap.get("privateKey"));
@@ -4016,7 +4013,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     statementUpdate.setString(1, (String) updateMap.get("keyType"));
                     statementUpdate.setString(2, (String)event.get(Constants.USER));
                     statementUpdate.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                    statementUpdate.setString(4, (String)map.get("providerId"));
+                    statementUpdate.setObject(4, UUID.fromString((String)map.get("providerId")));
                     statementUpdate.setString(5, (String)updateMap.get("kid"));
                     count = statementUpdate.executeUpdate();
                     if (count == 0) {
@@ -4025,7 +4022,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 try (PreparedStatement statementDelete = conn.prepareStatement(sqlDelete)) {
                     Map<String, Object> deleteMap = (Map<String, Object>) map.get("delete");
-                    statementDelete.setString(1, (String)map.get("providerId"));
+                    statementDelete.setObject(1, UUID.fromString((String)map.get("providerId")));
                     statementDelete.setString(2, (String)deleteMap.get("kid"));
                     count = statementDelete.executeUpdate();
                     if (count == 0) {
@@ -4082,8 +4079,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 statement.setString(5, (String)event.get(Constants.USER));
                 statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(7, (String)map.get("hostId"));
-                statement.setString(8, (String)map.get("providerId"));
+                statement.setObject(7, UUID.fromString((String)map.get("hostId")));
+                statement.setObject(8, UUID.fromString((String)map.get("providerId")));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -4119,8 +4116,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)map.get("hostId"));
-                statement.setString(2, (String)map.get("providerId"));
+                statement.setObject(1, UUID.fromString((String)map.get("hostId")));
+                statement.setObject(2, UUID.fromString((String)map.get("providerId")));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -4159,11 +4156,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, providerId);
+            preparedStatement.setObject(1, UUID.fromString(providerId));
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
-                    map.put("providerId", resultSet.getString("provider_id"));
+                    map.put("providerId", resultSet.getObject("provider_id", UUID.class));
                     map.put("kid", resultSet.getString("kid"));
                     map.put("publicKey", resultSet.getString("public_key"));
                     map.put("privateKey", resultSet.getString("private_key"));
@@ -4237,7 +4234,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("appId", resultSet.getString("app_id"));
                     map.put("appName", resultSet.getString("app_name"));
                     map.put("appDesc", resultSet.getString("app_desc"));
@@ -4285,7 +4282,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         addCondition(whereClause, parameters, "app_id", appId);
         addCondition(whereClause, parameters, "api_id", apiId);
-        addCondition(whereClause, parameters, "client_id", clientId);
+        addCondition(whereClause, parameters, "client_id", clientId != null ? UUID.fromString(clientId) : null);
         addCondition(whereClause, parameters, "client_name", clientName);
         addCondition(whereClause, parameters, "client_type", clientType);
         addCondition(whereClause, parameters, "client_profile", clientProfile);
@@ -4293,7 +4290,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         addCondition(whereClause, parameters, "custom_claim", customClaim);
         addCondition(whereClause, parameters, "redirect_uri", redirectUri);
         addCondition(whereClause, parameters, "authenticate_class", authenticateClass);
-        addCondition(whereClause, parameters, "deref_client_id", deRefClientId);
+        addCondition(whereClause, parameters, "deref_client_id", deRefClientId != null ? UUID.fromString(deRefClientId) : null);
 
         if (!whereClause.isEmpty()) {
             sqlBuilder.append("AND ").append(whereClause);
@@ -4326,8 +4323,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         isFirstRow = false;
                     }
 
-                    map.put("hostId", resultSet.getString("host_id"));
-                    map.put("clientId", resultSet.getString("client_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("clientId", resultSet.getObject("client_id", UUID.class));
                     map.put("appId", resultSet.getString("app_id"));
                     map.put("apiId", resultSet.getString("api_id"));
                     map.put("clientName", resultSet.getString("client_name"));
@@ -4337,7 +4334,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("customClaim", resultSet.getString("custom_claim"));
                     map.put("redirectUri", resultSet.getString("redirect_uri"));
                     map.put("authenticateClass", resultSet.getString("authenticate_class"));
-                    map.put("deRefClientId", resultSet.getString("deref_client_id"));
+                    map.put("deRefClientId", resultSet.getObject("deref_client_id", UUID.class));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getTimestamp("update_ts"));
                     clients.add(map);
@@ -4457,7 +4454,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 statement.setString(6, (String)event.get(Constants.USER));
                 statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(8, (String)map.get("hostId"));
+                statement.setObject(8, UUID.fromString((String)map.get("hostId")));
                 statement.setString(9, (String)map.get("appId"));
 
                 int count = statement.executeUpdate();
@@ -4495,7 +4492,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)map.get("hostId"));
+                statement.setObject(1, UUID.fromString((String)map.get("hostId")));
                 statement.setString(2, (String)map.get("appId"));
 
                 int count = statement.executeUpdate();
@@ -4530,7 +4527,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, hostId);
+            preparedStatement.setObject(1, UUID.fromString(hostId));
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
@@ -4577,7 +4574,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     statement.setNull(3, NULL);
                 }
                 statement.setString(4, (String)map.get("clientName"));
-                statement.setString(5, (String)map.get("clientId"));
+                statement.setObject(5, UUID.fromString((String)map.get("clientId")));
                 statement.setString(6, (String)map.get("clientType"));
                 statement.setString(7, (String)map.get("clientProfile"));
                 statement.setString(8, (String)map.get("clientSecret"));
@@ -4608,7 +4605,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 String deRefClientId = (String)map.get("deRefClientId");
                 if (deRefClientId != null && !deRefClientId.isEmpty()) {
-                    statement.setString(13, deRefClientId);
+                    statement.setObject(13, UUID.fromString(deRefClientId));
                 } else {
                     statement.setNull(13, NULL);
                 }
@@ -4694,14 +4691,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 String deRefClientId = (String)map.get("deRefClientId");
                 if (deRefClientId != null && !deRefClientId.isEmpty()) {
-                    statement.setString(10, deRefClientId);
+                    statement.setObject(10, UUID.fromString(deRefClientId));
                 } else {
                     statement.setNull(10, NULL);
                 }
                 statement.setString(11, (String)event.get(Constants.USER));
                 statement.setObject(12, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(13, (String)map.get("hostId"));
-                statement.setString(14, (String)map.get("clientId"));
+                statement.setObject(13, UUID.fromString((String)map.get("hostId")));
+                statement.setObject(14, UUID.fromString((String)map.get("clientId")));
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     // no record is updated, write an error notification.
@@ -4736,8 +4733,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteApp)) {
-                statement.setString(1, (String)map.get("hostId"));
-                statement.setString(2, (String)map.get("clientId"));
+                statement.setObject(1, UUID.fromString((String)map.get("hostId")));
+                statement.setObject(2, UUID.fromString((String)map.get("clientId")));
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     // no record is deleted, write an error notification.
@@ -4776,14 +4773,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, clientId);
+                statement.setObject(1, UUID.fromString(clientId));
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
-                        map.put("hostId", resultSet.getString("host_id"));
+                        map.put("hostId", resultSet.getObject("host_id", UUID.class));
                         map.put("appId", resultSet.getString("app_id"));
                         map.put("apiId", resultSet.getString("api_id"));
                         map.put("clientName", resultSet.getString("client_name"));
-                        map.put("clientId", resultSet.getString("client_id"));
+                        map.put("clientId", resultSet.getObject("client_id", UUID.class));
                         map.put("clientType", resultSet.getString("client_type"));
                         map.put("clientProfile", resultSet.getString("client_profile"));
                         map.put("clientSecret", resultSet.getString("client_secret"));
@@ -4791,7 +4788,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("customClaim", resultSet.getString("custom_claim"));
                         map.put("redirectUri", resultSet.getString("redirect_uri"));
                         map.put("authenticateClass", resultSet.getString("authenticate_class"));
-                        map.put("deRefClientId", resultSet.getString("deref_client_id"));
+                        map.put("deRefClientId", resultSet.getObject("deref_client_id", UUID.class));
                         map.put("updateUser", resultSet.getString("update_user"));
                         map.put("updateTs", resultSet.getTimestamp("update_ts"));
                     }
@@ -4825,14 +4822,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, providerId);
-                statement.setString(2, clientId);
+                statement.setObject(1, UUID.fromString(providerId));
+                statement.setObject(2, UUID.fromString(clientId));
 
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
-                        map.put("hostId", resultSet.getString("host_id"));
-                        map.put("providerId", resultSet.getString("provider_id"));
-                        map.put("clientId", resultSet.getString("client_id"));
+                        map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                        map.put("providerId", resultSet.getObject("provider_id", UUID.class));
+                        map.put("clientId", resultSet.getObject("client_id", UUID.class));
                         map.put("clientType", resultSet.getString("client_type"));
                         map.put("clientProfile", resultSet.getString("client_profile"));
                         map.put("clientSecret", resultSet.getString("client_secret"));
@@ -4840,7 +4837,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("customClaim", resultSet.getString("custom_claim"));
                         map.put("redirectUri", resultSet.getString("redirect_uri"));
                         map.put("authenticateClass", resultSet.getString("authenticate_class"));
-                        map.put("deRefClientId", resultSet.getString("deref_client_id"));
+                        map.put("deRefClientId", resultSet.getObject("deref_client_id", UUID.class));
                     }
                 }
             }
@@ -4873,16 +4870,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(2, appId);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
-                        map.put("hostId", resultSet.getString("host_id"));
+                        map.put("hostId", resultSet.getObject("host_id", UUID.class));
                         map.put("appId", resultSet.getString("app_id"));
-                        map.put("clientId", resultSet.getString("client_id"));
+                        map.put("clientId", resultSet.getObject("client_id", UUID.class));
                         map.put("clientType", resultSet.getString("client_type"));
                         map.put("clientProfile", resultSet.getString("client_profile"));
                         map.put("clientScope", resultSet.getString("client_scope"));
                         map.put("customClaim", resultSet.getString("custom_claim"));
                         map.put("redirectUri", resultSet.getString("redirect_uri"));
                         map.put("authenticateClass", resultSet.getString("authenticate_class"));
-                        map.put("deRefClientId", resultSet.getString("deref_client_id"));
+                        map.put("deRefClientId", resultSet.getObject("deref_client_id", UUID.class));
                         map.put("updateUser", resultSet.getString("update_user"));
                         map.put("updateTs", resultSet.getTimestamp("update_ts"));
                     }
@@ -5295,7 +5292,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         isFirstRow = false;
                     }
 
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("apiId", resultSet.getString("api_id"));
                     map.put("apiName", resultSet.getString("api_name"));
                     map.put("apiDesc", resultSet.getString("api_desc"));
@@ -5334,7 +5331,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, hostId);
+            preparedStatement.setObject(1, UUID.fromString(hostId));
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
@@ -5361,7 +5358,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         List<Map<String, Object>> versions = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, hostId);
+            preparedStatement.setObject(1, UUID.fromString(hostId));
             preparedStatement.setString(2, apiId);
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -5390,7 +5387,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, hostId);
+            preparedStatement.setObject(1, UUID.fromString(hostId));
             preparedStatement.setString(2, apiId);
             preparedStatement.setString(3, apiVersion);
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -5471,7 +5468,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setObject(10, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException(String.format("no record is inserted for api version %s", "hostId " + (String)event.get(Constants.HOST) + " apiId " + (String)map.get("apiId") + " apiVersion " + map.get("apiVersion")));
+                    throw new SQLException(String.format("no record is inserted for api version %s", "hostId " + event.get(Constants.HOST) + " apiId " + map.get("apiId") + " apiVersion " + map.get("apiVersion")));
                 }
                 if(endpoints != null && !endpoints.isEmpty()) {
                     // insert endpoints
@@ -5611,7 +5608,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException(String.format("no record is updated for api version %s", "hostId " + (String)event.get(Constants.HOST) + " apiId " + (String)map.get("apiId") + " apiVersion " + (String)map.get("apiVersion")));
+                    throw new SQLException(String.format("no record is updated for api version %s", "hostId " + (event.get(Constants.HOST) + " apiId " + map.get("apiId") + " apiVersion " + map.get("apiVersion"))));
                 }
                 if(endpoints != null && !endpoints.isEmpty()) {
                     // delete endpoints for the api version. the api_endpoint_scope_t will be deleted by the cascade.
@@ -5712,7 +5709,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     // no record is deleted, write an error notification.
-                    throw new SQLException(String.format("no record is deleted for api version %s", "hostId " + (String)event.get(Constants.HOST) + " apiId " + (String)map.get("apiId") + " apiVersion " + (String)map.get("apiVersion")));
+                    throw new SQLException(String.format("no record is deleted for api version %s", "hostId " + event.get(Constants.HOST) + " apiId " + map.get("apiId") + " apiVersion " + map.get("apiVersion")));
                 }
                 conn.commit();
                 result = Success.of((String)event.get(Constants.USER));
@@ -5750,12 +5747,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, hostId);
+            preparedStatement.setObject(1, UUID.fromString(hostId));
             preparedStatement.setString(2, apiId);
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("apiId", resultSet.getString("api_id"));
                     map.put("apiVersion", resultSet.getString("api_version"));
                     map.put("apiType", resultSet.getString("api_type"));
@@ -5779,7 +5776,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     private void addCondition(StringBuilder whereClause, List<Object> parameters, String columnName, String value) {
         if (value != null && !value.equals("*")) {
-            if (whereClause.length() > 0) {
+            if (!whereClause.isEmpty()) {
                 whereClause.append(" AND ");
             }
             whereClause.append(columnName);
@@ -5830,7 +5827,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     int count = statement.executeUpdate();
                     if (count == 0) {
                         // no record is updated, write an error notification.
-                        throw new SQLException(String.format("no record is updated for api version " + " hostId " + (String)event.get(Constants.HOST) + " apiId " + (String)map.get("apiId") + " apiVersion " + (String)map.get("apiVersion")));
+                        throw new SQLException(String.format("no record is updated for api version " + " hostId " + event.get(Constants.HOST) + " apiId " + map.get("apiId") + " apiVersion " + map.get("apiVersion")));
                     }
                 }
                 // delete endpoints for the api version. the api_endpoint_scope_t will be deleted by the cascade.
@@ -5971,7 +5968,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
 
 
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("apiId", resultSet.getString("api_id"));
                     map.put("apiVersion", resultSet.getString("api_version"));
                     map.put("endpoint", resultSet.getString("endpoint"));
@@ -6011,14 +6008,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, hostId);
+            preparedStatement.setObject(1, UUID.fromString(hostId));
             preparedStatement.setString(2, apiId);
             preparedStatement.setString(3, apiVersion);
             preparedStatement.setString(4, endpoint);
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("apiId", resultSet.getString("api_id"));
                     map.put("apiVersion", resultSet.getString("api_version"));
                     map.put("endpoint", resultSet.getString("endpoint"));
@@ -6055,14 +6052,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, hostId);
+            preparedStatement.setObject(1, UUID.fromString(hostId));
             preparedStatement.setString(2, apiId);
             preparedStatement.setString(3, apiVersion);
             preparedStatement.setString(4, endpoint);
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("apiId", resultSet.getString("api_id"));
                     map.put("apiVersion", resultSet.getString("api_version"));
                     map.put("endpoint", resultSet.getString("endpoint"));
@@ -6103,7 +6100,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException(String.format("no record is inserted for api version " + "hostId " + (String)event.get(Constants.HOST) + " apiId " + (String)map.get("apiId") + " apiVersion " + (String)map.get("apiVersion")));
+                    throw new SQLException(String.format("no record is inserted for api version " + "hostId " + event.get(Constants.HOST) + " apiId " + map.get("apiId") + " apiVersion " + map.get("apiVersion")));
                 }
                 conn.commit();
                 result = Success.of((String)map.get("apiId"));
@@ -6143,7 +6140,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     // no record is deleted, write an error notification.
-                    throw new SQLException(String.format("no record is deleted for endpoint rule " + "hostId " + (String)event.get(Constants.HOST) + " apiId " + (String)map.get("apiId") + " apiVersion " + (String)map.get("apiVersion")));
+                    throw new SQLException(String.format("no record is deleted for endpoint rule " + "hostId " + event.get(Constants.HOST) + " apiId " + map.get("apiId") + " apiVersion " + map.get("apiVersion")));
                 }
                 conn.commit();
                 result = Success.of((String)event.get(Constants.USER));
@@ -6183,13 +6180,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, hostId);
+            preparedStatement.setObject(1, UUID.fromString(hostId));
             preparedStatement.setString(2, apiId);
             preparedStatement.setString(3, apiVersion);
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("apiId", resultSet.getString("api_id"));
                     map.put("apiVersion", resultSet.getString("api_version"));
                     map.put("endpoint", resultSet.getString("endpoint"));
@@ -6320,22 +6317,22 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, hostId);
+            preparedStatement.setObject(1, UUID.fromString(hostId));
             preparedStatement.setString(2, apiId);
             preparedStatement.setString(3, apiVersion);
-            preparedStatement.setString(4, hostId);
+            preparedStatement.setObject(4, UUID.fromString(hostId));
             preparedStatement.setString(5, apiId);
             preparedStatement.setString(6, apiVersion);
-            preparedStatement.setString(7, hostId);
+            preparedStatement.setObject(7, UUID.fromString(hostId));
             preparedStatement.setString(8, apiId);
             preparedStatement.setString(9, apiVersion);
-            preparedStatement.setString(10, hostId);
+            preparedStatement.setObject(10, UUID.fromString(hostId));
             preparedStatement.setString(11, apiId);
             preparedStatement.setString(12, apiVersion);
-            preparedStatement.setString(13, hostId);
+            preparedStatement.setObject(13, UUID.fromString(hostId));
             preparedStatement.setString(14, apiId);
             preparedStatement.setString(15, apiVersion);
-            preparedStatement.setString(16, hostId);
+            preparedStatement.setObject(16, UUID.fromString(hostId));
             preparedStatement.setString(17, apiId);
             preparedStatement.setString(18, apiVersion);
 
@@ -6566,34 +6563,34 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, hostId);
+            preparedStatement.setObject(1, UUID.fromString(hostId));
             preparedStatement.setString(2, apiId);
             preparedStatement.setString(3, apiVersion);
-            preparedStatement.setString(4, hostId);
+            preparedStatement.setObject(4, UUID.fromString(hostId));
             preparedStatement.setString(5, apiId);
             preparedStatement.setString(6, apiVersion);
-            preparedStatement.setString(7, hostId);
+            preparedStatement.setObject(7, UUID.fromString(hostId));
             preparedStatement.setString(8, apiId);
             preparedStatement.setString(9, apiVersion);
-            preparedStatement.setString(10, hostId);
+            preparedStatement.setObject(10, UUID.fromString(hostId));
             preparedStatement.setString(11, apiId);
             preparedStatement.setString(12, apiVersion);
-            preparedStatement.setString(13, hostId);
+            preparedStatement.setObject(13, UUID.fromString(hostId));
             preparedStatement.setString(14, apiId);
             preparedStatement.setString(15, apiVersion);
-            preparedStatement.setString(16, hostId);
+            preparedStatement.setObject(16, UUID.fromString(hostId));
             preparedStatement.setString(17, apiId);
             preparedStatement.setString(18, apiVersion);
-            preparedStatement.setString(19, hostId);
+            preparedStatement.setObject(19, UUID.fromString(hostId));
             preparedStatement.setString(20, apiId);
             preparedStatement.setString(21, apiVersion);
-            preparedStatement.setString(22, hostId);
+            preparedStatement.setObject(22, UUID.fromString(hostId));
             preparedStatement.setString(23, apiId);
             preparedStatement.setString(24, apiVersion);
-            preparedStatement.setString(25, hostId);
+            preparedStatement.setObject(25, UUID.fromString(hostId));
             preparedStatement.setString(26, apiId);
             preparedStatement.setString(27, apiVersion);
-            preparedStatement.setString(28, hostId);
+            preparedStatement.setObject(28, UUID.fromString(hostId));
             preparedStatement.setString(29, apiId);
             preparedStatement.setString(30, apiVersion);
             List<String> list = new ArrayList<>();
@@ -6621,7 +6618,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, hostId);
+            preparedStatement.setObject(1, UUID.fromString(hostId));
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
@@ -7032,7 +7029,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         Result<String> result;
         String domain = null;
         try (final Connection conn = ds.getConnection(); final PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setString(1, hostId);
+            statement.setObject(1, UUID.fromString(hostId));
             try (ResultSet resultSet = statement.executeQuery()) {
                 if (resultSet.next()) {
                     domain = resultSet.getString("domain");
@@ -7063,7 +7060,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, id);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
-                        map.put("hostId", resultSet.getString("host_id"));
+                        map.put("hostId", resultSet.getObject("host_id", UUID.class));
                         map.put("domain", resultSet.getString("domain"));
                         map.put("subDomain", resultSet.getString("sub_domain"));
                         map.put("hostDesc", resultSet.getString("host_desc"));
@@ -7097,7 +7094,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, owner);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
-                        map.put("hostId", resultSet.getString("host_id"));
+                        map.put("hostId", resultSet.getObject("host_id", UUID.class));
                         map.put("hostDomain", resultSet.getString("host_domain"));
                         map.put("orgName", resultSet.getString("org_name"));
                         map.put("orgDesc", resultSet.getString("org_desc"));
@@ -7212,7 +7209,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "host_id", hostId);
+        addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
         addCondition(whereClause, parameters, "domain", domain);
         addCondition(whereClause, parameters, "sub_domain", subDomain);
         addCondition(whereClause, parameters, "host_desc", hostDesc);
@@ -7250,7 +7247,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("domain", resultSet.getString("domain"));
                     map.put("subDomain", resultSet.getString("sub_domain"));
                     map.put("hostDesc", resultSet.getString("host_desc"));
@@ -7311,7 +7308,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("domain", resultSet.getString("domain"));
                     map.put("subDomain", resultSet.getString("sub_domain"));
                     map.put("hostDesc", resultSet.getString("host_desc"));
@@ -7378,7 +7375,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)map.get("configId"));
+                statement.setObject(1, UUID.fromString((String)map.get("configId")));
                 statement.setString(2, (String)map.get("configName"));
                 statement.setString(3, (String)map.get("configPhase"));
                 statement.setString(4, (String)map.get("configType"));
@@ -7406,7 +7403,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("failed to insert the config with id " + (String)map.get("configId"));
+                    throw new SQLException("failed to insert the config with id " + map.get("configId"));
                 }
                 conn.commit();
                 result = Success.of((String)map.get("configId"));
@@ -7463,11 +7460,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 statement.setString(7, (String)event.get(Constants.USER));
                 statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(9, (String)map.get("configId"));
+                statement.setObject(9, UUID.fromString((String)map.get("configId")));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("failed to update config with id " + (String)map.get("configId"));
+                    throw new SQLException("failed to update config with id " + map.get("configId"));
                 }
                 conn.commit();
                 result = Success.of((String)map.get("configId"));
@@ -7499,11 +7496,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)map.get("configId"));
+                statement.setObject(1, UUID.fromString((String)map.get("configId")));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("failed to delete config with id " + (String)map.get("configId"));
+                    throw new SQLException("failed to delete config with id " + map.get("configId"));
                 }
                 conn.commit();
                 result = Success.of((String)map.get("configId"));
@@ -7540,7 +7537,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         List<Object> parameters = new ArrayList<>();
 
         StringBuilder whereClause = new StringBuilder();
-        addCondition(whereClause, parameters, "config_id", configId);
+        addCondition(whereClause, parameters, "config_id", configId != null ? UUID.fromString(configId) : null);
         addCondition(whereClause, parameters, "config_name", configName);
         addCondition(whereClause, parameters, "config_phase", configPhase);
         addCondition(whereClause, parameters, "config_type", configType);
@@ -7577,7 +7574,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("configId", resultSet.getString("config_id"));
+                    map.put("configId", resultSet.getObject("config_id", UUID.class));
                     map.put("configName", resultSet.getString("config_name"));
                     map.put("configPhase", resultSet.getString("config_phase"));
                     map.put("configType", resultSet.getString("config_type"));
@@ -7618,11 +7615,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection();
              PreparedStatement statement = conn.prepareStatement(queryConfigById)) {
 
-            statement.setString(1, configId);
+            statement.setObject(1, UUID.fromString(configId));
 
             try (ResultSet resultSet = statement.executeQuery()) {
                 if (resultSet.next()) {
-                    config.put("configId", resultSet.getString("config_id"));
+                    config.put("configId", resultSet.getObject("config_id", UUID.class));
                     config.put("configName", resultSet.getString("config_name"));
                     config.put("configPhase", resultSet.getString("config_phase"));
                     config.put("configType", resultSet.getString("config_type"));
@@ -7658,7 +7655,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 try (ResultSet resultSet = statement.executeQuery()) {
                     while (resultSet.next()) {
                         Map<String, Object> map = new HashMap<>();
-                        map.put("id", resultSet.getString("config_id"));
+                        map.put("id", resultSet.getObject("config_id", UUID.class));
                         map.put("label", resultSet.getString("config_name"));
                         list.add(map);
                     }
@@ -7721,7 +7718,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (final Connection conn = ds.getConnection()) {
             List<Map<String, Object>> list = new ArrayList<>();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, configId);
+                statement.setObject(1, UUID.fromString(configId));
                 try (ResultSet resultSet = statement.executeQuery()) {
                     while (resultSet.next()) {
                         Map<String, Object> map = new HashMap<>();
@@ -7757,7 +7754,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (final Connection conn = ds.getConnection()) {
             List<Map<String, Object>> list = new ArrayList<>();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, configId);
+                statement.setObject(1, UUID.fromString(configId));
                 statement.setString(2, "%" + resourceType + "%");
                 try (ResultSet resultSet = statement.executeQuery()) {
                     while (resultSet.next()) {
@@ -7792,7 +7789,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false); // Start transaction
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)map.get("configId"));
+                statement.setObject(1, UUID.fromString((String)map.get("configId")));
                 statement.setString(2, (String)map.get("propertyName"));
                 statement.setString(3, (String)map.get("propertyType"));
 
@@ -7858,10 +7855,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("Failed to insert the config property with id " + (String)map.get("configId") + " and name " + (String)map.get("propertyName"));
+                    throw new SQLException("Failed to insert the config property with id " + map.get("configId") + " and name " + map.get("propertyName"));
                 }
                 conn.commit(); // Commit transaction
-                result = Success.of((String)map.get("configId"));  // Use Success.of
+                result = Success.of((String)map.get("configId"));
                 // Assuming insertNotification is a method you have for handling notifications
                 insertNotification(event, true, null);
 
@@ -7959,7 +7956,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setObject(11, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
                 // WHERE clause: Crucial for updating the correct row!
-                statement.setString(12, (String)map.get("configId"));
+                statement.setObject(12, UUID.fromString((String)map.get("configId")));
                 statement.setString(13, (String)map.get("propertyName"));
 
 
@@ -7967,7 +7964,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 if (count == 0) {
                     // No rows were updated.  This could mean the config_id and property_name
                     // combination doesn't exist, or it could be a concurrency issue.
-                    throw new SQLException("Failed to update config property.  No rows affected for config_id: " + (String)map.get("configId") + " and property_name: " + (String)map.get("propertyName"));
+                    throw new SQLException("Failed to update config property.  No rows affected for config_id: " + map.get("configId") + " and property_name: " + map.get("propertyName"));
                 }
 
                 conn.commit();
@@ -8000,12 +7997,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)map.get("configId"));
+                statement.setObject(1, UUID.fromString((String)map.get("configId")));
                 statement.setString(2, (String)map.get("propertyName"));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("Failed to delete config property. No rows affected for config_id: " + (String)map.get("configId") + " and property_name: " + (String)map.get("propertyName"));
+                    throw new SQLException("Failed to delete config property. No rows affected for config_id: " + map.get("configId") + " and property_name: " + map.get("propertyName"));
                 }
                 conn.commit();
                 result = Success.of((String)map.get("configId"));
@@ -8050,7 +8047,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         List<Object> parameters = new ArrayList<>();
 
         StringBuilder whereClause = new StringBuilder();
-        addCondition(whereClause, parameters, "cp.config_id", configId);
+        addCondition(whereClause, parameters, "cp.config_id", configId != null ? UUID.fromString(configId) : null);
         addCondition(whereClause, parameters, "c.config_name", configName);
         addCondition(whereClause, parameters, "cp.property_name", propertyName);
         addCondition(whereClause, parameters, "cp.property_type", propertyType);
@@ -8093,7 +8090,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("configId", resultSet.getString("config_id"));
+                    map.put("configId", resultSet.getObject("config_id", UUID.class));
                     map.put("configName", resultSet.getString("config_name")); // Get config_name
                     map.put("propertyName", resultSet.getString("property_name"));
                     map.put("propertyType", resultSet.getString("property_type"));
@@ -8141,13 +8138,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
 
-            preparedStatement.setString(1, configId);
+            preparedStatement.setObject(1, UUID.fromString(configId));
 
             List<Map<String, Object>> configProperties = new ArrayList<>();
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
-                    map.put("configId", resultSet.getString("config_id"));
+                    map.put("configId", resultSet.getObject("config_id", UUID.class));
                     map.put("configName", resultSet.getString("config_name"));
                     map.put("propertyName", resultSet.getString("property_name"));
                     map.put("propertyType", resultSet.getString("property_type"));
@@ -8199,13 +8196,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
 
-            preparedStatement.setString(1, configId);
+            preparedStatement.setObject(1, UUID.fromString(configId));
             preparedStatement.setString(2, propertyName);
 
             Map<String, Object> map = new HashMap<>();
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 if (resultSet.next()) {
-                    map.put("configId", resultSet.getString("config_id"));
+                    map.put("configId", resultSet.getObject("config_id", UUID.class));
                     map.put("configName", resultSet.getString("config_name"));
                     map.put("propertyName", resultSet.getString("property_name"));
                     map.put("propertyType", resultSet.getString("property_type"));
@@ -8248,7 +8245,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, (String)map.get("environment"));
-                statement.setString(2, (String)map.get("configId"));
+                statement.setObject(2, UUID.fromString((String)map.get("configId")));
                 statement.setString(3, (String)map.get("propertyName"));
 
                 // Handle property_value (optional)
@@ -8270,11 +8267,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("Failed to insert environment property for environment: " + (String)map.get("environment") +
-                            ", config_id: " + (String)map.get("configId") + ", property_name: " + (String)map.get("propertyName"));
+                    throw new SQLException("Failed to insert environment property for environment: " + map.get("environment") +
+                            ", config_id: " + map.get("configId") + ", property_name: " + map.get("propertyName"));
                 }
                 conn.commit();
-                result = Success.of((String)map.get("configId")); // Or perhaps a composite key, if needed.
+                result = Success.of((String)map.get("configId"));
                 insertNotification(event, true, null);
 
 
@@ -8326,13 +8323,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
                 // WHERE clause parameters (from the event, *not* the JSON)
                 statement.setString(5, (String)map.get("environment"));
-                statement.setString(6, (String)map.get("configId"));
+                statement.setObject(6, UUID.fromString((String)map.get("configId")));
                 statement.setString(7, (String)map.get("propertyName"));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("Failed to update environment property. No rows affected for environment: " + (String)map.get("environment") +
-                            ", config_id: " + (String)map.get("configId") + ", property_name: " + (String)map.get("propertyName"));
+                    throw new SQLException("Failed to update environment property. No rows affected for environment: " + map.get("environment") +
+                            ", config_id: " + map.get("configId") + ", property_name: " + map.get("propertyName"));
                 }
                 conn.commit();
                 result = Success.of((String)map.get("configId"));  // Or a composite key.
@@ -8366,13 +8363,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, (String)map.get("environment"));
-                statement.setString(2, (String)map.get("configId"));
+                statement.setObject(2, UUID.fromString((String)map.get("configId")));
                 statement.setString(3, (String)map.get("propertyName"));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("Failed to delete environment property. No rows affected for environment: " + (String)map.get("environment") +
-                            ", config_id: " + (String)map.get("configId") + ", property_name: " + (String)map.get("propertyName"));
+                    throw new SQLException("Failed to delete environment property. No rows affected for environment: " + map.get("environment") +
+                            ", config_id: " + map.get("configId") + ", property_name: " + map.get("propertyName"));
                 }
                 conn.commit();
                 result = Success.of((String)map.get("configId")); // Or a composite key
@@ -8412,7 +8409,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
         addCondition(whereClause, parameters, "ep.environment", environment);
-        addCondition(whereClause, parameters, "ep.config_id", configId);
+        addCondition(whereClause, parameters, "ep.config_id", configId != null ? UUID.fromString(configId) : null);
         addCondition(whereClause, parameters, "c.config_name", configName); // Filter by config_name
         addCondition(whereClause, parameters, "ep.property_name", propertyName);
         addCondition(whereClause, parameters, "ep.property_value", propertyValue);
@@ -8449,7 +8446,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         isFirstRow = false;
                     }
                     map.put("environment", resultSet.getString("environment"));
-                    map.put("configId", resultSet.getString("config_id"));
+                    map.put("configId", resultSet.getObject("config_id", UUID.class));
                     map.put("configName", resultSet.getString("config_name")); // Get from joined table
                     map.put("propertyName", resultSet.getString("property_name"));
                     map.put("propertyValue", resultSet.getString("property_value"));
@@ -8487,7 +8484,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, (String)event.get(Constants.HOST));
-                statement.setString(2, (String)map.get("instanceId"));
+                statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
                 statement.setString(3, (String)map.get("apiId"));
                 statement.setString(4, (String)map.get("apiVersion"));
                 if (map.containsKey("active")) {
@@ -8504,7 +8501,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(String.format("Instance API created for instanceId: %s, apiId: %s, apiVersion: %s",
-                        (String)map.get("instanceId"), (String)map.get("apiId"), (String)map.get("apiVersion"))); // return some kind of key.
+                        map.get("instanceId"), map.get("apiId"), map.get("apiVersion"))); // return some kind of key.
                 insertNotification(event, true, null);
 
             }   catch (SQLException e) {
@@ -8542,7 +8539,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(2, (String)event.get(Constants.USER));
                 statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
                 statement.setString(4, (String)event.get(Constants.HOST));
-                statement.setString(5, (String)map.get("instanceId"));
+                statement.setObject(5, UUID.fromString((String)map.get("instanceId")));
                 statement.setString(6, (String)map.get("apiId"));
                 statement.setString(7, (String)map.get("apiVersion"));
 
@@ -8552,7 +8549,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(String.format("Instance API updated for instanceId: %s, apiId: %s, apiVersion: %s",
-                        (String)map.get("instanceId"), (String)map.get("apiId"), (String)map.get("apiVersion")));
+                        map.get("instanceId"), map.get("apiId"), map.get("apiVersion")));
                 insertNotification(event, true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
@@ -8581,7 +8578,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, (String)event.get(Constants.HOST));
-                statement.setString(2, (String)map.get("instanceId"));
+                statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
                 statement.setString(3, (String)map.get("apiId"));
                 statement.setString(4, (String)map.get("apiVersion"));
 
@@ -8591,7 +8588,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(String.format("Instance API deleted for instanceId: %s, apiId: %s, apiVersion: %s",
-                        (String)map.get("instanceId"), (String)map.get("apiId"), (String)map.get("apiVersion"))); //Return some information about the deleted record
+                        map.get("instanceId"), map.get("apiId"), map.get("apiVersion")));
                 insertNotification(event, true, null);
 
             } catch (SQLException e) {
@@ -8626,8 +8623,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "host_id", hostId);
-        addCondition(whereClause, parameters, "instance_id", instanceId);
+        addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
         addCondition(whereClause, parameters, "api_id", apiId);
         addCondition(whereClause, parameters, "api_version", apiVersion);
         addCondition(whereClause, parameters, "active", active);
@@ -8662,8 +8659,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
-                    map.put("instanceId", resultSet.getString("instance_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
                     map.put("apiId", resultSet.getString("api_id"));
                     map.put("apiVersion", resultSet.getString("api_version"));
                     map.put("active", resultSet.getBoolean("active"));
@@ -8700,10 +8697,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, (String)event.get(Constants.HOST));
-                statement.setString(2, (String)map.get("instanceId"));
+                statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
                 statement.setString(3, (String)map.get("apiId"));
                 statement.setString(4, (String)map.get("apiVersion"));
-                statement.setString(5, (String)map.get("configId"));
+                statement.setObject(5, UUID.fromString((String)map.get("configId")));
                 statement.setString(6, (String)map.get("propertyName"));
                 if (map.containsKey("propertyValue")) {
                     statement.setString(7, (String)map.get("propertyValue"));
@@ -8715,11 +8712,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("Failed to insert instance API for host_id: " + (String)event.get(Constants.HOST) +
-                            ", instance_id: " + (String)map.get("instanceId") + ", api_id: " + (String)map.get("apiId") + ", api_version: " + (String)map.get("apiVersion"));
+                    throw new SQLException("Failed to insert instance API for host_id: " + event.get(Constants.HOST) +
+                            ", instance_id: " + map.get("instanceId") + ", api_id: " + map.get("apiId") + ", api_version: " + map.get("apiVersion"));
                 }
                 conn.commit();
-                result = Success.of((String)event.get(Constants.HOST) + "|" + (String)map.get("instanceId") + "|" + (String)map.get("apiId") + "|" + (String)map.get("apiVersion")); // Composite key
+                result = Success.of((String)event.get(Constants.HOST) + "|" + map.get("instanceId") + "|" + map.get("apiId") + "|" + map.get("apiVersion"));
                 insertNotification(event, true, null);
 
             } catch (SQLException e) {
@@ -8758,20 +8755,20 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(2, (String)event.get(Constants.USER));
                 statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
                 statement.setString(4, (String)event.get(Constants.HOST));
-                statement.setString(5, (String)map.get("instanceId"));
+                statement.setObject(5, UUID.fromString((String)map.get("instanceId")));
                 statement.setString(6, (String)map.get("apiId"));
                 statement.setString(7, (String)map.get("apiVersion"));
-                statement.setString(8, (String)map.get("configId"));
+                statement.setObject(8, UUID.fromString((String)map.get("configId")));
                 statement.setString(9, (String)map.get("propertyName"));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("Failed to update instance API. No rows affected for host_id: " + (String)event.get(Constants.HOST) +
-                            ", instance_id: " + (String)map.get("instanceId") + ", api_id: " + (String)map.get("apiId") + ", api_version: " + (String)map.get("apiVersion") +
-                            ", config_id: " + (String)map.get("configId") + ", property_name: " + (String)map.get("propertyName"));
+                    throw new SQLException("Failed to update instance API. No rows affected for host_id: " + event.get(Constants.HOST) +
+                            ", instance_id: " + map.get("instanceId") + ", api_id: " + map.get("apiId") + ", api_version: " + map.get("apiVersion") +
+                            ", config_id: " + map.get("configId") + ", property_name: " + map.get("propertyName"));
                 }
                 conn.commit();
-                result = Success.of((String)event.get(Constants.HOST) + "|" + (String)map.get("instanceId") + "|" + (String)map.get("apiId") + "|" + (String)map.get("apiVersion") + "|" + (String)map.get("configId") + "|" + (String)map.get("propertyName"));
+                result = Success.of(event.get(Constants.HOST) + "|" + map.get("instanceId") + "|" + map.get("apiId") + "|" + map.get("apiVersion") + "|" + map.get("configId") + "|" + map.get("propertyName"));
                 insertNotification(event, true, null);
 
             } catch (SQLException e) {
@@ -8802,19 +8799,19 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, (String)event.get(Constants.HOST));
-                statement.setString(2, (String)map.get("instanceId"));
+                statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
                 statement.setString(3, (String)map.get("apiId"));
                 statement.setString(4, (String)map.get("apiVersion"));
-                statement.setString(5, (String)map.get("configId"));
+                statement.setObject(5, UUID.fromString((String)map.get("configId")));
                 statement.setString(6, (String)map.get("propertyName"));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("Failed to delete instance API. No rows affected for host_id: " + (String)event.get(Constants.HOST) +
-                            ", instance_id: " + (String)map.get("instanceId") + ", api_id: " + (String)map.get("apiId") + ", api_version: " + (String)map.get("apiVersion"));
+                    throw new SQLException("Failed to delete instance API. No rows affected for host_id: " + event.get(Constants.HOST) +
+                            ", instance_id: " + map.get("instanceId") + ", api_id: " + map.get("apiId") + ", api_version: " + map.get("apiVersion"));
                 }
                 conn.commit();
-                result = Success.of((String)event.get(Constants.HOST) + "|" + (String)map.get("instanceId") + "|" + (String)map.get("apiId") + "|" + (String)map.get("apiVersion")); // Composite key
+                result = Success.of(event.get(Constants.HOST) + "|" + map.get("instanceId") + "|" + map.get("apiId") + "|" + map.get("apiVersion"));
                 insertNotification(event, true, null);
 
             } catch (SQLException e) {
@@ -8854,12 +8851,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         List<Object> parameters = new ArrayList<>();
 
         StringBuilder whereClause = new StringBuilder();
-        addCondition(whereClause, parameters, "ia.host_id", hostId);
-        addCondition(whereClause, parameters, "ia.instance_id", instanceId);
+        addCondition(whereClause, parameters, "ia.host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "ia.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
         addCondition(whereClause, parameters, "i.instance_name", instanceName);
         addCondition(whereClause, parameters, "ia.api_id", apiId);
         addCondition(whereClause, parameters, "ia.api_version", apiVersion);
-        addCondition(whereClause, parameters, "iap.config_id", configId);
+        addCondition(whereClause, parameters, "iap.config_id", configId != null ? UUID.fromString(configId) : null);
         addCondition(whereClause, parameters, "c.config_name", configName);
         addCondition(whereClause, parameters, "iap.property_name", propertyName);
         addCondition(whereClause, parameters, "iap.property_value", propertyValue);
@@ -8896,12 +8893,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         isFirstRow = false;
                     }
 
-                    map.put("hostId", resultSet.getString("host_id"));
-                    map.put("instanceId", resultSet.getString("instance_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
                     map.put("instanceName", resultSet.getString("instance_name"));
                     map.put("apiId", resultSet.getString("api_id"));
                     map.put("apiVersion", resultSet.getString("api_version"));
-                    map.put("configId", resultSet.getString("config_id"));
+                    map.put("configId", resultSet.getObject("config_id", UUID.class));
                     map.put("configName", resultSet.getString("config_name"));
                     map.put("propertyName", resultSet.getString("property_name"));
                     map.put("propertyValue", resultSet.getString("property_value"));
@@ -8937,7 +8934,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, (String)event.get(Constants.HOST));
-                statement.setString(2, (String)map.get("instanceId"));
+                statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
                 statement.setString(3, (String)map.get("appId"));
                 statement.setString(4, (String)map.get("appVersion"));
                 if (map.containsKey("active")) {
@@ -8953,7 +8950,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 conn.commit();
                 result = Success.of(String.format("Instance App created for instanceId: %s, appId: %s, appVersion: %s",
-                        (String)map.get("instanceId"), (String)map.get("appId"), (String)map.get("appVersion"))); //Return some info about the created instance
+                        map.get("instanceId"), map.get("appId"), map.get("appVersion")));
                 insertNotification(event, true, null);
 
             } catch (SQLException e) {
@@ -8991,16 +8988,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(2, (String)event.get(Constants.USER));
                 statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
                 statement.setString(4, (String)event.get(Constants.HOST));
-                statement.setString(5, (String)map.get("instanceId"));
+                statement.setObject(5, UUID.fromString((String)map.get("instanceId")));
                 statement.setString(6, (String)map.get("appId"));
                 statement.setString(7, (String)map.get("appVersion"));
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("failed to update the instance app with id " + (String)map.get("appId"));
+                    throw new SQLException("failed to update the instance app with id " + map.get("appId"));
                 }
                 conn.commit();
                 result = Success.of(String.format("Instance App updated for instanceId: %s, appId: %s, appVersion: %s",
-                        (String)map.get("instanceId"), (String)map.get("appId"), (String)map.get("appVersion"))); //Return some info about the updated record.
+                        map.get("instanceId"), map.get("appId"), map.get("appVersion")));
                 insertNotification(event, true, null);
 
             } catch (SQLException e) {
@@ -9030,17 +9027,17 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, (String)event.get(Constants.HOST));
-                statement.setString(2, (String)map.get("instanceId"));
+                statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
                 statement.setString(3, (String)map.get("appId"));
                 statement.setString(4, (String)map.get("appVersion"));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("failed to delete the instance app with id " + (String)map.get("appId"));
+                    throw new SQLException("failed to delete the instance app with id " + map.get("appId"));
                 }
                 conn.commit();
                 result = Success.of(String.format("Instance app deleted for instanceId: %s, appId: %s, appVersion: %s",
-                        (String)map.get("instanceId"), (String)map.get("appId"), (String)map.get("appVersion"))); //Return some info about the deleted record
+                        map.get("instanceId"), map.get("appId"), map.get("appVersion")));
                 insertNotification(event, true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
@@ -9074,8 +9071,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "host_id", hostId);
-        addCondition(whereClause, parameters, "instance_id", instanceId);
+        addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
         addCondition(whereClause, parameters, "app_id", appId);
         addCondition(whereClause, parameters, "app_version", appVersion);
         addCondition(whereClause, parameters, "active", active);
@@ -9109,8 +9106,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
-                    map.put("instanceId", resultSet.getString("instance_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
                     map.put("appId", resultSet.getString("app_id"));
                     map.put("appVersion", resultSet.getString("app_version"));
                     map.put("active", resultSet.getBoolean("active"));
@@ -9147,10 +9144,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, (String)event.get(Constants.HOST));
-                statement.setString(2, (String)map.get("instanceId"));
+                statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
                 statement.setString(3, (String)map.get("appId"));
                 statement.setString(4, (String)map.get("appVersion"));
-                statement.setString(5, (String)map.get("configId"));
+                statement.setObject(5, UUID.fromString((String)map.get("configId")));
                 statement.setString(6, (String)map.get("propertyName"));
                 if (map.containsKey("propertyValue")) {
                     statement.setString(7, (String)map.get("propertyValue"));
@@ -9162,11 +9159,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("Failed to insert instance app for host_id: " + (String)event.get(Constants.HOST) +
-                            ", instance_id: " + (String)map.get("instanceId") + ", app_id: " + (String)map.get("appId") + ", app_version: " + (String)map.get("appVersion"));
+                    throw new SQLException("Failed to insert instance app for host_id: " + event.get(Constants.HOST) +
+                            ", instance_id: " + map.get("instanceId") + ", app_id: " + map.get("appId") + ", app_version: " + map.get("appVersion"));
                 }
                 conn.commit();
-                result = Success.of((String)event.get(Constants.HOST) + "|" + (String)map.get("instanceId") + "|" + (String)map.get("appId") + "|" + (String)map.get("appVersion")); // Composite key
+                result = Success.of(event.get(Constants.HOST) + "|" + map.get("instanceId") + "|" + map.get("appId") + "|" + map.get("appVersion"));
                 insertNotification(event, true, null);
 
 
@@ -9208,20 +9205,20 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(2, (String)event.get(Constants.USER));
                 statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
                 statement.setString(4, (String)event.get(Constants.HOST));
-                statement.setString(5, (String)map.get("instanceId"));
+                statement.setObject(5, UUID.fromString((String)map.get("instanceId")));
                 statement.setString(6, (String)map.get("appId"));
                 statement.setString(7, (String)map.get("appVersion"));
-                statement.setString(8, (String)map.get("configId"));
+                statement.setObject(8, UUID.fromString((String)map.get("configId")));
                 statement.setString(9, (String)map.get("propertyName"));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("Failed to update instance app.  No rows affected for host_id: " + (String)event.get(Constants.HOST) +
-                            ", instance_id: " + (String)map.get("instanceId") + ", app_id: " + (String)map.get("appId") + ", app_version: " + (String)map.get("appVersion") +
-                            ", config_id: " + (String)map.get("configId") + ", property_name: " + (String)map.get("propertyName"));
+                    throw new SQLException("Failed to update instance app.  No rows affected for host_id: " + event.get(Constants.HOST) +
+                            ", instance_id: " + map.get("instanceId") + ", app_id: " + map.get("appId") + ", app_version: " + map.get("appVersion") +
+                            ", config_id: " + map.get("configId") + ", property_name: " + map.get("propertyName"));
                 }
                 conn.commit();
-                result = Success.of((String)event.get(Constants.HOST) + "|" + (String)map.get("instanceId") + "|" + (String)map.get("appId") + "|" + (String)map.get("appVersion") + "|" +  (String)map.get("configId") + "|" + (String)map.get("propertyName")); // Composite key
+                result = Success.of(event.get(Constants.HOST) + "|" + map.get("instanceId") + "|" + map.get("appId") + "|" + map.get("appVersion") + "|" +  map.get("configId") + "|" + map.get("propertyName"));
                 insertNotification(event, true, null);
 
             } catch (SQLException e) {
@@ -9253,19 +9250,19 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, (String)event.get(Constants.HOST));
-                statement.setString(2, (String)map.get("instanceId"));
+                statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
                 statement.setString(3, (String)map.get("appId"));
                 statement.setString(4, (String)map.get("appVersion"));
-                statement.setString(5, (String)map.get("configId"));
+                statement.setObject(5, UUID.fromString((String)map.get("configId")));
                 statement.setString(6, (String)map.get("propertyName"));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("Failed to delete instance app. No rows affected for host_id: " + (String)event.get(Constants.HOST) +
-                            ", instance_id: " + (String)map.get("instanceId") + ", app_id: " + (String)map.get("appId") + ", app_version: " + (String)map.get("appVersion"));
+                    throw new SQLException("Failed to delete instance app. No rows affected for host_id: " + event.get(Constants.HOST) +
+                            ", instance_id: " + map.get("instanceId") + ", app_id: " + map.get("appId") + ", app_version: " + map.get("appVersion"));
                 }
                 conn.commit();
-                result = Success.of((String)event.get(Constants.HOST) + "|" + (String)map.get("instanceId") + "|" + (String)map.get("appId") + "|" + (String)map.get("appVersion"));  // Composite key
+                result = Success.of(event.get(Constants.HOST) + "|" + map.get("instanceId") + "|" + map.get("appId") + "|" + map.get("appVersion"));
                 insertNotification(event, true, null);
 
             } catch (SQLException e) {
@@ -9305,12 +9302,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         List<Object> parameters = new ArrayList<>();
 
         StringBuilder whereClause = new StringBuilder();
-        addCondition(whereClause, parameters, "ia.host_id", hostId);
-        addCondition(whereClause, parameters, "ia.instance_id", instanceId);
+        addCondition(whereClause, parameters, "ia.host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "ia.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
         addCondition(whereClause, parameters, "i.instance_name", instanceName);
         addCondition(whereClause, parameters, "ia.app_id", appId);
         addCondition(whereClause, parameters, "ia.app_version", appVersion);
-        addCondition(whereClause, parameters, "iap.config_id", configId);
+        addCondition(whereClause, parameters, "iap.config_id", configId != null ? UUID.fromString(configId) : null);
         addCondition(whereClause, parameters, "c.config_name", configName); // Filter by config_name
         addCondition(whereClause, parameters, "iap.property_name", propertyName);
         addCondition(whereClause, parameters, "iap.property_value", propertyValue);
@@ -9347,12 +9344,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
-                    map.put("instanceId", resultSet.getString("instance_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
                     map.put("instanceName", resultSet.getString("instance_name"));
                     map.put("appId", resultSet.getString("app_id"));
                     map.put("appVersion", resultSet.getString("app_version"));
-                    map.put("configId", resultSet.getString("config_id"));
+                    map.put("configId", resultSet.getObject("config_id", UUID.class));
                     map.put("configName", resultSet.getString("config_name")); // Get from joined table
                     map.put("propertyName", resultSet.getString("property_name"));
                     map.put("propertyValue", resultSet.getString("property_value"));
@@ -9389,8 +9386,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, (String)event.get(Constants.HOST));
-                statement.setString(2, (String)map.get("instanceId"));
-                statement.setString(3, (String)map.get("configId")); // Now using configId from the event
+                statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
+                statement.setObject(3, UUID.fromString((String)map.get("configId")));
                 statement.setString(4, (String)map.get("propertyName"));
 
                 // Handle 'property_value' (optional)
@@ -9412,12 +9409,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("Failed to insert instance property for host_id: " + (String)event.get(Constants.HOST) +
-                            ", instance_id: " + (String)map.get("instanceId") + ", config_id: " + (String)map.get("configId") +
-                            ", property_name: " + (String)map.get("propertyName"));
+                    throw new SQLException("Failed to insert instance property for host_id: " + event.get(Constants.HOST) +
+                            ", instance_id: " + map.get("instanceId") + ", config_id: " + map.get("configId") +
+                            ", property_name: " + map.get("propertyName"));
                 }
                 conn.commit();
-                result = Success.of((String)event.get(Constants.HOST) + "|" + (String)map.get("instanceId") + "|" + (String)map.get("configId") + "|" + (String)map.get("propertyName")); // Composite key
+                result = Success.of(event.get(Constants.HOST) + "|" + map.get("instanceId") + "|" + map.get("configId") + "|" + map.get("propertyName"));
                 insertNotification(event, true, null);
 
 
@@ -9469,18 +9466,18 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
                 // WHERE clause parameters (from the event, NOT the JSON)
                 statement.setString(5, (String)event.get(Constants.HOST));
-                statement.setString(6, (String)map.get("instanceId"));
-                statement.setString(7, (String)map.get("configId"));
+                statement.setObject(6, UUID.fromString((String)map.get("instanceId")));
+                statement.setObject(7, UUID.fromString((String)map.get("configId")));
                 statement.setString(8, (String)map.get("propertyName"));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("Failed to update instance property. No rows affected for host_id: " + (String)event.get(Constants.HOST) +
-                            ", instance_id: " + (String)map.get("instanceId") + ", config_id: " + (String)map.get("configId") +
-                            ", property_name: " + (String)map.get("propertyName"));
+                    throw new SQLException("Failed to update instance property. No rows affected for host_id: " + event.get(Constants.HOST) +
+                            ", instance_id: " + map.get("instanceId") + ", config_id: " + map.get("configId") +
+                            ", property_name: " + map.get("propertyName"));
                 }
                 conn.commit();
-                result = Success.of((String)event.get(Constants.HOST) + "|" + (String)map.get("instanceId") + "|" + (String)map.get("configId") + "|" + (String)map.get("propertyName")); // Composite key
+                result = Success.of(event.get(Constants.HOST) + "|" + map.get("instanceId") + "|" + map.get("configId") + "|" + map.get("propertyName"));
 
                 insertNotification(event, true, null);
 
@@ -9512,18 +9509,18 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, (String)event.get(Constants.HOST));
-                statement.setString(2, (String)map.get("instanceId"));
-                statement.setString(3, (String)map.get("configId"));
+                statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
+                statement.setObject(3, UUID.fromString((String)map.get("configId")));
                 statement.setString(4, (String)map.get("propertyName"));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("Failed to delete instance property. No rows affected for host_id: " + (String)event.get(Constants.HOST) +
-                            ", instance_id: " + (String)map.get("instanceId") + ", config_id: " + (String)map.get("configId") +
-                            ", property_name: " + (String)map.get("propertyName"));
+                    throw new SQLException("Failed to delete instance property. No rows affected for host_id: " + event.get(Constants.HOST) +
+                            ", instance_id: " + map.get("instanceId") + ", config_id: " + map.get("configId") +
+                            ", property_name: " + map.get("propertyName"));
                 }
                 conn.commit();
-                result = Success.of((String)event.get(Constants.HOST) + "|" + (String)map.get("instanceId") + "|" + (String)map.get("configId") + "|" + (String)map.get("propertyName")); // Composite key
+                result = Success.of(event.get(Constants.HOST) + "|" + map.get("instanceId") + "|" + map.get("configId") + "|" + map.get("propertyName"));
                 insertNotification(event, true, null);
 
             } catch (SQLException e) {
@@ -9561,9 +9558,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         List<Object> parameters = new ArrayList<>();
 
         StringBuilder whereClause = new StringBuilder();
-        addCondition(whereClause, parameters, "ip.host_id", hostId);
-        addCondition(whereClause, parameters, "ip.instance_id", instanceId);
-        addCondition(whereClause, parameters, "ip.config_id", configId);
+        addCondition(whereClause, parameters, "ip.host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "ip.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
+        addCondition(whereClause, parameters, "ip.config_id", configId != null ? UUID.fromString(configId) : null);
         addCondition(whereClause, parameters, "c.config_name", configName); // Filter by config_name
         addCondition(whereClause, parameters, "ip.property_name", propertyName);
         addCondition(whereClause, parameters, "ip.property_value", propertyValue);
@@ -9598,9 +9595,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
-                    map.put("instanceId", resultSet.getString("instance_id"));
-                    map.put("configId", resultSet.getString("config_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
+                    map.put("configId", resultSet.getObject("config_id", UUID.class));
                     map.put("configName", resultSet.getString("config_name")); // Get from joined table
                     map.put("propertyName", resultSet.getString("property_name"));
                     map.put("propertyValue", resultSet.getString("property_value"));
@@ -9637,7 +9634,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, (String)map.get("productId"));
-                statement.setString(2, (String)map.get("configId"));
+                statement.setObject(2, UUID.fromString((String)map.get("configId")));
                 statement.setString(3, (String)map.get("propertyName"));
 
                 // Handle 'property_value' (optional)
@@ -9659,11 +9656,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("Failed to insert product property for product_id: " + (String)map.get("productId") +
-                            ", config_id: " + (String)map.get("configId") + ", property_name: " + (String)map.get("propertyName"));
+                    throw new SQLException("Failed to insert product property for product_id: " + map.get("productId") +
+                            ", config_id: " + map.get("configId") + ", property_name: " + map.get("propertyName"));
                 }
                 conn.commit();
-                result = Success.of((String)map.get("productId") + "|" + (String)map.get("configId") + "|" + (String)map.get("propertyName")); // Composite key
+                result = Success.of(map.get("productId") + "|" + map.get("configId") + "|" + map.get("propertyName"));
                 insertNotification(event, true, null);
 
             } catch (SQLException e) {
@@ -9713,16 +9710,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
                 // WHERE clause parameters (from the event, NOT the JSON)
                 statement.setString(5, (String)map.get("productId"));
-                statement.setString(6, (String)map.get("configId"));
+                statement.setObject(6, UUID.fromString((String)map.get("configId")));
                 statement.setString(7, (String)map.get("propertyName"));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("Failed to update product property. No rows affected for product_id: " + (String)map.get("productId") +
-                            ", config_id: " + (String)map.get("configId") + ", property_name: " + (String)map.get("propertyName"));
+                    throw new SQLException("Failed to update product property. No rows affected for product_id: " + map.get("productId") +
+                            ", config_id: " + map.get("configId") + ", property_name: " + map.get("propertyName"));
                 }
                 conn.commit();
-                result = Success.of((String)map.get("productId") + "|" + (String)map.get("configId") + "|" + (String)map.get("propertyName")); // Composite Key
+                result = Success.of(map.get("productId") + "|" + map.get("configId") + "|" + map.get("propertyName"));
                 insertNotification(event, true, null);
 
             } catch (SQLException e) {
@@ -9752,16 +9749,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, (String)map.get("productId"));
-                statement.setString(2, (String)map.get("configId"));
+                statement.setObject(2, UUID.fromString((String)map.get("configId")));
                 statement.setString(3, (String)map.get("propertyName"));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("Failed to delete product property. No rows affected for product_id: " + (String)map.get("productId") +
-                            ", config_id: " + (String)map.get("configId") + ", property_name: " + (String)map.get("propertyName"));
+                    throw new SQLException("Failed to delete product property. No rows affected for product_id: " + map.get("productId") +
+                            ", config_id: " + map.get("configId") + ", property_name: " + map.get("propertyName"));
                 }
                 conn.commit();
-                result = Success.of((String)map.get("productId") + "|" + (String)map.get("configId") + "|" + (String)map.get("propertyName")); // Composite key
+                result = Success.of(map.get("productId") + "|" + map.get("configId") + "|" + map.get("propertyName"));
                 insertNotification(event, true, null);
 
             } catch (SQLException e) {
@@ -9800,7 +9797,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
         addCondition(whereClause, parameters, "pp.product_id", productId);
-        addCondition(whereClause, parameters, "pp.config_id", configId);
+        addCondition(whereClause, parameters, "pp.config_id", configId != null ? UUID.fromString(configId) : null);
         addCondition(whereClause, parameters, "c.config_name", configName); // Filter by config_name
         addCondition(whereClause, parameters, "pp.property_name", propertyName);
         addCondition(whereClause, parameters, "pp.property_value", propertyValue);
@@ -9836,7 +9833,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         isFirstRow = false;
                     }
                     map.put("productId", resultSet.getString("product_id"));
-                    map.put("configId", resultSet.getString("config_id"));
+                    map.put("configId", resultSet.getObject("config_id", UUID.class));
                     map.put("configName", resultSet.getString("config_name"));
                     map.put("propertyName", resultSet.getString("property_name"));
                     map.put("propertyValue", resultSet.getString("property_value"));
@@ -9876,7 +9873,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, (String)event.get(Constants.HOST));
                 statement.setString(2, (String)map.get("productId"));
                 statement.setString(3, (String)map.get("productVersion"));
-                statement.setString(4, (String)map.get("configId"));
+                statement.setObject(4, UUID.fromString((String)map.get("configId")));
                 statement.setString(5, (String)map.get("propertyName"));
 
                 // Handle 'property_value' (optional)
@@ -9955,7 +9952,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(5, (String)event.get(Constants.HOST));
                 statement.setString(6, (String)map.get("productId"));
                 statement.setString(7, (String)map.get("productVersion"));
-                statement.setString(8, (String)map.get("configId"));
+                statement.setObject(8, UUID.fromString((String)map.get("configId")));
                 statement.setString(9, (String)map.get("propertyName"));
 
                 int count = statement.executeUpdate();
@@ -9999,7 +9996,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, (String)event.get(Constants.HOST));
                 statement.setString(2, (String)map.get("productId"));
                 statement.setString(3, (String)map.get("productVersion"));
-                statement.setString(4, (String)map.get("configId"));
+                statement.setObject(4, UUID.fromString((String)map.get("configId")));
                 statement.setString(5, (String)map.get("propertyName"));
 
                 int count = statement.executeUpdate();
@@ -10048,10 +10045,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         List<Object> parameters = new ArrayList<>();
 
         StringBuilder whereClause = new StringBuilder();
-        addCondition(whereClause, parameters, "pvp.host_id", hostId);
+        addCondition(whereClause, parameters, "pvp.host_id", hostId != null ? UUID.fromString(hostId) : null);
         addCondition(whereClause, parameters, "pvp.product_id", productId);
         addCondition(whereClause, parameters, "pvp.product_version", productVersion);
-        addCondition(whereClause, parameters, "pvp.config_id", configId);
+        addCondition(whereClause, parameters, "pvp.config_id", configId != null ? UUID.fromString(configId) : null);
         addCondition(whereClause, parameters, "c.config_name", configName);  // Filter by config_name
         addCondition(whereClause, parameters, "pvp.property_name", propertyName);
         addCondition(whereClause, parameters, "pvp.property_value", propertyValue);
@@ -10087,10 +10084,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("productId", resultSet.getString("product_id"));
                     map.put("productVersion", resultSet.getString("product_version"));
-                    map.put("configId", resultSet.getString("config_id"));
+                    map.put("configId", resultSet.getObject("config_id", UUID.class));
                     map.put("configName", resultSet.getString("config_name")); // Get from joined table
                     map.put("propertyName", resultSet.getString("property_name"));
                     map.put("propertyValue", resultSet.getString("property_value"));
@@ -10126,10 +10123,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
             try (PreparedStatement statement = conn.prepareStatement(queryConfigById)) {
-                statement.setString(1, providerId);
+                statement.setObject(1, UUID.fromString(providerId));
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
-                        map.put("providerId", resultSet.getString("provider_id"));
+                        map.put("providerId", resultSet.getObject("provider_id", UUID.class));
                         map.put("kid", resultSet.getString("kid"));
                         map.put("publicKey", resultSet.getString("public_key"));
                         map.put("privateKey", resultSet.getString("private_key"));
@@ -10162,10 +10159,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
             try (PreparedStatement statement = conn.prepareStatement(queryConfigById)) {
-                statement.setString(1, providerId);
+                statement.setObject(1, UUID.fromString(providerId));
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
-                        map.put("providerId", resultSet.getString("provider_id"));
+                        map.put("providerId", resultSet.getObject("provider_id", UUID.class));
                         map.put("kid", resultSet.getString("kid"));
                         map.put("publicKey", resultSet.getString("public_key"));
                         map.put("privateKey", resultSet.getString("private_key"));
@@ -10404,13 +10401,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (final Connection conn = ds.getConnection()) {
             List<Map<String, Object>> list = new ArrayList<>();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, hostId);
+                statement.setObject(1, UUID.fromString(hostId));
                 statement.setString(2, groupId);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     while (resultSet.next()) {
                         Map<String, Object> map = new HashMap<>();
                         map.put("ruleId", resultSet.getString("rule_id"));
-                        map.put("hostId", resultSet.getString("host_id"));
+                        map.put("hostId", resultSet.getObject("host_id", UUID.class));
                         map.put("ruleType", resultSet.getString("rule_type"));
                         map.put("ruleGroup", resultSet.getBoolean("rule_group"));
                         map.put("ruleVisibility", resultSet.getString("rule_visibility"));
@@ -10595,7 +10592,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("ruleId", resultSet.getString("rule_id"));
                     map.put("ruleName", resultSet.getString("rule_name"));
                     map.put("ruleVersion", resultSet.getString("rule_version"));
@@ -10637,7 +10634,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
                         map.put("ruleId", resultSet.getString("rule_id"));
-                        map.put("hostId", resultSet.getString("host_id"));
+                        map.put("hostId", resultSet.getObject("host_id", UUID.class));
                         map.put("ruleType", resultSet.getString("rule_type"));
                         map.put("ruleGroup", resultSet.getBoolean("rule_group"));
                         map.put("ruleVisibility", resultSet.getString("rule_visibility"));
@@ -10680,9 +10677,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (final Connection conn = ds.getConnection()) {
             List<Map<String, Object>> list = new ArrayList<>();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, hostId);
+                statement.setObject(1, UUID.fromString(hostId));
                 statement.setString(2, ruleType);
-                statement.setString(3, hostId);
+                statement.setObject(3, UUID.fromString(hostId));
                 statement.setString(4, ruleType);
 
                 try (ResultSet resultSet = statement.executeQuery()) {
@@ -10721,13 +10718,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (final Connection conn = ds.getConnection()) {
             List<Map<String, Object>> list = new ArrayList<>();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, hostId);
+                statement.setObject(1, UUID.fromString(hostId));
                 statement.setString(2, apiId);
                 statement.setString(3, apiVersion);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     while (resultSet.next()) {
                         Map<String, Object> map = new HashMap<>();
-                        map.put("hostId", resultSet.getString("host_id"));
+                        map.put("hostId", resultSet.getObject("host_id", UUID.class));
                         map.put("ruleId", resultSet.getString("rule_id"));
                         map.put("ruleType", resultSet.getString("rule_type"));
                         map.put("endpoint", resultSet.getString("endpoint"));
@@ -10929,7 +10926,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("roleId", resultSet.getString("role_id"));
                     map.put("roleDesc", resultSet.getString("role_desc"));
                     map.put("updateUser", resultSet.getString("update_user"));
@@ -10961,7 +10958,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (final Connection conn = ds.getConnection()) {
             List<Map<String, Object>> list = new ArrayList<>();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, hostId);
+                statement.setObject(1, UUID.fromString(hostId));
                 try (ResultSet resultSet = statement.executeQuery()) {
                     while (resultSet.next()) {
                         Map<String, Object> map = new HashMap<>();
@@ -11037,7 +11034,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("roleId", resultSet.getString("role_id"));
                     map.put("apiId", resultSet.getString("api_id"));
                     map.put("apiVersion", resultSet.getString("api_version"));
@@ -11092,7 +11089,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         StringBuilder whereClause = new StringBuilder();
 
         addCondition(whereClause, parameters, "r.role_id", roleId);
-        addCondition(whereClause, parameters, "u.user_id", userId);
+        addCondition(whereClause, parameters, "u.user_id", userId != null ? UUID.fromString(userId) : null);
         addCondition(whereClause, parameters, "entity_id", entityId);
         addCondition(whereClause, parameters, "u.email", email);
         addCondition(whereClause, parameters, "u.first_name", firstName);
@@ -11128,11 +11125,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("roleId", resultSet.getString("role_id"));
                     map.put("startTs", resultSet.getTimestamp("start_ts"));
                     map.put("endTs", resultSet.getTimestamp("end_ts"));
-                    map.put("userId", resultSet.getString("user_id"));
+                    map.put("userId", resultSet.getObject("user_id", UUID.class));
                     map.put("entityId", resultSet.getString("entity_id"));
                     map.put("email", resultSet.getString("email"));
                     map.put("firstName", resultSet.getString("first_name"));
@@ -11437,7 +11434,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("roleId", resultSet.getString("role_id"));
                     map.put("apiId", resultSet.getString("api_id"));
                     map.put("apiVersion", resultSet.getString("api_version"));
@@ -11646,7 +11643,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("roleId", resultSet.getString("role_id"));
                     map.put("apiId", resultSet.getString("api_id"));
                     map.put("apiVersion", resultSet.getString("api_version"));
@@ -11969,7 +11966,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("groupId", resultSet.getString("group_id"));
                     map.put("groupDesc", resultSet.getString("group_desc"));
                     map.put("updateUser", resultSet.getString("update_user"));
@@ -11998,7 +11995,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (final Connection conn = ds.getConnection()) {
             List<Map<String, Object>> list = new ArrayList<>();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, hostId);
+                statement.setObject(1, UUID.fromString(hostId));
                 try (ResultSet resultSet = statement.executeQuery()) {
                     while (resultSet.next()) {
                         Map<String, Object> map = new HashMap<>();
@@ -12074,7 +12071,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("groupId", resultSet.getString("group_id"));
                     map.put("apiId", resultSet.getString("api_id"));
                     map.put("apiVersion", resultSet.getString("api_version"));
@@ -12128,7 +12125,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         StringBuilder whereClause = new StringBuilder();
 
         addCondition(whereClause, parameters, "g.group_id", groupId);
-        addCondition(whereClause, parameters, "u.user_id", userId);
+        addCondition(whereClause, parameters, "u.user_id", userId != null ? UUID.fromString(userId) : null);
         addCondition(whereClause, parameters, "entity_id", entityId);
         addCondition(whereClause, parameters, "u.email", email);
         addCondition(whereClause, parameters, "u.first_name", firstName);
@@ -12164,11 +12161,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("groupId", resultSet.getString("group_id"));
                     map.put("startTs", resultSet.getTimestamp("start_ts"));
                     map.put("endTs", resultSet.getTimestamp("end_ts"));
-                    map.put("userId", resultSet.getString("user_id"));
+                    map.put("userId", resultSet.getObject("user_id", UUID.class));
                     map.put("entityId", resultSet.getString("entity_id"));
                     map.put("email", resultSet.getString("email"));
                     map.put("firstName", resultSet.getString("first_name"));
@@ -12468,7 +12465,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("groupId", resultSet.getString("group_id"));
                     map.put("apiId", resultSet.getString("api_id"));
                     map.put("apiVersion", resultSet.getString("api_version"));
@@ -12677,7 +12674,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("groupId", resultSet.getString("group_id"));
                     map.put("apiId", resultSet.getString("api_id"));
                     map.put("apiVersion", resultSet.getString("api_version"));
@@ -13030,7 +13027,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("positionId", resultSet.getString("position_id"));
                     map.put("positionDesc", resultSet.getString("position_desc"));
                     map.put("inheritToAncestor", resultSet.getString("inherit_to_ancestor"));
@@ -13061,7 +13058,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (final Connection conn = ds.getConnection()) {
             List<Map<String, Object>> list = new ArrayList<>();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, hostId);
+                statement.setObject(1, UUID.fromString(hostId));
                 try (ResultSet resultSet = statement.executeQuery()) {
                     while (resultSet.next()) {
                         Map<String, Object> map = new HashMap<>();
@@ -13140,7 +13137,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("positionId", resultSet.getString("position_id"));
                     map.put("inheritToAncestor", resultSet.getString("inherit_to_ancestor"));
                     map.put("inheritToSibling", resultSet.getString("inherit_to_sibling"));
@@ -13191,7 +13188,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         addCondition(whereClause, parameters, "ep.position_id", positionId);
         addCondition(whereClause, parameters, "ep.position_type", positionType);
-        addCondition(whereClause, parameters, "u.user_id", userId);
+        addCondition(whereClause, parameters, "u.user_id", userId != null ? UUID.fromString(userId) : null);
         addCondition(whereClause, parameters, "entity_id", entityId);
         addCondition(whereClause, parameters, "u.email", email);
         addCondition(whereClause, parameters, "u.first_name", firstName);
@@ -13227,12 +13224,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("positionId", resultSet.getString("position_id"));
                     map.put("positionType", resultSet.getString("position_type"));
                     map.put("startTs", resultSet.getDate("start_ts"));
                     map.put("endTs", resultSet.getString("end_ts"));
-                    map.put("userId", resultSet.getString("user_id"));
+                    map.put("userId", resultSet.getObject("user_id", UUID.class));
                     map.put("entityId", resultSet.getString("entity_id"));
                     map.put("email", resultSet.getString("email"));
                     map.put("firstName", resultSet.getString("first_name"));
@@ -13535,7 +13532,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("positionId", resultSet.getString("position_id"));
                     map.put("apiId", resultSet.getString("api_id"));
                     map.put("apiVersion", resultSet.getString("api_version"));
@@ -13743,7 +13740,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("positionId", resultSet.getString("position_id"));
                     map.put("apiId", resultSet.getString("api_id"));
                     map.put("apiVersion", resultSet.getString("api_version"));
@@ -14081,7 +14078,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("attributeId", resultSet.getString("attribute_id"));
                     map.put("attributeType", resultSet.getString("attribute_type"));
                     map.put("attributeDesc", resultSet.getString("attribute_desc"));
@@ -14112,7 +14109,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (final Connection conn = ds.getConnection()) {
             List<Map<String, Object>> list = new ArrayList<>();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, hostId);
+                statement.setObject(1, UUID.fromString(hostId));
                 try (ResultSet resultSet = statement.executeQuery()) {
                     while (resultSet.next()) {
                         Map<String, Object> map = new HashMap<>();
@@ -14191,7 +14188,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("attributeId", resultSet.getString("attribute_id"));
                     map.put("attributeType", resultSet.getString("attribute_type"));
                     map.put("attributeValue", resultSet.getString("attribute_value"));
@@ -14252,7 +14249,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         addCondition(whereClause, parameters, "a.attribute_id", attributeId);
         addCondition(whereClause, parameters, "a.attribute_type", attributeType);
         addCondition(whereClause, parameters, "a.attribute_value", attributeValue);
-        addCondition(whereClause, parameters, "u.user_id", userId);
+        addCondition(whereClause, parameters, "u.user_id", userId != null ? UUID.fromString(userId) : null);
         addCondition(whereClause, parameters, "entity_id", entityId);
         addCondition(whereClause, parameters, "u.email", email);
         addCondition(whereClause, parameters, "u.first_name", firstName);
@@ -14288,13 +14285,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("attributeId", resultSet.getString("attribute_id"));
                     map.put("attributeType", resultSet.getString("attribute_type"));
                     map.put("attributeValue", resultSet.getString("attribute_value"));
                     map.put("startTs", resultSet.getDate("start_ts"));
                     map.put("endTs", resultSet.getString("end_ts"));
-                    map.put("userId", resultSet.getString("user_id"));
+                    map.put("userId", resultSet.getObject("user_id", UUID.class));
                     map.put("entityId", resultSet.getString("entity_id"));
                     map.put("email", resultSet.getString("email"));
                     map.put("firstName", resultSet.getString("first_name"));
@@ -14651,7 +14648,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("attributeId", resultSet.getString("attribute_id"));
                     map.put("attributeType", resultSet.getString("attribute_type"));
                     map.put("attributeValue", resultSet.getString("attribute_value"));
@@ -14866,7 +14863,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("attributeId", resultSet.getString("attribute_id"));
                     map.put("attributeType", resultSet.getString("attribute_type"));
                     map.put("attributeValue", resultSet.getString("attribute_value"));
@@ -14994,7 +14991,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
-                statement.setString(1, (String)map.get("hostId"));
+                statement.setObject(1, UUID.fromString((String)map.get("hostId")));
                 statement.setString(2, (String)map.get("attributeId"));
                 statement.setString(3, (String)map.get("apiId"));
                 statement.setString(4, (String)map.get("apiVersion"));
@@ -15240,7 +15237,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         List<Object> parameters = new ArrayList<>();
 
         StringBuilder whereClause = new StringBuilder();
-        addCondition(whereClause, parameters, "host_id", hostId);
+        addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
         addCondition(whereClause, parameters, "product_id", productId);
         addCondition(whereClause, parameters, "product_version", productVersion);
         addCondition(whereClause, parameters, "light4j_version", light4jVersion);
@@ -15281,7 +15278,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("productId", resultSet.getString("product_id"));
                     map.put("productVersion", resultSet.getString("product_version"));
                     map.put("light4jVersion", resultSet.getString("light4j_version"));
@@ -15321,7 +15318,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, hostId);
+            preparedStatement.setObject(1, UUID.fromString(hostId));
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
@@ -15348,7 +15345,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         List<Map<String, Object>> versions = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, hostId);
+            preparedStatement.setObject(1, UUID.fromString(hostId));
             preparedStatement.setString(2, productId);
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -15381,7 +15378,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, (String)event.get(Constants.HOST));
-                statement.setString(2, (String)map.get("instanceId"));
+                statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
                 statement.setString(3, (String)map.get("instanceName"));
                 statement.setString(4, (String)map.get("productId"));
                 statement.setString(5, (String)map.get("productVersion"));
@@ -15415,7 +15412,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     statement.setNull(12, Types.VARCHAR);
                 }
                 if(map.containsKey("tagId")) {
-                    statement.setString(13, (String) map.get("tagId"));
+                    statement.setObject(13, UUID.fromString((String)map.get("tagId")));
                 } else {
                     statement.setNull(13, Types.VARCHAR);
                 }
@@ -15424,7 +15421,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("failed to insert the instance with id " + (String)map.get("instanceId"));
+                    throw new SQLException("failed to insert the instance with id " + map.get("instanceId"));
                 }
                 conn.commit();
                 result = Success.of((String)map.get("instanceId"));
@@ -15490,18 +15487,18 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     statement.setNull(10, Types.VARCHAR);
                 }
                 if(map.containsKey("tagId")) {
-                    statement.setString(11, (String) map.get("tagId"));
+                    statement.setObject(11, UUID.fromString((String) map.get("tagId")));
                 } else {
                     statement.setNull(11, Types.VARCHAR);
                 }
                 statement.setString(12, (String)event.get(Constants.USER));
                 statement.setObject(13, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
                 statement.setString(14, (String)event.get(Constants.HOST));
-                statement.setString(15, (String)map.get("instanceId"));
+                statement.setObject(15, UUID.fromString((String)map.get("instanceId")));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("failed to update the instance with id " + (String)map.get("instanceId"));
+                    throw new SQLException("failed to update the instance with id " + map.get("instanceId"));
                 }
                 conn.commit();
                 result = Success.of((String)map.get("instanceId"));
@@ -15535,11 +15532,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, (String)event.get(Constants.HOST));
-                statement.setString(2, (String)map.get("instanceId"));
+                statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("failed to delete the instance with id " + (String)map.get("instanceId"));
+                    throw new SQLException("failed to delete the instance with id " + map.get("instanceId"));
                 }
                 conn.commit();
                 result = Success.of((String)map.get("instanceId"));
@@ -15580,8 +15577,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "host_id", hostId);
-        addCondition(whereClause, parameters, "instance_id", instanceId);
+        addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
         addCondition(whereClause, parameters, "instance_name", instanceName);
         addCondition(whereClause, parameters, "product_id", productId);
         addCondition(whereClause, parameters, "product_version", productVersion);
@@ -15592,7 +15589,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         addCondition(whereClause, parameters, "pipeline_id", pipelineId);
         addCondition(whereClause, parameters, "service_desc", serviceDesc);
         addCondition(whereClause, parameters, "instance_desc", instanceDesc);
-        addCondition(whereClause, parameters, "tag_id", tagId);
+        addCondition(whereClause, parameters, "tag_id", tagId != null ? UUID.fromString(tagId) : null);
 
 
         if (!whereClause.isEmpty()) {
@@ -15624,8 +15621,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
-                    map.put("instanceId", resultSet.getString("instance_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
                     map.put("instanceName", resultSet.getString("instance_name"));
                     map.put("productId", resultSet.getString("product_id"));
                     map.put("productVersion", resultSet.getString("product_version"));
@@ -15636,7 +15633,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("pipelineId", resultSet.getString("pipeline_id"));
                     map.put("serviceDesc", resultSet.getString("service_desc"));
                     map.put("instanceDesc", resultSet.getString("instance_desc"));
-                    map.put("tagId", resultSet.getString("tag_id"));
+                    map.put("tagId", resultSet.getObject("tag_id", UUID.class));
                     map.put("updateUser", resultSet.getString("update_user"));
                     // handling date properly
                     map.put("updateTs", resultSet.getTimestamp("update_ts") != null ? resultSet.getTimestamp("update_ts").toString() : null);
@@ -15666,7 +15663,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, hostId);
+            preparedStatement.setObject(1, UUID.fromString(hostId));
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
@@ -15698,7 +15695,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, (String)event.get(Constants.HOST));
                 statement.setString(2, (String)map.get("pipelineId"));
-                statement.setString(3, (String)map.get("platformId"));
+                statement.setObject(3, UUID.fromString((String)map.get("platformId")));
                 statement.setString(4, (String)map.get("endpoint"));
                 statement.setString(5, (String)map.get("requestSchema"));
                 statement.setString(6, (String)map.get("responseSchema"));
@@ -15739,7 +15736,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)map.get("platformId"));
+                statement.setObject(1, UUID.fromString((String)map.get("platformId")));
                 statement.setString(2, (String)map.get("endpoint"));
                 statement.setString(3, (String)map.get("requestSchema"));
                 statement.setString(4, (String)map.get("responseSchema"));
@@ -15825,9 +15822,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         List<Object> parameters = new ArrayList<>();
 
         StringBuilder whereClause = new StringBuilder();
-        addCondition(whereClause, parameters, "host_id", hostId);
+        addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
         addCondition(whereClause, parameters, "pipeline_id", pipelineId);
-        addCondition(whereClause, parameters, "platform_id", platformId);
+        addCondition(whereClause, parameters, "platform_id", platformId != null ? UUID.fromString(platformId) : null);
         addCondition(whereClause, parameters, "endpoint", endpoint);
         addCondition(whereClause, parameters, "request_schema", requestSchema);
         addCondition(whereClause, parameters, "response_schema", responseSchema);
@@ -15863,9 +15860,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("pipelineId", resultSet.getString("pipeline_id"));
-                    map.put("platformId", resultSet.getString("platform_id"));
+                    map.put("platformId", resultSet.getObject("platform_id", UUID.class));
                     map.put("endpoint", resultSet.getString("endpoint"));
                     map.put("requestSchema", resultSet.getString("request_schema"));
                     map.put("responseSchema", resultSet.getString("response_schema"));
@@ -15898,7 +15895,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, hostId);
+            preparedStatement.setObject(1, UUID.fromString(hostId));
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
@@ -15931,7 +15928,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, (String)event.get(Constants.HOST));
-                statement.setString(2, (String)map.get("platformId"));
+                statement.setObject(2, UUID.fromString((String)map.get("platformId")));
                 statement.setString(3, (String)map.get("platformName"));
                 statement.setString(4, (String)map.get("platformVersion"));
                 statement.setString(5, (String)map.get("clientType"));
@@ -16068,7 +16065,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(14, (String)event.get(Constants.USER));
                 statement.setObject(15, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
                 statement.setString(16, (String)event.get(Constants.HOST));
-                statement.setString(17, (String)map.get("platformId"));
+                statement.setObject(17, UUID.fromString((String)map.get("platformId")));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -16106,7 +16103,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, (String)event.get(Constants.HOST));
-                statement.setString(2, (String)map.get("platformId"));
+                statement.setObject(2, UUID.fromString((String)map.get("platformId")));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -16153,8 +16150,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
 
         StringBuilder whereClause = new StringBuilder();
-        addCondition(whereClause, parameters, "host_id", hostId);
-        addCondition(whereClause, parameters, "platform_id", platformId);
+        addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "platform_id", platformId != null ? UUID.fromString(platformId) : null);
         addCondition(whereClause, parameters, "platform_name", platformName);
         addCondition(whereClause, parameters, "platform_version", platformVersion);
         addCondition(whereClause, parameters, "client_type", clientType);
@@ -16200,8 +16197,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
-                    map.put("platformId", resultSet.getString("platform_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("platformId", resultSet.getObject("platform_id", UUID.class));
                     map.put("platformName", resultSet.getString("platform_name"));
                     map.put("platformVersion", resultSet.getString("platform_version"));
                     map.put("clientType", resultSet.getString("client_type"));
@@ -16245,7 +16242,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, hostId);
+            preparedStatement.setObject(1, UUID.fromString(hostId));
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
@@ -16276,8 +16273,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, (String)event.get(Constants.HOST));
-                statement.setString(2, (String)map.get("deploymentId"));
-                statement.setString(3, (String)map.get("instanceId"));
+                statement.setObject(2, UUID.fromString((String)map.get("deploymentId")));
+                statement.setObject(3, UUID.fromString((String)map.get("instanceId")));
                 statement.setString(4, (String)map.get("deploymentStatus"));
                 statement.setString(5, (String)map.get("deploymentType"));
                 statement.setObject(6, map.get("scheduleTs") != null ? OffsetDateTime.parse((String)map.get("scheduleTs")) : OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
@@ -16321,7 +16318,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)map.get("instanceId"));
+                statement.setObject(1, UUID.fromString((String)map.get("instanceId")));
                 statement.setString(2, (String)map.get("deploymentStatus"));
                 statement.setString(3, (String)map.get("deploymentType"));
                 // use the event time if schedule time is not provided. We cannot use now as this event might be replayed.
@@ -16329,7 +16326,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(5, (String)event.get(Constants.USER));
                 statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
                 statement.setString(7, (String)event.get(Constants.HOST));
-                statement.setString(8, (String)map.get("deploymentId"));
+                statement.setObject(8, UUID.fromString((String)map.get("deploymentId")));
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("failed to update the deployment with id " + map.get("deploymentId"));
@@ -16368,7 +16365,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(2, (String)event.get(Constants.USER));
                 statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
                 statement.setString(4, (String)event.get(Constants.HOST));
-                statement.setString(5, (String)map.get("deploymentId"));
+                statement.setObject(5, UUID.fromString((String)map.get("deploymentId")));
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("failed to update the platform job id with deploymentId " + map.get("deploymentId"));
@@ -16409,7 +16406,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(2, (String)event.get(Constants.USER));
                 statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
                 statement.setString(4, (String)event.get(Constants.HOST));
-                statement.setString(5, (String)map.get("deploymentId"));
+                statement.setObject(5, UUID.fromString((String)map.get("deploymentId")));
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("failed to update the deployment status with deploymentId " + map.get("deploymentId"));
@@ -16445,7 +16442,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, (String)event.get(Constants.HOST));
-                statement.setString(2, (String)map.get("deploymentId"));
+                statement.setObject(2, UUID.fromString((String)map.get("deploymentId")));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -16489,9 +16486,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "host_id", hostId);
-        addCondition(whereClause, parameters, "deployment_id", deploymentId);
-        addCondition(whereClause, parameters, "instance_id", instanceId);
+        addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "deployment_id", deploymentId != null ? UUID.fromString(deploymentId) : null);
+        addCondition(whereClause, parameters, "instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
         addCondition(whereClause, parameters, "deployment_status", deploymentStatus);
         addCondition(whereClause, parameters, "deployment_type", deploymentType);
         addCondition(whereClause, parameters, "platform_job_id", platformJobId);
@@ -16525,9 +16522,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getString("host_id"));
-                    map.put("deploymentId", resultSet.getString("deployment_id"));
-                    map.put("instanceId", resultSet.getString("instance_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("deploymentId", resultSet.getObject("deployment_id", UUID.class));
+                    map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
                     map.put("deploymentStatus", resultSet.getString("deployment_status"));
                     map.put("deploymentType", resultSet.getString("deployment_type"));
                     ;
@@ -16567,14 +16564,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 String hostId = (String)map.get("hostId");
                 if (hostId != null && !hostId.isBlank()) {
-                    statement.setString(1, (String) map.get("hostId"));
+                    statement.setObject(1, UUID.fromString(hostId));
                 } else {
                     statement.setNull(1, Types.VARCHAR);
                 }
 
-                statement.setString(2, (String)map.get("categoryId")); // Required
-                statement.setString(3, (String)map.get("entityType")); // Required
-                statement.setString(4, (String)map.get("categoryName")); // Required
+                statement.setObject(2, UUID.fromString((String)map.get("categoryId")));
+                statement.setString(3, (String)map.get("entityType"));
+                statement.setString(4, (String)map.get("categoryName"));
 
                 String categoryDesc = (String)map.get("categoryDesc");
                 if (categoryDesc != null && !categoryDesc.isBlank()) {
@@ -16584,7 +16581,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 String parentCategoryId = (String)map.get("parentCategoryId");
                 if (parentCategoryId != null && !parentCategoryId.isBlank()) {
-                    statement.setString(6, (String) map.get("parentCategoryId"));
+                    statement.setObject(6, UUID.fromString((String) map.get("parentCategoryId")));
                 } else {
                     statement.setNull(6, Types.VARCHAR);
                 }
@@ -16602,7 +16599,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     throw new SQLException("failed to insert the category with id " + map.get("categoryId"));
                 }
                 conn.commit();
-                result =  Success.of((String)map.get("categoryId")); // Return categoryId
+                result =  Success.of((String)map.get("categoryId"));
                 insertNotification(event, true, null);
 
             } catch (SQLException e) {
@@ -16642,7 +16639,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 String parentCategoryId = (String)map.get("parentCategoryId");
                 if (parentCategoryId != null && !parentCategoryId.isBlank()) {
-                    statement.setString(3, (String) map.get("parentCategoryId"));
+                    statement.setObject(3, UUID.fromString((String) map.get("parentCategoryId")));
                 } else {
                     statement.setNull(3, Types.VARCHAR);
                 }
@@ -16654,14 +16651,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 statement.setString(5, (String)event.get(Constants.USER));
                 statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(7, (String)map.get("categoryId"));
+                statement.setObject(7, UUID.fromString((String)map.get("categoryId")));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("failed to update the category with id " + map.get("categoryId"));
                 }
                 conn.commit();
-                result =  Success.of((String)map.get("categoryId")); // Return categoryId
+                result =  Success.of((String)map.get("categoryId"));
                 insertNotification(event, true, null);
 
             } catch (SQLException e) {
@@ -16691,13 +16688,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, categoryId);
+                statement.setObject(1, UUID.fromString(categoryId));
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("failed to delete the category with id " + categoryId);
                 }
                 conn.commit();
-                result =  Success.of(categoryId); // Return categoryId
+                result =  Success.of(categoryId);
                 insertNotification(event, true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
@@ -16745,11 +16742,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         }
 
         // --- Add other conditions using the helper ---
-        addConditionToList(conditions, parameters, "cat.category_id", categoryId);
+        addConditionToList(conditions, parameters, "cat.category_id", categoryId != null ? UUID.fromString(categoryId) : null);
         addConditionToList(conditions, parameters, "cat.entity_type", entityType);
         addConditionToList(conditions, parameters, "cat.category_name", categoryName);
         addConditionToList(conditions, parameters, "cat.category_desc", categoryDesc); // Consider LIKE here if needed
-        addConditionToList(conditions, parameters, "cat.parent_category_id", parentCategoryId);
+        addConditionToList(conditions, parameters, "cat.parent_category_id", parentCategoryId != null ? UUID.fromString(parentCategoryId) : null);
         // parentCategoryName is derived, not filtered here
         addConditionToList(conditions, parameters, "cat.sort_order", sortOrder);
 
@@ -16783,12 +16780,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("categoryId", resultSet.getString("category_id"));
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("categoryId", resultSet.getObject("category_id", UUID.class));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("entityType", resultSet.getString("entity_type"));
                     map.put("categoryName", resultSet.getString("category_name"));
                     map.put("categoryDesc", resultSet.getString("category_desc"));
-                    map.put("parentCategoryId", resultSet.getString("parent_category_id"));
+                    map.put("parentCategoryId", resultSet.getObject("parent_category_id", UUID.class));
                     map.put("parentCategoryName", resultSet.getString("parent_category_name")); // Get parent category name from join
                     map.put("sortOrder", resultSet.getInt("sort_order"));
                     map.put("updateUser", resultSet.getString("update_user"));
@@ -16839,7 +16836,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, hostId);
+            preparedStatement.setObject(1, UUID.fromString(hostId));
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
@@ -16867,16 +16864,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         Map<String, Object> map = null;
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, categoryId);
+            preparedStatement.setObject(1, UUID.fromString(categoryId));
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 if (resultSet.next()) {
                     map = new HashMap<>();
-                    map.put("categoryId", resultSet.getString("category_id"));
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("categoryId", resultSet.getObject("category_id", UUID.class));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("entityType", resultSet.getString("entity_type"));
                     map.put("categoryName", resultSet.getString("category_name"));
                     map.put("categoryDesc", resultSet.getString("category_desc"));
-                    map.put("parentCategoryId", resultSet.getString("parent_category_id"));
+                    map.put("parentCategoryId", resultSet.getObject("parent_category_id", UUID.class));
                     map.put("sortOrder", resultSet.getInt("sort_order"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
@@ -16919,18 +16916,18 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             preparedStatement.setString(parameterIndex++, categoryName); // 1. categoryName
 
             if (hostId != null && !hostId.isEmpty()) {
-                preparedStatement.setString(parameterIndex++, hostId); // 2. hostId (for tenant-specific OR global)
+                preparedStatement.setObject(parameterIndex++, UUID.fromString(hostId)); // 2. hostId (for tenant-specific OR global)
             }
 
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 if (resultSet.next()) {
                     map = new HashMap<>();
-                    map.put("categoryId", resultSet.getString("category_id"));
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("categoryId", resultSet.getObject("category_id", UUID.class));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("entityType", resultSet.getString("entity_type"));
                     map.put("categoryName", resultSet.getString("category_name"));
                     map.put("categoryDesc", resultSet.getString("category_desc"));
-                    map.put("parentCategoryId", resultSet.getString("parent_category_id"));
+                    map.put("parentCategoryId", resultSet.getObject("parent_category_id", UUID.class));
                     map.put("sortOrder", resultSet.getInt("sort_order"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
@@ -16972,18 +16969,18 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             int parameterIndex = 1;
             preparedStatement.setString(parameterIndex++, entityType); // 1. entityType
             if (hostId != null && !hostId.isEmpty()) {
-                preparedStatement.setString(parameterIndex++, hostId); // 2. hostId (for tenant-specific OR global)
+                preparedStatement.setObject(parameterIndex++, UUID.fromString(hostId)); // 2. hostId (for tenant-specific OR global)
             }
 
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
-                    map.put("categoryId", resultSet.getString("category_id"));
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("categoryId", resultSet.getObject("category_id", UUID.class));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("entityType", resultSet.getString("entity_type"));
                     map.put("categoryName", resultSet.getString("category_name"));
                     map.put("categoryDesc", resultSet.getString("category_desc"));
-                    map.put("parentCategoryId", resultSet.getString("parent_category_id"));
+                    map.put("parentCategoryId", resultSet.getObject("parent_category_id", UUID.class));
                     map.put("sortOrder", resultSet.getInt("sort_order"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
@@ -17032,18 +17029,18 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             int parameterIndex = 1;
             preparedStatement.setString(parameterIndex++, entityType); // 1. entityType
             if (hostId != null && !hostId.isEmpty()) {
-                preparedStatement.setString(parameterIndex++, hostId); // 2. hostId (for tenant-specific OR global)
+                preparedStatement.setObject(parameterIndex++, UUID.fromString(hostId)); // 2. hostId (for tenant-specific OR global)
             }
 
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
-                    map.put("categoryId", resultSet.getString("category_id"));
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("categoryId", resultSet.getObject("category_id", UUID.class));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("entityType", resultSet.getString("entity_type"));
                     map.put("categoryName", resultSet.getString("category_name"));
                     map.put("categoryDesc", resultSet.getString("category_desc"));
-                    map.put("parentCategoryId", resultSet.getString("parent_category_id"));
+                    map.put("parentCategoryId", resultSet.getObject("parent_category_id", UUID.class));
                     map.put("sortOrder", resultSet.getInt("sort_order"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
@@ -17124,7 +17121,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 String hostId = (String)map.get("hostId");
                 if (hostId != null && !hostId.isBlank()) {
-                    statement.setString(1, hostId);
+                    statement.setObject(1, UUID.fromString(hostId));
                 } else {
                     statement.setNull(1, Types.VARCHAR);
                 }
@@ -17167,7 +17164,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         for (String categoryId : categoryIds) {
                             insertCategoryStatement.setString(1, schemaId);
                             insertCategoryStatement.setString(2, "schema"); // entity_type = "schema"
-                            insertCategoryStatement.setString(3, categoryId);
+                            insertCategoryStatement.setObject(3, UUID.fromString(categoryId));
                             insertCategoryStatement.addBatch(); // Batch inserts for efficiency
                         }
                         insertCategoryStatement.executeBatch(); // Execute batch insert
@@ -17179,7 +17176,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         for (String tagId : tagIds) {
                             insertTagStatement.setString(1, schemaId);
                             insertTagStatement.setString(2, "schema"); // entity_type = "schema"
-                            insertTagStatement.setString(3, tagId);
+                            insertTagStatement.setObject(3, UUID.fromString(tagId));
                             insertTagStatement.addBatch(); // Batch inserts for efficiency
                         }
                         insertTagStatement.executeBatch(); // Execute batch insert
@@ -17268,7 +17265,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         for (String categoryId : categoryIds) {
                             insertCategoryStatement.setString(1, schemaId);
                             insertCategoryStatement.setString(2, "schema"); // entity_type = "schema"
-                            insertCategoryStatement.setString(3, categoryId);
+                            insertCategoryStatement.setObject(3, UUID.fromString(categoryId));
                             insertCategoryStatement.addBatch(); // Batch inserts for efficiency
                         }
                         insertCategoryStatement.executeBatch(); // Execute batch insert
@@ -17290,7 +17287,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         for (String tagId : tagIds) {
                             insertTagStatement.setString(1, schemaId);
                             insertTagStatement.setString(2, "schema"); // entity_type = "schema"
-                            insertTagStatement.setString(3, tagId);
+                            insertTagStatement.setObject(3, UUID.fromString(tagId));
                             insertTagStatement.addBatch(); // Batch inserts for efficiency
                         }
                         insertTagStatement.executeBatch(); // Execute batch insert
@@ -17372,7 +17369,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         List<Object> parameters = new ArrayList<>();
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "host_id", hostId);
+        addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
         addCondition(whereClause, parameters, "schema_id", schemaId);
         addCondition(whereClause, parameters, "schema_version", schemaVersion);
         addCondition(whereClause, parameters, "schema_type", schemaType);
@@ -17418,7 +17415,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         isFirstRow = false;
                     }
                     map.put("schemaId", resultSet.getString("schema_id"));
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("schemaVersion", resultSet.getString("schema_version"));
                     map.put("schemaType", resultSet.getString("schema_type"));
                     map.put("specVersion", resultSet.getString("spec_version"));
@@ -17471,7 +17468,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
 
             if (hostId != null && !hostId.isEmpty()) {
-                preparedStatement.setString(1, hostId); // Set hostId parameter if provided
+                preparedStatement.setObject(1, UUID.fromString(hostId)); // Set hostId parameter if provided
             }
 
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -17508,7 +17505,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     if (resultSet.next()) {
                         map = new HashMap<>();
                         map.put("schemaId", resultSet.getString("schema_id"));
-                        map.put("hostId", resultSet.getString("host_id"));
+                        map.put("hostId", resultSet.getObject("host_id", UUID.class));
                         map.put("schemaVersion", resultSet.getString("schema_version"));
                         map.put("schemaType", resultSet.getString("schema_type"));
                         map.put("specVersion", resultSet.getString("spec_version"));
@@ -17555,13 +17552,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder.toString())) {
 
-            preparedStatement.setString(1, categoryId); // Set categoryId parameter
+            preparedStatement.setObject(1, UUID.fromString(categoryId));
 
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
                     map.put("schemaId", resultSet.getString("schema_id"));
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("schemaVersion", resultSet.getString("schema_version"));
                     map.put("schemaType", resultSet.getString("schema_type"));
                     map.put("specVersion", resultSet.getString("spec_version"));
@@ -17609,13 +17606,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder.toString())) {
 
-            preparedStatement.setString(1, tagId); // Set categoryId parameter
+            preparedStatement.setObject(1, UUID.fromString(tagId));
 
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
                     map.put("schemaId", resultSet.getString("schema_id"));
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("schemaVersion", resultSet.getString("schema_version"));
                     map.put("schemaType", resultSet.getString("schema_type"));
                     map.put("specVersion", resultSet.getString("spec_version"));
@@ -17662,12 +17659,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 String hostId = (String)map.get("hostId");
                 if (hostId != null && !hostId.isEmpty()) {
-                    statement.setString(1, hostId);
+                    statement.setObject(1, UUID.fromString(hostId));
                 } else {
                     statement.setNull(1, Types.VARCHAR);
                 }
 
-                statement.setString(2, tagId); // Required
+                statement.setObject(2, UUID.fromString(tagId)); // Required
                 statement.setString(3, (String)map.get("entityType")); // Required
                 statement.setString(4, (String)map.get("tagName")); // Required
 
@@ -17726,7 +17723,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 statement.setString(3, (String)event.get(Constants.USER));
                 statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(5, tagId);
+                statement.setObject(5, UUID.fromString(tagId));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -17763,7 +17760,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, tagId);
+                statement.setObject(1, UUID.fromString(tagId));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -17806,14 +17803,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         // --- Modified host_id condition to include global tags ---
         if (hostId != null && !hostId.isEmpty()) {
             whereClause.append("("); // Start OR group
-            addCondition(whereClause, parameters, "host_id", hostId); // Tenant-specific tags
+            addCondition(whereClause, parameters, "host_id", UUID.fromString(hostId)); // Tenant-specific tags
             whereClause.append(" OR host_id IS NULL)");         // Include global tags
         } else {
             // If hostId is null or empty, only fetch global tags
             addCondition(whereClause, parameters, "host_id", null); // Fetch only global
         }
         // --- Rest of the conditions ---
-        addCondition(whereClause, parameters, "tag_id", tagId);
+        addCondition(whereClause, parameters, "tag_id", tagId != null ? UUID.fromString(tagId) : null);
         addCondition(whereClause, parameters, "entity_type", entityType);
         addCondition(whereClause, parameters, "tag_name", tagName);
         addCondition(whereClause, parameters, "tag_desc", tagDesc);
@@ -17847,8 +17844,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("tagId", resultSet.getString("tag_id"));
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("tagId", resultSet.getObject("tag_id", UUID.class));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("entityType", resultSet.getString("entity_type"));
                     map.put("tagName", resultSet.getString("tag_name"));
                     map.put("tagDesc", resultSet.getString("tag_desc"));
@@ -17881,7 +17878,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setString(1, hostId);
+            preparedStatement.setObject(1, UUID.fromString(hostId));
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
@@ -17913,8 +17910,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
                         map = new HashMap<>();
-                        map.put("tagId", resultSet.getString("tag_id"));
-                        map.put("hostId", resultSet.getString("host_id"));
+                        map.put("tagId", resultSet.getObject("tag_id", UUID.class));
+                        map.put("hostId", resultSet.getObject("host_id", UUID.class));
                         map.put("entityType", resultSet.getString("entity_type"));
                         map.put("tagName", resultSet.getString("tag_name"));
                         map.put("tagDesc", resultSet.getString("tag_desc"));
@@ -17963,14 +17960,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 preparedStatement.setString(parameterIndex++, tagName); // 1. tagName
 
                 if (hostId != null && !hostId.isEmpty()) {
-                    preparedStatement.setString(parameterIndex++, hostId); // 2. hostId (for tenant-specific OR global)
+                    preparedStatement.setObject(parameterIndex++, UUID.fromString(hostId)); // 2. hostId (for tenant-specific OR global)
                 }
 
                 try (ResultSet resultSet = preparedStatement.executeQuery()) {
                     if (resultSet.next()) {
                         map = new HashMap<>();
-                        map.put("tagId", resultSet.getString("tag_id"));
-                        map.put("hostId", resultSet.getString("host_id"));
+                        map.put("tagId", resultSet.getObject("tag_id", UUID.class));
+                        map.put("hostId", resultSet.getObject("host_id", UUID.class));
                         map.put("entityType", resultSet.getString("entity_type"));
                         map.put("tagName", resultSet.getString("tag_name"));
                         map.put("tagDesc", resultSet.getString("tag_desc"));
@@ -18016,14 +18013,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             preparedStatement.setString(parameterIndex++, entityType); // 1. entityType
 
             if (hostId != null && !hostId.isEmpty()) {
-                preparedStatement.setString(parameterIndex++, hostId); // 2. hostId (for tenant-specific OR global)
+                preparedStatement.setObject(parameterIndex++, UUID.fromString(hostId)); // 2. hostId (for tenant-specific OR global)
             }
 
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
-                    map.put("tagId", resultSet.getString("tag_id"));
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("tagId", resultSet.getObject("tag_id", UUID.class));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("entityType", resultSet.getString("entity_type"));
                     map.put("tagName", resultSet.getString("tag_name"));
                     map.put("tagDesc", resultSet.getString("tag_desc"));
@@ -18060,9 +18057,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
 
                 // 1. schedule_id (Required)
-                statement.setString(1, scheduleId);
+                statement.setObject(1, UUID.fromString(scheduleId));
                 // 2. host_id (Required - from event metadata)
-                statement.setString(2, (String)map.get("hostId"));
+                statement.setObject(2, UUID.fromString((String)map.get("hostId")));
                 // 3. schedule_name (Required)
                 statement.setString(3, (String)map.get("scheduleName"));
                 // 4. frequency_unit (Required)
@@ -18158,7 +18155,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setObject(9, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
                 // 9. schedule_id (For WHERE clause - Required)
-                statement.setString(10, scheduleId);
+                statement.setObject(10, UUID.fromString(scheduleId));
 
 
                 // Execute update
@@ -18210,7 +18207,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
 
                 // Set parameter for the WHERE clause
-                statement.setString(1, scheduleId);
+                statement.setObject(1, UUID.fromString(scheduleId));
 
                 // Execute delete
                 int count = statement.executeUpdate();
@@ -18259,8 +18256,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         StringBuilder whereClause = new StringBuilder();
 
         // Add conditions based on input parameters using the helper
-        addCondition(whereClause, parameters, "host_id", hostId);
-        addCondition(whereClause, parameters, "schedule_id", scheduleId);
+        addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "schedule_id", scheduleId != null ? UUID.fromString(scheduleId) : null);
         addCondition(whereClause, parameters, "schedule_name", scheduleName);
         addCondition(whereClause, parameters, "frequency_unit", frequencyUnit);
         addCondition(whereClause, parameters, "frequency_time", frequencyTime);
@@ -18304,8 +18301,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         isFirstRow = false;
                     }
                     // Populate map with data for the current row
-                    map.put("scheduleId", resultSet.getString("schedule_id"));
-                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("scheduleId", resultSet.getObject("schedule_id", UUID.class));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("scheduleName", resultSet.getString("schedule_name"));
                     map.put("frequencyUnit", resultSet.getString("frequency_unit"));
                     map.put("frequencyTime", resultSet.getInt("frequency_time"));
@@ -18348,7 +18345,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
 
-            preparedStatement.setString(1, hostId); // Set the hostId parameter
+            preparedStatement.setObject(1, UUID.fromString(hostId)); // Set the hostId parameter
 
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 // Iterate through results and build the label map list
@@ -18384,14 +18381,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             // No setAutoCommit(false) needed for SELECT
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, scheduleId); // Set the scheduleId parameter
+                statement.setObject(1, UUID.fromString(scheduleId));
 
                 try (ResultSet resultSet = statement.executeQuery()) {
                     // Check if a row was found
                     if (resultSet.next()) {
                         scheduleMap = new HashMap<>(); // Create map only if found
-                        scheduleMap.put("scheduleId", resultSet.getString("schedule_id"));
-                        scheduleMap.put("hostId", resultSet.getString("host_id"));
+                        scheduleMap.put("scheduleId", resultSet.getObject("schedule_id", UUID.class));
+                        scheduleMap.put("hostId", resultSet.getObject("host_id", UUID.class));
                         scheduleMap.put("scheduleName", resultSet.getString("schedule_name"));
                         scheduleMap.put("frequencyUnit", resultSet.getString("frequency_unit"));
                         scheduleMap.put("frequencyTime", resultSet.getInt("frequency_time"));

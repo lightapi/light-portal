@@ -1,9 +1,6 @@
 package net.lightapi.portal.platform;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import net.lightapi.portal.command.HybridCommandStartup;
-import net.lightapi.portal.deployment.DeploymentStatusEvent;
-import com.networknt.kafka.common.AvroSerializer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +17,6 @@ import java.util.Map;
 public class AnsiblePlatform implements DeploymentPlatformHandler {
     private static final Logger logger = LoggerFactory.getLogger(AnsiblePlatform.class);
     private static final ObjectMapper mapper = new ObjectMapper();
-    private static final AvroSerializer serializer = new AvroSerializer();
 
     @Override
     public Map<String, Object> startDeployment(Map<String, Object> input) throws Exception {
@@ -71,6 +67,7 @@ public class AnsiblePlatform implements DeploymentPlatformHandler {
 
         logger.info("Ansible job status for job {} = {}", jobId, status);
 
+        /*
         // Emit Avro DeploymentStatusEvent
         DeploymentStatusEvent event = DeploymentStatusEvent.newBuilder()
                 .setDeploymentId(deploymentId)
@@ -83,6 +80,7 @@ public class AnsiblePlatform implements DeploymentPlatformHandler {
         HybridCommandStartup.producer.send(
             new ProducerRecord<>("deployment-status", deploymentId.getBytes(StandardCharsets.UTF_8), serialized)
         );
+        */
 
         Map<String, Object> result = new HashMap<>();
         result.put("status", status);

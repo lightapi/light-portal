@@ -2,6 +2,7 @@ package net.lightapi.db;
 
 import com.networknt.utility.Constants;
 import com.networknt.utility.Util;
+import com.networknt.utility.UuidUtil;
 import io.cloudevents.CloudEvent;
 import io.cloudevents.core.builder.CloudEventBuilder;
 import io.cloudevents.jackson.JsonFormat;
@@ -26,7 +27,7 @@ public class CloudEventTest {
 
         String data = "{\"redirectUri\":\"https://localhost:3000/authorization\",\"authCode\":\"dTT0hjYBS7aZwF0gipqxnA\",\"roles\":\"admin user\",\"hostId\":\"N2CMw0HGQXeLvC1wBfln2A\",\"groups\":\"delete insert select update\",\"entityId\":\"sh35\",\"positions\":\"APIPlatformDelivery\",\"userId\":\"utgdG50vRVOX3mL1Kf83aA\",\"remember\":\"Y\",\"providerId\":\"EF3wqhfWQti2DUVrvYNM7g\",\"attributes\":\"country^=^CAN~peranent_employee^=^true~security_clearance_level^=^2\",\"userType\":\"E\",\"email\":\"steve.hu@lightapi.net\"}";
         CloudEvent event = eventTemplate.newBuilder()
-                .withId(Util.getUUID())
+                .withId(UuidUtil.getUUID().toString())
                 .withTime(OffsetDateTime.now())
                 .withExtension(Constants.USER, "user123")
                 .withExtension(PortalConstants.NONCE, 1)

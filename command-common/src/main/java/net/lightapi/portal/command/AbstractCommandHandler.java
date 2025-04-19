@@ -10,6 +10,7 @@ import com.networknt.utility.Constants;
 import com.networknt.utility.NioUtils;
 import com.networknt.rpc.HybridHandler;
 import com.networknt.utility.Util;
+import com.networknt.utility.UuidUtil;
 import io.cloudevents.CloudEvent;
 import io.cloudevents.core.builder.CloudEventBuilder;
 import io.cloudevents.jackson.JsonFormat;
@@ -209,7 +210,7 @@ public abstract class AbstractCommandHandler implements HybridHandler {
         String data = JsonMapper.toJson(map);
         if(getLogger().isTraceEnabled()) getLogger().trace("event user = {} host = {} type = {} and data = {}", userId, host, getCloudEventType(), data);
         return eventTemplate.newBuilder()
-                .withId(Util.getUUID())
+                .withId(UuidUtil.getUUID().toString())
                 .withTime(OffsetDateTime.now())
                 .withExtension(Constants.USER, userId)
                 .withExtension(PortalConstants.NONCE, nonce)
