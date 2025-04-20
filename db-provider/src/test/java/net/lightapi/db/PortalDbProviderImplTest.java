@@ -237,4 +237,13 @@ public class PortalDbProviderImplTest {
         }
     }
 
+    @Test
+    void testQueryClientByClientId() {
+        Result<Map<String, Object>> result =  dbProvider.queryClientByClientId("f7d42348-c647-4efb-a52d-4c5787421e70");
+        if(result.isFailure()) {
+            System.out.println(result.getError());
+        } else {
+            System.out.println(result.getResult());
+        }
+    }
 }
