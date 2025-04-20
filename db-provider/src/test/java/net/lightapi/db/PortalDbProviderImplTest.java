@@ -239,11 +239,42 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testQueryClientByClientId() {
-        Result<Map<String, Object>> result =  dbProvider.queryClientByClientId("f7d42348-c647-4efb-a52d-4c5787421e70");
+        Result<String> result =  dbProvider.queryClientByClientId("f7d42348-c647-4efb-a52d-4c5787421e70");
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
             System.out.println(result.getResult());
         }
     }
+
+    @Test
+    void testQueryHostById() {
+        Result<String> result =  dbProvider.queryHostById("01964b05-552a-7c4b-9184-6857e7f3dc5f");
+        if(result.isFailure()) {
+            System.out.println(result.getError());
+        } else {
+            System.out.println(result.getResult());
+        }
+    }
+
+    @Test
+    void testQueryNotification() {
+        Result<String> result =  dbProvider.queryNotification(0, 10, "01964b05-552a-7c4b-9184-6857e7f3dc5f", null, null, null, null, null, null, null);
+        if(result.isFailure()) {
+            System.out.println(result.getError());
+        } else {
+            System.out.println(result.getResult());
+        }
+    }
+
+    @Test
+    void testQueryAuthCode() {
+        Result<String> result =  dbProvider.queryAuthCode("AZZUf_bod7y2VaMm9Lu3_w");
+        if(result.isFailure()) {
+            System.out.println(result.getError());
+        } else {
+            System.out.println(result.getResult());
+        }
+    }
+
 }

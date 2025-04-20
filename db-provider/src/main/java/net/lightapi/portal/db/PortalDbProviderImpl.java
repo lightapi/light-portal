@@ -2119,7 +2119,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "WHERE uh.host_id = ?\n");
 
         List<Object> parameters = new ArrayList<>();
-        parameters.add(hostId);
+        parameters.add(UUID.fromString(hostId));
 
         StringBuilder whereClause = new StringBuilder();
 
@@ -2225,7 +2225,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "WHERE host_id = ?\n");
 
         List<Object> parameters = new ArrayList<>();
-        parameters.add(hostId);
+        parameters.add(UUID.fromString(hostId));
 
         StringBuilder whereClause = new StringBuilder();
 
@@ -2342,9 +2342,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public void insertNotification(Map<String, Object> event, boolean flag, String error) throws SQLException {
         try (Connection conn = ds.getConnection();
             PreparedStatement statement = conn.prepareStatement(INSERT_NOTIFICATION)) {
-            statement.setString(1, (String)event.get(CloudEventV1.ID));
-            statement.setString(2, (String)event.get(Constants.HOST));
-            statement.setString(3, (String)event.get(Constants.USER));
+            statement.setObject(1, UUID.fromString((String)event.get(CloudEventV1.ID)));
+            statement.setObject(2, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setObject(3, UUID.fromString((String)event.get(Constants.USER)));
             statement.setLong(4, ((Number)event.get(PortalConstants.NONCE)).longValue());
             statement.setString(5, (String)event.get(CloudEventV1.TYPE));
             statement.setString(6, JsonMapper.toJson(event));
@@ -3330,7 +3330,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "AND r.host_id = ?\n");
 
         List<Object> parameters = new ArrayList<>();
-        parameters.add(hostId);
+        parameters.add(UUID.fromString(hostId));
 
         StringBuilder whereClause = new StringBuilder();
 
@@ -3405,7 +3405,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("csrf", resultSet.getString("csrf"));
                     map.put("customClaim", resultSet.getString("custom_claim"));
                     map.put("updateUser", resultSet.getString("update_user"));
-                    map.put("updateTs", resultSet.getTimestamp("update_ts"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     tokens.add(map);
                 }
             }
@@ -3656,7 +3656,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
 
         List<Object> parameters = new ArrayList<>();
-        parameters.add(hostId);
+        parameters.add(UUID.fromString(hostId));
 
         StringBuilder whereClause = new StringBuilder();
 
@@ -3781,7 +3781,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "WHERE host_id = ?\n");
 
         List<Object> parameters = new ArrayList<>();
-        parameters.add(hostId);
+        parameters.add(UUID.fromString(hostId));
 
         StringBuilder whereClause = new StringBuilder();
 
@@ -4193,7 +4193,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "WHERE host_id = ?\n");
 
         List<Object> parameters = new ArrayList<>();
-        parameters.add(hostId);
+        parameters.add(UUID.fromString(hostId));
 
         StringBuilder whereClause = new StringBuilder();
 
@@ -4276,7 +4276,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "WHERE host_id = ?\n");
 
         List<Object> parameters = new ArrayList<>();
-        parameters.add(hostId);
+        parameters.add(UUID.fromString(hostId));
 
         StringBuilder whereClause = new StringBuilder();
 
@@ -4336,7 +4336,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("authenticateClass", resultSet.getString("authenticate_class"));
                     map.put("deRefClientId", resultSet.getObject("deref_client_id", UUID.class));
                     map.put("updateUser", resultSet.getString("update_user"));
-                    map.put("updateTs", resultSet.getTimestamp("update_ts"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     clients.add(map);
                 }
             }
@@ -4762,9 +4762,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<Map<String, Object>> queryClientByClientId(String clientId) {
-        if(logger.isTraceEnabled()) logger.trace("queryClientByClientId: clientId = " + clientId);
-        Result<Map<String, Object>> result;
+    public Result<String> queryClientByClientId(String clientId) {
+        if(logger.isTraceEnabled()) logger.trace("queryClientByClientId: clientId = {}", clientId);
+        Result<String> result;
         String sql =
                 "SELECT host_id, app_id, api_id, client_name, client_id, client_type, client_profile, client_secret, " +
                         "client_scope, custom_claim,\n" +
@@ -4791,14 +4791,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("authenticateClass", resultSet.getString("authenticate_class"));
                         map.put("deRefClientId", resultSet.getObject("deref_client_id", UUID.class));
                         map.put("updateUser", resultSet.getString("update_user"));
-                        map.put("updateTs", resultSet.getTimestamp("update_ts"));
+                        map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     }
                 }
             }
             if (map.isEmpty())
                 result = Failure.of(new Status(OBJECT_NOT_FOUND, "application with clientId ", clientId));
             else
-                result = Success.of(map);
+                result = Success.of(JsonMapper.toJson(map));
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
@@ -4857,8 +4857,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<Map<String, Object>> queryClientByHostAppId(String host_id, String appId) {
-        Result<Map<String, Object>> result;
+    public Result<String> queryClientByHostAppId(String host_id, String appId) {
+        Result<String> result;
         String sql =
                 "SELECT host_id, app_id, client_id, client_type, client_profile, client_scope, custom_claim, \n" +
                         "redirect_uri, authenticate_class, deref_client_id, update_user, update_ts \n" +
@@ -4882,14 +4882,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("authenticateClass", resultSet.getString("authenticate_class"));
                         map.put("deRefClientId", resultSet.getObject("deref_client_id", UUID.class));
                         map.put("updateUser", resultSet.getString("update_user"));
-                        map.put("updateTs", resultSet.getTimestamp("update_ts"));
+                        map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     }
                 }
             }
             if (map.size() == 0)
                 result = Failure.of(new Status(OBJECT_NOT_FOUND, "client with appId ", appId));
             else
-                result = Success.of(map);
+                result = Success.of(JsonMapper.toJson(map));
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
@@ -5243,7 +5243,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
 
         List<Object> parameters = new ArrayList<>();
-        parameters.add(hostId);
+        parameters.add(UUID.fromString(hostId));
 
         StringBuilder whereClause = new StringBuilder();
 
@@ -5925,7 +5925,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "WHERE host_id = ? AND api_id = ? AND api_version = ?\n");
 
         List<Object> parameters = new ArrayList<>();
-        parameters.add(hostId);
+        parameters.add(UUID.fromString(hostId));
         parameters.add(apiId);
         parameters.add(apiVersion);
 
@@ -7058,7 +7058,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
             try (PreparedStatement statement = conn.prepareStatement(queryHostById)) {
-                statement.setString(1, id);
+                statement.setObject(1, UUID.fromString(id));
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
                         map.put("hostId", resultSet.getObject("host_id", UUID.class));
@@ -7067,7 +7067,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("hostDesc", resultSet.getString("host_desc"));
                         map.put("hostOwner", resultSet.getString("host_owner"));
                         map.put("updateUser", resultSet.getString("update_user"));
-                        map.put("updateTs", resultSet.getTimestamp("update_ts"));
+                        map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     }
                 }
             }
@@ -7102,7 +7102,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("orgOwner", resultSet.getString("org_owner"));
                         map.put("jwk", resultSet.getString("jwk"));
                         map.put("updateUser", resultSet.getString("update_user"));
-                        map.put("updateTs", resultSet.getTimestamp("update_ts"));
+                        map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     }
                 }
             }
@@ -10169,7 +10169,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("privateKey", resultSet.getString("private_key"));
                         map.put("keyType", resultSet.getString("key_type"));
                         map.put("updateUser", resultSet.getString("update_user"));
-                        map.put("updateTs", resultSet.getTimestamp("update_ts"));
+                        map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     }
                 }
             }
@@ -10416,7 +10416,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("ruleBody", resultSet.getString("rule_body"));
                         map.put("ruleOwner", resultSet.getString("rule_owner"));
                         map.put("updateUser", resultSet.getString("update_user"));
-                        map.put("updateTs", resultSet.getTimestamp("update_ts"));
+                        map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                         list.add(map);
                     }
                 }
@@ -10450,7 +10450,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     "FROM rule_t r, rule_host_t h " +
                     "WHERE r.rule_id = h.rule_id " +
                     "AND h.host_id = ?\n");
-            parameters.add(hostId);
+            parameters.add(UUID.fromString(hostId));
 
             StringBuilder whereClause = new StringBuilder();
 
@@ -10505,7 +10505,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     "                    FROM rule_t r\n" +
                     "                    JOIN rule_host_t h ON r.rule_id = h.rule_id\n" +
                     "                    WHERE h.host_id = ?\n");
-            parameters.add(hostId);
+            parameters.add(UUID.fromString(hostId));
             StringBuilder whereClause = new StringBuilder();
 
             addCondition(whereClause, parameters, "r.rule_id", ruleId);
@@ -10546,8 +10546,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     "                         WHERE eh.rule_id = r.rule_id\n" +
                     "                         AND eh.host_id=?\n" +
                     "                     )\n");
-            parameters.add(hostId);
-            parameters.add(hostId);
+            parameters.add(UUID.fromString(hostId));
+            parameters.add(UUID.fromString(hostId));
 
 
             StringBuilder whereClauseCommon = new StringBuilder();
@@ -10604,7 +10604,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("ruleBody", resultSet.getString("rule_body"));
                     map.put("ruleOwner", resultSet.getString("rule_owner"));
                     map.put("updateUser", resultSet.getString("update_user"));
-                    map.put("updateTs", resultSet.getTimestamp("update_ts"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     rules.add(map);
                 }
             }
@@ -10643,7 +10643,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         map.put("ruleBody", resultSet.getString("rule_body"));
                         map.put("ruleOwner", resultSet.getString("rule_owner"));
                         map.put("updateUser", resultSet.getString("update_user"));
-                        map.put("updateTs", resultSet.getTimestamp("update_ts"));
+                        map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     }
                 }
             }
@@ -10889,7 +10889,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
 
         List<Object> parameters = new ArrayList<>();
-        parameters.add(hostId);
+        parameters.add(UUID.fromString(hostId));
 
 
         StringBuilder whereClause = new StringBuilder();
@@ -10931,7 +10931,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("roleId", resultSet.getString("role_id"));
                     map.put("roleDesc", resultSet.getString("role_desc"));
                     map.put("updateUser", resultSet.getString("update_user"));
-                    map.put("updateTs", resultSet.getTimestamp("update_ts"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     roles.add(map);
                 }
             }
@@ -10996,7 +10996,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
 
         List<Object> parameters = new ArrayList<>();
-        parameters.add(hostId);
+        parameters.add(UUID.fromString(hostId));
 
 
         StringBuilder whereClause = new StringBuilder();
@@ -11084,7 +11084,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
 
         List<Object> parameters = new ArrayList<>();
-        parameters.add(hostId);
+        parameters.add(UUID.fromString(hostId));
 
 
         StringBuilder whereClause = new StringBuilder();
@@ -11398,7 +11398,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "AND r.host_id = ?\n");
 
         List<Object> parameters = new ArrayList<>();
-        parameters.add(hostId);
+        parameters.add(UUID.fromString(hostId));
 
         StringBuilder whereClause = new StringBuilder();
 
@@ -11607,7 +11607,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "AND r.host_id = ?\n");
 
         List<Object> parameters = new ArrayList<>();
-        parameters.add(hostId);
+        parameters.add(UUID.fromString(hostId));
 
         StringBuilder whereClause = new StringBuilder();
 
@@ -11934,7 +11934,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "FROM group_t " +
                 "WHERE host_id = ?\n");
         List<Object> parameters = new ArrayList<>();
-        parameters.add(hostId);
+        parameters.add(UUID.fromString(hostId));
 
         StringBuilder whereClause = new StringBuilder();
         addCondition(whereClause, parameters, "group_id", groupId);
@@ -11971,7 +11971,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("groupId", resultSet.getString("group_id"));
                     map.put("groupDesc", resultSet.getString("group_desc"));
                     map.put("updateUser", resultSet.getString("update_user"));
-                    map.put("updateTs", resultSet.getTimestamp("update_ts"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     groups.add(map);
                 }
             }
@@ -12033,7 +12033,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
 
         List<Object> parameters = new ArrayList<>();
-        parameters.add(hostId);
+        parameters.add(UUID.fromString(hostId));
 
 
         StringBuilder whereClause = new StringBuilder();
@@ -12120,7 +12120,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "AND g.host_id = ?\n");
 
         List<Object> parameters = new ArrayList<>();
-        parameters.add(hostId);
+        parameters.add(UUID.fromString(hostId));
 
 
         StringBuilder whereClause = new StringBuilder();
@@ -12429,7 +12429,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "AND g.host_id = ?\n");
 
         List<Object> parameters = new ArrayList<>();
-        parameters.add(hostId);
+        parameters.add(UUID.fromString(hostId));
 
         StringBuilder whereClause = new StringBuilder();
 
@@ -12638,7 +12638,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "AND g.host_id = ?\n");
 
         List<Object> parameters = new ArrayList<>();
-        parameters.add(hostId);
+        parameters.add(UUID.fromString(hostId));
 
         StringBuilder whereClause = new StringBuilder();
 
@@ -12992,7 +12992,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "FROM position_t " +
                 "WHERE host_id = ?\n");
         List<Object> parameters = new ArrayList<>();
-        parameters.add(hostId);
+        parameters.add(UUID.fromString(hostId));
 
         StringBuilder whereClause = new StringBuilder();
         addCondition(whereClause, parameters, "position_id", positionId);
@@ -13034,7 +13034,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("inheritToAncestor", resultSet.getString("inherit_to_ancestor"));
                     map.put("inheritToSibling", resultSet.getString("inherit_to_sibling"));
                     map.put("updateUser", resultSet.getString("update_user"));
-                    map.put("updateTs", resultSet.getTimestamp("update_ts"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     positions.add(map);
                 }
             }
@@ -13097,7 +13097,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
 
         List<Object> parameters = new ArrayList<>();
-        parameters.add(hostId);
+        parameters.add(UUID.fromString(hostId));
 
 
         StringBuilder whereClause = new StringBuilder();
@@ -13182,7 +13182,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "AND ep.host_id = ?\n");
 
         List<Object> parameters = new ArrayList<>();
-        parameters.add(hostId);
+        parameters.add(UUID.fromString(hostId));
 
 
         StringBuilder whereClause = new StringBuilder();
@@ -13496,7 +13496,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "AND o.host_id = ?\n");
 
         List<Object> parameters = new ArrayList<>();
-        parameters.add(hostId);
+        parameters.add(UUID.fromString(hostId));
 
         StringBuilder whereClause = new StringBuilder();
 
@@ -13704,7 +13704,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "AND o.host_id = ?\n");
 
         List<Object> parameters = new ArrayList<>();
-        parameters.add(hostId);
+        parameters.add(UUID.fromString(hostId));
 
         StringBuilder whereClause = new StringBuilder();
 
@@ -14046,7 +14046,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "WHERE host_id = ?\n");
 
         List<Object> parameters = new ArrayList<>();
-        parameters.add(hostId);
+        parameters.add(UUID.fromString(hostId));
 
         StringBuilder whereClause = new StringBuilder();
         addCondition(whereClause, parameters, "attribute_id", attributeId);
@@ -14084,7 +14084,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("attributeType", resultSet.getString("attribute_type"));
                     map.put("attributeDesc", resultSet.getString("attribute_desc"));
                     map.put("updateUser", resultSet.getString("update_user"));
-                    map.put("updateTs", resultSet.getTimestamp("update_ts"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     attributes.add(map);
                 }
             }
@@ -14148,7 +14148,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
 
         List<Object> parameters = new ArrayList<>();
-        parameters.add(hostId);
+        parameters.add(UUID.fromString(hostId));
 
 
         StringBuilder whereClause = new StringBuilder();
@@ -14242,7 +14242,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "AND a.host_id = ?\n");
 
         List<Object> parameters = new ArrayList<>();
-        parameters.add(hostId);
+        parameters.add(UUID.fromString(hostId));
 
 
         StringBuilder whereClause = new StringBuilder();
@@ -14611,7 +14611,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "AND a.host_id = ?\n");
 
         List<Object> parameters = new ArrayList<>();
-        parameters.add(hostId);
+        parameters.add(UUID.fromString(hostId));
 
         StringBuilder whereClause = new StringBuilder();
 
@@ -14826,7 +14826,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "AND a.host_id = ?\n");
 
         List<Object> parameters = new ArrayList<>();
-        parameters.add(hostId);
+        parameters.add(UUID.fromString(hostId));
 
         StringBuilder whereClause = new StringBuilder();
 
@@ -16736,7 +16736,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         // --- Handle host_id condition first ---
         if (hostId != null && !hostId.isEmpty()) {
             conditions.add("(cat.host_id = ? OR cat.host_id IS NULL)");
-            parameters.add(hostId);
+            parameters.add(UUID.fromString(hostId));
         } else {
             conditions.add("cat.host_id IS NULL");
             // No parameter for IS NULL

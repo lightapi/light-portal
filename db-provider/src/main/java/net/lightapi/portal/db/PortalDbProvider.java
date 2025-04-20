@@ -127,9 +127,9 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> createClient(Map<String, Object> event);
     Result<String> updateClient(Map<String, Object> event);
     Result<String> deleteClient(Map<String, Object> event);
-    Result<Map<String, Object>> queryClientByClientId(String clientId);
+    Result<String> queryClientByClientId(String clientId);
     Result<String> queryClientByProviderClientId(String providerId, String clientId);
-    Result<Map<String, Object>> queryClientByHostAppId(String host, String applicationId);
+    Result<String> queryClientByHostAppId(String host, String applicationId);
 
     Result<String> createService(Map<String, Object> event);
     Result<String> updateService(Map<String, Object> event);
