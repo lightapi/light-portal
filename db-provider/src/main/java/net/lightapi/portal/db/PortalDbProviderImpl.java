@@ -3203,7 +3203,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
                 statement.setObject(1, UUID.fromString((String)map.get("refreshToken")));
                 statement.setObject(2, UUID.fromString((String)map.get("hostId")));
-                statement.setObject(3, UUID.fromString((String)map.get("providerId")));
+                statement.setString(3, (String)map.get("providerId"));
                 statement.setObject(4, UUID.fromString((String)map.get("userId")));
                 statement.setString(5, (String)map.get("entityId"));
                 statement.setString(6, (String)map.get("userType"));
@@ -3442,7 +3442,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     if (resultSet.next()) {
                         map.put("refreshToken", resultSet.getObject("refresh_token", UUID.class));
                         map.put("hostId", resultSet.getObject("host_id", UUID.class));
-                        map.put("providerId", resultSet.getObject("provider_id", UUID.class));
+                        map.put("providerId", resultSet.getString("provider_id"));
                         map.put("userId", resultSet.getObject("user_id", UUID.class));
                         map.put("entityId", resultSet.getString("entity_id"));
                         map.put("userType", resultSet.getString("user_type"));
@@ -3746,7 +3746,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString(providerId));
+                statement.setString(1, providerId);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
                         map.put("hostId", resultSet.getObject("host_id", UUID.class));
@@ -3899,7 +3899,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 try (PreparedStatement keyStatement = conn.prepareStatement(keySql)) {
                     Map<String, Object> keys = (Map<String, Object>) map.get("keys");
 
-                    keyStatement.setObject(1, UUID.fromString((String)map.get("providerId")));
+                    keyStatement.setString(1, (String)map.get("providerId"));
 
                     Map<String, Object> lcMap = (Map<String, Object>) keys.get("LC");
                     // add long live current key
@@ -4156,7 +4156,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setObject(1, UUID.fromString(providerId));
+            preparedStatement.setString(1, providerId);
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
@@ -4823,7 +4823,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString(providerId));
+                statement.setString(1, providerId);
                 statement.setObject(2, UUID.fromString(clientId));
 
                 try (ResultSet resultSet = statement.executeQuery()) {
@@ -10124,7 +10124,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
             try (PreparedStatement statement = conn.prepareStatement(queryConfigById)) {
-                statement.setObject(1, UUID.fromString(providerId));
+                statement.setString(1, providerId);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
                         map.put("providerId", resultSet.getString("provider_id"));
@@ -10160,7 +10160,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
             try (PreparedStatement statement = conn.prepareStatement(queryConfigById)) {
-                statement.setObject(1, UUID.fromString(providerId));
+                statement.setString(1, providerId);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
                         map.put("providerId", resultSet.getString("provider_id"));
