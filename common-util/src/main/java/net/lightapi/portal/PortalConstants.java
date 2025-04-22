@@ -1,6 +1,10 @@
 package net.lightapi.portal;
 
+import java.net.URI;
+
 public class PortalConstants {
+
+    public static final URI EVENT_SOURCE = URI.create("https://github.com/lightapi/light-portal");
 
     // order event handling
     public static final String ORDER_CONFIRMED = "Confirmed";

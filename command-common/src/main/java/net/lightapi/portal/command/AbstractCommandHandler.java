@@ -18,6 +18,7 @@ import io.undertow.server.HttpServerExchange;
 import net.lightapi.portal.HybridQueryClient;
 import net.lightapi.portal.PortalConfig;
 import net.lightapi.portal.PortalConstants;
+import net.lightapi.portal.PortalUtil;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
 
@@ -49,7 +50,6 @@ public abstract class AbstractCommandHandler implements HybridHandler {
 
     protected static final String INCORRECT_TOKEN_TYPE = "ERR11601";
     protected static final String SEND_MESSAGE_EXCEPTION = "ERR11605";
-    public static final URI EVENT_SOURCE = URI.create("https://github.com/lightapi/light-portal");
 
     /**
      * Subclasses must implement this to provide the specific CloudEvent type string. The type must be unique within the event source.
@@ -164,7 +164,7 @@ public abstract class AbstractCommandHandler implements HybridHandler {
         if(result.isFailure()) {
             return NioUtils.toByteBuffer(getStatus(exchange, result.getError()));
         }
-        Number nonce = parseNumber(result.getResult());
+        Number nonce = PortalUtil.parseNumber(result.getResult());
         if(logger.isTraceEnabled()) logger.trace("nonce = {}", nonce);
 
         // --- 3. Build CloudEvent ---
@@ -204,7 +204,7 @@ public abstract class AbstractCommandHandler implements HybridHandler {
     protected CloudEvent buildCloudEvent(Map<String, Object> map, String userId, String host, Number nonce) {
 
         CloudEventBuilder eventTemplate = CloudEventBuilder.v1()
-                .withSource(EVENT_SOURCE)
+                .withSource(PortalConstants.EVENT_SOURCE)
                 .withType(getCloudEventType());
 
         String data = JsonMapper.toJson(map);
@@ -225,47 +225,5 @@ public abstract class AbstractCommandHandler implements HybridHandler {
      */
     protected abstract Logger getLogger();
 
-    public static Number parseNumber(String str) throws NumberFormatException {
-        if (str == null || str.trim().isEmpty()) {
-            throw new NumberFormatException("Input string is null or empty");
-        }
-        String trimmed = str.trim();
-
-        // Check if the string represents a floating-point number
-        if (trimmed.matches(".*[.eE].*")) {
-            try {
-                return parseFloatingPoint(trimmed);
-            } catch (NumberFormatException e) {
-                throw new NumberFormatException("Invalid floating-point number: " + trimmed);
-            }
-        } else {
-            // Handle integer types (Integer, Long, or BigInteger)
-            try {
-                return parseInteger(trimmed);
-            } catch (NumberFormatException e) {
-                throw new NumberFormatException("Invalid integer number: " + trimmed);
-            }
-        }
-    }
-
-    private static Number parseFloatingPoint(String str) {
-        try {
-            return Double.parseDouble(str); // Try Double first
-        } catch (NumberFormatException e) {
-            return new BigDecimal(str); // Fallback to BigDecimal for precision
-        }
-    }
-
-    private static Number parseInteger(String str) {
-        try {
-            return Integer.parseInt(str); // Try Integer first
-        } catch (NumberFormatException e1) {
-            try {
-                return Long.parseLong(str); // Then Long
-            } catch (NumberFormatException e2) {
-                return new BigInteger(str); // Fallback to BigInteger for large values
-            }
-        }
-    }
 
 }

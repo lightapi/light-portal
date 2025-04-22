@@ -7,6 +7,8 @@ import org.yaml.snakeyaml.constructor.SafeConstructor;
 import org.yaml.snakeyaml.error.YAMLException;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.http.HttpClient;
@@ -74,4 +76,48 @@ public class PortalUtil {
             return new LinkedHashMap<>();
         }
     }
+
+    public static Number parseNumber(String str) throws NumberFormatException {
+        if (str == null || str.trim().isEmpty()) {
+            throw new NumberFormatException("Input string is null or empty");
+        }
+        String trimmed = str.trim();
+
+        // Check if the string represents a floating-point number
+        if (trimmed.matches(".*[.eE].*")) {
+            try {
+                return parseFloatingPoint(trimmed);
+            } catch (NumberFormatException e) {
+                throw new NumberFormatException("Invalid floating-point number: " + trimmed);
+            }
+        } else {
+            // Handle integer types (Integer, Long, or BigInteger)
+            try {
+                return parseInteger(trimmed);
+            } catch (NumberFormatException e) {
+                throw new NumberFormatException("Invalid integer number: " + trimmed);
+            }
+        }
+    }
+
+    private static Number parseFloatingPoint(String str) {
+        try {
+            return Double.parseDouble(str); // Try Double first
+        } catch (NumberFormatException e) {
+            return new BigDecimal(str); // Fallback to BigDecimal for precision
+        }
+    }
+
+    private static Number parseInteger(String str) {
+        try {
+            return Integer.parseInt(str); // Try Integer first
+        } catch (NumberFormatException e1) {
+            try {
+                return Long.parseLong(str); // Then Long
+            } catch (NumberFormatException e2) {
+                return new BigInteger(str); // Fallback to BigInteger for large values
+            }
+        }
+    }
+
 }
