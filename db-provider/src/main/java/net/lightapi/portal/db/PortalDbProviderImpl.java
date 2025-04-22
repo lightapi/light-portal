@@ -447,11 +447,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
 
                 // 5. start_time (Optional OffsetDateTime)
-                if (map.get("startTime") != null && map.get("startTime") instanceof String) {
+                if (map.get("startTs") != null && map.get("startTs") instanceof String) {
                     try {
-                        statement.setObject(5, OffsetDateTime.parse((String)map.get("startTime")));
+                        statement.setObject(5, OffsetDateTime.parse((String)map.get("startTs")));
                     } catch (java.time.format.DateTimeParseException e) {
-                        logger.warn("Invalid format for startTime '{}', setting NULL.", map.get("startTime"), e);
+                        logger.warn("Invalid format for startTs '{}', setting NULL.", map.get("startTs"), e);
                         statement.setNull(5, Types.TIMESTAMP_WITH_TIMEZONE);
                     }
                 } else {
@@ -459,11 +459,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
 
                 // 6. end_time (Optional OffsetDateTime)
-                if (map.get("endTime") != null && map.get("endTime") instanceof String) {
+                if (map.get("endTs") != null && map.get("endTs") instanceof String) {
                     try {
-                        statement.setObject(6, OffsetDateTime.parse((String)map.get("endTime")));
+                        statement.setObject(6, OffsetDateTime.parse((String)map.get("endTs")));
                     } catch (java.time.format.DateTimeParseException e) {
-                        logger.warn("Invalid format for endTime '{}', setting NULL.", map.get("endTime"), e);
+                        logger.warn("Invalid format for endTs '{}', setting NULL.", map.get("endTs"), e);
                         statement.setNull(6, Types.TIMESTAMP_WITH_TIMEZONE);
                     }
                 } else {
@@ -549,11 +549,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
 
                 // 4. start_time (Optional OffsetDateTime)
-                if (map.get("startTime") != null && map.get("startTime") instanceof String) {
+                if (map.get("startTs") != null && map.get("startTs") instanceof String) {
                     try {
-                        statement.setObject(4, OffsetDateTime.parse((String)map.get("startTime")));
+                        statement.setObject(4, OffsetDateTime.parse((String)map.get("startTs")));
                     } catch (java.time.format.DateTimeParseException e) {
-                        logger.warn("Invalid format for startTime '{}', setting NULL.", map.get("startTime"), e);
+                        logger.warn("Invalid format for startTs '{}', setting NULL.", map.get("startTs"), e);
                         statement.setNull(4, Types.TIMESTAMP_WITH_TIMEZONE);
                     }
                 } else {
@@ -561,11 +561,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
 
                 // 5. end_time (Optional OffsetDateTime)
-                if (map.get("endTime") != null && map.get("endTime") instanceof String) {
+                if (map.get("endTs") != null && map.get("endTs") instanceof String) {
                     try {
-                        statement.setObject(5, OffsetDateTime.parse((String)map.get("endTime")));
+                        statement.setObject(5, OffsetDateTime.parse((String)map.get("endTs")));
                     } catch (java.time.format.DateTimeParseException e) {
-                        logger.warn("Invalid format for endTime '{}', setting NULL.", map.get("endTime"), e);
+                        logger.warn("Invalid format for endTs '{}', setting NULL.", map.get("endTs"), e);
                         statement.setNull(5, Types.TIMESTAMP_WITH_TIMEZONE);
                     }
                 } else {
@@ -672,7 +672,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         Result<String> result = null;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "value_id, table_id, value_code, value_desc, start_time, end_time, " +
+                "value_id, table_id, value_code, value_desc, start_ts, end_ts, " +
                 "display_order, active, update_user, update_ts\n" +
                 "FROM ref_value_t\n" +
                 "WHERE 1=1\n");
@@ -724,8 +724,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("tableId", resultSet.getObject("table_id", UUID.class));
                     map.put("valueCode", resultSet.getString("value_code"));
                     map.put("valueDesc", resultSet.getString("value_desc"));
-                    map.put("startTime", resultSet.getObject("start_time") != null ? resultSet.getObject("start_time", OffsetDateTime.class) : null);
-                    map.put("endTime", resultSet.getObject("end_time") != null ? resultSet.getObject("end_time", OffsetDateTime.class) : null);
+                    map.put("startTs", resultSet.getObject("start_ts") != null ? resultSet.getObject("start_ts", OffsetDateTime.class) : null);
+                    map.put("endTs", resultSet.getObject("end_ts") != null ? resultSet.getObject("end_ts", OffsetDateTime.class) : null);
                     map.put("displayOrder", resultSet.getInt("display_order"));
                     map.put("active", resultSet.getBoolean("active"));
                     map.put("updateUser", resultSet.getString("update_user"));
@@ -773,8 +773,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         refValueMap.put("tableId", resultSet.getObject("table_id", UUID.class));
                         refValueMap.put("valueCode", resultSet.getString("value_code"));
                         refValueMap.put("valueDesc", resultSet.getString("value_desc"));
-                        refValueMap.put("startTime", resultSet.getObject("start_time") != null ? resultSet.getObject("start_time", OffsetDateTime.class) : null);
-                        refValueMap.put("endTime", resultSet.getObject("end_time") != null ? resultSet.getObject("end_time", OffsetDateTime.class) : null);
+                        refValueMap.put("startTs", resultSet.getObject("start_ts") != null ? resultSet.getObject("start_ts", OffsetDateTime.class) : null);
+                        refValueMap.put("endTs", resultSet.getObject("end_ts") != null ? resultSet.getObject("end_ts", OffsetDateTime.class) : null);
                         refValueMap.put("displayOrder", resultSet.getInt("display_order"));
                         refValueMap.put("active", resultSet.getBoolean("active"));
                         refValueMap.put("updateUser", resultSet.getString("update_user"));
@@ -2552,16 +2552,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
 
     @Override
-    public Result<Integer> queryNonceByUserId(String userId){
+    public Result<Long> queryNonceByUserId(String userId){
         final String updateNonceSql = "UPDATE user_t SET nonce = nonce + 1 WHERE user_id = ? RETURNING nonce;";
-        Result<Integer> result = null;
+        Result<Long> result = null;
         try (Connection connection = ds.getConnection();
              PreparedStatement statement = connection.prepareStatement(updateNonceSql)) {
-            Integer nonce = null;
+            Long nonce = null;
             statement.setObject(1, UUID.fromString(userId));
             try (ResultSet resultSet = statement.executeQuery()) {
                 if(resultSet.next()){
-                    nonce = resultSet.getInt(1);
+                    nonce = (Long)resultSet.getObject(1);
                 }
             }
             if (nonce == null)
