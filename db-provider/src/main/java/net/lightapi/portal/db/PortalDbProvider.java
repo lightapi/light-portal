@@ -78,7 +78,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> createUser(Map<String, Object> event);
     Result<String> confirmUser(Map<String, Object> event);
     Result<String> verifyUser(Map<String, Object> event);
-    Result<Integer> queryNonceByUserId(String userId);
+    Result<Long> queryNonceByUserId(String userId);
     Result<String> createSocialUser(Map<String, Object> event);
     Result<String> updateUser(Map<String, Object> event);
     Result<String> deleteUser(Map<String, Object> event);
