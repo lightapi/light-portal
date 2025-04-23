@@ -185,7 +185,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> createConfigProperty(Map<String, Object> event);
     Result<String> updateConfigProperty(Map<String, Object> event);
     Result<String> deleteConfigProperty(Map<String, Object> event);
-    Result<String> getConfigProperty(int offset, int limit, String configId, String configName, String propertyName,
+    Result<String> getConfigProperty(int offset, int limit, String configId, String propertyId, String configName, String propertyName,
                                                   String propertyType, String light4jVersion, Integer displayOrder, Boolean required,
                                                   String propertyDesc, String propertyValue, String valueType, String propertyFile,
                                                   String resourceType);
@@ -195,8 +195,8 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> createConfigEnvironment(Map<String, Object> event);
     Result<String> updateConfigEnvironment(Map<String, Object> event);
     Result<String> deleteConfigEnvironment(Map<String, Object> event);
-    Result<String> getConfigEnvironment(int offset, int limit, String environment, String configId, String configName,
-                                                  String propertyName, String propertyValue, String propertyFile);
+    Result<String> getConfigEnvironment(int offset, int limit, String hostId, String environment, String configId, String configName,
+                                                  String propertyId, String propertyName, String propertyValue, String propertyFile);
 
     Result<String> createInstanceApi(Map<String, Object> event);
     Result<String> updateInstanceApi(Map<String, Object> event);
@@ -208,7 +208,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> updateConfigInstanceApi(Map<String, Object> event);
     Result<String> deleteConfigInstanceApi(Map<String, Object> event);
     Result<String> getConfigInstanceApi(int offset, int limit, String hostId, String instanceId, String instanceName,
-                                        String apiId, String apiVersion, String configId, String configName,
+                                        String apiId, String apiVersion, String configId, String configName, String propertyId,
                                         String propertyName, String propertyValue, String propertyFile);
 
     Result<String> createInstanceApp(Map<String, Object> event);
@@ -222,27 +222,27 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> deleteConfigInstanceApp(Map<String, Object> event);
     Result<String> getConfigInstanceApp(int offset, int limit, String hostId, String instanceId, String instanceName,
                                         String appId, String appVersion,String configId, String configName,
-                                        String propertyName, String propertyValue, String propertyFile);
+                                        String propertyId, String propertyName, String propertyValue, String propertyFile);
 
     Result<String> createConfigInstance(Map<String, Object> event);
     Result<String> updateConfigInstance(Map<String, Object> event);
     Result<String> deleteConfigInstance(Map<String, Object> event);
     Result<String> getConfigInstance(int offset, int limit, String hostId, String instanceId,
-                                                     String configId, String configName,
+                                                     String configId, String configName, String propertyId,
                                                      String propertyName, String propertyValue, String propertyFile);
 
     Result<String> createConfigProduct(Map<String, Object> event);
     Result<String> updateConfigProduct(Map<String, Object> event);
     Result<String> deleteConfigProduct(Map<String, Object> event);
     Result<String> getConfigProduct(int offset, int limit, String productId,
-                                                  String configId, String configName,
+                                                  String configId, String configName, String propertyId,
                                                   String propertyName, String propertyValue, String propertyFile);
 
     Result<String> createConfigProductVersion(Map<String, Object> event);
     Result<String> updateConfigProductVersion(Map<String, Object> event);
     Result<String> deleteConfigProductVersion(Map<String, Object> event);
     Result<String> getConfigProductVersion(int offset, int limit, String hostId, String productId, String productVersion,
-                                                 String configId, String configName,
+                                                 String configId, String configName, String propertyId,
                                                  String propertyName, String propertyValue, String propertyFile);
     //Result<String> queryConfig();
     //Result<String> queryCert();

@@ -7782,76 +7782,77 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createConfigProperty(Map<String, Object> event) {
-        final String sql = "INSERT INTO config_property_t (config_id, property_name, property_type, property_value, property_file, " +
+        final String sql = "INSERT INTO config_property_t (config_id, property_id, property_name, property_type, property_value, property_file, " +
                 "resource_type, value_type, display_order, required, property_desc, light4j_version, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false); // Start transaction
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setObject(1, UUID.fromString((String)map.get("configId")));
-                statement.setString(2, (String)map.get("propertyName"));
-                statement.setString(3, (String)map.get("propertyType"));
+                statement.setObject(2, UUID.fromString((String)map.get("propertyId")));
+                statement.setString(3, (String)map.get("propertyName"));
+                statement.setString(4, (String)map.get("propertyType"));
 
                 // Handle property_value (required)
                 if (map.containsKey("propertyValue")) {
-                    statement.setString(4, (String) map.get("propertyValue"));
+                    statement.setString(5, (String) map.get("propertyValue"));
                 } else {
-                    statement.setNull(4, Types.VARCHAR); // Or throw exception if it's truly required, but DB default is not set.
+                    statement.setNull(5, Types.VARCHAR); // Or throw exception if it's truly required, but DB default is not set.
                 }
 
                 // Handle property_file (optional)
                 if (map.containsKey("propertyFile")) {
-                    statement.setString(5, (String) map.get("propertyFile"));
+                    statement.setString(6, (String) map.get("propertyFile"));
                 } else {
-                    statement.setNull(5, Types.VARCHAR);
+                    statement.setNull(6, Types.VARCHAR);
                 }
                 // Handle resource_type (optional)
                 if (map.containsKey("resourceType")) {
-                    statement.setString(6, (String) map.get("resourceType"));
+                    statement.setString(7, (String) map.get("resourceType"));
                 } else {
-                    statement.setString(6, "none");
+                    statement.setString(7, "none");
                 }
 
                 // Handle value_type (optional)
                 if (map.containsKey("valueType")) {
-                    statement.setString(7, (String) map.get("valueType"));
+                    statement.setString(8, (String) map.get("valueType"));
                 } else {
-                    statement.setNull(7, Types.VARCHAR);
+                    statement.setNull(8, Types.VARCHAR);
                 }
 
                 // Handle display_order (optional)
                 if (map.containsKey("displayOrder")) {
-                    statement.setInt(8, Integer.parseInt(map.get("displayOrder").toString()));
+                    statement.setInt(9, Integer.parseInt(map.get("displayOrder").toString()));
                 } else {
-                    statement.setNull(8, Types.INTEGER);
+                    statement.setNull(9, Types.INTEGER);
                 }
 
                 // Handle required (optional)
                 if (map.containsKey("required")) {
-                    statement.setBoolean(9, Boolean.parseBoolean(map.get("required").toString()));
+                    statement.setBoolean(10, Boolean.parseBoolean(map.get("required").toString()));
                 } else {
-                    statement.setBoolean(9, false);
+                    statement.setBoolean(10, false);
                 }
 
                 // Handle property_desc (optional)
                 if (map.containsKey("propertyDesc")) {
-                    statement.setString(10, (String) map.get("propertyDesc"));
-                } else {
-                    statement.setNull(10, Types.VARCHAR);
-                }
-
-                // Handle light4j_version (optional)
-                if(map.containsKey("light4jVersion")) {
-                    statement.setString(11, (String) map.get("light4jVersion"));
+                    statement.setString(11, (String) map.get("propertyDesc"));
                 } else {
                     statement.setNull(11, Types.VARCHAR);
                 }
 
+                // Handle light4j_version (optional)
+                if(map.containsKey("light4jVersion")) {
+                    statement.setString(12, (String) map.get("light4jVersion"));
+                } else {
+                    statement.setNull(12, Types.VARCHAR);
+                }
 
-                statement.setString(12, (String)event.get(Constants.USER));
-                statement.setObject(13, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+                statement.setString(13, (String)event.get(Constants.USER));
+                statement.setObject(14, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
 
                 int count = statement.executeUpdate();
@@ -7884,10 +7885,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateConfigProperty(Map<String, Object> event) {
-        final String sql = "UPDATE config_property_t SET property_type = ?, property_value = ?, property_file = ?, " +
+        final String sql = "UPDATE config_property_t SET property_name = ?, property_type = ?, property_value = ?, property_file = ?, " +
                 "resource_type = ?, value_type = ?, display_order = ?, required = ?, property_desc = ?, " +
                 "light4j_version = ?, update_user = ?, update_ts = ? " +
-                "WHERE config_id = ? AND property_name = ?";
+                "WHERE config_id = ? AND property_id = ?";
 
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -7895,70 +7896,71 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 // Set the update values from the event and the parsed JSON
-                statement.setString(1, (String)map.get("propertyType"));
+                statement.setString(1, (String)map.get("propertyName"));
+                statement.setString(2, (String)map.get("propertyType"));
 
                 // Handle property_value (optional in update, but check in map)
                 if (map.containsKey("propertyValue")) {
-                    statement.setString(2, (String) map.get("propertyValue"));
+                    statement.setString(3, (String) map.get("propertyValue"));
                 } else {
-                    statement.setNull(2, Types.VARCHAR); // Or keep existing value if you prefer
+                    statement.setNull(3, Types.VARCHAR); // Or keep existing value if you prefer
                 }
 
                 // Handle property_file
                 if (map.containsKey("propertyFile")) {
-                    statement.setString(3, (String) map.get("propertyFile"));
+                    statement.setString(4, (String) map.get("propertyFile"));
                 } else {
-                    statement.setNull(3, Types.VARCHAR);
+                    statement.setNull(4, Types.VARCHAR);
                 }
 
                 // Handle resource_type
                 if (map.containsKey("resourceType")) {
-                    statement.setString(4, (String) map.get("resourceType"));
+                    statement.setString(5, (String) map.get("resourceType"));
                 } else {
-                    statement.setNull(4, Types.VARCHAR); // Could set to 'none' or a DB default, or keep existing.
+                    statement.setNull(5, Types.VARCHAR); // Could set to 'none' or a DB default, or keep existing.
                 }
 
                 // Handle value_type
                 if (map.containsKey("valueType")) {
-                    statement.setString(5, (String) map.get("valueType"));
+                    statement.setString(6, (String) map.get("valueType"));
                 } else {
-                    statement.setNull(5, Types.VARCHAR);
+                    statement.setNull(6, Types.VARCHAR);
                 }
 
                 // Handle display_order
                 if (map.containsKey("displayOrder")) {
-                    statement.setInt(6, Integer.parseInt(map.get("displayOrder").toString()));
+                    statement.setInt(7, Integer.parseInt(map.get("displayOrder").toString()));
                 } else {
-                    statement.setNull(6, Types.INTEGER);
+                    statement.setNull(7, Types.INTEGER);
                 }
 
                 // Handle required
                 if (map.containsKey("required")) {
-                    statement.setBoolean(7, Boolean.parseBoolean(map.get("required").toString()));
+                    statement.setBoolean(8, Boolean.parseBoolean(map.get("required").toString()));
                 } else {
-                    statement.setNull(7, Types.BOOLEAN); //or statement.setBoolean(7, false);
+                    statement.setNull(8, Types.BOOLEAN); //or statement.setBoolean(7, false);
                 }
 
                 // Handle property_desc
                 if (map.containsKey("propertyDesc")) {
-                    statement.setString(8, (String) map.get("propertyDesc"));
-                } else {
-                    statement.setNull(8, Types.VARCHAR);
-                }
-
-                // Handle light4j_version
-                if (map.containsKey("light4jVersion")) {
-                    statement.setString(9, (String) map.get("light4jVersion"));
+                    statement.setString(9, (String) map.get("propertyDesc"));
                 } else {
                     statement.setNull(9, Types.VARCHAR);
                 }
 
-                statement.setString(10, (String)event.get(Constants.USER));
-                statement.setObject(11, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                // Handle light4j_version
+                if (map.containsKey("light4jVersion")) {
+                    statement.setString(10, (String) map.get("light4jVersion"));
+                } else {
+                    statement.setNull(10, Types.VARCHAR);
+                }
+
+                statement.setString(11, (String)event.get(Constants.USER));
+                statement.setObject(12, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
                 // WHERE clause: Crucial for updating the correct row!
-                statement.setObject(12, UUID.fromString((String)map.get("configId")));
-                statement.setString(13, (String)map.get("propertyName"));
+                statement.setObject(13, UUID.fromString((String)map.get("configId")));
+                statement.setString(14, (String)map.get("propertyName"));
 
 
                 int count = statement.executeUpdate();
@@ -7992,18 +7994,18 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> deleteConfigProperty(Map<String, Object> event) {
-        final String sql = "DELETE FROM config_property_t WHERE config_id = ? AND property_name = ?";
+        final String sql = "DELETE FROM config_property_t WHERE config_id = ? AND property_id = ?";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setObject(1, UUID.fromString((String)map.get("configId")));
-                statement.setString(2, (String)map.get("propertyName"));
+                statement.setObject(2, UUID.fromString((String)map.get("propertyId")));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("Failed to delete config property. No rows affected for config_id: " + map.get("configId") + " and property_name: " + map.get("propertyName"));
+                    throw new SQLException("Failed to delete config property. No rows affected for config_id: " + map.get("configId") + " and property_id: " + map.get("propertyId"));
                 }
                 conn.commit();
                 result = Success.of((String)map.get("configId"));
@@ -8030,15 +8032,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
 
     @Override
-    public Result<String> getConfigProperty(int offset, int limit, String configId, String configName, String propertyName,
-                                            String propertyType, String light4jVersion, Integer displayOrder, Boolean required,
-                                            String propertyDesc, String propertyValue, String valueType, String propertyFile,
-                                            String resourceType) {
+    public Result<String> getConfigProperty(int offset, int limit, String configId, String configName, String propertyId,
+                                            String propertyName, String propertyType, String light4jVersion, Integer displayOrder,
+                                            Boolean required, String propertyDesc, String propertyValue, String valueType,
+                                            String propertyFile, String resourceType) {
         Result<String> result = null;
 
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "cp.config_id, cp.property_name, cp.property_type, cp.light4j_version, cp.display_order, cp.required, " +
+                "cp.config_id, cp.property_id, cp.property_name, cp.property_type, cp.light4j_version, cp.display_order, cp.required, " +
                 "cp.property_desc, cp.property_value, cp.value_type, cp.property_file, cp.resource_type, cp.update_user, cp.update_ts, " +
                 "c.config_name \n" +
                 "FROM config_property_t cp\n" +
@@ -8050,6 +8052,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         StringBuilder whereClause = new StringBuilder();
         addCondition(whereClause, parameters, "cp.config_id", configId != null ? UUID.fromString(configId) : null);
         addCondition(whereClause, parameters, "c.config_name", configName);
+        addCondition(whereClause, parameters, "cp.property_id", propertyId != null ? UUID.fromString(propertyId) : null);
         addCondition(whereClause, parameters, "cp.property_name", propertyName);
         addCondition(whereClause, parameters, "cp.property_type", propertyType);
         addCondition(whereClause, parameters, "cp.light4j_version", light4jVersion);
@@ -8062,7 +8065,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         addCondition(whereClause, parameters, "cp.resource_type", resourceType);
 
 
-        if (whereClause.length() > 0) {
+        if (!whereClause.isEmpty()) {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
@@ -8092,12 +8095,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         isFirstRow = false;
                     }
                     map.put("configId", resultSet.getObject("config_id", UUID.class));
-                    map.put("configName", resultSet.getString("config_name")); // Get config_name
+                    map.put("configName", resultSet.getString("config_name"));
+                    map.put("propertyId", resultSet.getObject("property_id", UUID.class));
                     map.put("propertyName", resultSet.getString("property_name"));
                     map.put("propertyType", resultSet.getString("property_type"));
                     map.put("light4jVersion", resultSet.getString("light4j_version"));
-                    map.put("displayOrder", resultSet.getInt("display_order"));  // Could be null
-                    map.put("required", resultSet.getBoolean("required"));      // Could be null
+                    map.put("displayOrder", resultSet.getInt("display_order"));
+                    map.put("required", resultSet.getBoolean("required"));
                     map.put("propertyDesc", resultSet.getString("property_desc"));
                     map.put("propertyValue", resultSet.getString("property_value"));
                     map.put("valueType", resultSet.getString("value_type"));
@@ -8129,7 +8133,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> queryConfigPropertyById(String configId) {
         Result<String> result = null;
 
-        String sql = "SELECT cp.config_id, cp.property_name, cp.property_type, cp.light4j_version, cp.display_order, cp.required, " +
+        String sql = "SELECT cp.config_id, cp.property_id, cp.property_name, cp.property_type, cp.light4j_version, cp.display_order, cp.required, " +
                 "cp.property_desc, cp.property_value, cp.value_type, cp.property_file, cp.resource_type, cp.update_user, cp.update_ts, " +
                 "c.config_name " +
                 "FROM config_property_t cp " +
@@ -8147,6 +8151,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     Map<String, Object> map = new HashMap<>();
                     map.put("configId", resultSet.getObject("config_id", UUID.class));
                     map.put("configName", resultSet.getString("config_name"));
+                    map.put("propertyId", resultSet.getObject("property_id", UUID.class));
                     map.put("propertyName", resultSet.getString("property_name"));
                     map.put("propertyType", resultSet.getString("property_type"));
                     map.put("light4jVersion", resultSet.getString("light4j_version"));
@@ -8162,11 +8167,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     configProperties.add(map);
                 }
             }
-
             if (configProperties.isEmpty()) {
-                // return Failure.of(new Status("CONFIG_PROPERTY_NOT_FOUND", configId)); // Consider a more specific status
-                result = Success.of("[]"); // Return an empty JSON array.  This is generally better than a 404.
-
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "config property", "configId = " + configId ));
             } else {
                 result = Success.of(JsonMapper.toJson(configProperties)); // Return the list of properties as JSON
             }
@@ -8185,7 +8187,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> queryConfigPropertyByIdName(String configId, String propertyName) {
         Result<String> result = null;
 
-        String sql = "SELECT cp.config_id, cp.property_name, cp.property_type, cp.light4j_version, cp.display_order, cp.required, " +
+        String sql = "SELECT cp.config_id, cp.property_id, cp.property_name, cp.property_type, cp.light4j_version, cp.display_order, cp.required, " +
                 "cp.property_desc, cp.property_value, cp.value_type, cp.property_file, cp.resource_type, cp.update_user, cp.update_ts, " +
                 "c.config_name " +
                 "FROM config_property_t cp " +
@@ -8205,6 +8207,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 if (resultSet.next()) {
                     map.put("configId", resultSet.getObject("config_id", UUID.class));
                     map.put("configName", resultSet.getString("config_name"));
+                    map.put("propertyId", resultSet.getObject("property_id", UUID.class));
                     map.put("propertyName", resultSet.getString("property_name"));
                     map.put("propertyType", resultSet.getString("property_type"));
                     map.put("light4jVersion", resultSet.getString("light4j_version"));
@@ -8237,7 +8240,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createConfigEnvironment(Map<String, Object> event) {
-        final String sql = "INSERT INTO environment_property_t (environment, config_id, property_name, " +
+        final String sql = "INSERT INTO environment_property_t (host_id, environment, property_id, " +
                 "property_value, property_file, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?)";
         Result<String> result;
@@ -8245,9 +8248,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)map.get("environment"));
-                statement.setObject(2, UUID.fromString((String)map.get("configId")));
-                statement.setString(3, (String)map.get("propertyName"));
+                statement.setObject(1, UUID.fromString((String)map.get("hostId")));
+                statement.setString(2, (String)map.get("environment"));
+                statement.setObject(3, UUID.fromString((String)map.get("propertyId")));
 
                 // Handle property_value (optional)
                 if (map.containsKey("propertyValue")) {
@@ -8269,7 +8272,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("Failed to insert environment property for environment: " + map.get("environment") +
-                            ", config_id: " + map.get("configId") + ", property_name: " + map.get("propertyName"));
+                            ", host_id: " + map.get("hostId") + ", property_id: " + map.get("propertyId"));
                 }
                 conn.commit();
                 result = Success.of((String)map.get("configId"));
@@ -8298,14 +8301,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> updateConfigEnvironment(Map<String, Object> event) {
         final String sql = "UPDATE environment_property_t SET property_value = ?, property_file = ?, update_user = ?, update_ts = ? " +
-                "WHERE environment = ? AND config_id = ? AND property_name = ?";
+                "WHERE host_id = ? AND environment = ? AND property_id = ?";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
 
-                // Handle property_value (optional)
                 if (map.containsKey("propertyValue")) {
                     statement.setString(1, (String) map.get("propertyValue"));
                 } else {
@@ -8323,17 +8325,17 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
                 // WHERE clause parameters (from the event, *not* the JSON)
-                statement.setString(5, (String)map.get("environment"));
-                statement.setObject(6, UUID.fromString((String)map.get("configId")));
-                statement.setString(7, (String)map.get("propertyName"));
+                statement.setObject(5, UUID.fromString((String)map.get("hostId")));
+                statement.setString(6, (String)map.get("environment"));
+                statement.setObject(7, UUID.fromString((String)map.get("propertyId")));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("Failed to update environment property. No rows affected for environment: " + map.get("environment") +
-                            ", config_id: " + map.get("configId") + ", property_name: " + map.get("propertyName"));
+                            ", property_id: " + map.get("propertyId"));
                 }
                 conn.commit();
-                result = Success.of((String)map.get("configId"));  // Or a composite key.
+                result = Success.of((String)map.get("environment"));
                 insertNotification(event, true, null);
 
             } catch (SQLException e) {
@@ -8357,25 +8359,25 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> deleteConfigEnvironment(Map<String, Object> event) {
-        final String sql = "DELETE FROM environment_property_t WHERE environment = ? AND config_id = ? AND property_name = ?";
+        final String sql = "DELETE FROM environment_property_t WHERE host_id = ? AND environment = ? AND property_id = ?";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)map.get("environment"));
-                statement.setObject(2, UUID.fromString((String)map.get("configId")));
-                statement.setString(3, (String)map.get("propertyName"));
+                statement.setString(1, (String)map.get("hostId"));
+                statement.setString(2, (String)map.get("environment"));
+                statement.setObject(3, UUID.fromString((String)map.get("propertyId")));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("Failed to delete environment property. No rows affected for environment: " + map.get("environment") +
-                            ", config_id: " + map.get("configId") + ", property_name: " + map.get("propertyName"));
+                    throw new SQLException("Failed to delete environment property. No rows affected for hostId: " + map.get("hostId") + ", environment: " + map.get("environment") +
+                            ", property_id: " + map.get("propertyId"));
                 }
                 conn.commit();
-                result = Success.of((String)map.get("configId")); // Or a composite key
+                result = Success.of((String)map.get("hostId: " + map.get("hostId") + ", environment: " + map.get("environment") +
+                ", property_id: " + map.get("propertyId")));
                 insertNotification(event, true, null);
-
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
@@ -8395,23 +8397,31 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> getConfigEnvironment(int offset, int limit, String environment, String configId, String configName,
-                                               String propertyName, String propertyValue, String propertyFile) {
+    public Result<String> getConfigEnvironment(int offset, int limit, String hostId, String environment, String configId, String configName,
+                                               String propertyId, String propertyName, String propertyValue, String propertyFile) {
         Result<String> result = null;
+        String s = """
+                SELECT COUNT(*) OVER () AS total,
+                ep.host_id, ep.environment, c.config_id, c.config_name,
+                ep.property_id, p.property_name, ep.property_value,
+                ep.property_file, ep.update_user, ep.update_ts
+                FROM environment_property_t ep
+                JOIN config_property_t p ON ep.property_id = p.property_id
+                JOIN config_t c ON p.config_id = c.config_id
+                WHERE 1=1
+                """;
+
         StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "ep.environment, ep.config_id, ep.property_name, ep.property_value, ep.property_file, ep.update_user, ep.update_ts, \n" +
-                "c.config_name \n" +  // Include config_name
-                "FROM environment_property_t ep\n" +
-                "JOIN config_t c ON ep.config_id = c.config_id\n" + // Join with config_t
-                "WHERE 1=1\n");
+        sqlBuilder.append(s).append("\n");
 
         List<Object> parameters = new ArrayList<>();
 
         StringBuilder whereClause = new StringBuilder();
+        addCondition(whereClause, parameters, "ep.host_id", hostId != null ? UUID.fromString(hostId) : null);
         addCondition(whereClause, parameters, "ep.environment", environment);
-        addCondition(whereClause, parameters, "ep.config_id", configId != null ? UUID.fromString(configId) : null);
-        addCondition(whereClause, parameters, "c.config_name", configName); // Filter by config_name
+        addCondition(whereClause, parameters, "ep.property_id", propertyId != null ? UUID.fromString(propertyId) : null);
+        addCondition(whereClause, parameters, "c.config_id", configId != null ? UUID.fromString(configId) : null);
+        addCondition(whereClause, parameters, "c.config_name", configName);
         addCondition(whereClause, parameters, "ep.property_name", propertyName);
         addCondition(whereClause, parameters, "ep.property_value", propertyValue);
         addCondition(whereClause, parameters, "ep.property_file", propertyFile);
@@ -8421,7 +8431,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append(" ORDER BY ep.environment, ep.config_id, ep.property_name\n" +
+        sqlBuilder.append(" ORDER BY ep.environment, c.config_id, ep.property_name\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -8690,8 +8700,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createConfigInstanceApi(Map<String, Object> event) {
-        final String sql = "INSERT INTO instance_api_property_t (host_id, instance_id, api_id, api_version, config_id, " +
-                "property_name, property_value, update_user, update_ts) VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?)";
+        final String sql = "INSERT INTO instance_api_property_t (host_id, instance_id, api_id, api_version, property_id, " +
+                "property_value, update_user, update_ts) VALUES (?, ?, ?, ?,  ?, ?, ?, ?)";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
@@ -8701,15 +8711,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
                 statement.setString(3, (String)map.get("apiId"));
                 statement.setString(4, (String)map.get("apiVersion"));
-                statement.setObject(5, UUID.fromString((String)map.get("configId")));
-                statement.setString(6, (String)map.get("propertyName"));
+                statement.setObject(5, UUID.fromString((String)map.get("propertyId")));
                 if (map.containsKey("propertyValue")) {
-                    statement.setString(7, (String)map.get("propertyValue"));
+                    statement.setString(6, (String)map.get("propertyValue"));
                 } else {
-                    statement.setNull(7, Types.VARCHAR);
+                    statement.setNull(6, Types.VARCHAR);
                 }
-                statement.setString(8, (String)event.get(Constants.USER));
-                statement.setObject(9, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setString(7, (String)event.get(Constants.USER));
+                statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -8717,7 +8726,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                             ", instance_id: " + map.get("instanceId") + ", api_id: " + map.get("apiId") + ", api_version: " + map.get("apiVersion"));
                 }
                 conn.commit();
-                result = Success.of((String)event.get(Constants.HOST) + "|" + map.get("instanceId") + "|" + map.get("apiId") + "|" + map.get("apiVersion"));
+                result = Success.of(event.get(Constants.HOST) + "|" + map.get("instanceId") + "|" + map.get("apiId") + "|" + map.get("apiVersion"));
                 insertNotification(event, true, null);
 
             } catch (SQLException e) {
@@ -8742,7 +8751,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> updateConfigInstanceApi(Map<String, Object> event) {
         final String sql = "UPDATE instance_api_property_t SET " +
                 "property_value = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? AND instance_id = ? AND api_id = ? AND api_version = ? AND config_id = ? AND property_name = ?";
+                "WHERE host_id = ? AND instance_id = ? AND api_id = ? AND api_version = ? AND property_id = ?";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
@@ -8759,14 +8768,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setObject(5, UUID.fromString((String)map.get("instanceId")));
                 statement.setString(6, (String)map.get("apiId"));
                 statement.setString(7, (String)map.get("apiVersion"));
-                statement.setObject(8, UUID.fromString((String)map.get("configId")));
-                statement.setString(9, (String)map.get("propertyName"));
+                statement.setObject(8, UUID.fromString((String)map.get("propertyId")));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("Failed to update instance API. No rows affected for host_id: " + event.get(Constants.HOST) +
                             ", instance_id: " + map.get("instanceId") + ", api_id: " + map.get("apiId") + ", api_version: " + map.get("apiVersion") +
-                            ", config_id: " + map.get("configId") + ", property_name: " + map.get("propertyName"));
+                            ", property_id: " + map.get("propertyId"));
                 }
                 conn.commit();
                 result = Success.of(event.get(Constants.HOST) + "|" + map.get("instanceId") + "|" + map.get("apiId") + "|" + map.get("apiVersion") + "|" + map.get("configId") + "|" + map.get("propertyName"));
@@ -8793,7 +8801,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> deleteConfigInstanceApi(Map<String, Object> event) {
         final String sql = "DELETE FROM instance_api_property_t " +
-                "WHERE host_id = ? AND instance_id = ? AND api_id = ? AND api_version = ? AND config_id = ? AND property_name = ?";
+                "WHERE host_id = ? AND instance_id = ? AND api_id = ? AND api_version = ? AND property_id = ?";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
@@ -8803,8 +8811,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
                 statement.setString(3, (String)map.get("apiId"));
                 statement.setString(4, (String)map.get("apiVersion"));
-                statement.setObject(5, UUID.fromString((String)map.get("configId")));
-                statement.setString(6, (String)map.get("propertyName"));
+                statement.setObject(5, UUID.fromString((String)map.get("propertyId")));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -8836,18 +8843,22 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> getConfigInstanceApi(int offset, int limit, String hostId, String instanceId, String instanceName,
                                                String apiId, String apiVersion, String configId, String configName,
-                                               String propertyName, String propertyValue, String propertyFile) {
+                                               String propertyId, String propertyName, String propertyValue, String propertyFile) {
         Result<String> result = null;
-
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                ia.host_id, ia.instance_id, i.instance_name, ia.api_id, ia.api_version, ia.active, ia.update_user, ia.update_ts,
+                p.config_id, c.config_name, iap.property_id, p.property_name, iap.property_value, iap.property_file
+                FROM instance_api_t ia
+                INNER JOIN instance_t i ON ia.host_id =i.host_id AND ia.instance_id = i.instance_id
+                INNER JOIN instance_api_property_t iap ON ia.host_id = iap.host_id AND ia.instance_id = iap.instance_id AND ia.api_id = iap.api_id AND ia.api_version = iap.api_version
+                INNER JOIN config_property_t p ON iap.property_id = p.property_id
+                INNER JOIN config_t c ON p.config_id = c.config_id
+                WHERE 1=1
+                """;
         StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "ia.host_id, ia.instance_id, i.instance_name, ia.api_id, ia.api_version, ia.active, ia.update_user, ia.update_ts,\n" +
-                "iap.config_id, c.config_name, iap.property_name, iap.property_value, iap.property_file\n" +
-                "FROM instance_api_t ia\n" +
-                "INNER JOIN instance_t i ON ia.host_id =i.host_id AND ia.instance_id = i.instance_id \n" +
-                "INNER JOIN instance_api_property_t iap ON ia.host_id = iap.host_id AND ia.instance_id = iap.instance_id AND ia.api_id = iap.api_id AND ia.api_version = iap.api_version\n" +
-                "INNER JOIN config_t c ON iap.config_id = c.config_id\n" +
-                "WHERE 1=1\n");
+        sqlBuilder.append(s).append("\n");
 
         List<Object> parameters = new ArrayList<>();
 
@@ -8857,9 +8868,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         addCondition(whereClause, parameters, "i.instance_name", instanceName);
         addCondition(whereClause, parameters, "ia.api_id", apiId);
         addCondition(whereClause, parameters, "ia.api_version", apiVersion);
-        addCondition(whereClause, parameters, "iap.config_id", configId != null ? UUID.fromString(configId) : null);
+        addCondition(whereClause, parameters, "p.config_id", configId != null ? UUID.fromString(configId) : null);
         addCondition(whereClause, parameters, "c.config_name", configName);
-        addCondition(whereClause, parameters, "iap.property_name", propertyName);
+        addCondition(whereClause, parameters, "iap.property_id", propertyId != null ? UUID.fromString(propertyId) : null);
+        addCondition(whereClause, parameters, "p.property_name", propertyName);
         addCondition(whereClause, parameters, "iap.property_value", propertyValue);
         addCondition(whereClause, parameters, "iap.property_file", propertyFile);
 
@@ -8868,7 +8880,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append(" ORDER BY ia.host_id, ia.instance_id, ia.api_id, ia.api_version, iap.config_id, iap.property_name\n" +
+        sqlBuilder.append(" ORDER BY ia.host_id, ia.instance_id, ia.api_id, ia.api_version, p.config_id, p.property_name\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -8901,6 +8913,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("apiVersion", resultSet.getString("api_version"));
                     map.put("configId", resultSet.getObject("config_id", UUID.class));
                     map.put("configName", resultSet.getString("config_name"));
+                    map.put("propertyId", resultSet.getObject("property_id", UUID.class));
                     map.put("propertyName", resultSet.getString("property_name"));
                     map.put("propertyValue", resultSet.getString("property_value"));
                     map.put("propertyFile", resultSet.getString("property_file"));
@@ -9137,8 +9150,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createConfigInstanceApp(Map<String, Object> event) {
-        final String sql = "INSERT INTO instance_app_property_t (host_id, instance_id, app_id, app_version, config_id, property_name, property_value, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?)";
+        final String sql = "INSERT INTO instance_app_property_t (host_id, instance_id, app_id, app_version, property_id, property_value, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?,  ?, ?, ?)";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
@@ -9148,15 +9161,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
                 statement.setString(3, (String)map.get("appId"));
                 statement.setString(4, (String)map.get("appVersion"));
-                statement.setObject(5, UUID.fromString((String)map.get("configId")));
-                statement.setString(6, (String)map.get("propertyName"));
+                statement.setObject(5, UUID.fromString((String)map.get("propertyId")));
                 if (map.containsKey("propertyValue")) {
-                    statement.setString(7, (String)map.get("propertyValue"));
+                    statement.setString(6, (String)map.get("propertyValue"));
                 } else {
-                    statement.setNull(7, Types.VARCHAR);
+                    statement.setNull(6, Types.VARCHAR);
                 }
-                statement.setString(8, (String)event.get(Constants.USER));
-                statement.setObject(9, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setString(7, (String)event.get(Constants.USER));
+                statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -9191,7 +9203,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> updateConfigInstanceApp(Map<String, Object> event) {
         final String sql = "UPDATE instance_app_property_t SET " +
                 "property_value = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? AND instance_id = ? AND app_id = ? AND app_version = ? AND config_id = ? AND property_name = ?";
+                "WHERE host_id = ? AND instance_id = ? AND app_id = ? AND app_version = ? AND property_id = ?";
 
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -9209,17 +9221,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setObject(5, UUID.fromString((String)map.get("instanceId")));
                 statement.setString(6, (String)map.get("appId"));
                 statement.setString(7, (String)map.get("appVersion"));
-                statement.setObject(8, UUID.fromString((String)map.get("configId")));
-                statement.setString(9, (String)map.get("propertyName"));
+                statement.setObject(8, UUID.fromString((String)map.get("propertyId")));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("Failed to update instance app.  No rows affected for host_id: " + event.get(Constants.HOST) +
                             ", instance_id: " + map.get("instanceId") + ", app_id: " + map.get("appId") + ", app_version: " + map.get("appVersion") +
-                            ", config_id: " + map.get("configId") + ", property_name: " + map.get("propertyName"));
+                            ", property_id: " + map.get("propertyId"));
                 }
                 conn.commit();
-                result = Success.of(event.get(Constants.HOST) + "|" + map.get("instanceId") + "|" + map.get("appId") + "|" + map.get("appVersion") + "|" +  map.get("configId") + "|" + map.get("propertyName"));
+                result = Success.of(event.get(Constants.HOST) + "|" + map.get("instanceId") + "|" + map.get("appId") + "|" + map.get("appVersion") + "|" +  map.get("propertyId"));
                 insertNotification(event, true, null);
 
             } catch (SQLException e) {
@@ -9244,7 +9255,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> deleteConfigInstanceApp(Map<String, Object> event) {
         final String sql = "DELETE FROM instance_app_property_t " +
-                "WHERE host_id = ? AND instance_id = ? AND app_id = ? AND app_version = ? AND config_id = ? AND property_name = ?";
+                "WHERE host_id = ? AND instance_id = ? AND app_id = ? AND app_version = ? AND property_id = ?";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
@@ -9254,8 +9265,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
                 statement.setString(3, (String)map.get("appId"));
                 statement.setString(4, (String)map.get("appVersion"));
-                statement.setObject(5, UUID.fromString((String)map.get("configId")));
-                statement.setString(6, (String)map.get("propertyName"));
+                statement.setObject(5, UUID.fromString((String)map.get("propertyId")));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -9287,18 +9297,22 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> getConfigInstanceApp(int offset, int limit, String hostId, String instanceId, String instanceName,
                                                String appId, String appVersion, String configId, String configName,
-                                               String propertyName, String propertyValue, String propertyFile) {
+                                               String propertyId, String propertyName, String propertyValue, String propertyFile) {
         Result<String> result = null;
-
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                ia.host_id, ia.instance_id, i.instance_name, ia.app_id, ia.app_version, ia.active, ia.update_user, ia.update_ts,
+                p.config_id, c.config_name, iap.property_id, p.property_name, iap.property_value, iap.property_file
+                FROM instance_app_t ia
+                INNER JOIN instance_t i ON ia.host_id =i.host_id AND ia.instance_id = i.instance_id
+                INNER JOIN instance_app_property_t iap ON ia.host_id = iap.host_id AND ia.instance_id = iap.instance_id AND ia.app_id = iap.app_id AND ia.app_version = iap.app_version
+                INNER JOIN config_property_t p ON p.property_id = iap.property_id
+                INNER JOIN config_t c ON p.config_id = c.config_id
+                WHERE 1=1
+                """;
         StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "ia.host_id, ia.instance_id, i.instance_name, ia.app_id, ia.app_version, ia.active, ia.update_user, ia.update_ts,\n" +
-                "iap.config_id, iap.property_name, iap.property_value, iap.property_file, c.config_name\n" +
-                "FROM instance_app_t ia\n" +
-                "INNER JOIN instance_t i ON ia.host_id =i.host_id AND ia.instance_id = i.instance_id \n" +
-                "INNER JOIN instance_app_property_t iap ON ia.host_id = iap.host_id AND ia.instance_id = iap.instance_id AND ia.app_id = iap.app_id AND ia.app_version = iap.app_version\n" +
-                "INNER JOIN config_t c ON iap.config_id = c.config_id\n" +
-                "WHERE 1=1\n");
+        sqlBuilder.append(s).append("\n");
 
         List<Object> parameters = new ArrayList<>();
 
@@ -9308,14 +9322,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         addCondition(whereClause, parameters, "i.instance_name", instanceName);
         addCondition(whereClause, parameters, "ia.app_id", appId);
         addCondition(whereClause, parameters, "ia.app_version", appVersion);
-        addCondition(whereClause, parameters, "iap.config_id", configId != null ? UUID.fromString(configId) : null);
-        addCondition(whereClause, parameters, "c.config_name", configName); // Filter by config_name
-        addCondition(whereClause, parameters, "iap.property_name", propertyName);
+        addCondition(whereClause, parameters, "p.config_id", configId != null ? UUID.fromString(configId) : null);
+        addCondition(whereClause, parameters, "c.config_name", configName);
+        addCondition(whereClause, parameters, "iap.property_id", propertyId != null ? UUID.fromString(propertyId) : null);
+        addCondition(whereClause, parameters, "p.property_name", propertyName);
         addCondition(whereClause, parameters, "iap.property_value", propertyValue);
         addCondition(whereClause, parameters, "iap.property_file", propertyFile);
 
 
-        if (whereClause.length() > 0) {
+        if (!whereClause.isEmpty()) {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
@@ -9351,7 +9366,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("appId", resultSet.getString("app_id"));
                     map.put("appVersion", resultSet.getString("app_version"));
                     map.put("configId", resultSet.getObject("config_id", UUID.class));
-                    map.put("configName", resultSet.getString("config_name")); // Get from joined table
+                    map.put("configName", resultSet.getString("config_name"));
+                    map.put("propertyId", resultSet.getObject("property_id", UUID.class));
                     map.put("propertyName", resultSet.getString("property_name"));
                     map.put("propertyValue", resultSet.getString("property_value"));
                     map.put("propertyFile", resultSet.getString("property_file"));
@@ -9379,8 +9395,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> createConfigInstance(Map<String, Object> event) {
         // The table is now instance_property_t, NOT instance_t
-        final String sql = "INSERT INTO instance_property_t (host_id, instance_id, config_id, property_name, " +
-                "property_value, property_file, update_user, update_ts) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        final String sql = "INSERT INTO instance_property_t (host_id, instance_id, property_id, " +
+                "property_value, property_file, update_user, update_ts) VALUES (?, ?, ?, ?, ?, ?, ?)";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
@@ -9388,34 +9404,32 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, (String)event.get(Constants.HOST));
                 statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
-                statement.setObject(3, UUID.fromString((String)map.get("configId")));
-                statement.setString(4, (String)map.get("propertyName"));
+                statement.setObject(3, UUID.fromString((String)map.get("propertyId")));
 
                 // Handle 'property_value' (optional)
                 if (map.containsKey("propertyValue")) {
-                    statement.setString(5, (String) map.get("propertyValue"));
+                    statement.setString(4, (String) map.get("propertyValue"));
                 } else {
-                    statement.setNull(5, Types.VARCHAR);
+                    statement.setNull(4, Types.VARCHAR);
                 }
 
                 // Handle 'property_file' (optional)
                 if (map.containsKey("propertyFile")) {
-                    statement.setString(6, (String) map.get("propertyFile"));
+                    statement.setString(5, (String) map.get("propertyFile"));
                 } else {
-                    statement.setNull(6, Types.VARCHAR);
+                    statement.setNull(5, Types.VARCHAR);
                 }
 
-                statement.setString(7, (String)event.get(Constants.USER));
-                statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setString(6, (String)event.get(Constants.USER));
+                statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("Failed to insert instance property for host_id: " + event.get(Constants.HOST) +
-                            ", instance_id: " + map.get("instanceId") + ", config_id: " + map.get("configId") +
-                            ", property_name: " + map.get("propertyName"));
+                            ", instance_id: " + map.get("instanceId") + ", property_id: " + map.get("propertyId"));
                 }
                 conn.commit();
-                result = Success.of(event.get(Constants.HOST) + "|" + map.get("instanceId") + "|" + map.get("configId") + "|" + map.get("propertyName"));
+                result = Success.of(event.get(Constants.HOST) + "|" + map.get("instanceId") + "|" + map.get("propertyId"));
                 insertNotification(event, true, null);
 
 
@@ -9441,7 +9455,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> updateConfigInstance(Map<String, Object> event) {
         final String sql = "UPDATE instance_property_t SET property_value = ?, property_file = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? AND instance_id = ? AND config_id = ? AND property_name = ?";
+                "WHERE host_id = ? AND instance_id = ? AND property_id = ?";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
@@ -9468,17 +9482,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 // WHERE clause parameters (from the event, NOT the JSON)
                 statement.setString(5, (String)event.get(Constants.HOST));
                 statement.setObject(6, UUID.fromString((String)map.get("instanceId")));
-                statement.setObject(7, UUID.fromString((String)map.get("configId")));
-                statement.setString(8, (String)map.get("propertyName"));
+                statement.setObject(7, UUID.fromString((String)map.get("propertyId")));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("Failed to update instance property. No rows affected for host_id: " + event.get(Constants.HOST) +
-                            ", instance_id: " + map.get("instanceId") + ", config_id: " + map.get("configId") +
-                            ", property_name: " + map.get("propertyName"));
+                            ", instance_id: " + map.get("instanceId") + ", property_id: " + map.get("propertyId"));
                 }
                 conn.commit();
-                result = Success.of(event.get(Constants.HOST) + "|" + map.get("instanceId") + "|" + map.get("configId") + "|" + map.get("propertyName"));
+                result = Success.of(event.get(Constants.HOST) + "|" + map.get("instanceId") + "|" + map.get("propertyId"));
 
                 insertNotification(event, true, null);
 
@@ -9503,7 +9515,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> deleteConfigInstance(Map<String, Object> event) {
-        final String sql = "DELETE FROM instance_property_t WHERE host_id = ? AND instance_id = ? AND config_id = ? AND property_name = ?";
+        final String sql = "DELETE FROM instance_property_t WHERE host_id = ? AND instance_id = ? AND property_id = ?";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
@@ -9511,17 +9523,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, (String)event.get(Constants.HOST));
                 statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
-                statement.setObject(3, UUID.fromString((String)map.get("configId")));
-                statement.setString(4, (String)map.get("propertyName"));
+                statement.setObject(3, UUID.fromString((String)map.get("propertyId")));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("Failed to delete instance property. No rows affected for host_id: " + event.get(Constants.HOST) +
-                            ", instance_id: " + map.get("instanceId") + ", config_id: " + map.get("configId") +
-                            ", property_name: " + map.get("propertyName"));
+                            ", instance_id: " + map.get("instanceId") + ", property_id: " + map.get("propertyId"));
                 }
                 conn.commit();
-                result = Success.of(event.get(Constants.HOST) + "|" + map.get("instanceId") + "|" + map.get("configId") + "|" + map.get("propertyName"));
+                result = Success.of(event.get(Constants.HOST) + "|" + map.get("instanceId") + "|" + map.get("propertyId"));
                 insertNotification(event, true, null);
 
             } catch (SQLException e) {
@@ -9544,25 +9554,30 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> getConfigInstance(int offset, int limit, String hostId, String instanceId,
-                                            String configId, String configName,
+                                            String configId, String configName, String propertyId,
                                             String propertyName, String propertyValue, String propertyFile) {
         Result<String> result = null;
-
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                ip.host_id, ip.instance_id, p.config_id, c.config_name, ip.property_id,\s
+                p.property_name, ip.property_value, ip.property_file, ip.update_user, ip.update_ts
+                FROM instance_property_t ip
+                INNER JOIN config_property_t p ON p.property_id = ip.property_id
+                INNER JOIN config_t c ON p.config_id = c.config_id
+                WHERE 1=1
+                """;
         StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "ip.host_id, ip.instance_id, ip.config_id, ip.property_name, ip.property_value, ip.property_file, " +
-                "ip.update_user, ip.update_ts, c.config_name \n" +
-                "FROM instance_property_t ip\n" +
-                "LEFT JOIN config_t c ON ip.config_id = c.config_id\n" +
-                "WHERE 1=1\n");
+        sqlBuilder.append(s).append("\n");
 
         List<Object> parameters = new ArrayList<>();
 
         StringBuilder whereClause = new StringBuilder();
         addCondition(whereClause, parameters, "ip.host_id", hostId != null ? UUID.fromString(hostId) : null);
         addCondition(whereClause, parameters, "ip.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
-        addCondition(whereClause, parameters, "ip.config_id", configId != null ? UUID.fromString(configId) : null);
+        addCondition(whereClause, parameters, "p.config_id", configId != null ? UUID.fromString(configId) : null);
         addCondition(whereClause, parameters, "c.config_name", configName); // Filter by config_name
+        addCondition(whereClause, parameters, "p.property_id", propertyId != null ? UUID.fromString(propertyId) : null);
         addCondition(whereClause, parameters, "ip.property_name", propertyName);
         addCondition(whereClause, parameters, "ip.property_value", propertyValue);
         addCondition(whereClause, parameters, "ip.property_file", propertyFile);
@@ -9599,7 +9614,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
                     map.put("configId", resultSet.getObject("config_id", UUID.class));
-                    map.put("configName", resultSet.getString("config_name")); // Get from joined table
+                    map.put("configName", resultSet.getString("config_name"));
+                    map.put("propertyId", resultSet.getObject("property_id", UUID.class));
                     map.put("propertyName", resultSet.getString("property_name"));
                     map.put("propertyValue", resultSet.getString("property_value"));
                     map.put("propertyFile", resultSet.getString("property_file"));
@@ -9628,40 +9644,38 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createConfigProduct(Map<String, Object> event) {
-        final String sql = "INSERT INTO product_property_t (product_id, config_id, property_name, property_value, property_file, update_user, update_ts) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        final String sql = "INSERT INTO product_property_t (product_id, property_id, property_value, property_file, update_user, update_ts) VALUES (?, ?, ?, ?, ?, ?)";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, (String)map.get("productId"));
-                statement.setObject(2, UUID.fromString((String)map.get("configId")));
-                statement.setString(3, (String)map.get("propertyName"));
+                statement.setObject(2, UUID.fromString((String)map.get("propertyId")));
 
-                // Handle 'property_value' (optional)
                 if (map.containsKey("propertyValue")) {
-                    statement.setString(4, (String) map.get("propertyValue"));
+                    statement.setString(3, (String) map.get("propertyValue"));
                 } else {
-                    statement.setNull(4, Types.VARCHAR);
+                    statement.setNull(3, Types.VARCHAR);
                 }
 
                 // Handle 'property_file' (optional)
                 if (map.containsKey("propertyFile")) {
-                    statement.setString(5, (String) map.get("propertyFile"));
+                    statement.setString(4, (String) map.get("propertyFile"));
                 } else {
-                    statement.setNull(5, Types.VARCHAR);
+                    statement.setNull(4, Types.VARCHAR);
                 }
 
-                statement.setString(6, (String)event.get(Constants.USER));
-                statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setString(5, (String)event.get(Constants.USER));
+                statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("Failed to insert product property for product_id: " + map.get("productId") +
-                            ", config_id: " + map.get("configId") + ", property_name: " + map.get("propertyName"));
+                            ", property_id: " + map.get("propertyId"));
                 }
                 conn.commit();
-                result = Success.of(map.get("productId") + "|" + map.get("configId") + "|" + map.get("propertyName"));
+                result = Success.of(map.get("productId") + "|" + map.get("propertyId"));
                 insertNotification(event, true, null);
 
             } catch (SQLException e) {
@@ -9685,7 +9699,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> updateConfigProduct(Map<String, Object> event) {
         final String sql = "UPDATE product_property_t SET property_value = ?, property_file = ?, update_user = ?, update_ts = ? " +
-                "WHERE product_id = ? AND config_id = ? AND property_name = ?";
+                "WHERE product_id = ? AND property_id = ?";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
@@ -9696,7 +9710,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 if (map.containsKey("propertyValue")) {
                     statement.setString(1, (String) map.get("propertyValue"));
                 } else {
-                    statement.setNull(1, Types.VARCHAR); // Or keep existing
+                    statement.setNull(1, Types.VARCHAR);
                 }
 
                 // Handle 'property_file' (optional)
@@ -9711,16 +9725,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
                 // WHERE clause parameters (from the event, NOT the JSON)
                 statement.setString(5, (String)map.get("productId"));
-                statement.setObject(6, UUID.fromString((String)map.get("configId")));
-                statement.setString(7, (String)map.get("propertyName"));
+                statement.setObject(6, UUID.fromString((String)map.get("propertyId")));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("Failed to update product property. No rows affected for product_id: " + map.get("productId") +
-                            ", config_id: " + map.get("configId") + ", property_name: " + map.get("propertyName"));
+                            ", property_id: " + map.get("propertyId"));
                 }
                 conn.commit();
-                result = Success.of(map.get("productId") + "|" + map.get("configId") + "|" + map.get("propertyName"));
+                result = Success.of(map.get("productId") + "|" + map.get("propertyId"));
                 insertNotification(event, true, null);
 
             } catch (SQLException e) {
@@ -9743,23 +9756,22 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> deleteConfigProduct(Map<String, Object> event) {
-        final String sql = "DELETE FROM product_property_t WHERE product_id = ? AND config_id = ? AND property_name = ?";
+        final String sql = "DELETE FROM product_property_t WHERE product_id = ? AND property_id = ?";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, (String)map.get("productId"));
-                statement.setObject(2, UUID.fromString((String)map.get("configId")));
-                statement.setString(3, (String)map.get("propertyName"));
+                statement.setObject(2, UUID.fromString((String)map.get("propertyId")));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("Failed to delete product property. No rows affected for product_id: " + map.get("productId") +
-                            ", config_id: " + map.get("configId") + ", property_name: " + map.get("propertyName"));
+                            ", property_id: " + map.get("propertyId"));
                 }
                 conn.commit();
-                result = Success.of(map.get("productId") + "|" + map.get("configId") + "|" + map.get("propertyName"));
+                result = Success.of(map.get("productId") + "|" + map.get("propertyId"));
                 insertNotification(event, true, null);
 
             } catch (SQLException e) {
@@ -9782,25 +9794,30 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> getConfigProduct(int offset, int limit, String productId,
-                                           String configId, String configName,
+                                           String configId, String configName, String propertyId,
                                            String propertyName, String propertyValue, String propertyFile) {
         Result<String> result = null;
-
+        String s =
+                """
+                        SELECT COUNT(*) OVER () AS total,
+                        pp.product_id, p.config_id, pp.property_id, p.property_name, pp.property_value,\s
+                        pp.property_file, pp.update_user, pp.update_ts, c.config_name
+                        FROM product_property_t pp
+                        INNER JOIN config_property_t p ON p.property_id = pp.property_id
+                        INNER JOIN config_t c ON p.config_id = c.config_id
+                        WHERE 1=1
+                """;
         StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "pp.product_id, pp.config_id, pp.property_name, pp.property_value, pp.property_file, pp.update_user, pp.update_ts, \n" +
-                "c.config_name \n" + // Include config_name from config_t
-                "FROM product_property_t pp\n" +
-                "LEFT JOIN config_t c ON pp.config_id = c.config_id\n" + // Left join with config_t
-                "WHERE 1=1\n");
+        sqlBuilder.append(s).append("\n");
 
         List<Object> parameters = new ArrayList<>();
 
         StringBuilder whereClause = new StringBuilder();
         addCondition(whereClause, parameters, "pp.product_id", productId);
-        addCondition(whereClause, parameters, "pp.config_id", configId != null ? UUID.fromString(configId) : null);
-        addCondition(whereClause, parameters, "c.config_name", configName); // Filter by config_name
-        addCondition(whereClause, parameters, "pp.property_name", propertyName);
+        addCondition(whereClause, parameters, "p.config_id", configId != null ? UUID.fromString(configId) : null);
+        addCondition(whereClause, parameters, "c.config_name", configName);
+        addCondition(whereClause, parameters, "pp.property_id", propertyId != null ? UUID.fromString(propertyId) : null);
+        addCondition(whereClause, parameters, "p.property_name", propertyName);
         addCondition(whereClause, parameters, "pp.property_value", propertyValue);
         addCondition(whereClause, parameters, "pp.property_file", propertyFile);
 
@@ -9836,6 +9853,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("productId", resultSet.getString("product_id"));
                     map.put("configId", resultSet.getObject("config_id", UUID.class));
                     map.put("configName", resultSet.getString("config_name"));
+                    map.put("propertyId", resultSet.getObject("property_id", UUID.class));
                     map.put("propertyName", resultSet.getString("property_name"));
                     map.put("propertyValue", resultSet.getString("property_value"));
                     map.put("propertyFile", resultSet.getString("property_file"));
@@ -9864,8 +9882,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> createConfigProductVersion(Map<String, Object> event) {
         final String sql = "INSERT INTO product_version_property_t (host_id, product_id, product_version, " +
-                "config_id, property_name, property_value, property_file, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                "property_id, property_value, property_file, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
@@ -9874,34 +9892,33 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, (String)event.get(Constants.HOST));
                 statement.setString(2, (String)map.get("productId"));
                 statement.setString(3, (String)map.get("productVersion"));
-                statement.setObject(4, UUID.fromString((String)map.get("configId")));
-                statement.setString(5, (String)map.get("propertyName"));
+                statement.setObject(4, UUID.fromString((String)map.get("propertyId")));
 
                 // Handle 'property_value' (optional)
                 if (map.containsKey("propertyValue")) {
-                    statement.setString(6, (String) map.get("propertyValue"));
+                    statement.setString(5, (String) map.get("propertyValue"));
                 } else {
-                    statement.setNull(6, Types.VARCHAR);
+                    statement.setNull(5, Types.VARCHAR);
                 }
 
                 // Handle 'property_file' (optional)
                 if (map.containsKey("propertyFile")) {
-                    statement.setString(7, (String) map.get("propertyFile"));
+                    statement.setString(6, (String) map.get("propertyFile"));
                 } else {
-                    statement.setNull(7, Types.VARCHAR);
+                    statement.setNull(6, Types.VARCHAR);
                 }
 
-                statement.setString(8, (String)event.get(Constants.USER));
-                statement.setObject(9, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setString(7, (String)event.get(Constants.USER));
+                statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("Failed to insert product version property for host_id: " + event.get(Constants.HOST) +
                             ", product_id: " + map.get("productId") + ", product_version: " + map.get("productVersion") +
-                            ", config_id: " + map.get("configId") + ", property_name: " + map.get("propertyName"));
+                            ", property_id: " + map.get("propertyId"));
                 }
                 conn.commit();
-                result = Success.of(event.get(Constants.HOST) + "|" + map.get("productId") + "|" + map.get("productVersion") + "|" + map.get("configId") + "|" + map.get("propertyName")); // Composite key
+                result = Success.of(event.get(Constants.HOST) + "|" + map.get("productId") + "|" + map.get("productVersion") + "|" + map.get("propertyId"));
                 insertNotification(event, true, null);
 
             } catch (SQLException e) {
@@ -9925,7 +9942,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> updateConfigProductVersion(Map<String, Object> event) {
         final String sql = "UPDATE product_version_property_t SET property_value = ?, property_file = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? AND product_id = ? AND product_version = ? AND config_id = ? AND property_name = ?";
+                "WHERE host_id = ? AND product_id = ? AND product_version = ? AND property_id = ?";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
@@ -9953,17 +9970,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(5, (String)event.get(Constants.HOST));
                 statement.setString(6, (String)map.get("productId"));
                 statement.setString(7, (String)map.get("productVersion"));
-                statement.setObject(8, UUID.fromString((String)map.get("configId")));
-                statement.setString(9, (String)map.get("propertyName"));
+                statement.setObject(8, UUID.fromString((String)map.get("propertyId")));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("Failed to update product version property. No rows affected for host_id: " + event.get(Constants.HOST) +
                             ", product_id: " + map.get("productId") + ", product_version: " + map.get("productVersion") +
-                            ", config_id: " + map.get("configId") + ", property_name: " + map.get("propertyName"));
+                            ", property_id: " + map.get("propertyId"));
                 }
                 conn.commit();
-                result = Success.of(event.get(Constants.HOST) + "|" + map.get("productId") + "|" + map.get("productVersion") + "|" + map.get("configId") + "|" + map.get("propertyName"));
+                result = Success.of(event.get(Constants.HOST) + "|" + map.get("productId") + "|" + map.get("productVersion") + "|" + map.get("propertyId"));
                 insertNotification(event, true, null);
 
             } catch (SQLException e) {
@@ -9988,7 +10004,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> deleteConfigProductVersion(Map<String, Object> event) {
         final String sql = "DELETE FROM product_version_property_t WHERE host_id = ? AND product_id = ? " +
-                "AND product_version = ? AND config_id = ? AND property_name = ?";
+                "AND product_version = ? AND property_id = ?";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
@@ -9997,17 +10013,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, (String)event.get(Constants.HOST));
                 statement.setString(2, (String)map.get("productId"));
                 statement.setString(3, (String)map.get("productVersion"));
-                statement.setObject(4, UUID.fromString((String)map.get("configId")));
-                statement.setString(5, (String)map.get("propertyName"));
+                statement.setObject(4, UUID.fromString((String)map.get("propertyId")));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("Failed to delete product version property. No rows affected for host_id: " + event.get(Constants.HOST) +
                             ", product_id: " + map.get("productId") + ", product_version: " + map.get("productVersion") +
-                            ", config_id: " + map.get("configId") + ", property_name: " + map.get("propertyName"));
+                            ", property_id: " + map.get("propertyId"));
                 }
                 conn.commit();
-                result = Success.of(event.get(Constants.HOST) + "|" + map.get("productId") + "|" + map.get("productVersion") + "|" + map.get("configId") + "|" + map.get("propertyName"));
+                result = Success.of(event.get(Constants.HOST) + "|" + map.get("productId") + "|" + map.get("productVersion") + "|" + map.get("propertyId"));
                 insertNotification(event, true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
@@ -10030,18 +10045,22 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> getConfigProductVersion(int offset, int limit, String hostId, String productId, String productVersion,
-                                                  String configId, String configName,
+                                                  String configId, String configName, String propertyId,
                                                   String propertyName, String propertyValue, String propertyFile) {
         Result<String> result = null;
-
+        String s =
+                """
+                        SELECT COUNT(*) OVER () AS total,
+                        pvp.host_id, pvp.product_id, pvp.product_version, p.config_id, p.property_name,
+                        pvp.property_value, pvp.property_file, pvp.update_user, pvp.update_ts,
+                        c.config_name
+                        FROM product_version_property_t pvp
+                        INNER JOIN config_property_t p ON p.property_id = pvp.property_id
+                        INNER JOIN config_t c ON p.config_id = c.config_id
+                        WHERE 1=1
+                """;
         StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "pvp.host_id, pvp.product_id, pvp.product_version, pvp.config_id, pvp.property_name, " +
-                "pvp.property_value, pvp.property_file, pvp.update_user, pvp.update_ts, \n" +
-                "c.config_name \n" + // Include config_name from config_t
-                "FROM product_version_property_t pvp\n" +
-                "LEFT JOIN config_t c ON pvp.config_id = c.config_id\n" +  // Left join with config_t
-                "WHERE 1=1\n");
+        sqlBuilder.append(s).append("\n");
 
         List<Object> parameters = new ArrayList<>();
 
@@ -10049,9 +10068,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         addCondition(whereClause, parameters, "pvp.host_id", hostId != null ? UUID.fromString(hostId) : null);
         addCondition(whereClause, parameters, "pvp.product_id", productId);
         addCondition(whereClause, parameters, "pvp.product_version", productVersion);
-        addCondition(whereClause, parameters, "pvp.config_id", configId != null ? UUID.fromString(configId) : null);
-        addCondition(whereClause, parameters, "c.config_name", configName);  // Filter by config_name
-        addCondition(whereClause, parameters, "pvp.property_name", propertyName);
+        addCondition(whereClause, parameters, "p.config_id", configId != null ? UUID.fromString(configId) : null);
+        addCondition(whereClause, parameters, "c.config_name", configName);
+        addCondition(whereClause, parameters, "pvp.property_id", propertyId != null ? UUID.fromString(propertyId) : null);
+        addCondition(whereClause, parameters, "p.property_name", propertyName);
         addCondition(whereClause, parameters, "pvp.property_value", propertyValue);
         addCondition(whereClause, parameters, "pvp.property_file", propertyFile);
 
@@ -10089,7 +10109,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("productId", resultSet.getString("product_id"));
                     map.put("productVersion", resultSet.getString("product_version"));
                     map.put("configId", resultSet.getObject("config_id", UUID.class));
-                    map.put("configName", resultSet.getString("config_name")); // Get from joined table
+                    map.put("configName", resultSet.getString("config_name"));
+                    map.put("propertyId", resultSet.getObject("property_id", UUID.class));
                     map.put("propertyName", resultSet.getString("property_name"));
                     map.put("propertyValue", resultSet.getString("property_value"));
                     map.put("propertyFile", resultSet.getString("property_file"));
