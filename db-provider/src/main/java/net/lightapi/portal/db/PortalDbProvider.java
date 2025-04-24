@@ -60,8 +60,6 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> getRefRelation(int offset, int limit, String relationId, String valueIdFrom, String valueIdTo,
             Boolean active);
 
-    Result<String> queryRefTable(int offset, int limit, String hostId, String tableName, String tableDesc, String active, String editable, String common);
-
     Result<String> loginUserByEmail(String email);
     Result<String> queryUserByEmail(String email);
     Result<String> queryUserById(String id);
@@ -356,8 +354,11 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> createInstance(Map<String, Object> event);
     Result<String> updateInstance(Map<String, Object> event);
     Result<String> deleteInstance(Map<String, Object> event);
-    Result<String> getInstance(int offset, int limit, String hostId, String instanceId, String instanceName, String productId, String productVersion,
-                               String serviceId, String apiId, String apiVersion, String environment, String pipelineId, String serviceDesc, String instanceDesc, String tagId);
+    Result<String> getInstance(int offset, int limit, String hostId, String instanceId, String instanceName,
+                               String productVersionId, String serviceId, Boolean current, Boolean readonly,
+                               String environment, String serviceDesc, String instanceDesc, String zone,
+                               String region, String lob, String resourceName, String businessName,
+                               String topicClassification);
     Result<String> getInstanceLabel(String hostId);
 
 

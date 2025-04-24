@@ -204,6 +204,9 @@ public class PortalConstants {
     public static final String INSTANCE_APP_CREATED_EVENT = "InstanceAppCreatedEvent";
     public static final String INSTANCE_APP_UPDATED_EVENT = "InstanceAppUpdatedEvent";
     public static final String INSTANCE_APP_DELETED_EVENT = "InstanceAppDeletedEvent";
+    public static final String INSTANCE_PIPELINE_CREATED_EVENT = "InstancePipelineCreatedEvent";
+    public static final String INSTANCE_PIPELINE_UPDATED_EVENT = "InstancePipelineUpdatedEvent";
+    public static final String INSTANCE_PIPELINE_DELETED_EVENT = "InstancePipelineDeletedEvent";
 
     // --- Deployment Events ---
     public static final String DEPLOYMENT_CREATED_EVENT = "DeploymentCreatedEvent";

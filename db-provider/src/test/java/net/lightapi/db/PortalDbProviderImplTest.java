@@ -37,30 +37,38 @@ public class PortalDbProviderImplTest {
     }
 
     @Test
-    void testQueryRefTableNoParameter() {
-        Result<String> result = dbProvider.queryRefTable(0, 2, "N2CMw0HGQXeLvC1wBfln2A", null, null, "Y", "Y", null);
+    void testGetRefTableNoHost() {
+        Result<String> result = dbProvider.getRefTable(0, 2, null, "01964b05-5532-7c79-8cde-191dcbd421b8", null, null, null, null);
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
             System.out.println(result.getResult());
         }
-
     }
 
     @Test
-    void testQueryRefTable() {
-        Result<String> result = dbProvider.queryRefTable(0, 2, "N2CMw0HGQXeLvC1wBfln2A", null, "t", "Y", "Y", "Y");
+    void testGetRefTableWithHost() {
+        Result<String> result = dbProvider.getRefTable(0, 2, "01964b05-552a-7c4b-9184-6857e7f3dc5f", "01964b05-5532-7c79-8cde-191dcbd421b8", null, null, null, null);
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
             System.out.println(result.getResult());
         }
+    }
 
+    @Test
+    void testGetRefTableLabelWithHost() {
+        Result<String> result = dbProvider.getRefTableLabel("01964b05-552a-7c4b-9184-6857e7f3dc5f");
+        if(result.isFailure()) {
+            System.out.println(result.getError());
+        } else {
+            System.out.println(result.getResult());
+        }
     }
 
     @Test
     void testQueryService() {
-        Result<String> result = dbProvider.queryService(0, 2, "N2CMw0HGQXeLvC1wBfln2A", "1234",
+        Result<String> result = dbProvider.queryService(0, 2, "01964b05-552a-7c4b-9184-6857e7f3dc5f", "1234",
                 null, null, null, null, null, null, null,
                 null, null, null, null, null);
         if(result.isFailure()) {
@@ -72,7 +80,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testQueryRule() {
-        Result<String> result = dbProvider.queryRule(0, 2, "N2CMw0HGQXeLvC1wBfln2A", null,
+        Result<String> result = dbProvider.queryRule(0, 2, "01964b05-552a-7c4b-9184-6857e7f3dc5f", null,
                 null, null, null, null, null, null, null,
                 "Y");
         if(result.isFailure()) {
@@ -95,7 +103,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     public void testQueryRole()  {
-        Result<String> result = dbProvider.queryRole(0, 4, "N2CMw0HGQXeLvC1wBfln2A", null, null);
+        Result<String> result = dbProvider.queryRole(0, 4, "01964b05-552a-7c4b-9184-6857e7f3dc5f", null, null);
         if(result.isFailure()) {
             System.out.println(result.getError());
             fail();
@@ -110,7 +118,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     public void testQueryGroup() {
-        Result<String> result = dbProvider.queryGroup(0, 2, "N2CMw0HGQXeLvC1wBfln2A", "le", null);
+        Result<String> result = dbProvider.queryGroup(0, 2, "01964b05-552a-7c4b-9184-6857e7f3dc5f", "le", null);
         if(result.isFailure()) {
             System.out.println(result.getError());
             fail();
@@ -124,7 +132,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     public void testQueryPosition() {
-        Result<String> result = dbProvider.queryPosition(0, 2, "N2CMw0HGQXeLvC1wBfln2A", null, null, "Y", null);
+        Result<String> result = dbProvider.queryPosition(0, 2, "01964b05-552a-7c4b-9184-6857e7f3dc5f", null, null, "Y", null);
         if(result.isFailure()) {
             System.out.println(result.getError());
             fail();
@@ -138,7 +146,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     public void testQueryAttribute() {
-        Result<String> result = dbProvider.queryAttribute(0, 2, "N2CMw0HGQXeLvC1wBfln2A", "ou", null, null);
+        Result<String> result = dbProvider.queryAttribute(0, 2, "01964b05-552a-7c4b-9184-6857e7f3dc5f", "ou", null, null);
         if(result.isFailure()) {
             System.out.println(result.getError());
             fail();
@@ -152,7 +160,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     public void testQueryServicePermission() {
-        Result<String> result = dbProvider.queryServicePermission("N2CMw0HGQXeLvC1wBfln2A", "0100", "1.0.0");
+        Result<String> result = dbProvider.queryServicePermission("01964b05-552a-7c4b-9184-6857e7f3dc5f", "0100", "1.0.0");
         if(result.isFailure()) {
             System.out.println(result.getError());
             fail();
@@ -165,7 +173,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     public void testQueryServiceFilter() {
-        Result<List<String>> result = dbProvider.queryServiceFilter("N2CMw0HGQXeLvC1wBfln2A", "0100", "1.0.0");
+        Result<List<String>> result = dbProvider.queryServiceFilter("01964b05-552a-7c4b-9184-6857e7f3dc5f", "0100", "1.0.0");
         if(result.isFailure()) {
             System.out.println(result.getError());
             fail();
@@ -178,7 +186,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testListUserByHostId() {
-        Result<String> result = dbProvider.queryUserByHostId(0, 2, "N2CMw0HGQXeLvC1wBfln2A", null, null,
+        Result<String> result = dbProvider.queryUserByHostId(0, 2, "01964b05-552a-7c4b-9184-6857e7f3dc5f", null, null,
                 null, null,null, null, null, null, null, null,
                 null, null, null, null, null, null, null, null);
         if(result.isFailure()) {
@@ -190,7 +198,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testQueryProviderKey() {
-        Result<String> result = dbProvider.queryProviderKey("biAGY0FdRkS38JUtOQymuQ");
+        Result<String> result = dbProvider.queryProviderKey("01964b05-552a-7c4b-9184-6857e7f3dc5f");
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
@@ -210,7 +218,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testGetProduct() {
-        Result<String> result = dbProvider.getProduct(0, 2, "N2CMw0HGQXeLvC1wBfln2A", null, null, null, null, null, null, null, null, null, null);
+        Result<String> result = dbProvider.getProduct(0, 2, "01964b05-552a-7c4b-9184-6857e7f3dc5f", null, null, null, null, null, null, null, null, null, null);
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
@@ -220,7 +228,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testGetCategory() {
-        Result<String> result = dbProvider.getCategory(0, 2, "N2CMw0HGQXeLvC1wBfln2A", null, null, null, null, null, null, null);
+        Result<String> result = dbProvider.getCategory(0, 2, "01964b05-552a-7c4b-9184-6857e7f3dc5f", null, null, null, null, null, null, null);
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
@@ -271,6 +279,16 @@ public class PortalDbProviderImplTest {
     @Test
     void testQueryAuthCode() {
         Result<String> result =  dbProvider.queryAuthCode("AZZUf_bod7y2VaMm9Lu3_w");
+        if(result.isFailure()) {
+            System.out.println(result.getError());
+        } else {
+            System.out.println(result.getResult());
+        }
+    }
+
+    @Test
+    void testGetTag() {
+        Result<String> result = dbProvider.getTag(0, 2, "01964b05-552a-7c4b-9184-6857e7f3dc5f", null, null, null, null);
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
