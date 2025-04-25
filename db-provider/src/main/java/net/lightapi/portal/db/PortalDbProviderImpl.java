@@ -8294,19 +8294,20 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createInstanceApi(Map<String, Object> event) {
-        final String sql = "INSERT INTO instance_api_t(host_id, instance_id, api_id, api_version, active, update_user, update_ts) " +
+        final String sql = "INSERT INTO instance_api_t(host_id, instance_api_id, instance_id, api_version_id, active, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?)";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
-                statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
-                statement.setString(3, (String)map.get("apiId"));
-                statement.setString(4, (String)map.get("apiVersion"));
-                if (map.containsKey("active")) {
-                    statement.setBoolean(5, (Boolean) map.get("active"));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(2, UUID.fromString((String)map.get("instanceApiId")));
+                statement.setObject(3, UUID.fromString((String)map.get("instanceId")));
+                statement.setObject(4, UUID.fromString((String)map.get("apiVersionId")));
+                Boolean active = (Boolean)map.get("active");
+                if (active != null) {
+                    statement.setBoolean(5, active);
                 } else {
                     statement.setNull(5, Types.BOOLEAN);
                 }
@@ -8318,8 +8319,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     throw new SQLException("failed to insert the instance api");
                 }
                 conn.commit();
-                result = Success.of(String.format("Instance API created for instanceId: %s, apiId: %s, apiVersion: %s",
-                        map.get("instanceId"), map.get("apiId"), map.get("apiVersion"))); // return some kind of key.
+                result = Success.of(String.format("Instance API created for hostId: %s, instanceApiId: %s, instanceId: %s, apiVersionId: %s",
+                        event.get(Constants.HOST), map.get("instanceApiId"), map.get("instanceId"), map.get("apiVersionId")));
                 insertNotification(event, true, null);
 
             }   catch (SQLException e) {
@@ -8342,32 +8343,33 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateInstanceApi(Map<String, Object> event) {
-        final String sql = "UPDATE instance_api_t SET active = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? and instance_id = ? and api_id = ? and api_version = ?";
+        final String sql = "UPDATE instance_api_t SET instance_id = ?, api_version_id = ?, active = ?, update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? and instance_api_id = ?";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                if (map.containsKey("active")) {
-                    statement.setBoolean(1, (Boolean) map.get("active"));
+                statement.setObject(1, UUID.fromString((String)map.get("instanceId")));
+                statement.setObject(2, UUID.fromString((String)map.get("apiVersionId")));
+                Boolean active = (Boolean)map.get("active");
+                if (active != null) {
+                    statement.setBoolean(3, active);
                 } else {
-                    statement.setNull(1, Types.BOOLEAN);
+                    statement.setNull(3, Types.BOOLEAN);
                 }
-                statement.setString(2, (String)event.get(Constants.USER));
-                statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(4, (String)event.get(Constants.HOST));
-                statement.setObject(5, UUID.fromString((String)map.get("instanceId")));
-                statement.setString(6, (String)map.get("apiId"));
-                statement.setString(7, (String)map.get("apiVersion"));
+                statement.setString(4, (String)event.get(Constants.USER));
+                statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(7, UUID.fromString((String)map.get("instanceApiId")));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("failed to update instance api");
                 }
                 conn.commit();
-                result = Success.of(String.format("Instance API updated for instanceId: %s, apiId: %s, apiVersion: %s",
-                        map.get("instanceId"), map.get("apiId"), map.get("apiVersion")));
+                result = Success.of(String.format("Instance API updated for hostId: %s, instanceApiId: %s",
+                        event.get(Constants.HOST), map.get("instanceApiId")));
                 insertNotification(event, true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
@@ -8389,24 +8391,22 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> deleteInstanceApi(Map<String, Object> event) {
-        final String sql = "DELETE FROM instance_api_t WHERE host_id = ? AND instance_id = ? AND api_id = ? AND api_version = ?";
+        final String sql = "DELETE FROM instance_api_t WHERE host_id = ? AND instance_api_id = ?";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
-                statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
-                statement.setString(3, (String)map.get("apiId"));
-                statement.setString(4, (String)map.get("apiVersion"));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(2, UUID.fromString((String)map.get("instanceApiId")));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("failed to delete the instance api with id " + map.get("apiId"));
+                    throw new SQLException("failed to delete the instance api with instanceApiId " + map.get("instanceApiId"));
                 }
                 conn.commit();
-                result = Success.of(String.format("Instance API deleted for instanceId: %s, apiId: %s, apiVersion: %s",
-                        map.get("instanceId"), map.get("apiId"), map.get("apiVersion")));
+                result = Success.of(String.format("Instance API deleted for hostId: %s, instanceApiId: %s",
+                        event.get(Constants.HOST), map.get("instanceApiId")));
                 insertNotification(event, true, null);
 
             } catch (SQLException e) {
@@ -8428,23 +8428,27 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> getInstanceApi(int offset, int limit, String hostId, String instanceId, String apiId, String apiVersion,
+    public Result<String> getInstanceApi(int offset, int limit, String hostId, String instanceApiId, String instanceId, String apiVersionId,
                                          Boolean active) {
         Result<String> result = null;
+        String s =
+                """
+                        SELECT COUNT(*) OVER () AS total,
+                        host_id, instance_api_id, instance_id, api_version_id, active, update_user, update_ts
+                        FROM instance_api_t
+                        WHERE 1=1
+                """;
         StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "host_id, instance_id, api_id, api_version, active, update_user, update_ts\n" +
-                "FROM instance_api_t\n" +
-                "WHERE 1=1\n");
+        sqlBuilder.append(s).append("\n");
 
         List<Object> parameters = new ArrayList<>();
 
         StringBuilder whereClause = new StringBuilder();
 
         addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "instance_api_id", instanceApiId != null ? UUID.fromString(instanceApiId) : null);
         addCondition(whereClause, parameters, "instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
-        addCondition(whereClause, parameters, "api_id", apiId);
-        addCondition(whereClause, parameters, "api_version", apiVersion);
+        addCondition(whereClause, parameters, "api_version_id", apiVersionId != null ? UUID.fromString(apiVersionId) : null);
         addCondition(whereClause, parameters, "active", active);
 
 
@@ -8452,7 +8456,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append("ORDER BY instance_id, api_id, api_version\n" + // Added ordering
+        sqlBuilder.append("ORDER BY instance_id, api_version_id\n" + // Added ordering
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -8478,9 +8482,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         isFirstRow = false;
                     }
                     map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceApiId", resultSet.getObject("instance_api_id", UUID.class));
                     map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
-                    map.put("apiId", resultSet.getString("api_id"));
-                    map.put("apiVersion", resultSet.getString("api_version"));
+                    map.put("apiVersionId", resultSet.getObject("api_version_id", UUID.class));
                     map.put("active", resultSet.getBoolean("active"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     // handling date properly
@@ -8747,31 +8751,32 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createInstanceApp(Map<String, Object> event) {
-        final String sql = "INSERT INTO instance_app_t(host_id, instance_id, app_id, app_version, active, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        final String sql = "INSERT INTO instance_app_t(host_id, instance_app_id, instance_id, app_id, app_version, active, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
-                statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
-                statement.setString(3, (String)map.get("appId"));
-                statement.setString(4, (String)map.get("appVersion"));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(2, UUID.fromString((String)map.get("instanceAppId")));
+                statement.setObject(3, UUID.fromString((String)map.get("instanceId")));
+                statement.setString(4, (String)map.get("appId"));
+                statement.setString(5, (String)map.get("appVersion"));
                 if (map.containsKey("active")) {
-                    statement.setBoolean(5, (Boolean) map.get("active"));
+                    statement.setBoolean(6, (Boolean) map.get("active"));
                 } else {
-                    statement.setNull(5, Types.BOOLEAN);
+                    statement.setNull(6, Types.BOOLEAN);
                 }
-                statement.setString(6, (String)event.get(Constants.USER));
-                statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setString(7, (String)event.get(Constants.USER));
+                statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("failed to insert the instance app with event " + event);
                 }
                 conn.commit();
-                result = Success.of(String.format("Instance App created for instanceId: %s, appId: %s, appVersion: %s",
-                        map.get("instanceId"), map.get("appId"), map.get("appVersion")));
+                result = Success.of(String.format("Instance App created for hostId: %s, instanceAppId: %s",
+                        event.get(Constants.HOST), map.get("instanceAppId")));
                 insertNotification(event, true, null);
 
             } catch (SQLException e) {
@@ -8794,31 +8799,34 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateInstanceApp(Map<String, Object> event) {
-        final String sql = "UPDATE instance_app_t SET active = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? and instance_id = ? and app_id = ? and app_version = ?";
+        final String sql = "UPDATE instance_app_t SET instance_id = ?, app_id = ?, app_version = ?, active = ?, update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? and instance_app_id = ?";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                if (map.containsKey("active")) {
-                    statement.setBoolean(1, (Boolean) map.get("active"));
+                statement.setObject(1, UUID.fromString((String)map.get("instanceId")));
+                statement.setString(2, (String)map.get("appId"));
+                statement.setString(3, (String)map.get("appVersion"));
+                Boolean active = (Boolean)map.get("active");
+                if (active != null) {
+                    statement.setBoolean(4, active);
                 } else {
-                    statement.setNull(1, Types.BOOLEAN);
+                    statement.setNull(4, Types.BOOLEAN);
                 }
-                statement.setString(2, (String)event.get(Constants.USER));
-                statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(4, (String)event.get(Constants.HOST));
-                statement.setObject(5, UUID.fromString((String)map.get("instanceId")));
-                statement.setString(6, (String)map.get("appId"));
-                statement.setString(7, (String)map.get("appVersion"));
+                statement.setString(5, (String)event.get(Constants.USER));
+                statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setObject(7, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(8, UUID.fromString((String)map.get("instanceAppId")));
+
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("failed to update the instance app with id " + map.get("appId"));
+                    throw new SQLException("failed to update the instance app with instanceAppId " + map.get("instanceAppId"));
                 }
                 conn.commit();
-                result = Success.of(String.format("Instance App updated for instanceId: %s, appId: %s, appVersion: %s",
-                        map.get("instanceId"), map.get("appId"), map.get("appVersion")));
+                result = Success.of(String.format("Instance App updated for hostId: %s, instanceAppId: %s",
+                        event.get(Constants.HOST), map.get("instanceAppId")));
                 insertNotification(event, true, null);
 
             } catch (SQLException e) {
@@ -8841,24 +8849,22 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> deleteInstanceApp(Map<String, Object> event) {
-        final String sql = "DELETE FROM instance_app_t WHERE host_id = ? AND instance_id = ? AND app_id = ? AND app_version = ?";
+        final String sql = "DELETE FROM instance_app_t WHERE host_id = ? AND instance_app_id = ?";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
-                statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
-                statement.setString(3, (String)map.get("appId"));
-                statement.setString(4, (String)map.get("appVersion"));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(2, UUID.fromString((String)map.get("instanceAppId")));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException("failed to delete the instance app with id " + map.get("appId"));
+                    throw new SQLException("failed to delete the instance app with instanceAppId " + map.get("instanceAppId"));
                 }
                 conn.commit();
-                result = Success.of(String.format("Instance app deleted for instanceId: %s, appId: %s, appVersion: %s",
-                        map.get("instanceId"), map.get("appId"), map.get("appVersion")));
+                result = Success.of(String.format("Instance app deleted for hostId: %s, instanceAppId: %s",
+                        event.get(Constants.HOST), map.get("instanceAppId")));
                 insertNotification(event, true, null);
             } catch (SQLException e) {
                 logger.error("SQLException:", e);
@@ -8879,20 +8885,25 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> getInstanceApp(int offset, int limit, String hostId, String instanceId, String appId, String appVersion,
+    public Result<String> getInstanceApp(int offset, int limit, String hostId, String instanceAppId, String instanceId, String appId, String appVersion,
                                          Boolean active) {
         Result<String> result = null;
+        String s =
+                """
+                        SELECT COUNT(*) OVER () AS total,
+                        host_id, instance_app_id, instance_id, app_id, app_version, active, update_user, update_ts
+                        FROM instance_app_t
+                        WHERE 1=1
+                """;
         StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "host_id, instance_id, app_id, app_version, active, update_user, update_ts\n" +
-                "FROM instance_app_t\n" +
-                "WHERE 1=1\n");
+        sqlBuilder.append(s).append("\n");
 
         List<Object> parameters = new ArrayList<>();
 
         StringBuilder whereClause = new StringBuilder();
 
         addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "instance_app_id", instanceAppId != null ? UUID.fromString(instanceAppId) : null);
         addCondition(whereClause, parameters, "instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
         addCondition(whereClause, parameters, "app_id", appId);
         addCondition(whereClause, parameters, "app_version", appVersion);
@@ -8928,12 +8939,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         isFirstRow = false;
                     }
                     map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceAppId", resultSet.getObject("instance_app_id", UUID.class));
                     map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
                     map.put("appId", resultSet.getString("app_id"));
                     map.put("appVersion", resultSet.getString("app_version"));
                     map.put("active", resultSet.getBoolean("active"));
                     map.put("updateUser", resultSet.getString("update_user"));
-                    // handling date properly
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     instanceApps.add(map);
                 }
@@ -8943,7 +8954,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             resultMap.put("total", total);
             resultMap.put("instanceApps", instanceApps);
             result = Success.of(JsonMapper.toJson(resultMap));
-
 
         } catch (SQLException e) {
             logger.error("SQLException:", e);
@@ -15849,6 +15859,223 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
             }
             result = Success.of(JsonMapper.toJson(labels));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> createInstancePipeline(Map<String, Object> event) {
+        final String sql = "INSERT INTO instance_pipeline_t(host_id, instance_id, pipeline_id, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?)";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
+                statement.setObject(3, UUID.fromString((String)map.get("pipelineId")));
+                statement.setString(4, (String)event.get(Constants.USER));
+                statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+                int count = statement.executeUpdate();
+                String key = String.format("hostId: %s, instanceId: %s pipelineId: %s",
+                        event.get(Constants.HOST), map.get("instanceId"), map.get("pipelineId"));
+                if (count == 0) {
+                    throw new SQLException("failed to insert the instance_pipeline_t with id " + key);
+                }
+                conn.commit();
+                result = Success.of(key);
+                insertNotification(event, true, null);
+            }   catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+    @Override
+    public Result<String> updateInstancePipeline(Map<String, Object> event) {
+        final String sql = "UPDATE instance_pipeline_t SET update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? and instance_id = ? and pipeline_id = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1,(String) event.get(Constants.USER));
+                statement.setObject(2, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setObject(3, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(4, UUID.fromString((String)map.get("instanceId")));
+                statement.setObject(5, UUID.fromString((String)map.get("pipelineId")));
+
+                int count = statement.executeUpdate();
+                String key = String.format("hostId: %s, instanceId: %s pipelineId: %s",
+                        event.get(Constants.HOST), map.get("instanceId"), map.get("pipelineId"));
+
+                if (count == 0) {
+                    throw new SQLException("failed to update the pipeline with id " + key);
+                }
+                conn.commit();
+                result = Success.of(key);
+                insertNotification(event, true, null);
+            }  catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+    @Override
+    public Result<String> deleteInstancePipeline(Map<String, Object> event) {
+        final String sql = "DELETE FROM instance_pipeline_t WHERE host_id = ? AND instance_id = ? AND pipeline_id = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
+                statement.setObject(3, UUID.fromString((String)map.get("pipelineId")));
+
+                int count = statement.executeUpdate();
+                String key = String.format("hostId: %s, instanceId: %s pipelineId: %s",
+                        event.get(Constants.HOST), map.get("instanceId"), map.get("pipelineId"));
+
+                if (count == 0) {
+                    throw new SQLException("failed to delete the pipeline with id " + key);
+                }
+                conn.commit();
+                result = Success.of(key);
+                insertNotification(event, true, null);
+            }   catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            }  catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+    @Override
+    public Result<String> getInstancePipeline(int offset, int limit, String hostId, String instanceId, String instanceName,
+                                       String productId, String productVersion, String pipelineId, String platformName,
+                                       String platformVersion, String pipelineName, String pipelineVersion) {
+        Result<String> result = null;
+        String s =
+                """
+                        SELECT ip.host_id, ip.instance_id, i.instance_name, pv.product_id,\s
+                        pv.product_version, ip.pipeline_id, pf.platform_name, pf.platform_version,\s
+                        p.pipeline_name, p.pipeline_version, ip.update_user, ip.update_ts\s
+                        FROM instance_pipeline_t ip
+                        INNER JOIN instance_t i ON ip.instance_id = i.instance_id
+                        INNER JOIN product_version_t pv ON i.product_version_id = pv.product_version_id
+                        INNER JOIN pipeline_t p ON p.pipeline_id = ip.pipeline_id
+                        INNER JOIN platform_t pf ON p.platform_id = pf.platform_id
+                        WHERE 1=1
+                """;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append(s).append("\n");
+
+        List<Object> parameters = new ArrayList<>();
+
+        StringBuilder whereClause = new StringBuilder();
+        addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
+        addCondition(whereClause, parameters, "instance_name", instanceName);
+        addCondition(whereClause, parameters, "product_id", productId);
+        addCondition(whereClause, parameters, "product_version", productVersion);
+        addCondition(whereClause, parameters, "pipeline_id", pipelineId != null ? UUID.fromString(pipelineId) : null);
+        addCondition(whereClause, parameters, "platform_name", platformName);
+        addCondition(whereClause, parameters, "platform_version", platformVersion);
+        addCondition(whereClause, parameters, "pipeline_name", pipelineName);
+        addCondition(whereClause, parameters, "pipeline_version", pipelineVersion);
+
+        if (!whereClause.isEmpty()) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append(" ORDER BY instance_id, pipeline_id\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> instancePipelines = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
+                    map.put("instanceName", resultSet.getString("instance_name"));
+                    map.put("productId", resultSet.getString("product_id"));
+                    map.put("productVersion", resultSet.getString("product_version"));
+                    map.put("pipelineId", resultSet.getString("pipeline_id"));
+                    map.put("platformName", resultSet.getString("platform_name"));
+                    map.put("platformVersion", resultSet.getString("platform_version"));
+                    map.put("pipelineName", resultSet.getString("pipeline_name"));
+                    map.put("pipelineVersion", resultSet.getString("pipeline_version"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    instancePipelines.add(map);
+                }
+            }
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("instancePipelines", instancePipelines);
+            result = Success.of(JsonMapper.toJson(resultMap));
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));

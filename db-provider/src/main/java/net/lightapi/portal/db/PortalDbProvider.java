@@ -212,8 +212,8 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> createInstanceApp(Map<String, Object> event);
     Result<String> updateInstanceApp(Map<String, Object> event);
     Result<String> deleteInstanceApp(Map<String, Object> event);
-    Result<String> getInstanceApp(int offset, int limit, String hostId, String instanceId, String appId, String appVersion,
-                                        Boolean active);
+    Result<String> getInstanceApp(int offset, int limit, String hostId, String instanceAppId, String instanceId, String appId, String appVersion,
+                                  Boolean active);
 
     Result<String> createConfigInstanceApp(Map<String, Object> event);
     Result<String> updateConfigInstanceApp(Map<String, Object> event);
@@ -368,6 +368,14 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> getPipeline(int offset, int limit, String hostId, String pipelineId, String platformId, String endpoint,
                                String requestSchema, String responseSchema);
     Result<String> getPipelineLabel(String hostId);
+
+    Result<String> createInstancePipeline(Map<String, Object> event);
+    Result<String> updateInstancePipeline(Map<String, Object> event);
+    Result<String> deleteInstancePipeline(Map<String, Object> event);
+    Result<String> getInstancePipeline(int offset, int limit, String hostId, String instanceId, String instanceName,
+                                       String productId, String productVersion, String pipelineId, String platformName,
+                                       String platformVersion, String pipelineName, String pipelineVersion);
+
     Result<String> createPlatform(Map<String, Object> event);
     Result<String> updatePlatform(Map<String, Object> event);
     Result<String> deletePlatform(Map<String, Object> event);
