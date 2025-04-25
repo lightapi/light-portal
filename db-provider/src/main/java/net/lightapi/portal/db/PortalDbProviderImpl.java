@@ -8428,14 +8428,20 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> getInstanceApi(int offset, int limit, String hostId, String instanceApiId, String instanceId, String apiVersionId,
+    public Result<String> getInstanceApi(int offset, int limit, String hostId, String instanceApiId, String instanceId, String instanceName,
+                                         String productId, String productVersion, String apiVersionId, String apiId, String apiVersion,
                                          Boolean active) {
         Result<String> result = null;
         String s =
                 """
                         SELECT COUNT(*) OVER () AS total,
-                        host_id, instance_api_id, instance_id, api_version_id, active, update_user, update_ts
-                        FROM instance_api_t
+                        ia.host_id, ia.instance_api_id, ia.instance_id, i.instance_name, pv.product_id,
+                        pv.product_version, ia.api_version_id, av.api_id, av.api_version, ia.active,
+                        ia.update_user, ia.update_ts
+                        FROM instance_api_t ia
+                        INNER JOIN instance_t i ON ia.instance_id = i.instance_id
+                        INNER JOIN product_version_t pv ON i.product_version_id = pv.product_version_id
+                        INNER JOIN api_version_t av ON ia.api_version_id = av.api_version_id
                         WHERE 1=1
                 """;
         StringBuilder sqlBuilder = new StringBuilder();
@@ -8445,12 +8451,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "instance_api_id", instanceApiId != null ? UUID.fromString(instanceApiId) : null);
-        addCondition(whereClause, parameters, "instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
+        addCondition(whereClause, parameters, "ia.host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "ia.instance_api_id", instanceApiId != null ? UUID.fromString(instanceApiId) : null);
+        addCondition(whereClause, parameters, "ia.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
+        addCondition(whereClause, parameters, "i.instance_name", instanceName);
+        addCondition(whereClause, parameters, "pv.product_id", productId);
+        addCondition(whereClause, parameters, "pv.product_version", productVersion);
         addCondition(whereClause, parameters, "api_version_id", apiVersionId != null ? UUID.fromString(apiVersionId) : null);
+        addCondition(whereClause, parameters, "av.api_id", apiId);
+        addCondition(whereClause, parameters, "av.api_version", apiVersion);
         addCondition(whereClause, parameters, "active", active);
-
 
         if (!whereClause.isEmpty()) {
             sqlBuilder.append("AND ").append(whereClause);
@@ -8484,10 +8494,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("instanceApiId", resultSet.getObject("instance_api_id", UUID.class));
                     map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
+                    map.put("instanceName", resultSet.getString("instance_name"));
+                    map.put("productId", resultSet.getString("product_id"));
+                    map.put("productVersion", resultSet.getString("product_version"));
                     map.put("apiVersionId", resultSet.getObject("api_version_id", UUID.class));
+                    map.put("apiId", resultSet.getString("api_id"));
+                    map.put("apiVersion", resultSet.getString("api_version"));
                     map.put("active", resultSet.getBoolean("active"));
                     map.put("updateUser", resultSet.getString("update_user"));
-                    // handling date properly
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     instanceApis.add(map);
                 }
@@ -8499,6 +8513,39 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             result = Success.of(JsonMapper.toJson(resultMap));
 
 
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    public Result<String> getInstanceApiLabel(String hostId) {
+        Result<String> result = null;
+        String sql =
+                """
+                        SELECT ia.instance_api_id, i.instance_name, av.api_id, av.api_version
+                        FROM instance_api_t ia
+                        INNER JOIN instance_t i ON i.instance_id = ia.instance_id
+                        INNER JOIN api_version_t av ON av.api_version_id = ia.api_version_id
+                        WHERE ia.host_id = ?
+                """;
+        List<Map<String, Object>> labels = new ArrayList<>();
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setObject(1, UUID.fromString(hostId));
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", resultSet.getString("instance_id"));
+                    map.put("label", resultSet.getString("instance_name") + "|" + resultSet.getString("api_id") + "|" + resultSet.getString("api_version"));
+                    labels.add(map);
+                }
+            }
+            result = Success.of(JsonMapper.toJson(labels));
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
@@ -8885,14 +8932,17 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> getInstanceApp(int offset, int limit, String hostId, String instanceAppId, String instanceId, String appId, String appVersion,
-                                         Boolean active) {
+    public Result<String> getInstanceApp(int offset, int limit, String hostId, String instanceAppId, String instanceId, String instanceName,
+                                         String productId, String productVersion, String appId, String appVersion, Boolean active) {
         Result<String> result = null;
         String s =
                 """
                         SELECT COUNT(*) OVER () AS total,
-                        host_id, instance_app_id, instance_id, app_id, app_version, active, update_user, update_ts
-                        FROM instance_app_t
+                        ia.host_id, ia.instance_app_id, ia.instance_id, i.instance_name, pv.product_id, pv.product_version,\s
+                        ia.app_id, ia.app_version, ia.active, ia.update_user, ia.update_ts
+                        FROM instance_app_t ia
+                        INNER JOIN instance_t i ON ia.instance_id = i.instance_id
+                        INNER JOIN product_version_t pv ON i.product_version_id = pv.product_version_id
                         WHERE 1=1
                 """;
         StringBuilder sqlBuilder = new StringBuilder();
@@ -8902,12 +8952,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "instance_app_id", instanceAppId != null ? UUID.fromString(instanceAppId) : null);
-        addCondition(whereClause, parameters, "instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
-        addCondition(whereClause, parameters, "app_id", appId);
-        addCondition(whereClause, parameters, "app_version", appVersion);
-        addCondition(whereClause, parameters, "active", active);
+        addCondition(whereClause, parameters, "ia.host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "ia.instance_app_id", instanceAppId != null ? UUID.fromString(instanceAppId) : null);
+        addCondition(whereClause, parameters, "ia.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
+        addCondition(whereClause, parameters, "i.instance_name", instanceName);
+        addCondition(whereClause, parameters, "pv.product_id", productId);
+        addCondition(whereClause, parameters, "pv.product_version", productVersion);
+        addCondition(whereClause, parameters, "ia.app_id", appId);
+        addCondition(whereClause, parameters, "ia.app_version", appVersion);
+        addCondition(whereClause, parameters, "ia.active", active);
 
         if (!whereClause.isEmpty()) {
             sqlBuilder.append("AND ").append(whereClause);
@@ -8941,6 +8994,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("instanceAppId", resultSet.getObject("instance_app_id", UUID.class));
                     map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
+                    map.put("instanceName", resultSet.getString("instance_name"));
+                    map.put("productId", resultSet.getString("product_id"));
+                    map.put("productVersion", resultSet.getString("product_version"));
                     map.put("appId", resultSet.getString("app_id"));
                     map.put("appVersion", resultSet.getString("app_version"));
                     map.put("active", resultSet.getBoolean("active"));
@@ -8955,6 +9011,38 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             resultMap.put("instanceApps", instanceApps);
             result = Success.of(JsonMapper.toJson(resultMap));
 
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    public Result<String> getInstanceAppLabel(String hostId) {
+        Result<String> result = null;
+        String sql =
+                """
+                        SELECT ia.instance_app_id, i.instance_name, ia.app_id, ia.app_version
+                        FROM instance_app_t ia
+                        INNER JOIN instance_t i ON i.instance_id = ia.instance_id
+                        WHERE ia.host_id = ?
+                """;
+        List<Map<String, Object>> labels = new ArrayList<>();
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setObject(1, UUID.fromString(hostId));
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", resultSet.getString("instance_id"));
+                    map.put("label", resultSet.getString("instance_name") + "|" + resultSet.getString("app_id") + "|" + resultSet.getString("app_version"));
+                    labels.add(map);
+                }
+            }
+            result = Success.of(JsonMapper.toJson(labels));
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
@@ -15504,19 +15592,20 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> getInstance(int offset, int limit, String hostId, String instanceId, String instanceName,
-                                      String productVersionId, String serviceId, Boolean current, Boolean readonly,
-                                      String environment, String serviceDesc, String instanceDesc, String zone,
-                                      String region, String lob, String resourceName, String businessName,
-                                      String topicClassification) {
+                                      String productVersionId, String productId, String productVersion, String serviceId,
+                                      Boolean current, Boolean readonly, String environment, String serviceDesc,
+                                      String instanceDesc, String zone,  String region, String lob, String resourceName,
+                                      String businessName, String topicClassification) {
         Result<String> result = null;
         String s =
                 """
-                SELECT COUNT(*) OVER () AS total,
-                host_id, instance_id, instance_name, product_version_id, service_id, current,\s
-                readonly, environment, service_desc, instance_desc, zone, region, lob,\s
-                resource_name, business_name, topic_classification, update_user, update_ts
-                FROM instance_t
-                WHERE 1=1
+                        SELECT COUNT(*) OVER () AS total,
+                        i.host_id, i.instance_id, i.instance_name, i.product_version_id, pv.product_id, pv.product_version,\s
+                        i.service_id, i.current, i.readonly, i.environment, i.service_desc, i.instance_desc, i.zone, i.region,
+                        i.lob, i.resource_name, i.business_name, i.topic_classification, i.update_user, i.update_ts
+                        FROM instance_t i
+                        INNER JOIN product_version_t pv ON pv.product_version_id = i.product_version_id
+                        WHERE 1=1
                 """;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append(s).append("\n");
@@ -15525,28 +15614,30 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
-        addCondition(whereClause, parameters, "instance_name", instanceName);
-        addCondition(whereClause, parameters, "product_version_id", productVersionId != null ? UUID.fromString(productVersionId) : null);
-        addCondition(whereClause, parameters, "service_id", serviceId);
-        addCondition(whereClause, parameters, "current", current);
-        addCondition(whereClause, parameters, "readonly", readonly);
-        addCondition(whereClause, parameters, "environment", environment);
-        addCondition(whereClause, parameters, "service_desc", serviceDesc);
-        addCondition(whereClause, parameters, "instance_desc", instanceDesc);
-        addCondition(whereClause, parameters, "zone", zone);
-        addCondition(whereClause, parameters, "region", region);
-        addCondition(whereClause, parameters, "lob", lob);
-        addCondition(whereClause, parameters, "resource_name", resourceName);
-        addCondition(whereClause, parameters, "business_name", businessName);
-        addCondition(whereClause, parameters, "topic_classification", topicClassification);
+        addCondition(whereClause, parameters, "i.host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "i.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
+        addCondition(whereClause, parameters, "i.instance_name", instanceName);
+        addCondition(whereClause, parameters, "i.product_version_id", productVersionId != null ? UUID.fromString(productVersionId) : null);
+        addCondition(whereClause, parameters, "pv.product_id", productId);
+        addCondition(whereClause, parameters, "pv.product_version", productVersion);
+        addCondition(whereClause, parameters, "i.service_id", serviceId);
+        addCondition(whereClause, parameters, "i.current", current);
+        addCondition(whereClause, parameters, "i.readonly", readonly);
+        addCondition(whereClause, parameters, "i.environment", environment);
+        addCondition(whereClause, parameters, "i.service_desc", serviceDesc);
+        addCondition(whereClause, parameters, "i.instance_desc", instanceDesc);
+        addCondition(whereClause, parameters, "i.zone", zone);
+        addCondition(whereClause, parameters, "i.region", region);
+        addCondition(whereClause, parameters, "i.lob", lob);
+        addCondition(whereClause, parameters, "i.resource_name", resourceName);
+        addCondition(whereClause, parameters, "i.business_name", businessName);
+        addCondition(whereClause, parameters, "i.topic_classification", topicClassification);
 
         if (!whereClause.isEmpty()) {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append(" ORDER BY instance_id\n" +
+        sqlBuilder.append(" ORDER BY i.instance_id\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -15574,7 +15665,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
                     map.put("instanceName", resultSet.getString("instance_name"));
-                    map.put("productVersionId", resultSet.getObject("product_version_id, UUID.class"));
+                    map.put("productVersionId", resultSet.getObject("product_version_id", UUID.class));
+                    map.put("productId", resultSet.getString("product_id"));
+                    map.put("productVersion", resultSet.getString("product_version"));
                     map.put("serviceId", resultSet.getString("service_id"));
                     map.put("current", resultSet.getBoolean("current"));
                     map.put("readonly", resultSet.getBoolean("readonly"));
@@ -15597,8 +15690,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             resultMap.put("total", total);
             resultMap.put("instances", instances);
             result = Success.of(JsonMapper.toJson(resultMap));
-
-
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
@@ -15612,7 +15703,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> getInstanceLabel(String hostId) {
         Result<String> result = null;
-        String sql = "SELECT instance_id, instance_name FROM instance_t WHERE host_id = ?";
+        String sql =
+                """
+                        SELECT i.instance_id, i.instance_name, pv.product_id, pv.product_version
+                        FROM instance_t i
+                        INNER JOIN product_version_t pv ON pv.product_version_id = i.product_version_id
+                        WHERE i.host_id = ?
+                """;
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
@@ -15621,7 +15718,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
                     map.put("id", resultSet.getString("instance_id"));
-                    map.put("label", resultSet.getString("instance_name"));
+                    map.put("label", resultSet.getString("instance_name") + "|" +
+                            resultSet.getString("product_id") + "|" + resultSet.getString("product_version"));
                     labels.add(map);
                 }
             }
@@ -15635,7 +15733,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         }
         return result;
     }
-
 
     @Override
     public Result<String> createPipeline(Map<String, Object> event) {

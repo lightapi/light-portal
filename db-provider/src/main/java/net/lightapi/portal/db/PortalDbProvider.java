@@ -199,8 +199,10 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> createInstanceApi(Map<String, Object> event);
     Result<String> updateInstanceApi(Map<String, Object> event);
     Result<String> deleteInstanceApi(Map<String, Object> event);
-    Result<String> getInstanceApi(int offset, int limit, String hostId, String instanceId, String apiId, String apiVersion,
-                                        Boolean active);
+    Result<String> getInstanceApi(int offset, int limit, String hostId, String instanceApiId, String instanceId, String instanceName,
+                                  String productId, String productVersion, String apiVersionId, String apiId, String apiVersion,
+                                  Boolean active);
+    Result<String> getInstanceApiLabel(String hostId);
 
     Result<String> createConfigInstanceApi(Map<String, Object> event);
     Result<String> updateConfigInstanceApi(Map<String, Object> event);
@@ -212,8 +214,9 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> createInstanceApp(Map<String, Object> event);
     Result<String> updateInstanceApp(Map<String, Object> event);
     Result<String> deleteInstanceApp(Map<String, Object> event);
-    Result<String> getInstanceApp(int offset, int limit, String hostId, String instanceAppId, String instanceId, String appId, String appVersion,
-                                  Boolean active);
+    Result<String> getInstanceApp(int offset, int limit, String hostId, String instanceAppId, String instanceId, String instanceName,
+                                  String productId, String productVersion, String appId, String appVersion, Boolean active);
+    Result<String> getInstanceAppLabel(String hostId);
 
     Result<String> createConfigInstanceApp(Map<String, Object> event);
     Result<String> updateConfigInstanceApp(Map<String, Object> event);
@@ -355,8 +358,8 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> updateInstance(Map<String, Object> event);
     Result<String> deleteInstance(Map<String, Object> event);
     Result<String> getInstance(int offset, int limit, String hostId, String instanceId, String instanceName,
-                               String productVersionId, String serviceId, Boolean current, Boolean readonly,
-                               String environment, String serviceDesc, String instanceDesc, String zone,
+                               String productVersionId, String productId, String productVersion, String serviceId, Boolean current,
+                               Boolean readonly, String environment, String serviceDesc, String instanceDesc, String zone,
                                String region, String lob, String resourceName, String businessName,
                                String topicClassification);
     Result<String> getInstanceLabel(String hostId);
