@@ -69,11 +69,12 @@ public class Db2EventTest {
                     CloudEventBuilder eventTemplate = CloudEventBuilder.v1()
                             .withSource(PortalConstants.EVENT_SOURCE)
                             .withType(PortalConstants.CONFIG_CREATED_EVENT);
+                    Number number = ++nonce;
                     CloudEvent event = eventTemplate.newBuilder()
                             .withId(UuidUtil.getUUID().toString())
                             .withTime(OffsetDateTime.now())
                             .withExtension(Constants.USER, USER)
-                            .withExtension(PortalConstants.NONCE, ++nonce)
+                            .withExtension(PortalConstants.NONCE, number)
                             .withExtension(Constants.HOST, HOST)
                             .withData("application/json", data.getBytes(StandardCharsets.UTF_8))
                             .build();
@@ -116,11 +117,12 @@ public class Db2EventTest {
                     CloudEventBuilder eventTemplate = CloudEventBuilder.v1()
                             .withSource(PortalConstants.EVENT_SOURCE)
                             .withType(PortalConstants.CONFIG_PROPERTY_CREATED_EVENT);
+                    Number number = ++nonce;
                     CloudEvent event = eventTemplate.newBuilder()
                             .withId(UuidUtil.getUUID().toString())
                             .withTime(OffsetDateTime.now())
                             .withExtension(Constants.USER, USER)
-                            .withExtension(PortalConstants.NONCE, ++nonce)
+                            .withExtension(PortalConstants.NONCE, number)
                             .withExtension(Constants.HOST, HOST)
                             .withData("application/json", data.getBytes(StandardCharsets.UTF_8))
                             .build();
@@ -161,11 +163,12 @@ public class Db2EventTest {
                     CloudEventBuilder eventTemplate = CloudEventBuilder.v1()
                             .withSource(PortalConstants.EVENT_SOURCE)
                             .withType(PortalConstants.REF_TABLE_CREATED_EVENT);
+                    Number number = ++nonce;
                     CloudEvent event = eventTemplate.newBuilder()
                             .withId(UuidUtil.getUUID().toString())
                             .withTime(OffsetDateTime.now())
                             .withExtension(Constants.USER, USER)
-                            .withExtension(PortalConstants.NONCE, ++nonce)
+                            .withExtension(PortalConstants.NONCE, number)
                             .withExtension(Constants.HOST, HOST)
                             .withData("application/json", data.getBytes(StandardCharsets.UTF_8))
                             .build();
@@ -206,11 +209,12 @@ public class Db2EventTest {
                     CloudEventBuilder eventTemplate = CloudEventBuilder.v1()
                             .withSource(PortalConstants.EVENT_SOURCE)
                             .withType(PortalConstants.REF_VALUE_CREATED_EVENT);
+                    Number number = ++nonce;
                     CloudEvent event = eventTemplate.newBuilder()
                             .withId(UuidUtil.getUUID().toString())
                             .withTime(OffsetDateTime.now())
                             .withExtension(Constants.USER, USER)
-                            .withExtension(PortalConstants.NONCE, ++nonce)
+                            .withExtension(PortalConstants.NONCE, number)
                             .withExtension(Constants.HOST, HOST)
                             .withData("application/json", data.getBytes(StandardCharsets.UTF_8))
                             .build();
@@ -251,11 +255,12 @@ public class Db2EventTest {
                     CloudEventBuilder eventTemplate = CloudEventBuilder.v1()
                             .withSource(PortalConstants.EVENT_SOURCE)
                             .withType(PortalConstants.REF_LOCALE_CREATED_EVENT);
+                    Number number = ++nonce;
                     CloudEvent event = eventTemplate.newBuilder()
                             .withId(UuidUtil.getUUID().toString())
                             .withTime(OffsetDateTime.now())
                             .withExtension(Constants.USER, USER)
-                            .withExtension(PortalConstants.NONCE, ++nonce)
+                            .withExtension(PortalConstants.NONCE, number)
                             .withExtension(Constants.HOST, HOST)
                             .withData("application/json", data.getBytes(StandardCharsets.UTF_8))
                             .build();
@@ -296,11 +301,12 @@ public class Db2EventTest {
                     CloudEventBuilder eventTemplate = CloudEventBuilder.v1()
                             .withSource(PortalConstants.EVENT_SOURCE)
                             .withType(PortalConstants.REF_RELATION_TYPE_CREATED_EVENT);
+                    Number number = ++nonce;
                     CloudEvent event = eventTemplate.newBuilder()
                             .withId(UuidUtil.getUUID().toString())
                             .withTime(OffsetDateTime.now())
                             .withExtension(Constants.USER, USER)
-                            .withExtension(PortalConstants.NONCE, ++nonce)
+                            .withExtension(PortalConstants.NONCE, number)
                             .withExtension(Constants.HOST, HOST)
                             .withData("application/json", data.getBytes(StandardCharsets.UTF_8))
                             .build();
@@ -341,11 +347,12 @@ public class Db2EventTest {
                     CloudEventBuilder eventTemplate = CloudEventBuilder.v1()
                             .withSource(PortalConstants.EVENT_SOURCE)
                             .withType(PortalConstants.REF_RELATION_CREATED_EVENT);
+                    Number number = ++nonce;
                     CloudEvent event = eventTemplate.newBuilder()
                             .withId(UuidUtil.getUUID().toString())
                             .withTime(OffsetDateTime.now())
                             .withExtension(Constants.USER, USER)
-                            .withExtension(PortalConstants.NONCE, ++nonce)
+                            .withExtension(PortalConstants.NONCE, number)
                             .withExtension(Constants.HOST, HOST)
                             .withData("application/json", data.getBytes(StandardCharsets.UTF_8))
                             .build();
