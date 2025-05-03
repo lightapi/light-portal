@@ -208,6 +208,14 @@ public class PortalConstants {
     public static final String INSTANCE_PIPELINE_UPDATED_EVENT = "InstancePipelineUpdatedEvent";
     public static final String INSTANCE_PIPELINE_DELETED_EVENT = "InstancePipelineDeletedEvent";
 
+    public static final String INSTANCE_APP_API_CREATED_EVENT = "InstanceAppApiCreatedEvent";
+    public static final String INSTANCE_APP_API_UPDATED_EVENT = "InstanceAppApiUpdatedEvent";
+    public static final String INSTANCE_APP_API_DELETED_EVENT = "InstanceAppApiDeletedEvent";
+    public static final String INSTANCE_API_PATH_PREFIX_CREATED_EVENT = "InstanceApiPathPrefixCreatedEvent";
+    public static final String INSTANCE_API_PATH_PREFIX_UPDATED_EVENT = "InstanceApiPathPrefixUpdatedEvent";
+    public static final String INSTANCE_API_PATH_PREFIX_DELETED_EVENT = "InstanceApiPathPrefixDeletedEvent";
+
+
     // --- Deployment Events ---
     public static final String DEPLOYMENT_CREATED_EVENT = "DeploymentCreatedEvent";
     public static final String DEPLOYMENT_UPDATED_EVENT = "DeploymentUpdatedEvent";
