@@ -6,6 +6,7 @@ import com.networknt.monad.Result;
 import com.networknt.monad.Success;
 import com.networknt.status.Status;
 import com.networknt.utility.Constants;
+import com.networknt.utility.UuidUtil;
 import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.PortalConstants;
 
@@ -247,7 +248,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         // --- Rest of the conditions ---
         addCondition(whereClause, parameters, "table_id", tableId != null ? UUID.fromString(tableId) : null);
         addCondition(whereClause, parameters, "table_name", tableName);
-        addCondition(whereClause, parameters, "table_desc", tableDesc); // Might need LIKE for descriptions
+        addCondition(whereClause, parameters, "table_desc", tableDesc);
         addCondition(whereClause, parameters, "active", active);
         addCondition(whereClause, parameters, "editable", editable);
 
@@ -9455,6 +9456,804 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
         }
         return result;
+    }
+
+    @Override
+    public Result<String> commitConfigInstance(Map<String, Object> event) {
+
+        // 1. Extract Input Parameters
+        UUID hostId = (UUID) event.get("hostId");
+        UUID instanceId = (UUID) event.get("instanceId");
+        String snapshotType = (String) event.getOrDefault("snapshotType", "USER_SAVE"); // Default type
+        String description = (String) event.get("description");
+        UUID userId = (UUID) event.get("userId"); // May be null
+        UUID deploymentId = (UUID) event.get("deploymentId"); // May be null
+
+        UUID snapshotId = UuidUtil.getUUID();
+
+        Connection connection = null;
+        try {
+            connection = ds.getConnection();
+            connection.setAutoCommit(false); // Start Transaction
+
+            // 2. Derive Scope IDs
+            // Query instance_t and potentially product_version_t based on hostId, instanceId
+            DerivedScope scope = deriveScopeInfo(connection, hostId, instanceId);
+            if (scope == null) {
+                connection.rollback(); // Rollback if instance not found
+                return Failure.of(new Status(OBJECT_NOT_FOUND, "Instance not found for hostId/instanceId."));
+            }
+
+            // 3. Insert Snapshot Metadata
+            insertSnapshotMetadata(connection, snapshotId, snapshotType, description, userId, deploymentId, hostId, scope);
+
+            // 4 & 5. Aggregate and Insert Effective Config
+            insertEffectiveConfigSnapshot(connection, snapshotId, hostId, instanceId, scope);
+
+            // 6. Snapshot Individual Override Tables
+            // Use INSERT ... SELECT ... for efficiency
+            snapshotInstanceProperties(connection, snapshotId, hostId, instanceId);
+            snapshotInstanceApiProperties(connection, snapshotId, hostId, instanceId);
+            snapshotInstanceAppProperties(connection, snapshotId, hostId, instanceId);
+            snapshotInstanceAppApiProperties(connection, snapshotId, hostId, instanceId);
+            snapshotEnvironmentProperties(connection, snapshotId, hostId, scope.environment());
+            snapshotProductVersionProperties(connection, snapshotId, hostId, scope.productVersionId());
+            snapshotProductProperties(connection, snapshotId, scope.productId());
+            // Add others as needed
+
+            // 7. Commit Transaction
+            connection.commit();
+            logger.info("Successfully created config snapshot: {}", snapshotId);
+            return Success.of(snapshotId.toString());
+
+        } catch (SQLException e) {
+            logger.error("SQLException during snapshot creation for instance {}: {}", instanceId, e.getMessage(), e);
+            if (connection != null) {
+                try {
+                    connection.rollback();
+                } catch (SQLException ex) {
+                    logger.error("Error rolling back transaction:", ex);
+                }
+            }
+            return Failure.of(new Status(SQL_EXCEPTION, "Database error during snapshot creation."));
+        } catch (Exception e) { // Catch other potential errors (e.g., during scope derivation)
+            logger.error("Exception during snapshot creation for instance {}: {}", instanceId, e.getMessage(), e);
+            if (connection != null) {
+                try { connection.rollback(); } catch (SQLException ex) { logger.error("Error rolling back transaction:", ex); }
+            }
+            return Failure.of(new Status(GENERIC_EXCEPTION, "Unexpected error during snapshot creation."));
+        } finally {
+            if (connection != null) {
+                try {
+                    connection.setAutoCommit(true); // Restore default behavior
+                    connection.close();
+                } catch (SQLException e) {
+                    logger.error("Error closing connection:", e);
+                }
+            }
+        }
+
+    }
+
+    // Placeholder for derived scope data structure
+    private record DerivedScope(String environment, String productId, String productVersion, UUID productVersionId, String serviceId /*, add API details if needed */) {}
+
+    private DerivedScope deriveScopeInfo(Connection conn, UUID hostId, UUID instanceId) throws SQLException {
+        // Query instance_t LEFT JOIN product_version_t ... WHERE i.host_id = ? AND i.instance_id = ?
+        // Extract environment, service_id from instance_t
+        // Extract product_id, product_version from product_version_t (via product_version_id in instance_t)
+        // Return new DerivedScope(...) or null if not found
+        String sql = """
+            SELECT i.environment, i.service_id, pv.product_id, pv.product_version, i.product_version_id
+            FROM instance_t i
+            LEFT JOIN product_version_t pv ON i.host_id = pv.host_id AND i.product_version_id = pv.product_version_id
+            WHERE i.host_id = ? AND i.instance_id = ?
+        """;
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setObject(1, hostId);
+            ps.setObject(2, instanceId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return new DerivedScope(
+                            rs.getString("environment"),
+                            rs.getString("product_id"),
+                            rs.getString("product_version"),
+                            rs.getObject("product_version_id", UUID.class),
+                            rs.getString("service_id")
+                    );
+                } else {
+                    return null; // Instance not found
+                }
+            }
+        }
+    }
+
+    private void insertSnapshotMetadata(Connection conn, UUID snapshotId, String snapshotType, String description,
+                                        UUID userId, UUID deploymentId, UUID hostId, DerivedScope scope) throws SQLException {
+        String sql = """
+            INSERT INTO config_snapshot_t
+            (snapshot_id, snapshot_ts, snapshot_type, description, user_id, deployment_id,
+             scope_host_id, scope_environment, scope_product_id, scope_product_version_id, -- Changed col name
+             scope_service_id /*, scope_api_id, scope_api_version - Add if applicable */)
+            VALUES (?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?, ? /*, ?, ? */)
+            """;
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setObject(1, snapshotId);
+            ps.setString(2, snapshotType);
+            ps.setString(3, description);
+            ps.setObject(4, userId);         // setObject handles null correctly
+            ps.setObject(5, deploymentId);   // setObject handles null correctly
+            ps.setObject(6, hostId);
+            ps.setString(7, scope.environment());
+            ps.setString(8, scope.productId());
+            ps.setObject(9, scope.productVersionId()); // Store the ID
+            ps.setString(10, scope.serviceId());
+            // Set API scope if needed ps.setObject(11, ...); ps.setString(12, ...);
+            ps.executeUpdate();
+        }
+    }
+
+
+    private void insertEffectiveConfigSnapshot(Connection conn, UUID snapshotId, UUID hostId, UUID instanceId, DerivedScope scope) throws SQLException {
+        final String selectSql =
+                """
+                    WITH
+                    -- Parameters derived *before* running this query:
+                    -- p_host_id UUID
+                    -- p_instance_id UUID
+                    -- v_product_version_id UUID (derived from p_instance_id)
+                    -- v_environment VARCHAR(16) (derived from p_instance_id)
+                    -- v_product_id VARCHAR(8) (derived from v_product_version_id)
+                    -- Find relevant instance_api_ids and instance_app_ids for the target instance
+                    RelevantInstanceApis AS (
+                        SELECT instance_api_id
+                        FROM instance_api_t
+                        WHERE host_id = ? -- p_host_id
+                          AND instance_id = ? -- p_instance_id
+                    ),
+                    RelevantInstanceApps AS (
+                        SELECT instance_app_id
+                        FROM instance_app_t
+                        WHERE host_id = ? -- p_host_id
+                          AND instance_id = ? -- p_instance_id
+                    ),
+                    -- Pre-process Instance App API properties with merging logic
+                    Merged_Instance_App_Api_Properties AS (
+                        SELECT
+                            iaap.property_id,
+                            CASE cp.value_type
+                                WHEN 'map' THEN COALESCE(jsonb_merge_agg(iaap.property_value::jsonb), '{}'::jsonb)::text
+                                WHEN 'list' THEN COALESCE((SELECT jsonb_agg(elem ORDER BY iaa.update_ts) -- Order elements based on when they were added via the link table? Or property update_ts? Assuming property update_ts. Check data model if linking time matters more.
+                                                            FROM jsonb_array_elements(sub.property_value::jsonb) elem
+                                                            WHERE jsonb_typeof(sub.property_value::jsonb) = 'array'
+                                                          ), '[]'::jsonb)::text -- Requires subquery if ordering elements
+                                 -- Subquery approach for ordering list elements by property timestamp:
+                                 /*
+                                  COALESCE(
+                                     (SELECT jsonb_agg(elem ORDER BY prop.update_ts)
+                                      FROM instance_app_api_property_t prop,
+                                           jsonb_array_elements(prop.property_value::jsonb) elem
+                                      WHERE prop.host_id = iaap.host_id
+                                        AND prop.instance_app_id = iaap.instance_app_id
+                                        AND prop.instance_api_id = iaap.instance_api_id
+                                        AND prop.property_id = iaap.property_id
+                                        AND jsonb_typeof(prop.property_value::jsonb) = 'array'
+                                     ), '[]'::jsonb
+                                  )::text
+                                 */
+                                ELSE MAX(iaap.property_value) -- For simple types, MAX can work if only one entry expected, otherwise need timestamp logic
+                                -- More robust for simple types: Pick latest based on timestamp
+                                /*
+                                 (SELECT property_value
+                                  FROM instance_app_api_property_t latest
+                                  WHERE latest.host_id = iaap.host_id
+                                    AND latest.instance_app_id = iaap.instance_app_id
+                                    AND latest.instance_api_id = iaap.instance_api_id
+                                    AND latest.property_id = iaap.property_id
+                                  ORDER BY latest.update_ts DESC LIMIT 1)
+                                */
+                            END AS effective_value
+                        FROM instance_app_api_property_t iaap
+                        JOIN config_property_t cp ON iaap.property_id = cp.property_id
+                        JOIN instance_app_api_t iaa ON iaa.host_id = iaap.host_id AND iaa.instance_app_id = iaap.instance_app_id AND iaa.instance_api_id = iaap.instance_api_id -- Join to potentially use its timestamp for ordering lists
+                        WHERE iaap.host_id = ? -- p_host_id
+                          AND iaap.instance_app_id IN (SELECT instance_app_id FROM RelevantInstanceApps)
+                          AND iaap.instance_api_id IN (SELECT instance_api_id FROM RelevantInstanceApis)
+                        GROUP BY iaap.host_id, iaap.instance_app_id, iaap.instance_api_id, iaap.property_id, cp.value_type -- Group to aggregate/merge
+                    ),
+                    -- Pre-process Instance API properties
+                    Merged_Instance_Api_Properties AS (
+                        SELECT
+                            iap.property_id,
+                            CASE cp.value_type
+                                WHEN 'map' THEN COALESCE(jsonb_merge_agg(iap.property_value::jsonb), '{}'::jsonb)::text
+                                WHEN 'list' THEN COALESCE((SELECT jsonb_agg(elem ORDER BY prop.update_ts) FROM instance_api_property_t prop, jsonb_array_elements(prop.property_value::jsonb) elem WHERE prop.host_id = iap.host_id AND prop.instance_api_id = iap.instance_api_id AND prop.property_id = iap.property_id AND jsonb_typeof(prop.property_value::jsonb) = 'array'), '[]'::jsonb)::text
+                                ELSE (SELECT property_value FROM instance_api_property_t latest WHERE latest.host_id = iap.host_id AND latest.instance_api_id = iap.instance_api_id AND latest.property_id = iap.property_id ORDER BY latest.update_ts DESC LIMIT 1)
+                            END AS effective_value
+                        FROM instance_api_property_t iap
+                        JOIN config_property_t cp ON iap.property_id = cp.property_id
+                        WHERE iap.host_id = ? -- p_host_id
+                          AND iap.instance_api_id IN (SELECT instance_api_id FROM RelevantInstanceApis)
+                        GROUP BY iap.host_id, iap.instance_api_id, iap.property_id, cp.value_type
+                    ),
+                    -- Pre-process Instance App properties
+                    Merged_Instance_App_Properties AS (
+                         SELECT
+                            iapp.property_id,
+                            CASE cp.value_type
+                                WHEN 'map' THEN COALESCE(jsonb_merge_agg(iapp.property_value::jsonb), '{}'::jsonb)::text
+                                WHEN 'list' THEN COALESCE((SELECT jsonb_agg(elem ORDER BY prop.update_ts) FROM instance_app_property_t prop, jsonb_array_elements(prop.property_value::jsonb) elem WHERE prop.host_id = iapp.host_id AND prop.instance_app_id = iapp.instance_app_id AND prop.property_id = iapp.property_id AND jsonb_typeof(prop.property_value::jsonb) = 'array'), '[]'::jsonb)::text
+                                ELSE (SELECT property_value FROM instance_app_property_t latest WHERE latest.host_id = iapp.host_id AND latest.instance_app_id = iapp.instance_app_id AND latest.property_id = iapp.property_id ORDER BY latest.update_ts DESC LIMIT 1)
+                            END AS effective_value
+                        FROM instance_app_property_t iapp
+                        JOIN config_property_t cp ON iapp.property_id = cp.property_id
+                        WHERE iapp.host_id = ? -- p_host_id
+                          AND iapp.instance_app_id IN (SELECT instance_app_id FROM RelevantInstanceApps)
+                        GROUP BY iapp.host_id, iapp.instance_app_id, iapp.property_id, cp.value_type
+                    ),
+                    -- Combine all levels with priority
+                    AllOverrides AS (
+                        -- Priority 10: Instance App API (highest) - Requires aggregating the merged results if multiple app/api combos apply to the instance
+                        SELECT
+                            m_iaap.property_id,
+                            -- Need final merge/latest logic here if multiple app/api combos apply to the SAME instance_id and define the SAME property_id
+                            -- Assuming for now we take the first one found or need more complex logic if merge is needed *again* at this stage
+                            -- For simplicity, let's assume we just take MAX effective value if multiple rows exist per property_id for the instance
+                            MAX(m_iaap.effective_value) as property_value, -- This MAX might not be right for JSON, need specific logic if merging across app/api combos is needed here
+                            10 AS priority_level
+                        FROM Merged_Instance_App_Api_Properties m_iaap
+                        -- No additional instance filter needed if CTEs were already filtered by RelevantInstanceApps/Apis linked to p_instance_id
+                        GROUP BY m_iaap.property_id -- Group to handle multiple app/api links potentially setting the same property for the instance
+                        UNION ALL
+                        -- Priority 20: Instance API
+                        SELECT
+                            m_iap.property_id,
+                            MAX(m_iap.effective_value) as property_value, -- Similar merge concern as above
+                            20 AS priority_level
+                        FROM Merged_Instance_Api_Properties m_iap
+                        GROUP BY m_iap.property_id
+                        UNION ALL
+                        -- Priority 30: Instance App
+                        SELECT
+                            m_iapp.property_id,
+                            MAX(m_iapp.effective_value) as property_value, -- Similar merge concern
+                            30 AS priority_level
+                        FROM Merged_Instance_App_Properties m_iapp
+                        GROUP BY m_iapp.property_id
+                        UNION ALL
+                        -- Priority 40: Instance
+                        SELECT
+                            ip.property_id,
+                            ip.property_value,
+                            40 AS priority_level
+                        FROM instance_property_t ip
+                        WHERE ip.host_id = ? -- p_host_id
+                          AND ip.instance_id = ? -- p_instance_id
+                        UNION ALL
+                        -- Priority 50: Product Version
+                        SELECT
+                            pvp.property_id,
+                            pvp.property_value,
+                            50 AS priority_level
+                        FROM product_version_property_t pvp
+                        WHERE pvp.host_id = ? -- p_host_id
+                          AND pvp.product_version_id = ? -- v_product_version_id
+                        UNION ALL
+                        -- Priority 60: Environment
+                        SELECT
+                            ep.property_id,
+                            ep.property_value,
+                            60 AS priority_level
+                        FROM environment_property_t ep
+                        WHERE ep.host_id = ? -- p_host_id
+                          AND ep.environment = ? -- v_environment
+                        UNION ALL
+                        -- Priority 70: Product (Host independent)
+                        SELECT
+                            pp.property_id,
+                            pp.property_value,
+                            70 AS priority_level
+                        FROM product_property_t pp
+                        WHERE pp.product_id = ? -- v_product_id
+                        UNION ALL
+                        -- Priority 100: Default values
+                        SELECT
+                            cp.property_id,
+                            cp.property_value, -- Default value
+                            100 AS priority_level
+                        FROM config_property_t cp
+                        -- Optimization: Filter defaults to only those applicable to the product version?
+                        -- JOIN product_version_config_property_t pvcp ON cp.property_id = pvcp.property_id
+                        -- WHERE pvcp.host_id = ? AND pvcp.product_version_id = ?
+                    ),
+                    RankedOverrides AS (
+                        SELECT
+                            ao.property_id,
+                            ao.property_value,
+                            ao.priority_level,
+                            ROW_NUMBER() OVER (PARTITION BY ao.property_id ORDER BY ao.priority_level ASC) as rn
+                        FROM AllOverrides ao
+                        WHERE ao.property_value IS NOT NULL -- Exclude levels where the value was NULL (unless NULL is a valid override)
+                    )
+                    -- Final Selection for Snapshot Table
+                    SELECT
+                        -- snapshot_id needs to be added here or during INSERT
+                        c.config_phase,
+                        cfg.config_name || '.' || cp.property_name AS property_key,
+                        ro.property_value,
+                        cp.property_type,
+                        cp.value_type
+                        -- Include ro.priority_level AS source_priority if storing provenance
+                    FROM RankedOverrides ro
+                    JOIN config_property_t cp ON ro.property_id = cp.property_id
+                    JOIN config_t cfg ON cp.config_id = cfg.config_id
+                    WHERE ro.rn = 1;
+
+                """;
+
+        String insertSql = """
+            INSERT INTO config_snapshot_property_t
+            (snapshot_property_id, snapshot_id, config_phase, config_id, property_id, property_name,
+             property_type, property_value, value_type, source_level)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """;
+        // Prepare the aggregation query
+        try (PreparedStatement selectStmt = conn.prepareStatement(selectSql);
+             PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
+
+            // Set ALL parameters for the AGGREGATE_EFFECTIVE_CONFIG_SQL query
+            int paramIndex = 1;
+            // Example: set parameters based on how AGGREGATE_EFFECTIVE_CONFIG_SQL is structured
+            // selectStmt.setObject(paramIndex++, hostId);
+            // selectStmt.setObject(paramIndex++, instanceId);
+            // ... set derived scope IDs (productVersionId, environment, productId) ...
+            // ... set parameters for all UNION branches and potential subqueries ...
+
+            try (ResultSet rs = selectStmt.executeQuery()) {
+                int batchCount = 0;
+                while (rs.next()) {
+                    insertStmt.setObject(1, UuidUtil.getUUID()); // snapshot_property_id
+                    insertStmt.setObject(2, snapshotId);
+                    insertStmt.setString(3, rs.getString("config_phase"));
+                    insertStmt.setObject(4, rs.getObject("config_id", UUID.class));
+                    insertStmt.setObject(5, rs.getObject("property_id", UUID.class));
+                    insertStmt.setString(6, rs.getString("property_name"));
+                    insertStmt.setString(7, rs.getString("property_type"));
+                    insertStmt.setString(8, rs.getString("property_value"));
+                    insertStmt.setString(9, rs.getString("value_type"));
+                    insertStmt.setString(10, mapPriorityToSourceLevel(rs.getInt("priority_level"))); // Map numeric priority back to level name
+
+                    insertStmt.addBatch();
+                    batchCount++;
+
+                    if (batchCount % 100 == 0) { // Execute batch periodically
+                        insertStmt.executeBatch();
+                    }
+                }
+                if (batchCount % 100 != 0) { // Execute remaining batch
+                    insertStmt.executeBatch();
+                }
+            }
+        }
+    }
+
+    // Helper to map priority back to source level name
+    private String mapPriorityToSourceLevel(int priority) {
+        return switch (priority) {
+            case 10 -> "instance_app_api"; // Adjust priorities as used in your query
+            case 20 -> "instance_api";
+            case 30 -> "instance_app";
+            case 40 -> "instance";
+            case 50 -> "product_version";
+            case 60 -> "environment";
+            case 70 -> "product";
+            case 100 -> "default";
+            default -> "unknown";
+        };
+    }
+
+
+    // --- Methods for Snapshotting Individual Override Tables ---
+
+    private void snapshotInstanceProperties(Connection conn, UUID snapshotId, UUID hostId, UUID instanceId) throws SQLException {
+        String sql = """
+            INSERT INTO snapshot_instance_property_t
+            (snapshot_id, host_id, instance_id, property_id, property_value, update_user, update_ts)
+            SELECT ?, host_id, instance_id, property_id, property_value, update_user, update_ts
+            FROM instance_property_t
+            WHERE host_id = ? AND instance_id = ?
+            """;
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setObject(1, snapshotId);
+            ps.setObject(2, hostId);
+            ps.setObject(3, instanceId);
+            ps.executeUpdate();
+        }
+    }
+
+    private void snapshotInstanceApiProperties(Connection conn, UUID snapshotId, UUID hostId, UUID instanceId) throws SQLException {
+        // Find relevant instance_api_ids first
+        List<UUID> apiIds = findRelevantInstanceApiIds(conn, hostId, instanceId);
+        if (apiIds.isEmpty()) return; // No API overrides for this instance
+
+        String sql = """
+            INSERT INTO snapshot_instance_api_property_t
+            (snapshot_id, host_id, instance_api_id, property_id, property_value, update_user, update_ts)
+            SELECT ?, host_id, instance_api_id, property_id, property_value, update_user, update_ts
+            FROM instance_api_property_t
+            WHERE host_id = ? AND instance_api_id = ANY(?) -- Use ANY with array for multiple IDs
+            """;
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setObject(1, snapshotId);
+            ps.setObject(2, hostId);
+            // Create a SQL Array from the List of UUIDs
+            Array sqlArray = conn.createArrayOf("UUID", apiIds.toArray());
+            ps.setArray(3, sqlArray);
+            ps.executeUpdate();
+            sqlArray.free(); // Release array resources
+        }
+    }
+
+    private void snapshotInstanceAppProperties(Connection conn, UUID snapshotId, UUID hostId, UUID instanceId) throws SQLException {
+        // Find relevant instance_api_ids first
+        List<UUID> appIds = findRelevantInstanceAppIds(conn, hostId, instanceId);
+        if (appIds.isEmpty()) return; // No API overrides for this instance
+
+        String sql = """
+                INSERT INTO snapshot_instance_app_property_t
+                (snapshot_id, host_id, instance_app_id, property_id, property_value, update_user, update_ts)
+                SELECT ?, host_id, instance_app_id, property_id, property_value, update_user, update_ts
+                FROM instance_app_property_t
+                WHERE host_id = ? AND instance_app_id = ANY(?) -- Parameter is a SQL Array of relevant instance_app_ids
+            """;
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setObject(1, snapshotId);
+            ps.setObject(2, hostId);
+            // Create a SQL Array from the List of UUIDs
+            Array sqlArray = conn.createArrayOf("UUID", appIds.toArray());
+            ps.setArray(3, sqlArray);
+            ps.executeUpdate();
+            sqlArray.free(); // Release array resources
+        }
+    }
+
+    private void snapshotInstanceAppApiProperties(Connection conn, UUID snapshotId, UUID hostId, UUID instanceId) throws SQLException {
+        List<UUID> apiIds = findRelevantInstanceApiIds(conn, hostId, instanceId);
+        List<UUID> appIds = findRelevantInstanceAppIds(conn, hostId, instanceId);
+
+        if (appIds.isEmpty()) return; // No API overrides for this instance
+
+        String sql = """
+                INSERT INTO snapshot_instance_app_api_property_t
+                (snapshot_id, host_id, instance_app_id, instance_api_id, property_id, property_value, update_user, update_ts)
+                SELECT ?, host_id, instance_app_id, instance_api_id, property_id, property_value, update_user, update_ts
+                FROM instance_app_api_property_t
+                WHERE host_id = ?
+                  AND instance_app_id = ANY(?) -- SQL Array of relevant instance_app_ids
+                  AND instance_api_id = ANY(?) -- SQL Array of relevant instance_api_ids
+            """;
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setObject(1, snapshotId);
+            ps.setObject(2, hostId);
+            // Create a SQL Array from the List of UUIDs
+            Array sqlAppArray = conn.createArrayOf("UUID", appIds.toArray());
+            ps.setArray(3, sqlAppArray);
+            Array sqlApiArray = conn.createArrayOf("UUID", apiIds.toArray());
+            ps.setArray(4, sqlApiArray);
+            ps.executeUpdate();
+            sqlAppArray.free(); // Release array resources
+            sqlApiArray.free(); // Release array resources
+        }
+    }
+
+    // Similar methods for snapshotInstanceAppProperties, snapshotInstanceAppApiProperties...
+    // These will need helper methods like findRelevantInstanceApiIds/findRelevantInstanceAppIds
+
+    private void snapshotEnvironmentProperties(Connection conn, UUID snapshotId, UUID hostId, String environment) throws SQLException {
+        if (environment == null || environment.isEmpty()) return; // No environment scope
+        String sql = """
+             INSERT INTO snapshot_environment_property_t
+             (snapshot_id, host_id, environment, property_id, property_value, update_user, update_ts)
+             SELECT ?, host_id, environment, property_id, property_value, update_user, update_ts
+             FROM environment_property_t
+             WHERE host_id = ? AND environment = ?
+             """;
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setObject(1, snapshotId);
+            ps.setObject(2, hostId);
+            ps.setString(3, environment);
+            ps.executeUpdate();
+        }
+    }
+
+    private void snapshotProductVersionProperties(Connection conn, UUID snapshotId, UUID hostId, UUID productVersionId) throws SQLException {
+        if (productVersionId == null) return;
+        String sql = """
+              INSERT INTO snapshot_product_version_property_t
+              (snapshot_id, host_id, product_version_id, property_id, property_value, update_user, update_ts)
+              SELECT ?, host_id, product_version_id, property_id, property_value, update_user, update_ts
+              FROM product_version_property_t
+              WHERE host_id = ? AND product_version_id = ?
+              """;
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setObject(1, snapshotId);
+            ps.setObject(2, hostId);
+            ps.setObject(3, productVersionId);
+            ps.executeUpdate();
+        }
+    }
+
+    private void snapshotProductProperties(Connection conn, UUID snapshotId, String productId) throws SQLException {
+        if (productId == null || productId.isEmpty()) return;
+        String sql = """
+               INSERT INTO snapshot_product_property_t
+               (snapshot_id, product_id, property_id, property_value, update_user, update_ts)
+               SELECT ?, product_id, property_id, property_value, update_user, update_ts
+               FROM product_property_t
+               WHERE product_id = ?
+               """;
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setObject(1, snapshotId);
+            ps.setString(2, productId);
+            ps.executeUpdate();
+        }
+    }
+
+    // --- Helper method to find associated instance_api_ids ---
+    private List<UUID> findRelevantInstanceApiIds(Connection conn, UUID hostId, UUID instanceId) throws SQLException {
+        List<UUID> ids = new ArrayList<>();
+        String sql = "SELECT instance_api_id FROM instance_api_t WHERE host_id = ? AND instance_id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setObject(1, hostId);
+            ps.setObject(2, instanceId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while(rs.next()) {
+                    ids.add(rs.getObject("instance_api_id", UUID.class));
+                }
+            }
+        }
+        return ids;
+    }
+
+    // --- Helper method to find associated instance_app_ids ---
+    private List<UUID> findRelevantInstanceAppIds(Connection conn, UUID hostId, UUID instanceId) throws SQLException {
+        List<UUID> ids = new ArrayList<>();
+        String sql = "SELECT instance_app_id FROM instance_app_t WHERE host_id = ? AND instance_id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setObject(1, hostId);
+            ps.setObject(2, instanceId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while(rs.next()) {
+                    ids.add(rs.getObject("instance_app_id", UUID.class));
+                }
+            }
+        }
+        return ids;
+    }
+
+
+    @Override
+    public Result<String> rollbackConfigInstance(Map<String, Object> event) {
+        final String DELETE_INSTANCE_PROPS_SQL = "DELETE FROM instance_property_t WHERE host_id = ? AND instance_id = ?";
+        final String DELETE_INSTANCE_API_PROPS_SQL = "DELETE FROM instance_api_property_t WHERE host_id = ? AND instance_api_id = ANY(?)";
+        final String DELETE_INSTANCE_APP_PROPS_SQL = "DELETE FROM instance_app_property_t WHERE host_id = ? AND instance_app_id = ANY(?)";
+        final String DELETE_INSTANCE_APP_API_PROPS_SQL = "DELETE FROM instance_app_api_property_t WHERE host_id = ? AND instance_app_id = ANY(?) AND instance_api_id = ANY(?)";
+
+        // INSERT ... SELECT Statements (From SNAPSHOT tables to LIVE tables)
+        final String INSERT_INSTANCE_PROPS_SQL = """
+        INSERT INTO instance_property_t
+        (host_id, instance_id, property_id, property_value, update_user, update_ts)
+        SELECT host_id, instance_id, property_id, property_value, update_user, update_ts
+        FROM snapshot_instance_property_t
+        WHERE snapshot_id = ? AND host_id = ? AND instance_id = ?
+        """;
+        final String INSERT_INSTANCE_API_PROPS_SQL = """
+        INSERT INTO instance_api_property_t
+        (host_id, instance_api_id, property_id, property_value, update_user, update_ts)
+        SELECT host_id, instance_api_id, property_id, property_value, update_user, update_ts
+        FROM snapshot_instance_api_property_t
+        WHERE snapshot_id = ? AND host_id = ? AND instance_api_id = ANY(?)
+        """;
+        final String INSERT_INSTANCE_APP_PROPS_SQL = """
+        INSERT INTO instance_app_property_t
+        (host_id, instance_app_id, property_id, property_value, update_user, update_ts)
+        SELECT host_id, instance_app_id, property_id, property_value, update_user, update_ts
+        FROM snapshot_instance_app_property_t
+        WHERE snapshot_id = ? AND host_id = ? AND instance_app_id = ANY(?)
+        """;
+        final String INSERT_INSTANCE_APP_API_PROPS_SQL = """
+        INSERT INTO instance_app_api_property_t
+        (host_id, instance_app_id, instance_api_id, property_id, property_value, update_user, update_ts)
+        SELECT host_id, instance_app_id, instance_api_id, property_id, property_value, update_user, update_ts
+        FROM snapshot_instance_app_api_property_t
+        WHERE snapshot_id = ? AND host_id = ? AND instance_app_id = ANY(?) AND instance_api_id = ANY(?)
+        """;
+
+        // 1. Extract Input Parameters
+        UUID snapshotId = (UUID) event.get("snapshotId");
+        UUID hostId = (UUID) event.get("hostId");
+        UUID instanceId = (UUID) event.get("instanceId");
+        UUID userId = (UUID) event.get("userId"); // For potential auditing
+        String description = (String) event.get("rollbackDescription"); // Optional reason
+
+        Connection connection = null;
+        List<UUID> currentApiIds = null;
+        List<UUID> currentAppIds = null;
+
+        try {
+            connection = ds.getConnection();
+            connection.setAutoCommit(false); // Start Transaction
+
+            // --- Pre-computation: Find CURRENT associated IDs for DELETE scope ---
+            // It's generally safer to delete based on current relationships and then
+            // insert based on snapshot relationships if they could have diverged.
+            currentApiIds = findRelevantInstanceApiIds(connection, hostId, instanceId);
+            currentAppIds = findRelevantInstanceAppIds(connection, hostId, instanceId);
+            // Note: InstanceAppApi requires both lists.
+
+            logger.info("Starting rollback for instance {} (host {}) to snapshot {}", instanceId, hostId, snapshotId);
+
+            // --- Execute Deletes from LIVE tables ---
+            executeDelete(connection, DELETE_INSTANCE_PROPS_SQL, hostId, instanceId);
+
+            if (!currentApiIds.isEmpty()) {
+                executeDeleteWithArray(connection, DELETE_INSTANCE_API_PROPS_SQL, hostId, currentApiIds);
+                // Also delete AppApi props related to these APIs if apps also exist
+                if (!currentAppIds.isEmpty()) {
+                    executeDeleteWithTwoArrays(connection, DELETE_INSTANCE_APP_API_PROPS_SQL, hostId, currentAppIds, currentApiIds);
+                }
+            }
+
+            if (!currentAppIds.isEmpty()) {
+                executeDeleteWithArray(connection, DELETE_INSTANCE_APP_PROPS_SQL, hostId, currentAppIds);
+                // AppApi props deletion might have already happened above if APIs existed.
+                // If only apps existed but no APIs, delete AppApi here (redundant if handled above)
+                // Generally safe to run the AppApi delete again if needed, targeting only appIds.
+                // For simplicity, we assume the AppApi delete targeting both arrays covers necessary cases.
+            }
+
+
+            // --- Execute Inserts from SNAPSHOT tables ---
+            executeInsertSelect(connection, INSERT_INSTANCE_PROPS_SQL, snapshotId, hostId, instanceId);
+
+            // For array-based inserts, we need the IDs *from the snapshot time*
+            // However, the SELECT inside the INSERT query implicitly filters by snapshot_id AND the array condition,
+            // so it should correctly only insert relationships that existed in the snapshot.
+            // We still use the *current* IDs to DEFINE the overall scope of instance being affected,
+            // but the INSERT...SELECT filters correctly based on snapshot content.
+            if (!currentApiIds.isEmpty()) { // Use currentApiIds to decide IF we run the insert query
+                executeInsertSelectWithArray(connection, INSERT_INSTANCE_API_PROPS_SQL, snapshotId, hostId, currentApiIds);
+                if (!currentAppIds.isEmpty()) {
+                    executeInsertSelectWithTwoArrays(connection, INSERT_INSTANCE_APP_API_PROPS_SQL, snapshotId, hostId, currentAppIds, currentApiIds);
+                }
+            }
+            if (!currentAppIds.isEmpty()) { // Use currentAppIds to decide IF we run the insert query
+                executeInsertSelectWithArray(connection, INSERT_INSTANCE_APP_PROPS_SQL, snapshotId, hostId, currentAppIds);
+                // Redundant AppApi insert if handled above? No, the INSERT uses the AppId filter.
+                // If only apps existed at snapshot time, this covers it.
+            }
+
+            // --- Optional: Audit Logging ---
+            // logRollbackActivity(connection, snapshotId, hostId, instanceId, userId, description);
+
+
+            // --- Commit Transaction ---
+            connection.commit();
+            logger.info("Successfully rolled back instance {} (host {}) to snapshot {}", instanceId, hostId, snapshotId);
+            return Success.of("Rollback successful to snapshot " + snapshotId);
+
+        } catch (SQLException e) {
+            logger.error("SQLException during rollback for instance {} to snapshot {}: {}", instanceId, snapshotId, e.getMessage(), e);
+            if (connection != null) {
+                try {
+                    connection.rollback();
+                    logger.warn("Transaction rolled back for instance {} snapshot {}", instanceId, snapshotId);
+                } catch (SQLException ex) {
+                    logger.error("Error rolling back transaction:", ex);
+                }
+            }
+            return Failure.of(new Status(SQL_EXCEPTION, "Database error during rollback operation."));
+        } catch (Exception e) { // Catch other potential errors
+            logger.error("Exception during rollback for instance {} to snapshot {}: {}", instanceId, snapshotId, e.getMessage(), e);
+            if (connection != null) {
+                try { connection.rollback(); } catch (SQLException ex) { logger.error("Error rolling back transaction:", ex); }
+            }
+            return Failure.of(new Status(GENERIC_EXCEPTION, "Unexpected error during rollback operation."));
+        } finally {
+            if (connection != null) {
+                try {
+                    connection.setAutoCommit(true); // Restore default behavior
+                    connection.close();
+                } catch (SQLException e) {
+                    logger.error("Error closing connection:", e);
+                }
+            }
+        }
+    }
+
+    private void executeDelete(Connection conn, String sql, UUID hostId, UUID instanceId) throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setObject(1, hostId);
+            ps.setObject(2, instanceId);
+            int rowsAffected = ps.executeUpdate();
+            logger.debug("Deleted {} rows from {} for instance {}", rowsAffected, getTableNameFromDeleteSql(sql), instanceId);
+        }
+    }
+
+    private void executeDeleteWithArray(Connection conn, String sql, UUID hostId, List<UUID> idList) throws SQLException {
+        if (idList == null || idList.isEmpty()) return; // Nothing to delete if list is empty
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setObject(1, hostId);
+            Array sqlArray = conn.createArrayOf("UUID", idList.toArray());
+            ps.setArray(2, sqlArray);
+            int rowsAffected = ps.executeUpdate();
+            logger.debug("Deleted {} rows from {} for {} IDs", rowsAffected, getTableNameFromDeleteSql(sql), idList.size());
+            sqlArray.free();
+        }
+    }
+
+    private void executeDeleteWithTwoArrays(Connection conn, String sql, UUID hostId, List<UUID> idList1, List<UUID> idList2) throws SQLException {
+        if (idList1 == null || idList1.isEmpty() || idList2 == null || idList2.isEmpty()) return;
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setObject(1, hostId);
+            Array sqlArray1 = conn.createArrayOf("UUID", idList1.toArray());
+            Array sqlArray2 = conn.createArrayOf("UUID", idList2.toArray());
+            ps.setArray(2, sqlArray1);
+            ps.setArray(3, sqlArray2);
+            int rowsAffected = ps.executeUpdate();
+            logger.debug("Deleted {} rows from {} for {}x{} IDs", rowsAffected, getTableNameFromDeleteSql(sql), idList1.size(), idList2.size());
+            sqlArray1.free();
+            sqlArray2.free();
+        }
+    }
+
+
+    private void executeInsertSelect(Connection conn, String sql, UUID snapshotId, UUID hostId, UUID instanceId) throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setObject(1, snapshotId);
+            ps.setObject(2, hostId);
+            ps.setObject(3, instanceId);
+            int rowsAffected = ps.executeUpdate();
+            logger.debug("Inserted {} rows into {} from snapshot {}", rowsAffected, getTableNameFromInsertSql(sql), snapshotId);
+        }
+    }
+
+    private void executeInsertSelectWithArray(Connection conn, String sql, UUID snapshotId, UUID hostId, List<UUID> idList) throws SQLException {
+        if (idList == null || idList.isEmpty()) return; // No scope to insert for
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setObject(1, snapshotId);
+            ps.setObject(2, hostId);
+            Array sqlArray = conn.createArrayOf("UUID", idList.toArray());
+            ps.setArray(3, sqlArray);
+            int rowsAffected = ps.executeUpdate();
+            logger.debug("Inserted {} rows into {} from snapshot {} for {} IDs", rowsAffected, getTableNameFromInsertSql(sql), snapshotId, idList.size());
+            sqlArray.free();
+        }
+    }
+
+    private void executeInsertSelectWithTwoArrays(Connection conn, String sql, UUID snapshotId, UUID hostId, List<UUID> idList1, List<UUID> idList2) throws SQLException {
+        if (idList1 == null || idList1.isEmpty() || idList2 == null || idList2.isEmpty()) return;
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setObject(1, snapshotId);
+            ps.setObject(2, hostId);
+            Array sqlArray1 = conn.createArrayOf("UUID", idList1.toArray());
+            Array sqlArray2 = conn.createArrayOf("UUID", idList2.toArray());
+            ps.setArray(3, sqlArray1);
+            ps.setArray(4, sqlArray2);
+            int rowsAffected = ps.executeUpdate();
+            logger.debug("Inserted {} rows into {} from snapshot {} for {}x{} IDs", rowsAffected, getTableNameFromInsertSql(sql), snapshotId, idList1.size(), idList2.size());
+            sqlArray1.free();
+            sqlArray2.free();
+        }
+    }
+
+    // --- Optional: Helper to get table name from SQL for logging ---
+    private String getTableNameFromDeleteSql(String sql) {
+        // Simple parsing, might need adjustment
+        try { return sql.split("FROM ")[1].split(" ")[0]; } catch (Exception e) { return "[unknown table]"; }
+    }
+    private String getTableNameFromInsertSql(String sql) {
+        try { return sql.split("INTO ")[1].split(" ")[0]; } catch (Exception e) { return "[unknown table]"; }
     }
 
     @Override

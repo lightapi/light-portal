@@ -38,7 +38,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testGetRefTableNoHost() {
-        Result<String> result = dbProvider.getRefTable(0, 2, null, "01964b05-5532-7c79-8cde-191dcbd421b8", null, null, null, null);
+        Result<String> result = dbProvider.getRefTable(0, 100, null, null, null, null, null, null);
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
@@ -48,7 +48,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testGetRefTableWithHost() {
-        Result<String> result = dbProvider.getRefTable(0, 2, "01964b05-552a-7c4b-9184-6857e7f3dc5f", "01964b05-5532-7c79-8cde-191dcbd421b8", null, null, null, null);
+        Result<String> result = dbProvider.getRefTable(0, 100, "01964b05-552a-7c4b-9184-6857e7f3dc5f", null, null, null, null, null);
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
@@ -296,4 +296,23 @@ public class PortalDbProviderImplTest {
         }
     }
 
+    @Test
+    void testCommitConfigInstance() {
+        Map<String, Object> map = Map.of("hostId", "01964b05-552a-7c4b-9184-6857e7f3dc5f",
+                "instanceId", "0196923e-ad58-7f40-8004-3d6fb657bad5",
+                "productVersion", "1.0.0",
+                "serviceId", "0100",
+                "serviceVersion", "1.0.0",
+                "apiId", "0100",
+                "apiVersion", "1.0.0",
+                "configPhase", "R",
+                "configType", "R");
+
+        Result<String> result = dbProvider.getTag(0, 2, null, null, null, null, null);
+        if(result.isFailure()) {
+            System.out.println(result.getError());
+        } else {
+            System.out.println(result.getResult());
+        }
+    }
 }
