@@ -8558,6 +8558,470 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
+    public Result<String> createInstanceApiPathPrefix(Map<String, Object> event) {
+        final String sql = "INSERT INTO instance_api_path_prefix_t(host_id, instance_api_id, path_prefix, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?)";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(2, UUID.fromString((String)map.get("instanceApiId")));
+                statement.setString(3, (String)map.get("pathPrefix"));
+                statement.setString(4, (String)event.get(Constants.USER));
+                statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert the instance api path prefix");
+                }
+                conn.commit();
+                result = Success.of(String.format("Instance api path prefix created for hostId: %s, instanceApiId: %s, pathPrefix: %s",
+                        event.get(Constants.HOST), map.get("instanceApiId"), map.get("pathPrefix")));
+                insertNotification(event, true, null);
+
+            }   catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> updateInstanceApiPathPrefix(Map<String, Object> event) {
+        final String sql = "UPDATE instance_api_path_prefix_t SET path_prefix = ?, update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? and instance_api_id = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, (String)map.get("pathPrefix"));
+                statement.setString(2, (String)event.get(Constants.USER));
+                statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(5, UUID.fromString((String)map.get("instanceApiId")));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to update instance api path prefix");
+                }
+                conn.commit();
+                result = Success.of(String.format("Instance API updated for hostId: %s, instanceApiId: %s, pathPrefix: %s",
+                        event.get(Constants.HOST), map.get("instanceApiId"), map.get("pathPrefix")));
+                insertNotification(event, true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            }  catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
+    public Result<String> deleteInstanceApiPathPrefix(Map<String, Object> event) {
+        final String sql = "DELETE FROM instance_api_path_prefix_t WHERE host_id = ? AND instance_api_id = ? AND path_prefix = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(2, UUID.fromString((String)map.get("instanceApiId")));
+                statement.setString(3, (String)map.get("pathPrefix"));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to delete the instance api with instanceApiId " + map.get("instanceApiId"));
+                }
+                conn.commit();
+                result = Success.of(String.format("Instance api path prefix deleted for hostId: %s, instanceApiId: %s, pathPrefix: %s",
+                        event.get(Constants.HOST), map.get("instanceApiId"), map.get("pathPrefix")));
+                insertNotification(event, true, null);
+
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            }  catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
+    public Result<String> getInstanceApiPathPrefix(int offset, int limit, String hostId, String instanceApiId, String instanceName,
+                                                   String productId, String productVersion, String apiId, String apiVersion, String pathPrefix) {
+        Result<String> result = null;
+        String s =
+                """
+                        SELECT COUNT(*) OVER () AS total,
+                        iapp.host_id, iapp.instance_api_id, i.instance_name,\s
+                        pv.product_id, pv.product_version, av.api_id,\s
+                        av.api_version, iapp.path_prefix, iapp.update_user, iapp.update_ts
+                        FROM instance_api_path_prefix_t iapp
+                        INNER JOIN instance_api_t iai ON iapp.instance_api_id = iai.instance_api_id
+                        INNER JOIN instance_t i ON i.instance_id = iai.instance_id
+                        INNER JOIN product_version_t pv ON pv.product_version_id = i.product_version_id
+                        INNER JOIN api_version_t av ON av.api_version_id = iai.api_version_id
+                        INNER JOIN api_t ai ON ai.api_id = av.api_id
+                        WHERE 1=1
+                """;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append(s).append("\n");
+
+        List<Object> parameters = new ArrayList<>();
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "iapp.host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "iapp.instance_api_id", instanceApiId != null ? UUID.fromString(instanceApiId) : null);
+        addCondition(whereClause, parameters, "i.instance_name", instanceName);
+        addCondition(whereClause, parameters, "pv.product_id", productId);
+        addCondition(whereClause, parameters, "pv.product_version", productVersion);
+        addCondition(whereClause, parameters, "av.api_id", apiId);
+        addCondition(whereClause, parameters, "av.api_version", apiVersion);
+        addCondition(whereClause, parameters, "iapp.path_prefix", pathPrefix);
+
+
+        if (!whereClause.isEmpty()) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append("ORDER BY instance_name, api_id, api_version\n" + // Added ordering
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> instanceApiPathPrefixes = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceApiId", resultSet.getObject("instance_api_id", UUID.class));
+                    map.put("instanceName", resultSet.getString("instance_name"));
+                    map.put("productId", resultSet.getString("product_id"));
+                    map.put("productVersion", resultSet.getString("product_version"));
+                    map.put("apiId", resultSet.getString("api_id"));
+                    map.put("apiVersion", resultSet.getString("api_version"));
+                    map.put("pathPrefix", resultSet.getBoolean("path_prefix"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    instanceApiPathPrefixes.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("instanceApiPathPrefixes", instanceApiPathPrefixes);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+
+    @Override
+    public Result<String> createInstanceAppApi(Map<String, Object> event) {
+        final String sql = "INSERT INTO instance_app_api_t(host_id, instance_app_id, instance_api_id, active, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?)";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(2, UUID.fromString((String)map.get("instanceAppId")));
+                statement.setObject(3, UUID.fromString((String)map.get("instanceApiId")));
+                Boolean active = (Boolean)map.get("active");
+                if (active != null) {
+                    statement.setBoolean(4, active);
+                } else {
+                    statement.setNull(4, Types.BOOLEAN);
+                }
+                statement.setString(5, (String)event.get(Constants.USER));
+                statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert the instance app api");
+                }
+                conn.commit();
+                result = Success.of(String.format("Instance app api created for hostId: %s, instanceAppId: %s, instanceApiId: %s",
+                        event.get(Constants.HOST), map.get("instanceAppId"), map.get("instanceApiId")));
+                insertNotification(event, true, null);
+
+            }   catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+
+    @Override
+    public Result<String> updateInstanceAppApi(Map<String, Object> event) {
+        final String sql = "UPDATE instance_api_t SET active = ?, update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? AND instance_app_id = ? AND instance_api_id = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                Boolean active = (Boolean)map.get("active");
+                if (active != null) {
+                    statement.setBoolean(1, active);
+                } else {
+                    statement.setNull(1, Types.BOOLEAN);
+                }
+                statement.setString(2, (String)event.get(Constants.USER));
+                statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(5, UUID.fromString((String)map.get("instanceAppId")));
+                statement.setObject(6, UUID.fromString((String)map.get("instanceApiId")));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to update instance app api");
+                }
+                conn.commit();
+                result = Success.of(String.format("Instance API updated for hostId: %s, instanceAppId: %s, instanceApiId: %s",
+                        event.get(Constants.HOST), map.get("instanceAppId"), map.get("instanceApiId")));
+                insertNotification(event, true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            }  catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
+    public Result<String> deleteInstanceAppApi(Map<String, Object> event) {
+        final String sql = "DELETE FROM instance_app_api_t WHERE host_id = ? AND instance_app_id = ? AND instance_api_id = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(2, UUID.fromString((String)map.get("instanceAppId")));
+                statement.setObject(3, UUID.fromString((String)map.get("instanceApiId")));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to delete the instance app api");
+                }
+                conn.commit();
+                result = Success.of(String.format("Instance app api deleted for hostId: %s, instanceAppId: %s, instanceApiId: %s",
+                        event.get(Constants.HOST), map.get("instanceAppId"), map.get("instanceApiId")));
+                insertNotification(event, true, null);
+
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            }  catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+
+    @Override
+    public Result<String> getInstanceAppApi(int offset, int limit, String hostId, String instanceAppId, String appId, String appVersion,
+                                            String instanceApiId, String instanceName, String productId, String productVersion,
+                                            String apiId, String apiVersion, Boolean active) {
+        Result<String> result = null;
+        String s =
+                """
+                                SELECT COUNT(*) OVER () AS total,
+                                iaa.host_id, iaa.instance_app_id, iap.app_id, iap.app_version,
+                                iaa.instance_api_id, i.instance_name, pv.product_id,
+                                pv.product_version, av.api_id, av.api_version, iaa.active,
+                                iaa.update_user, iaa.update_ts
+                                FROM instance_app_api_t iaa
+                                INNER JOIN instance_app_t iap ON iaa.instance_app_id = iap.instance_app_id
+                                INNER JOIN app_t a ON iap.app_id = a.app_id
+                                INNER JOIN instance_api_t iai ON iaa.instance_api_id = iai.instance_api_id
+                                INNER JOIN instance_t i ON i.instance_id = iai.instance_id
+                                INNER JOIN product_version_t pv ON pv.product_version_id = i.product_version_id
+                                INNER JOIN api_version_t av ON av.api_version_id = iai.api_version_id
+                                INNER JOIN api_t ai ON ai.api_id = av.api_id
+                                WHERE 1=1
+                        """;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append(s).append("\n");
+
+        List<Object> parameters = new ArrayList<>();
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "iaa.host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "iaa.instance_app_id", instanceAppId != null ? UUID.fromString(instanceAppId) : null);
+        addCondition(whereClause, parameters, "iap.app_id", appId);
+        addCondition(whereClause, parameters, "iap.app_version", appVersion);
+        addCondition(whereClause, parameters, "iaa.instance_api_id", instanceApiId != null ? UUID.fromString(instanceApiId) : null);
+        addCondition(whereClause, parameters, "i.instance_name", instanceName);
+        addCondition(whereClause, parameters, "pv.product_id", productId);
+        addCondition(whereClause, parameters, "pv.product_version", productVersion);
+        addCondition(whereClause, parameters, "av.api_id", apiId);
+        addCondition(whereClause, parameters, "av.api_version", apiVersion);
+        addCondition(whereClause, parameters, "active", active);
+
+        if (!whereClause.isEmpty()) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append("ORDER BY i.instance_name, iap.app_id, av.api_id\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> instanceApis = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceAppId", resultSet.getObject("instance_app_id", UUID.class));
+                    map.put("appId", resultSet.getString("app_id"));
+                    map.put("appVersion", resultSet.getString("app_version"));
+                    map.put("instanceApiId", resultSet.getObject("instance_api_id", UUID.class));
+                    map.put("instanceName", resultSet.getString("instance_name"));
+                    map.put("productId", resultSet.getString("product_id"));
+                    map.put("productVersion", resultSet.getString("product_version"));
+                    map.put("apiId", resultSet.getString("api_id"));
+                    map.put("apiVersion", resultSet.getString("api_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    instanceApis.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("instanceAppApis", instanceApis);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+
+    @Override
     public Result<String> createConfigInstanceApi(Map<String, Object> event) {
         final String sql = "INSERT INTO instance_api_property_t (host_id, instance_id, api_id, api_version, property_id, " +
                 "property_value, update_user, update_ts) VALUES (?, ?, ?, ?,  ?, ?, ?, ?)";
