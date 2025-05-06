@@ -2,21 +2,6 @@ package net.lightapi.portal.db;
 
 import com.networknt.db.provider.DbProvider;
 import com.networknt.monad.Result;
-import net.lightapi.portal.client.*;
-import net.lightapi.portal.config.*;
-import net.lightapi.portal.oauth.*;
-import net.lightapi.portal.user.*;
-import net.lightapi.portal.attribute.*;
-import net.lightapi.portal.group.*;
-import net.lightapi.portal.position.*;
-import net.lightapi.portal.role.*;
-import net.lightapi.portal.service.*;
-import net.lightapi.portal.rule.*;
-import net.lightapi.portal.host.*;
-import net.lightapi.portal.product.*;
-import net.lightapi.portal.instance.*;
-import net.lightapi.portal.deployment.*;
-
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
@@ -260,9 +245,6 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> getConfigProductVersion(int offset, int limit, String hostId, String productId, String productVersion,
                                                  String configId, String configName, String propertyId,
                                                  String propertyName, String propertyValue, String propertyFile);
-    //Result<String> queryConfig();
-    //Result<String> queryCert();
-    //Result<String> queryFile();
 
     Result<String> createRule(Map<String, Object> event);
     Result<String> updateRule(Map<String, Object> event);

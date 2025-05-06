@@ -661,11 +661,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         Result<String> result = null;
         String s =
                 """
-                        SELECT COUNT(*) OVER () AS total,
-                        value_id, table_id, value_code, value_desc, start_ts, end_ts,
-                        display_order, active, update_user, update_ts
-                        FROM ref_value_t
-                        WHERE 1=1
+                    SELECT COUNT(*) OVER () AS total,
+                    v.value_id, v.table_id, t.table_name, v.value_code, v.value_desc, v.start_ts, v.end_ts,
+                    v.display_order, v.active, v.update_user, v.update_ts
+                    FROM ref_value_t v
+                    INNER JOIN ref_table_t t ON t.table_id = v.table_id\s
+                    WHERE 1=1
                 """;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append(s).append("\n");
@@ -674,25 +675,26 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         StringBuilder whereClause = new StringBuilder();
 
         // Add conditions based on input parameters
-        addCondition(whereClause, parameters, "value_id", valueId != null ? UUID.fromString(valueId) : null);
-        addCondition(whereClause, parameters, "table_id", tableId != null ? UUID.fromString(tableId) : null);
-        addCondition(whereClause, parameters, "value_code", valueCode);
-        addCondition(whereClause, parameters, "value_desc", valueDesc); // Might need LIKE for descriptions
-        addCondition(whereClause, parameters, "display_order", displayOrder);
-        addCondition(whereClause, parameters, "active", active);
+        addCondition(whereClause, parameters, "v.value_id", valueId != null ? UUID.fromString(valueId) : null);
+        addCondition(whereClause, parameters, "v.table_id", tableId != null ? UUID.fromString(tableId) : null);
+        addCondition(whereClause, parameters, "v.value_code", valueCode);
+        addCondition(whereClause, parameters, "v.value_desc", valueDesc);
+        addCondition(whereClause, parameters, "v.display_order", displayOrder);
+        addCondition(whereClause, parameters, "v.active", active);
 
         if (!whereClause.isEmpty()) {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
         // Add ordering and pagination
-        sqlBuilder.append(" ORDER BY display_order, value_code\n" + // Default order
+        sqlBuilder.append(" ORDER BY v.display_order, v.value_code\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
         parameters.add(offset);
 
         String sql = sqlBuilder.toString();
+        if(logger.isTraceEnabled()) logger.trace("sql = {}", sql);
         int total = 0;
         List<Map<String, Object>> refValues = new ArrayList<>();
 
@@ -715,6 +717,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                     map.put("valueId", resultSet.getObject("value_id", UUID.class));
                     map.put("tableId", resultSet.getObject("table_id", UUID.class));
+                    map.put("tableName", resultSet.getString("table_name"));
                     map.put("valueCode", resultSet.getString("value_code"));
                     map.put("valueDesc", resultSet.getString("value_desc"));
                     map.put("startTs", resultSet.getObject("start_ts") != null ? resultSet.getObject("start_ts", OffsetDateTime.class) : null);
@@ -731,7 +734,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             // Prepare final result map
             Map<String, Object> resultMap = new HashMap<>();
             resultMap.put("total", total);
-            resultMap.put("refValues", refValues); // Use a descriptive key
+            resultMap.put("refValues", refValues);
             result = Success.of(JsonMapper.toJson(resultMap));
 
         } catch (SQLException e) {
@@ -5607,9 +5610,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateServiceSpec(Map<String, Object> event, List<Map<String, Object>> endpoints) {
-        final String updateApiVersion = "UPDATE api_version_t SET spec = ?, " +
-                "update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? AND api_id = ? AND api_version = ?";
+        final String updateApiVersion =
+            """
+                UPDATE api_version_t SET spec = ?,
+                update_user = ?, update_ts = ?
+                WHERE host_id = ? AND api_version_id = ?
+            """;
         final String deleteEndpoint = "DELETE FROM api_endpoint_t WHERE host_id = ? AND api_id = ? AND api_version = ?";
         final String insertEndpoint = "INSERT INTO api_endpoint_t (host_id, api_id, api_version, endpoint, http_method, " +
                 "endpoint_path, endpoint_name, endpoint_desc, update_user, update_ts) " +
@@ -5630,8 +5636,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     statement.setString(2, (String)event.get(Constants.USER));
                     statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
                     statement.setString(4, (String)event.get(Constants.HOST));
-                    statement.setString(5, (String)map.get("apiId"));
-                    statement.setString(6, (String)map.get("apiVersion"));
+                    statement.setObject(6, UUID.fromString((String)map.get("apiVersionId")));
 
                     int count = statement.executeUpdate();
                     if (count == 0) {
