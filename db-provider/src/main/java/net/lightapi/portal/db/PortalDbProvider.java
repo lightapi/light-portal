@@ -33,7 +33,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> createRefLocale(Map<String, Object> event);
     Result<String> updateRefLocale(Map<String, Object> event);
     Result<String> deleteRefLocale(Map<String, Object> event);
-    Result<String> getRefLocale(int offset, int limit, String valueId, String language, String valueLabel);
+    Result<String> getRefLocale(int offset, int limit, String valueId, String valueCode, String valueDesc, String language, String valueLabel);
     Result<String> createRefRelationType(Map<String, Object> event);
     Result<String> updateRefRelationType(Map<String, Object> event);
     Result<String> deleteRefRelationType(Map<String, Object> event);
@@ -42,8 +42,8 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> createRefRelation(Map<String, Object> event);
     Result<String> updateRefRelation(Map<String, Object> event);
     Result<String> deleteRefRelation(Map<String, Object> event);
-    Result<String> getRefRelation(int offset, int limit, String relationId, String valueIdFrom, String valueIdTo,
-            Boolean active);
+    Result<String> getRefRelation(int offset, int limit, String relationId, String relationName, String valueIdFrom,
+                                  String valueCodeFrom, String valueIdTo, String valueCodeTo, Boolean active);
 
     Result<String> loginUserByEmail(String email);
     Result<String> queryUserByEmail(String email);

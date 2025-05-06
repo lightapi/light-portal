@@ -836,8 +836,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> createRefLocale(Map<String, Object> event) {
         // SQL statement for inserting into value_locale_t
-        final String sql = "INSERT INTO value_locale_t(value_id, language, value_label) " +
-                "VALUES (?, ?, ?)";
+        final String sql =
+             """
+                INSERT INTO value_locale_t(value_id, language, value_label)
+                VALUES (?, ?, ?)
+             """;
+
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String valueId = (String) map.get("valueId");
@@ -896,8 +900,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> updateRefLocale(Map<String, Object> event) {
         // SQL statement for updating value_locale_t
-        final String sql = "UPDATE value_locale_t SET value_label = ? " +
-                "WHERE value_id = ? AND language = ?";
+        final String sql =
+                """
+                UPDATE value_locale_t SET value_label = ?
+                WHERE value_id = ? AND language = ?
+                """;
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String valueId = (String) map.get("valueId");
@@ -999,14 +1006,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> getRefLocale(int offset, int limit, String valueId, String language, String valueLabel) {
+    public Result<String> getRefLocale(int offset, int limit, String valueId, String valueCode, String valueDesc, String language, String valueLabel) {
         Result<String> result = null;
         String s =
                 """
-                        SELECT COUNT(*) OVER () AS total,
-                        value_id, language, value_label
-                        FROM value_locale_t
-                        WHERE 1=1
+                    SELECT COUNT(*) OVER () AS total,
+                    l.value_id, v.value_code, v.value_desc, l.language, l.value_label
+                    FROM value_locale_t l
+                    INNER JOIN ref_value_t v ON v.value_id = l.value_id
+                    WHERE 1=1
                 """;
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append(s).append("\n");
@@ -1015,9 +1023,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         StringBuilder whereClause = new StringBuilder();
 
         // Add conditions based on input parameters using the helper
-        addCondition(whereClause, parameters, "value_id", valueId != null ? UUID.fromString(valueId) : null);
-        addCondition(whereClause, parameters, "language", language);
-        addCondition(whereClause, parameters, "value_label", valueLabel);
+        addCondition(whereClause, parameters, "l.value_id", valueId != null ? UUID.fromString(valueId) : null);
+        addCondition(whereClause, parameters, "v.value_code", valueCode);
+        addCondition(whereClause, parameters, "v.value_desc", valueDesc);
+        addCondition(whereClause, parameters, "l.language", language);
+        addCondition(whereClause, parameters, "l.value_label", valueLabel);
 
         // Append the dynamic WHERE conditions if any were added
         if (!whereClause.isEmpty()) {
@@ -1025,7 +1035,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         }
 
         // Add ordering and pagination
-        sqlBuilder.append(" ORDER BY value_id, language\n" +
+        sqlBuilder.append(" ORDER BY l.value_id, l.language\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -1054,6 +1064,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                     // Populate map with data for the current row
                     map.put("valueId", resultSet.getObject("value_id", UUID.class));
+                    map.put("valueCode", resultSet.getString("value_code"));
+                    map.put("valueDesc", resultSet.getString("value_desc"));
                     map.put("language", resultSet.getString("language"));
                     map.put("valueLabel", resultSet.getString("value_label"));
 
@@ -1491,14 +1503,18 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> getRefRelation(int offset, int limit, String relationId, String valueIdFrom, String valueIdTo,
-                                         Boolean active) {
+    public Result<String> getRefRelation(int offset, int limit, String relationId, String relationName, String valueIdFrom,
+                                         String valueCodeFrom, String valueIdTo, String valueCodeTo, Boolean active) {
         Result<String> result = null;
         String s =
                 """
                         SELECT COUNT(*) OVER () AS total,
-                        relation_id, value_id_from, value_id_to, active, update_user, update_ts
-                        FROM relation_t
+                        r.relation_id, t.relation_name, r.value_id_from, v1.value_code value_code_from, r.value_id_to,\s
+                        v2.value_code value_code_to, r.active, r.update_user, r.update_ts
+                        FROM relation_t r
+                        INNER JOIN relation_type_t t ON r.relation_id = t.relation_id
+                        INNER JOIN ref_value_t v1 ON v1.value_id = r.value_id_from
+                        INNER JOIN ref_value_t v2 ON v2.value_id = r.value_id_to\s
                         WHERE 1=1
                 """;
         StringBuilder sqlBuilder = new StringBuilder();
@@ -1509,10 +1525,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         StringBuilder whereClause = new StringBuilder();
 
         // Add conditions based on input parameters using the helper
-        addCondition(whereClause, parameters, "relation_id", relationId != null ? UUID.fromString(relationId) : null);
-        addCondition(whereClause, parameters, "value_id_from", valueIdFrom != null ? UUID.fromString(valueIdFrom) : null);
-        addCondition(whereClause, parameters, "value_id_to", valueIdTo != null ? UUID.fromString(valueIdTo) : null);
-        addCondition(whereClause, parameters, "active", active);
+        addCondition(whereClause, parameters, "r.relation_id", relationId != null ? UUID.fromString(relationId) : null);
+        addCondition(whereClause, parameters, "t.relation_name", relationName);
+        addCondition(whereClause, parameters, "r.value_id_from", valueIdFrom != null ? UUID.fromString(valueIdFrom) : null);
+        addCondition(whereClause, parameters, "v1.value_code_from", valueCodeFrom);
+        addCondition(whereClause, parameters, "r.value_id_to", valueIdTo != null ? UUID.fromString(valueIdTo) : null);
+        addCondition(whereClause, parameters, "v2.value_code_to", valueCodeTo);
+        addCondition(whereClause, parameters, "r.active", active);
 
 
         // Append the dynamic WHERE conditions if any were added
@@ -1521,11 +1540,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         }
 
         // Add ordering and pagination
-        sqlBuilder.append(" ORDER BY relation_id, value_id_from, value_id_to\n" + // Order by PK
+        sqlBuilder.append(" ORDER BY r.relation_id, r.value_id_from, r.value_id_to\n" +
                 "LIMIT ? OFFSET ?");
 
-        parameters.add(limit);  // Add limit parameter
-        parameters.add(offset); // Add offset parameter
+        parameters.add(limit);
+        parameters.add(offset);
 
         String sql = sqlBuilder.toString();
         int total = 0; // Variable to store total count
@@ -1550,8 +1569,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                     // Populate map with data for the current row
                     map.put("relationId", resultSet.getObject("relation_id", UUID.class));
+                    map.put("relationName", resultSet.getString("relation_name"));
                     map.put("valueIdFrom", resultSet.getObject("value_id_from", UUID.class));
+                    map.put("valueCodeFrom", resultSet.getString("value_code_from"));
                     map.put("valueIdTo", resultSet.getObject("value_id_to", UUID.class));
+                    map.put("valueCodeTo", resultSet.getString("value_code_to"));
                     map.put("active", resultSet.getBoolean("active"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);

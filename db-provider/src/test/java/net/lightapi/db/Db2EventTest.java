@@ -235,7 +235,7 @@ public class Db2EventTest {
         LocalDateTime now = LocalDateTime.now();
         String formattedDateTime = now.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         String filename = "/home/steve/lightapi/events/value-locale-" + formattedDateTime + ".txt";
-        Result<String> result = dbProvider.getRefLocale(0, Integer.MAX_VALUE, null, null, null);
+        Result<String> result = dbProvider.getRefLocale(0, Integer.MAX_VALUE, null, null, null, null, null);
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
@@ -327,7 +327,7 @@ public class Db2EventTest {
         LocalDateTime now = LocalDateTime.now();
         String formattedDateTime = now.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         String filename = "/home/steve/lightapi/events/ref-relation-" + formattedDateTime + ".txt";
-        Result<String> result = dbProvider.getRefRelation(0, Integer.MAX_VALUE, null, null, null, null);
+        Result<String> result = dbProvider.getRefRelation(0, Integer.MAX_VALUE, null, null,null, null, null, null, null);
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
