@@ -129,9 +129,10 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> deleteServiceVersion(Map<String, Object> event);
     Result<String> queryServiceVersion(String hostId, String apiId);
     Result<String> updateServiceSpec(Map<String, Object> event, List<Map<String, Object>> endpoints);
-    Result<String> queryServiceEndpoint(int offset, int limit, String hostId, String apiId, String apiVersion, String endpoint, String method, String path, String desc);
+    Result<String> queryServiceEndpoint(int offset, int limit, String hostId, String apiVersionId, String apiId, String apiVersion,
+                                        String endpoint, String method, String path, String desc);
     Result<String> queryEndpointRule(String hostId, String apiId, String apiVersion, String endpoint);
-    Result<String> queryEndpointScope(String hostId, String apiId, String apiVersion, String endpoint);
+    Result<String> queryEndpointScope(String hostId, String endpointId);
     Result<String> createEndpointRule(Map<String, Object> event);
     Result<String> deleteEndpointRule(Map<String, Object> event);
     Result<String> queryServiceRule(String hostId, String apiId, String apiVersion);

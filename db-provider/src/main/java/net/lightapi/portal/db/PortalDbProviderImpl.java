@@ -4747,7 +4747,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)map.get("hostId")));
                 statement.setString(2, (String)map.get("apiId"));
                 statement.setString(3, (String)map.get("apiName"));
                 if (map.containsKey("apiDesc")) {
@@ -4995,7 +4995,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(12, (String)map.get("apiStatus"));
                 statement.setString(13, (String)event.get(Constants.USER));
                 statement.setObject(14, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(15, (String)event.get(Constants.HOST));
+                statement.setObject(15, UUID.fromString((String)map.get("hostId")));
                 statement.setString(16, (String)map.get("apiId"));
 
                 int count = statement.executeUpdate();
@@ -5033,7 +5033,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteApplication)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)map.get("hostId")));
                 statement.setString(2, (String)map.get("apiId"));
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -5217,17 +5217,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> queryEndpointLabel(String hostId, String apiId, String apiVersion) {
         Result<String> result = null;
-        String sql = "SELECT endpoint FROM api_endpoint_t WHERE host_id = ? AND api_id = ? AND api_version = ?";
+        String sql = "SELECT endpoint_id FROM api_endpoint_t WHERE host_id = ? AND api_version_id = ?";
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
             preparedStatement.setObject(1, UUID.fromString(hostId));
-            preparedStatement.setString(2, apiId);
-            preparedStatement.setString(3, apiVersion);
+            preparedStatement.setObject(2, UUID.fromString(apiId));
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
-                    String id = resultSet.getString("endpoint");
+                    String id = resultSet.getString("endpoint_id");
                     map.put("id", id);
                     map.put("label", id);
                     labels.add(map);
@@ -5246,15 +5245,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createServiceVersion(Map<String, Object> event, List<Map<String, Object>> endpoints) {
-        final String insertUser = "INSERT INTO api_version_t (host_id, api_id, api_version, api_type, service_id, api_version_desc, " +
+        final String insertUser = "INSERT INTO api_version_t (host_id, api_version_id, api_id, api_version, api_type, service_id, api_version_desc, " +
                 "spec_link, spec, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?)";
-        final String insertEndpoint = "INSERT INTO api_endpoint_t (host_id, api_id, api_version, endpoint, http_method, " +
+                "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,  ?)";
+        final String insertEndpoint = "INSERT INTO api_endpoint_t (host_id, endpoint_id, api_version_id, endpoint, http_method, " +
                 "endpoint_path, endpoint_name, endpoint_desc, update_user, update_ts) " +
                 "VALUES (?,? ,?, ?, ?,  ?, ?, ?, ?, ?)";
-        final String insertScope = "INSERT INTO api_endpoint_scope_t (host_id, api_id, api_version, endpoint, scope, scope_desc, " +
+        final String insertScope = "INSERT INTO api_endpoint_scope_t (host_id, endpoint_id, scope, scope_desc, " +
                 "update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?,  ?, ?, ?)";
+                "VALUES (?, ?, ?, ?, ?,  ?)";
 
         Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -5262,55 +5261,56 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
-                statement.setString(2, (String)map.get("apiId"));
-                statement.setString(3, (String)map.get("apiVersion"));
-                statement.setString(4, (String)map.get("apiType"));
-                statement.setString(5, (String)map.get("serviceId"));
+                statement.setObject(1, UUID.fromString((String)map.get("hostId")));
+                statement.setObject(2, UUID.fromString((String)map.get("apiVersionId")));
+                statement.setString(3, (String)map.get("apiId"));
+                statement.setString(4, (String)map.get("apiVersion"));
+                statement.setString(5, (String)map.get("apiType"));
+                statement.setString(6, (String)map.get("serviceId"));
 
                 if (map.containsKey("apiVersionDesc")) {
                     String apiDesc = (String) map.get("apiVersionDesc");
                     if (apiDesc != null && !apiDesc.trim().isEmpty()) {
-                        statement.setString(6, apiDesc);
-                    } else {
-                        statement.setNull(6, Types.VARCHAR);
-                    }
-                } else {
-                    statement.setNull(6, Types.VARCHAR);
-                }
-                if (map.containsKey("specLink")) {
-                    String specLink = (String) map.get("specLink");
-                    if (specLink != null && !specLink.trim().isEmpty()) {
-                        statement.setString(7, specLink);
+                        statement.setString(7, apiDesc);
                     } else {
                         statement.setNull(7, Types.VARCHAR);
                     }
                 } else {
                     statement.setNull(7, Types.VARCHAR);
                 }
-                if (map.containsKey("spec")) {
-                    String spec = (String) map.get("spec");
-                    if (spec != null && !spec.trim().isEmpty()) {
-                        statement.setString(8, spec);
+                if (map.containsKey("specLink")) {
+                    String specLink = (String) map.get("specLink");
+                    if (specLink != null && !specLink.trim().isEmpty()) {
+                        statement.setString(8, specLink);
                     } else {
                         statement.setNull(8, Types.VARCHAR);
                     }
                 } else {
                     statement.setNull(8, Types.VARCHAR);
                 }
-                statement.setString(9, (String)event.get(Constants.USER));
-                statement.setObject(10, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                if (map.containsKey("spec")) {
+                    String spec = (String) map.get("spec");
+                    if (spec != null && !spec.trim().isEmpty()) {
+                        statement.setString(9, spec);
+                    } else {
+                        statement.setNull(9, Types.VARCHAR);
+                    }
+                } else {
+                    statement.setNull(9, Types.VARCHAR);
+                }
+                statement.setString(10, (String)event.get(Constants.USER));
+                statement.setObject(11, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException(String.format("no record is inserted for api version %s", "hostId " + event.get(Constants.HOST) + " apiId " + map.get("apiId") + " apiVersion " + map.get("apiVersion")));
+                    throw new SQLException(String.format("no record is inserted for api version %s", "hostId " + map.get("hostId") + " apiId " + map.get("apiId") + " apiVersion " + map.get("apiVersion")));
                 }
                 if(endpoints != null && !endpoints.isEmpty()) {
                     // insert endpoints
                     for (Map<String, Object> endpoint : endpoints) {
                         try (PreparedStatement statementInsert = conn.prepareStatement(insertEndpoint)) {
-                            statementInsert.setString(1, (String)event.get(Constants.HOST));
-                            statementInsert.setString(2, (String)map.get("apiId"));
-                            statementInsert.setString(3, (String)map.get("apiVersion"));
+                            statementInsert.setObject(1, UUID.fromString((String)map.get("hostId")));
+                            statementInsert.setObject(2, UUID.fromString((String)endpoint.get("endpointId")));
+                            statementInsert.setObject(3, UUID.fromString((String)map.get("apiVersionId")));
                             statementInsert.setString(4, (String) endpoint.get("endpoint"));
 
                             if (endpoint.get("httpMethod") == null)
@@ -5343,17 +5343,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                             for (String scope : scopes) {
                                 String[] scopeDesc = scope.split(":");
                                 try (PreparedStatement statementScope = conn.prepareStatement(insertScope)) {
-                                    statementScope.setString(1, (String)event.get(Constants.HOST));
-                                    statementScope.setString(2, (String)map.get("apiId"));
-                                    statementScope.setString(3, (String)map.get("apiVersion"));
-                                    statementScope.setString(4, (String) endpoint.get("endpoint"));
-                                    statementScope.setString(5, scopeDesc[0]);
+                                    statementScope.setObject(1, UUID.fromString((String)map.get("hostId")));
+                                    statementScope.setObject(2, UUID.fromString((String)endpoint.get("endpointId")));
+                                    statementScope.setString(3, scopeDesc[0]);
                                     if (scopeDesc.length == 1)
-                                        statementScope.setNull(6, NULL);
+                                        statementScope.setNull(4, NULL);
                                     else
-                                        statementScope.setString(6, scopeDesc[1]);
-                                    statementScope.setString(7, (String)event.get(Constants.USER));
-                                    statementScope.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                                        statementScope.setString(4, scopeDesc[1]);
+                                    statementScope.setString(5, (String)event.get(Constants.USER));
+                                    statementScope.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
                                     statementScope.executeUpdate();
                                 }
                             }
@@ -5383,16 +5381,17 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateServiceVersion(Map<String, Object> event, List<Map<String, Object>> endpoints) {
-        final String updateApi = "UPDATE api_version_t SET api_type = ?, service_id = ?, api_version_desc = ?, spec_link = ?,  spec = ?," +
+        final String updateApi = "UPDATE api_version_t SET api_id = ?, api_version = ?, api_type = ?, service_id = ?, " +
+                "api_version_desc = ?, spec_link = ?,  spec = ?," +
                 "update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? AND api_id = ? AND api_version = ?";
-        final String deleteEndpoint = "DELETE FROM api_endpoint_t WHERE host_id = ? AND api_id = ? AND api_version = ?";
-        final String insertEndpoint = "INSERT INTO api_endpoint_t (host_id, api_id, api_version, endpoint, http_method, " +
+                "WHERE host_id = ? AND api_version_id = ?";
+        final String deleteEndpoint = "DELETE FROM api_endpoint_t WHERE host_id = ? AND api_version_id = ?";
+        final String insertEndpoint = "INSERT INTO api_endpoint_t (host_id, endpoint_id, api_version_id, endpoint, http_method, " +
                 "endpoint_path, endpoint_name, endpoint_desc, update_user, update_ts) " +
                 "VALUES (?,? ,?, ?, ?,  ?, ?, ?, ?, ?)";
-        final String insertScope = "INSERT INTO api_endpoint_scope_t (host_id, api_id, api_version, endpoint, scope, scope_desc, " +
+        final String insertScope = "INSERT INTO api_endpoint_scope_t (host_id, endpoint_id, scope, scope_desc, " +
                 "update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?,  ?, ?, ?)";
+                "VALUES (?, ?, ?, ?, ?,  ?)";
 
         Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -5400,64 +5399,64 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
 
             try (PreparedStatement statement = conn.prepareStatement(updateApi)) {
-                statement.setString(1, (String)map.get("apiType"));
-                statement.setString(2, (String)map.get("serviceId"));
+                statement.setString(1, (String)map.get("apiId"));
+                statement.setString(2, (String)map.get("apiVersion"));
+                statement.setString(3, (String)map.get("apiType"));
+                statement.setString(4, (String)map.get("serviceId"));
 
                 if (map.containsKey("apiVersionDesc")) {
                     String apiDesc = (String) map.get("apiVersionDesc");
                     if (apiDesc != null && !apiDesc.trim().isEmpty()) {
-                        statement.setString(3, apiDesc);
-                    } else {
-                        statement.setNull(3, Types.VARCHAR);
-                    }
-                } else {
-                    statement.setNull(3, Types.VARCHAR);
-                }
-                if (map.containsKey("specLink")) {
-                    String specLink = (String) map.get("specLink");
-                    if (specLink != null && !specLink.trim().isEmpty()) {
-                        statement.setString(4, specLink);
-                    } else {
-                        statement.setNull(4, Types.VARCHAR);
-                    }
-                } else {
-                    statement.setNull(4, Types.VARCHAR);
-                }
-                if (map.containsKey("spec")) {
-                    String spec = (String) map.get("spec");
-                    if (spec != null && !spec.trim().isEmpty()) {
-                        statement.setString(5, spec);
+                        statement.setString(5, apiDesc);
                     } else {
                         statement.setNull(5, Types.VARCHAR);
                     }
                 } else {
                     statement.setNull(5, Types.VARCHAR);
                 }
+                if (map.containsKey("specLink")) {
+                    String specLink = (String) map.get("specLink");
+                    if (specLink != null && !specLink.trim().isEmpty()) {
+                        statement.setString(6, specLink);
+                    } else {
+                        statement.setNull(6, Types.VARCHAR);
+                    }
+                } else {
+                    statement.setNull(6, Types.VARCHAR);
+                }
+                if (map.containsKey("spec")) {
+                    String spec = (String) map.get("spec");
+                    if (spec != null && !spec.trim().isEmpty()) {
+                        statement.setString(7, spec);
+                    } else {
+                        statement.setNull(7, Types.VARCHAR);
+                    }
+                } else {
+                    statement.setNull(7, Types.VARCHAR);
+                }
 
-                statement.setString(6, (String)event.get(Constants.USER));
-                statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(8, (String)event.get(Constants.HOST));
-                statement.setString(9, (String)map.get("apiId"));
-                statement.setString(10, (String)map.get("apiVersion"));
+                statement.setString(8, (String)event.get(Constants.USER));
+                statement.setObject(9, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setObject(10, UUID.fromString((String)map.get("hostId")));
+                statement.setObject(11, UUID.fromString((String)map.get("apiVersionId")));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException(String.format("no record is updated for api version %s", "hostId " + (event.get(Constants.HOST) + " apiId " + map.get("apiId") + " apiVersion " + map.get("apiVersion"))));
+                    throw new SQLException(String.format("no record is updated for api version %s", "hostId " + (event.get(Constants.HOST) + " apiVersionId " + map.get("apiVersionId"))));
                 }
                 if(endpoints != null && !endpoints.isEmpty()) {
                     // delete endpoints for the api version. the api_endpoint_scope_t will be deleted by the cascade.
                     try (PreparedStatement statementDelete = conn.prepareStatement(deleteEndpoint)) {
-                        statementDelete.setString(1, (String)event.get(Constants.HOST));
-                        statementDelete.setString(2, (String)map.get("apiId"));
-                        statementDelete.setString(3, (String)map.get("apiVersion"));
+                        statementDelete.setObject(1, UUID.fromString((String)map.get("hostId")));
+                        statementDelete.setObject(2, UUID.fromString((String)map.get("apiVersionId")));
                         statementDelete.executeUpdate();
                     }
                     // insert endpoints
                     for (Map<String, Object> endpoint : endpoints) {
                         try (PreparedStatement statementInsert = conn.prepareStatement(insertEndpoint)) {
-                            statementInsert.setString(1, (String)event.get(Constants.HOST));
-                            statementInsert.setString(2, (String)map.get("apiId"));
-                            statementInsert.setString(3, (String)map.get("apiVersion"));
+                            statementInsert.setObject(1, UUID.fromString((String)map.get("hostId")));
+                            statementInsert.setObject(2, UUID.fromString((String)endpoint.get("endpointId")));
+                            statementInsert.setObject(3, UUID.fromString((String)map.get("apiVersionId")));
                             statementInsert.setString(4, (String) endpoint.get("endpoint"));
 
                             if (endpoint.get("httpMethod") == null)
@@ -5490,17 +5489,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                             for (String scope : scopes) {
                                 String[] scopeDesc = scope.split(":");
                                 try (PreparedStatement statementScope = conn.prepareStatement(insertScope)) {
-                                    statementScope.setString(1, (String)event.get(Constants.HOST));
-                                    statementScope.setString(2, (String)map.get("apiId"));
-                                    statementScope.setString(3, (String)map.get("apiVersion"));
-                                    statementScope.setString(4, (String) endpoint.get("endpoint"));
-                                    statementScope.setString(5, scopeDesc[0]);
+                                    statementScope.setObject(1, UUID.fromString((String)map.get("hostId")));
+                                    statementScope.setObject(2, UUID.fromString((String)endpoint.get("endpointId")));
+                                    statementScope.setString(3, scopeDesc[0]);
                                     if (scopeDesc.length == 1)
-                                        statementScope.setNull(6, NULL);
+                                        statementScope.setNull(4, NULL);
                                     else
-                                        statementScope.setString(6, scopeDesc[1]);
-                                    statementScope.setString(7, (String)event.get(Constants.USER));
-                                    statementScope.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                                        statementScope.setString(4, scopeDesc[1]);
+                                    statementScope.setString(5, (String)event.get(Constants.USER));
+                                    statementScope.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
                                     statementScope.executeUpdate();
                                 }
                             }
@@ -5531,19 +5528,18 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> deleteServiceVersion(Map<String, Object> event) {
-        final String deleteApplication = "DELETE from api_version_t WHERE host_id = ? AND api_id = ? AND api_version = ?";
+        final String deleteApplication = "DELETE from api_version_t WHERE host_id = ? AND api_version_id = ?";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteApplication)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
-                statement.setString(2, (String)map.get("apiId"));
-                statement.setString(3, (String)map.get("apiVersion"));
+                statement.setObject(1, UUID.fromString((String)map.get("hostId")));
+                statement.setObject(2, UUID.fromString((String)map.get("apiVersionId")));
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     // no record is deleted, write an error notification.
-                    throw new SQLException(String.format("no record is deleted for api version %s", "hostId " + event.get(Constants.HOST) + " apiId " + map.get("apiId") + " apiVersion " + map.get("apiVersion")));
+                    throw new SQLException(String.format("no record is deleted for api version %s", "hostId " + map.get("hostId") + " apiVersionId " + map.get("apiVersionId")));
                 }
                 conn.commit();
                 result = Success.of((String)event.get(Constants.USER));
@@ -5571,12 +5567,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> queryServiceVersion(String hostId, String apiId) {
         Result<String> result = null;
-        String sql = "SELECT host_id, api_id, api_version, api_type, service_id,\n" +
-                "api_version_desc, spec_link, spec\n" +
-                "FROM api_version_t\n" +
-                "WHERE host_id = ? AND api_id = ?\n" +
-                "ORDER BY api_version";
-
+        String sql = """
+                SELECT host_id, api_version_id, api_id, api_version, api_type,
+                service_id, api_version_desc, spec_link, spec
+                FROM api_version_t
+                WHERE host_id = ? AND api_id = ?
+                ORDER BY api_version
+            """;
         List<Map<String, Object>> serviceVersions = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
@@ -5587,6 +5584,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
                     map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("apiVersionId", resultSet.getObject("api_version_id", UUID.class));
                     map.put("apiId", resultSet.getString("api_id"));
                     map.put("apiVersion", resultSet.getString("api_version"));
                     map.put("apiType", resultSet.getString("api_type"));
@@ -5632,19 +5630,20 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateServiceSpec(Map<String, Object> event, List<Map<String, Object>> endpoints) {
+        if(logger.isTraceEnabled()) logger.trace("endpoints = {}", endpoints);
         final String updateApiVersion =
             """
                 UPDATE api_version_t SET spec = ?,
                 update_user = ?, update_ts = ?
                 WHERE host_id = ? AND api_version_id = ?
             """;
-        final String deleteEndpoint = "DELETE FROM api_endpoint_t WHERE host_id = ? AND api_id = ? AND api_version = ?";
-        final String insertEndpoint = "INSERT INTO api_endpoint_t (host_id, api_id, api_version, endpoint, http_method, " +
+        final String deleteEndpoint = "DELETE FROM api_endpoint_t WHERE host_id = ? AND api_version_id = ?";
+        final String insertEndpoint = "INSERT INTO api_endpoint_t (host_id, endpoint_id, api_version_id, endpoint, http_method, " +
                 "endpoint_path, endpoint_name, endpoint_desc, update_user, update_ts) " +
-                "VALUES (?,? ,?, ?, ?,  ?, ?, ?, ?, ?)";
-        final String insertScope = "INSERT INTO api_endpoint_scope_t (host_id, api_id, api_version, endpoint, scope, scope_desc, " +
+                "VALUES (?,? ,?, ?, ?,   ?, ?, ?, ?, ?)";
+        final String insertScope = "INSERT INTO api_endpoint_scope_t (host_id, endpoint_id, scope, scope_desc, " +
                 "update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?,  ?, ?, ?)";
+                "VALUES (?, ?, ?, ?, ?,  ?)";
 
 
         Result<String> result = null;
@@ -5657,28 +5656,27 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     statement.setString(1, (String)map.get("spec"));
                     statement.setString(2, (String)event.get(Constants.USER));
                     statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                    statement.setString(4, (String)event.get(Constants.HOST));
-                    statement.setObject(6, UUID.fromString((String)map.get("apiVersionId")));
+                    statement.setObject(4, UUID.fromString((String)map.get("hostId")));
+                    statement.setObject(5, UUID.fromString((String)map.get("apiVersionId")));
 
                     int count = statement.executeUpdate();
                     if (count == 0) {
                         // no record is updated, write an error notification.
-                        throw new SQLException(String.format("no record is updated for api version " + " hostId " + event.get(Constants.HOST) + " apiId " + map.get("apiId") + " apiVersion " + map.get("apiVersion")));
+                        throw new SQLException(String.format("no record is updated for api version " + " hostId " + map.get("hostId") + " apiId " + map.get("apiId") + " apiVersion " + map.get("apiVersion")));
                     }
                 }
                 // delete endpoints for the api version. the api_endpoint_scope_t will be deleted by the cascade.
                 try (PreparedStatement statement = conn.prepareStatement(deleteEndpoint)) {
-                    statement.setString(1, (String)event.get(Constants.HOST));
-                    statement.setString(2, (String)map.get("apiId"));
-                    statement.setString(3, (String)map.get("apiVersion"));
+                    statement.setObject(1, UUID.fromString((String)map.get("hostId")));
+                    statement.setObject(2, UUID.fromString((String)map.get("apiVersionId")));
                     statement.executeUpdate();
                 }
                 // insert endpoints
                 for (Map<String, Object> endpoint : endpoints) {
                     try (PreparedStatement statement = conn.prepareStatement(insertEndpoint)) {
-                        statement.setString(1, (String)event.get(Constants.HOST));
-                        statement.setString(2, (String)map.get("apiId"));
-                        statement.setString(3, (String)map.get("apiVersion"));
+                        statement.setObject(1, UUID.fromString((String)map.get("hostId")));
+                        statement.setObject(2, UUID.fromString((String)endpoint.get("endpointId")));
+                        statement.setObject(3, UUID.fromString((String)map.get("apiVersionId")));
                         statement.setString(4, (String)endpoint.get("endpoint"));
 
                         if (endpoint.get("httpMethod") == null)
@@ -5711,17 +5709,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         for (String scope : scopes) {
                             String[] scopeDesc = scope.split(":");
                             try (PreparedStatement statement = conn.prepareStatement(insertScope)) {
-                                statement.setString(1, (String)event.get(Constants.HOST));
-                                statement.setString(2, (String)map.get("apiId"));
-                                statement.setString(3, (String)map.get("apiVersion"));
-                                statement.setString(4, (String) endpoint.get("endpoint"));
-                                statement.setString(5, scopeDesc[0]);
+                                statement.setObject(1, UUID.fromString((String)map.get("hostId")));
+                                statement.setObject(2, UUID.fromString((String)endpoint.get("endpointId")));
+                                statement.setString(3, scopeDesc[0]);
                                 if (scopeDesc.length == 1)
-                                    statement.setNull(6, NULL);
+                                    statement.setNull(4, NULL);
                                 else
-                                    statement.setString(6, scopeDesc[1]);
-                                statement.setString(7, (String)event.get(Constants.USER));
-                                statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                                    statement.setString(4, scopeDesc[1]);
+                                statement.setString(5, (String)event.get(Constants.USER));
+                                statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
                                 statement.executeUpdate();
                             }
                         }
@@ -5750,32 +5746,38 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> queryServiceEndpoint(int offset, int limit, String hostId, String apiId, String apiVersion, String endpoint, String method, String path, String desc) {
+    public Result<String> queryServiceEndpoint(int offset, int limit, String hostId, String apiVersionId, String apiId, String apiVersion,
+                                               String endpoint, String method, String path, String desc) {
         Result<String> result = null;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "host_id, api_id, api_version, endpoint, http_method,\n" +
-                "endpoint_path, endpoint_desc\n" +
-                "FROM api_endpoint_t\n" +
-                "WHERE host_id = ? AND api_id = ? AND api_version = ?\n");
+        String s =
+            """
+                SELECT COUNT(*) OVER () AS total,
+                e.host_id, e.endpoint_id, e.api_version_id, v.api_id, v.api_version,
+                e.endpoint, e.http_method, e.endpoint_path, e.endpoint_desc
+                FROM api_endpoint_t e
+                INNER JOIN api_version_t v ON e.api_version_id = v.api_version_id
+                WHERE e.host_id = ? AND e.api_version_id = ?
+            """;
 
+        StringBuilder sqlBuilder = new StringBuilder();
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
-        parameters.add(apiId);
-        parameters.add(apiVersion);
+        parameters.add(apiVersionId);
 
         StringBuilder whereClause = new StringBuilder();
-        addCondition(whereClause, parameters, "endpoint", endpoint);
-        addCondition(whereClause, parameters, "http_method", method);
-        addCondition(whereClause, parameters, "endpoint_path", path);
-        addCondition(whereClause, parameters, "endpoint_desc", desc);
+        addCondition(whereClause, parameters, "v.api_id", apiId);
+        addCondition(whereClause, parameters, "v.api_version", apiVersion);
+        addCondition(whereClause, parameters, "e.endpoint", endpoint);
+        addCondition(whereClause, parameters, "e.http_method", method);
+        addCondition(whereClause, parameters, "e.endpoint_path", path);
+        addCondition(whereClause, parameters, "e.endpoint_desc", desc);
 
         if(!whereClause.isEmpty()) {
             sqlBuilder.append(" AND ").append(whereClause);
         }
 
 
-        sqlBuilder.append(" ORDER BY endpoint\n" +
+        sqlBuilder.append(" ORDER BY e.endpoint\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -5805,6 +5807,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
 
                     map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("endpointId", resultSet.getObject("endpoint_id", UUID.class));
+                    map.put("apiVersionId", resultSet.getObject("api_version_id", UUID.class));
                     map.put("apiId", resultSet.getString("api_id"));
                     map.put("apiVersion", resultSet.getString("api_version"));
                     map.put("endpoint", resultSet.getString("endpoint"));
@@ -5830,30 +5834,29 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> queryEndpointScope(String hostId, String apiId, String apiVersion, String endpoint) {
+    public Result<String> queryEndpointScope(String hostId, String endpointId) {
         Result<String> result = null;
-        String sql = "SELECT host_id, api_id, api_version, endpoint, scope, scope_desc \n" +
-                "FROM api_endpoint_scope_t\n" +
-                "WHERE host_id = ?\n" +
-                "AND api_id = ?\n" +
-                "AND api_version = ?\n" +
-                "AND endpoint = ?\n" +
-                "ORDER BY scope";
+        String sql =
+                """
+                    SELECT s.host_id, s.endpoint_id, e.endpoint, s.scope, s.scope_desc
+                    FROM api_endpoint_scope_t s
+                    INNER JOIN api_endpoint_t e ON e.host_id = s.host_id AND e.endpoint_id = s.endpoint_id
+                    WHERE host_id = ?
+                    AND endpoint_id = ?
+                    ORDER BY scope
+                """;
 
         List<Map<String, Object>> scopes = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
             preparedStatement.setObject(1, UUID.fromString(hostId));
-            preparedStatement.setString(2, apiId);
-            preparedStatement.setString(3, apiVersion);
-            preparedStatement.setString(4, endpoint);
+            preparedStatement.setObject(2, UUID.fromString(endpointId));
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
                     map.put("hostId", resultSet.getObject("host_id", UUID.class));
-                    map.put("apiId", resultSet.getString("api_id"));
-                    map.put("apiVersion", resultSet.getString("api_version"));
+                    map.put("endpointId", resultSet.getObject("endpoint_id", UUID.class));
                     map.put("endpoint", resultSet.getString("endpoint"));
                     map.put("scope", resultSet.getString("scope"));
                     map.put("scopeDesc", resultSet.getString("scope_desc"));
