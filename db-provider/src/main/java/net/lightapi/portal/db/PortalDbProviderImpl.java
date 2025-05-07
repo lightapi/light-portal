@@ -4199,7 +4199,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("appId"));
                 statement.setString(3, (String)map.get("appName"));
                 if (map.containsKey("appDesc")) {
@@ -4393,7 +4393,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 String appId = (String)map.get("appId");
                 if (appId != null && !appId.isEmpty()) {
                     statement.setString(2, appId);
@@ -5930,7 +5930,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("apiId"));
                 statement.setString(3, (String)map.get("apiVersion"));
                 statement.setString(4, (String)map.get("endpoint"));
@@ -5970,7 +5970,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteApplication)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("apiId"));
                 statement.setString(3, (String)map.get("apiVersion"));
                 statement.setString(4, (String)map.get("endpoint"));
@@ -6506,7 +6506,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     throw new SQLException("failed to insert the org " + map.get("domain"));
                 }
                 try (PreparedStatement hostStatement = conn.prepareStatement(insertHost)) {
-                    hostStatement.setString(1, (String)event.get(Constants.HOST));
+                    hostStatement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                     hostStatement.setString(2, (String)map.get("domain"));
                     hostStatement.setString(3, (String)map.get("subDomain"));
                     hostStatement.setString(4, (String)map.get("hostDesc"));
@@ -6517,7 +6517,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 // create user, org-admin and host-admin roles for the hostId by default.
                 try (PreparedStatement roleStatement = conn.prepareStatement(insertRole)) {
-                    roleStatement.setString(1, (String)event.get(Constants.HOST));
+                    roleStatement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                     roleStatement.setString(2, "user");
                     roleStatement.setString(3, "user role");
                     roleStatement.setString(4, (String)event.get(Constants.USER));
@@ -6525,7 +6525,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     roleStatement.executeUpdate();
                 }
                 try (PreparedStatement roleStatement = conn.prepareStatement(insertRole)) {
-                    roleStatement.setString(1, (String)event.get(Constants.HOST));
+                    roleStatement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                     roleStatement.setString(2, "org-admin");
                     roleStatement.setString(3, "org-admin role");
                     roleStatement.setString(4, (String)event.get(Constants.USER));
@@ -6533,7 +6533,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     roleStatement.executeUpdate();
                 }
                 try (PreparedStatement roleStatement = conn.prepareStatement(insertRole)) {
-                    roleStatement.setString(1, (String)event.get(Constants.HOST));
+                    roleStatement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                     roleStatement.setString(2, "host-admin");
                     roleStatement.setString(3, "host-admin role");
                     roleStatement.setString(4, (String)event.get(Constants.USER));
@@ -6542,7 +6542,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 // insert role user to user for the host
                 try (PreparedStatement roleUserStatement = conn.prepareStatement(insertRoleUser)) {
-                    roleUserStatement.setString(1, (String)event.get(Constants.HOST));
+                    roleUserStatement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                     roleUserStatement.setString(2, "user");
                     roleUserStatement.setString(3, (String)map.get("orgOwner"));
                     roleUserStatement.setString(4, (String)event.get(Constants.USER));
@@ -6551,7 +6551,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 // insert role org-admin to user for the host
                 try (PreparedStatement roleUserStatement = conn.prepareStatement(insertRoleUser)) {
-                    roleUserStatement.setString(1, (String)event.get(Constants.HOST));
+                    roleUserStatement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                     roleUserStatement.setString(2, "org-admin");
                     roleUserStatement.setString(3, (String)map.get("orgOwner"));
                     roleUserStatement.setString(4, (String)event.get(Constants.USER));
@@ -6560,7 +6560,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 // insert host-admin to user for the host
                 try (PreparedStatement roleUserStatement = conn.prepareStatement(insertRoleUser)) {
-                    roleUserStatement.setString(1, (String)event.get(Constants.HOST));
+                    roleUserStatement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                     roleUserStatement.setString(2, "host-admin");
                     roleUserStatement.setString(3, (String)map.get("hostOwner"));
                     roleUserStatement.setString(4, (String)event.get(Constants.USER));
@@ -6569,7 +6569,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 // switch the current user to the hostId by updating to same user pointing to two hosts.
                 try (PreparedStatement userHostStatement = conn.prepareStatement(updateUserHost)) {
-                    userHostStatement.setString(1, (String)event.get(Constants.HOST));
+                    userHostStatement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                     userHostStatement.setString(2, (String)event.get(Constants.USER));
                     userHostStatement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
                     userHostStatement.setString(4, (String)map.get("orgOwner"));
@@ -6699,7 +6699,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(insertHost)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("domain"));
                 statement.setString(3, (String)map.get("subDomain"));
                 statement.setString(4, (String)map.get("hostDesc"));
@@ -6763,7 +6763,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 statement.setString(5, (String)event.get(Constants.USER));
                 statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(7, (String)event.get(Constants.HOST));
+                statement.setObject(7, UUID.fromString((String)event.get(Constants.HOST)));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -6799,7 +6799,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteHost)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("no record is deleted for host " + event.get(Constants.HOST));
@@ -6833,7 +6833,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(updateUserHost)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)event.get(Constants.USER));
                 statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
                 statement.setString(4, (String)event.get(Constants.USER));
@@ -9060,7 +9060,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
                 statement.setString(3, (String)map.get("apiId"));
                 statement.setString(4, (String)map.get("apiVersion"));
@@ -9117,7 +9117,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 statement.setString(2, (String)event.get(Constants.USER));
                 statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(4, (String)event.get(Constants.HOST));
+                statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setObject(5, UUID.fromString((String)map.get("instanceId")));
                 statement.setString(6, (String)map.get("apiId"));
                 statement.setString(7, (String)map.get("apiVersion"));
@@ -9160,7 +9160,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
                 statement.setString(3, (String)map.get("apiId"));
                 statement.setString(4, (String)map.get("apiVersion"));
@@ -9617,7 +9617,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 statement.setString(2, (String)event.get(Constants.USER));
                 statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(4, (String)event.get(Constants.HOST));
+                statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setObject(5, UUID.fromString((String)map.get("instanceId")));
                 statement.setString(6, (String)map.get("appId"));
                 statement.setString(7, (String)map.get("appVersion"));
@@ -9661,7 +9661,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
                 statement.setString(3, (String)map.get("appId"));
                 statement.setString(4, (String)map.get("appVersion"));
@@ -9802,7 +9802,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
                 statement.setObject(3, UUID.fromString((String)map.get("propertyId")));
 
@@ -9880,7 +9880,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
                 // WHERE clause parameters (from the event, NOT the JSON)
-                statement.setString(5, (String)event.get(Constants.HOST));
+                statement.setObject(5, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setObject(6, UUID.fromString((String)map.get("instanceId")));
                 statement.setObject(7, UUID.fromString((String)map.get("propertyId")));
 
@@ -9921,7 +9921,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
                 statement.setObject(3, UUID.fromString((String)map.get("propertyId")));
 
@@ -11087,7 +11087,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("productId"));
                 statement.setString(3, (String)map.get("productVersion"));
                 statement.setObject(4, UUID.fromString((String)map.get("propertyId")));
@@ -11165,7 +11165,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
                 // WHERE clause parameters (from the event, NOT the JSON)
-                statement.setString(5, (String)event.get(Constants.HOST));
+                statement.setObject(5, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(6, (String)map.get("productId"));
                 statement.setString(7, (String)map.get("productVersion"));
                 statement.setObject(8, UUID.fromString((String)map.get("propertyId")));
@@ -11208,7 +11208,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("productId"));
                 statement.setString(3, (String)map.get("productVersion"));
                 statement.setObject(4, UUID.fromString((String)map.get("propertyId")));
@@ -11446,7 +11446,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                 }
                 try (PreparedStatement statement = conn.prepareStatement(insertHostRule)) {
-                    statement.setString(1, (String)event.get(Constants.HOST));
+                    statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                     statement.setString(2, (String)map.get("ruleId"));
                     statement.setString(3, (String)event.get(Constants.USER));
                     statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
@@ -11583,7 +11583,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                 }
                 try (PreparedStatement statement = conn.prepareStatement(deleteHostRule)) {
-                    statement.setString(1, (String)event.get(Constants.HOST));
+                    statement.setObject(1, (String)event.get(Constants.HOST));
                     statement.setString(2, (String)map.get("ruleId"));
                     int count = statement.executeUpdate();
                     if (count == 0) {
@@ -11979,7 +11979,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertRole)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("roleId"));
                 String roleDesc = (String)map.get("roleDesc");
                 if (roleDesc != null && !roleDesc.isEmpty())
@@ -12034,7 +12034,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 statement.setString(2, (String)event.get(Constants.USER));
                 statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(4, (String)event.get(Constants.HOST));
+                statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(5, (String)map.get("roleId"));
 
                 int count = statement.executeUpdate();
@@ -12071,7 +12071,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteRole)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("roleId"));
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -12386,7 +12386,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertRole)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("roleId"));
                 statement.setString(3, (String)map.get("apiId"));
                 statement.setString(4, (String)map.get("apiVersion"));
@@ -12428,7 +12428,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteRole)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("roleId"));
                 statement.setString(3, (String)map.get("apiId"));
                 statement.setString(4, (String)map.get("apiVersion"));
@@ -12470,7 +12470,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertRole)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("roleId"));
                 statement.setString(3, (String)event.get(Constants.USER));
 
@@ -12538,7 +12538,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 statement.setString(3, (String)event.get(Constants.USER));
                 statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(5, (String)event.get(Constants.HOST));
+                statement.setObject(5, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(6, (String)map.get("roleId"));
                 statement.setString(7, (String)event.get(Constants.USER));
 
@@ -12576,7 +12576,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteRole)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("roleId"));
                 statement.setString(3, (String)event.get(Constants.USER));
 
@@ -12689,7 +12689,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteRole)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("roleId"));
                 statement.setString(3, (String)map.get("apiId"));
                 statement.setString(4, (String)map.get("apiVersion"));
@@ -12732,7 +12732,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertRole)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("roleId"));
                 statement.setString(3, (String)map.get("apiId"));
                 statement.setString(4, (String)map.get("apiVersion"));
@@ -12783,7 +12783,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(2, (String)map.get("colValue"));
                 statement.setString(3, (String)event.get(Constants.USER));
                 statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(5, (String)event.get(Constants.HOST));
+                statement.setObject(5, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(6, (String)map.get("roleId"));
                 statement.setString(7, (String)map.get("apiId"));
                 statement.setString(8, (String)map.get("apiVersion"));
@@ -12899,7 +12899,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertRole)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("roleId"));
                 statement.setString(3, (String)map.get("apiId"));
                 statement.setString(4, (String)map.get("apiVersion"));
@@ -12941,7 +12941,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteRole)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("roleId"));
                 statement.setString(3, (String)map.get("apiId"));
                 statement.setString(4, (String)map.get("apiVersion"));
@@ -12986,7 +12986,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, (String)map.get("columns"));
                 statement.setString(2, (String)event.get(Constants.USER));
                 statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(4, (String)event.get(Constants.HOST));
+                statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(5, (String)map.get("roleId"));
                 statement.setString(6, (String)map.get("apiId"));
                 statement.setString(7, (String)map.get("apiVersion"));
@@ -13027,7 +13027,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("groupId"));
                 String groupDesc = (String)map.get("groupDesc");
                 if (groupDesc != null && !groupDesc.isEmpty())
@@ -13081,7 +13081,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 statement.setString(2, (String)event.get(Constants.USER));
                 statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(4, (String)event.get(Constants.HOST));
+                statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(5, (String)map.get("groupId"));
 
                 int count = statement.executeUpdate();
@@ -13118,7 +13118,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("groupId"));
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -13422,7 +13422,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("groupId"));
                 statement.setString(3, (String)map.get("apiId"));
                 statement.setString(4, (String)map.get("apiVersion"));
@@ -13462,7 +13462,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("groupId"));
                 statement.setString(3, (String)map.get("apiId"));
                 statement.setString(4, (String)map.get("apiVersion"));
@@ -13504,7 +13504,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("groupId"));
                 statement.setString(3, (String)event.get(Constants.USER));
                 String startTs = (String)map.get("startTs");
@@ -13570,7 +13570,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 statement.setString(3, (String)event.get(Constants.USER));
                 statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(5, (String)event.get(Constants.HOST));
+                statement.setObject(5, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(6, (String)map.get("groupId"));
                 statement.setString(7, (String)event.get(Constants.USER));
 
@@ -13607,7 +13607,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("groupId"));
                 statement.setString(3, (String)event.get(Constants.USER));
 
@@ -13723,7 +13723,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("groupId"));
                 statement.setString(3, (String)map.get("apiId"));
                 statement.setString(4, (String)map.get("apiVersion"));
@@ -13774,7 +13774,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(2, (String)map.get("colValue"));
                 statement.setString(3, (String)event.get(Constants.USER));
                 statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(5, (String)event.get(Constants.HOST));
+                statement.setObject(5, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(6, (String)map.get("groupId"));
                 statement.setString(7, (String)map.get("apiId"));
                 statement.setString(8, (String)map.get("apiVersion"));
@@ -13814,7 +13814,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("groupId"));
                 statement.setString(3, (String)map.get("apiId"));
                 statement.setString(4, (String)map.get("apiVersion"));
@@ -13930,7 +13930,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("groupId"));
                 statement.setString(3, (String)map.get("apiId"));
                 statement.setString(4, (String)map.get("apiVersion"));
@@ -13978,7 +13978,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, (String)map.get("columns"));
                 statement.setString(2, (String)event.get(Constants.USER));
                 statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(4, (String)event.get(Constants.HOST));
+                statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(5, (String)map.get("groupId"));
                 statement.setString(6, (String)map.get("apiId"));
                 statement.setString(7, (String)map.get("apiVersion"));
@@ -14017,7 +14017,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("groupId"));
                 statement.setString(3, (String)map.get("apiId"));
                 statement.setString(4, (String)map.get("apiVersion"));
@@ -14060,7 +14060,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(insertPosition)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("positionId"));
                 String positionDesc = (String)map.get("positionDesc");
                 if (positionDesc != null && !positionDesc.isEmpty())
@@ -14138,7 +14138,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(4, (String)event.get(Constants.USER));
                 statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
-                statement.setString(6, (String)event.get(Constants.HOST));
+                statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(7, (String)map.get("positionId"));
 
                 int count = statement.executeUpdate();
@@ -14175,7 +14175,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("positionId"));
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -14485,7 +14485,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("positionId"));
                 statement.setString(3, (String)map.get("apiId"));
                 statement.setString(4, (String)map.get("apiVersion"));
@@ -14527,7 +14527,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("positionId"));
                 statement.setString(3, (String)map.get("apiId"));
                 statement.setString(4, (String)map.get("apiVersion"));
@@ -14569,7 +14569,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("positionId"));
                 statement.setString(3, (String)event.get(Constants.USER));
                 String startTs = (String)map.get("startTs");
@@ -14636,7 +14636,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 statement.setString(3, (String)event.get(Constants.USER));
                 statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(5, (String)event.get(Constants.HOST));
+                statement.setObject(5, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(6, (String)map.get("positionId"));
                 statement.setString(7, (String)event.get(Constants.USER));
 
@@ -14674,7 +14674,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("positionId"));
                 statement.setString(3, (String)event.get(Constants.USER));
 
@@ -14789,7 +14789,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("positionId"));
                 statement.setString(3, (String)map.get("apiId"));
                 statement.setString(4, (String)map.get("apiVersion"));
@@ -14840,7 +14840,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(2, (String)map.get("colValue"));
                 statement.setString(3, (String)event.get(Constants.USER));
                 statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(5, (String)event.get(Constants.HOST));
+                statement.setObject(5, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(6, (String)map.get("positionId"));
                 statement.setString(7, (String)map.get("apiId"));
                 statement.setString(8, (String)map.get("apiVersion"));
@@ -14880,7 +14880,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("positionId"));
                 statement.setString(3, (String)map.get("apiId"));
                 statement.setString(4, (String)map.get("apiVersion"));
@@ -14995,7 +14995,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("positionId"));
                 statement.setString(3, (String)map.get("apiId"));
                 statement.setString(4, (String)map.get("apiVersion"));
@@ -15043,7 +15043,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, (String)map.get("columns"));
                 statement.setString(2, (String)event.get(Constants.USER));
                 statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(4, (String)event.get(Constants.HOST));
+                statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(5, (String)map.get("positionId"));
                 statement.setString(6, (String)map.get("apiId"));
                 statement.setString(7, (String)map.get("apiVersion"));
@@ -15082,7 +15082,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("positionId"));
                 statement.setString(3, (String)map.get("apiId"));
                 statement.setString(4, (String)map.get("apiVersion"));
@@ -15124,7 +15124,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(insertAttribute)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("attributeId"));
                 String attributeType = (String)map.get("attributeType");
                 if(attributeType != null && !attributeType.isEmpty())
@@ -15191,7 +15191,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(3, (String)event.get(Constants.USER));
                 statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
-                statement.setString(5, (String)event.get(Constants.HOST));
+                statement.setObject(5, UUID.fromString((String)event.get(Constants.HOST)));
                 String attributeId = (String)map.get("attributeId");
                 statement.setString(6, attributeId);
 
@@ -15229,7 +15229,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("attributeId"));
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -15548,7 +15548,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("attributeId"));
                 statement.setString(3, (String)map.get("attributeValue"));
                 statement.setString(4, (String)map.get("apiId"));
@@ -15596,7 +15596,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(2, (String)event.get(Constants.USER));
                 statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
-                statement.setString(4, (String)event.get(Constants.HOST));
+                statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(5, (String)map.get("attributeId"));
                 statement.setString(6, (String)map.get("apiId"));
                 statement.setString(7, (String)map.get("apiVersion"));
@@ -15637,7 +15637,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("attributeId"));
                 statement.setString(3, (String)map.get("apiId"));
                 statement.setString(4, (String)map.get("apiVersion"));
@@ -15680,7 +15680,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 String attributeId = (String)map.get("attributeId");
                 statement.setString(2, attributeId);
                 statement.setString(3, (String)map.get("attributeValue"));
@@ -15749,7 +15749,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 statement.setString(4, (String)event.get(Constants.USER));
                 statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(6, (String)event.get(Constants.HOST));
+                statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
                 String attributeId = (String)map.get("attributeId");
                 statement.setString(7, attributeId);
                 statement.setString(8, (String)event.get(Constants.USER));
@@ -15788,7 +15788,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("attributeId"));
                 statement.setString(3, (String)event.get(Constants.USER));
 
@@ -15908,7 +15908,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("attributeId"));
                 statement.setString(3, (String)map.get("attributeValue"));
                 statement.setString(4, (String)map.get("apiId"));
@@ -15965,7 +15965,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(8, (String)event.get(Constants.USER));
                 statement.setObject(9, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
-                statement.setString(10, (String)event.get(Constants.HOST));
+                statement.setObject(10, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(11, (String)map.get("attributeId"));
 
                 int count = statement.executeUpdate();
@@ -16002,7 +16002,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("attributeId"));
                 statement.setString(3, (String)map.get("apiId"));
                 statement.setString(4, (String)map.get("apiVersion"));
@@ -16121,7 +16121,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("attributeId"));
                 statement.setString(3, (String)map.get("attributeValue"));
                 statement.setString(4, (String)map.get("apiId"));
@@ -16174,7 +16174,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(6, (String)event.get(Constants.USER));
                 statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
-                statement.setString(8, (String)event.get(Constants.HOST));
+                statement.setObject(8, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(9, (String)map.get("attributeId"));
 
                 int count = statement.executeUpdate();
@@ -16257,7 +16257,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("productId"));
                 statement.setString(3, (String)map.get("productVersion"));
                 statement.setString(4, (String)map.get("light4jVersion"));
@@ -16294,7 +16294,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 // try to update current to false for others if current is true.
                 if((Boolean)map.get("current")) {
                     try (PreparedStatement statementUpdate = conn.prepareStatement(sqlUpdate)) {
-                        statementUpdate.setString(1, (String)event.get(Constants.HOST));
+                        statementUpdate.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                         statementUpdate.setString(2, (String)map.get("productId"));
                         statementUpdate.setString(3, (String)map.get("productVersion"));
                         statementUpdate.executeUpdate();
@@ -16363,7 +16363,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(8, (String)map.get("versionStatus"));
                 statement.setString(9, (String)event.get(Constants.USER));
                 statement.setObject(10, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(11, (String)event.get(Constants.HOST));
+                statement.setObject(11, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(12, (String)map.get("productId"));
                 statement.setString(13, (String)map.get("productVersion"));
                 int count = statement.executeUpdate();
@@ -16373,7 +16373,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 // try to update current to false for others if current is true.
                 if((Boolean)map.get("current")) {
                     try (PreparedStatement statementUpdate = conn.prepareStatement(sqlUpdate)) {
-                        statementUpdate.setString(1, (String)event.get(Constants.HOST));
+                        statementUpdate.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                         statementUpdate.setString(2, (String)map.get("productId"));
                         statementUpdate.setString(3, (String)map.get("productVersion"));
                         statementUpdate.executeUpdate();
@@ -16409,7 +16409,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("productId"));
                 statement.setString(3, (String)map.get("productVersion"));
 
@@ -16806,7 +16806,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 statement.setString(15, (String)event.get(Constants.USER));
                 statement.setObject(16, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(17, (String)event.get(Constants.HOST));
+                statement.setObject(17, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setObject(18, UUID.fromString((String)map.get("instanceId")));
 
                 int count = statement.executeUpdate();
@@ -17036,7 +17036,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("pipelineId"));
                 statement.setObject(3, UUID.fromString((String)map.get("platformId")));
                 statement.setString(4, (String)map.get("endpoint"));
@@ -17085,7 +17085,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(4, (String)map.get("responseSchema"));
                 statement.setString(5,(String) event.get(Constants.USER));
                 statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(7, (String)event.get(Constants.HOST));
+                statement.setObject(7, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(8, (String)map.get("pipelineId"));
 
 
@@ -17123,7 +17123,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("pipelineId"));
 
                 int count = statement.executeUpdate();
@@ -17487,7 +17487,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setObject(2, UUID.fromString((String)map.get("platformId")));
                 statement.setString(3, (String)map.get("platformName"));
                 statement.setString(4, (String)map.get("platformVersion"));
@@ -17624,7 +17624,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
                 statement.setString(14, (String)event.get(Constants.USER));
                 statement.setObject(15, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(16, (String)event.get(Constants.HOST));
+                statement.setObject(16, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setObject(17, UUID.fromString((String)map.get("platformId")));
 
                 int count = statement.executeUpdate();
@@ -17662,7 +17662,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setObject(2, UUID.fromString((String)map.get("platformId")));
 
                 int count = statement.executeUpdate();
@@ -17832,7 +17832,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setObject(2, UUID.fromString((String)map.get("deploymentId")));
                 statement.setObject(3, UUID.fromString((String)map.get("instanceId")));
                 statement.setString(4, (String)map.get("deploymentStatus"));
@@ -17885,7 +17885,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setObject(4, map.get("scheduleTs") != null ? OffsetDateTime.parse((String)map.get("scheduleTs")) : OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
                 statement.setString(5, (String)event.get(Constants.USER));
                 statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(7, (String)event.get(Constants.HOST));
+                statement.setObject(7, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setObject(8, UUID.fromString((String)map.get("deploymentId")));
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -17924,7 +17924,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, (String)map.get("platformJobId"));
                 statement.setString(2, (String)event.get(Constants.USER));
                 statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(4, (String)event.get(Constants.HOST));
+                statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setObject(5, UUID.fromString((String)map.get("deploymentId")));
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -17965,7 +17965,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, (String)map.get("deploymentStatus"));
                 statement.setString(2, (String)event.get(Constants.USER));
                 statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(4, (String)event.get(Constants.HOST));
+                statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setObject(5, UUID.fromString((String)map.get("deploymentId")));
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -18001,7 +18001,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setObject(2, UUID.fromString((String)map.get("deploymentId")));
 
                 int count = statement.executeUpdate();
