@@ -3621,8 +3621,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         addCondition(whereClause, parameters, "provider_id", providerId);
         addCondition(whereClause, parameters, "provider_name", providerName);
         addCondition(whereClause, parameters, "provider_desc", providerDesc);
-        addCondition(whereClause, parameters, "operation_owner", operationOwner);
-        addCondition(whereClause, parameters, "delivery_owner", deliveryOwner);
+        addCondition(whereClause, parameters, "operation_owner", operationOwner != null ? UUID.fromString(operationOwner) : null);
+        addCondition(whereClause, parameters, "delivery_owner", deliveryOwner != null ? UUID.fromString(deliveryOwner) : null);
         addCondition(whereClause, parameters, "jwk", jwk);
 
         if (!whereClause.isEmpty()) {
@@ -3658,8 +3658,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("providerId", resultSet.getString("provider_id"));
                     map.put("providerName", resultSet.getString("provider_name"));
                     map.put("providerDesc", resultSet.getString("provider_desc"));
-                    map.put("operationOwner", resultSet.getString("operation_owner"));
-                    map.put("deliveryOwner", resultSet.getString("delivery_owner"));
+                    map.put("operationOwner", resultSet.getObject("operation_owner", UUID.class));
+                    map.put("deliveryOwner", resultSet.getObject("delivery_owner", UUID.class));
                     map.put("jwk", resultSet.getString("jwk"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     // handling date properly
@@ -3703,14 +3703,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     statement.setNull(4, Types.VARCHAR);
                 }
                 if(map.containsKey("operationOwner")) {
-                    statement.setString(5, (String)map.get("operationOwner"));
+                    statement.setObject(5, UUID.fromString((String)map.get("operationOwner")));
                 } else {
-                    statement.setNull(5, Types.VARCHAR);
+                    statement.setNull(5, Types.OTHER);
                 }
                 if(map.containsKey("deliveryOwner")) {
-                    statement.setString(6, (String)map.get("deliveryOwner"));
+                    statement.setObject(6, UUID.fromString((String)map.get("deliveryOwner")));
                 } else {
-                    statement.setNull(6, Types.VARCHAR);
+                    statement.setNull(6, Types.OTHER);
                 }
                 if(map.containsKey("jwk")) {
                     statement.setString(7, (String)map.get("jwk"));
@@ -3901,14 +3901,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     statement.setNull(2, Types.VARCHAR);
                 }
                 if(map.containsKey("operationOwner")) {
-                    statement.setString(3, (String)map.get("operationOwner"));
+                    statement.setObject(3, UUID.fromString((String)map.get("operationOwner")));
                 } else {
-                    statement.setNull(3, Types.VARCHAR);
+                    statement.setNull(3, Types.OTHER);
                 }
                 if(map.containsKey("deliveryOwner")) {
-                    statement.setString(4, (String)map.get("deliveryOwner"));
+                    statement.setObject(4, UUID.fromString((String)map.get("deliveryOwner")));
                 } else {
-                    statement.setNull(4, Types.VARCHAR);
+                    statement.setNull(4, Types.OTHER);
                 }
                 statement.setString(5, (String)event.get(Constants.USER));
                 statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
@@ -4034,8 +4034,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         addCondition(whereClause, parameters, "app_name", appName);
         addCondition(whereClause, parameters, "app_desc", appDesc);
         addCondition(whereClause, parameters, "is_kafka_app", isKafkaApp);
-        addCondition(whereClause, parameters, "operation_owner", operationOwner);
-        addCondition(whereClause, parameters, "delivery_owner", deliveryOwner);
+        addCondition(whereClause, parameters, "operation_owner", operationOwner != null ? UUID.fromString(operationOwner) : null);
+        addCondition(whereClause, parameters, "delivery_owner", deliveryOwner != null ? UUID.fromString(deliveryOwner) : null);
 
         if (!whereClause.isEmpty()) {
             sqlBuilder.append("AND ").append(whereClause);
@@ -4072,8 +4072,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("appName", resultSet.getString("app_name"));
                     map.put("appDesc", resultSet.getString("app_desc"));
                     map.put("isKafkaApp", resultSet.getBoolean("is_kafka_app"));
-                    map.put("operationOwner", resultSet.getString("operation_owner"));
-                    map.put("deliveryOwner", resultSet.getString("delivery_owner"));
+                    map.put("operationOwner", resultSet.getObject("operation_owner", UUID.class));
+                    map.put("deliveryOwner", resultSet.getObject("delivery_owner", UUID.class));
                     apps.add(map);
                 }
             }
@@ -4213,12 +4213,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     statement.setNull(5, Types.BOOLEAN);
                 }
                 if (map.containsKey("operationOwner")) {
-                    statement.setString(6, (String) map.get("operationOwner"));
+                    statement.setObject(6, UUID.fromString((String) map.get("operationOwner")));
                 } else {
-                    statement.setNull(6, Types.VARCHAR);
+                    statement.setNull(6, Types.OTHER);
                 }
                 if (map.containsKey("deliveryOwner")) {
-                    statement.setString(7, (String) map.get("deliveryOwner"));
+                    statement.setObject(7, UUID.fromString((String) map.get("deliveryOwner")));
                 } else {
                     statement.setNull(7, Types.VARCHAR);
                 }
@@ -4276,12 +4276,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 }
 
                 if (map.containsKey("operationOwner")) {
-                    statement.setString(4, (String) map.get("operationOwner"));
+                    statement.setObject(4, UUID.fromString((String) map.get("operationOwner")));
                 } else {
-                    statement.setNull(4, Types.VARCHAR);
+                    statement.setNull(4, Types.OTHER);
                 }
                 if (map.containsKey("deliveryOwner")) {
-                    statement.setString(5, (String) map.get("deliveryOwner"));
+                    statement.setObject(5, UUID.fromString((String) map.get("deliveryOwner")));
                 } else {
                     statement.setNull(5, Types.VARCHAR);
                 }
@@ -4760,26 +4760,19 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 } else {
                     statement.setNull(4, Types.VARCHAR);
                 }
-                if (map.containsKey("operationOwner")) {
-                    String operationOwner = (String) map.get("operationOwner");
-                    if(operationOwner != null && !operationOwner.trim().isEmpty()) {
-                        statement.setString(5, operationOwner);
-                    } else {
-                        statement.setNull(5, Types.VARCHAR);
-                    }
+                String operationOwner = (String)map.get("operationOwner");
+                if(operationOwner != null && !operationOwner.trim().isEmpty()) {
+                    statement.setObject(5, UUID.fromString(operationOwner));
                 } else {
-                    statement.setNull(5, Types.VARCHAR);
+                    statement.setNull(5, Types.OTHER);
                 }
-                if (map.containsKey("deliveryOwner")) {
-                    String deliveryOwner = (String) map.get("deliveryOwner");
-                    if(deliveryOwner != null && !deliveryOwner.trim().isEmpty()) {
-                        statement.setString(6, deliveryOwner);
-                    } else {
-                        statement.setNull(6, Types.VARCHAR);
-                    }
+                String deliveryOwner = (String) map.get("deliveryOwner");
+                if(deliveryOwner != null && !deliveryOwner.trim().isEmpty()) {
+                    statement.setObject(6, UUID.fromString(deliveryOwner));
                 } else {
-                    statement.setNull(6, Types.VARCHAR);
+                    statement.setNull(6, Types.OTHER);
                 }
+
                 if (map.containsKey("region")) {
                     String region = (String) map.get("region");
                     if(region != null && !region.trim().isEmpty()) {
@@ -4902,26 +4895,20 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 } else {
                     statement.setNull(2, Types.VARCHAR);
                 }
-                if (map.containsKey("operationOwner")) {
-                    String operationOwner = (String) map.get("operationOwner");
-                    if(operationOwner != null && !operationOwner.trim().isEmpty()) {
-                        statement.setString(3, operationOwner);
-                    } else {
-                        statement.setNull(3, Types.VARCHAR);
-                    }
+                String operationOwner = (String) map.get("operationOwner");
+                if(operationOwner != null && !operationOwner.trim().isEmpty()) {
+                    statement.setObject(3, UUID.fromString(operationOwner));
                 } else {
-                    statement.setNull(3, Types.VARCHAR);
+                    statement.setNull(3, Types.OTHER);
                 }
-                if (map.containsKey("deliveryOwner")) {
-                    String deliveryOwner = (String) map.get("deliveryOwner");
-                    if(deliveryOwner != null && !deliveryOwner.trim().isEmpty()) {
-                        statement.setString(4, deliveryOwner);
-                    } else {
-                        statement.setNull(4, Types.VARCHAR);
-                    }
+
+                String deliveryOwner = (String) map.get("deliveryOwner");
+                if(deliveryOwner != null && !deliveryOwner.trim().isEmpty()) {
+                    statement.setObject(4, UUID.fromString(deliveryOwner));
                 } else {
-                    statement.setNull(4, Types.VARCHAR);
+                    statement.setNull(4, Types.OTHER);
                 }
+
                 if (map.containsKey("region")) {
                     String region = (String) map.get("region");
                     if(region != null && !region.trim().isEmpty()) {
@@ -5083,8 +5070,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         addCondition(whereClause, parameters, "api_id", apiId);
         addCondition(whereClause, parameters, "api_name", apiName);
         addCondition(whereClause, parameters, "api_desc", apiDesc);
-        addCondition(whereClause, parameters, "operation_owner", operationOwner);
-        addCondition(whereClause, parameters, "delivery_owner", deliveryOwner);
+        addCondition(whereClause, parameters, "operation_owner", operationOwner != null ? UUID.fromString(operationOwner) : null);
+        addCondition(whereClause, parameters, "delivery_owner", deliveryOwner != null ? UUID.fromString(deliveryOwner) : null);
         addCondition(whereClause, parameters, "region", region);
         addCondition(whereClause, parameters, "business_group", businessGroup);
         addCondition(whereClause, parameters, "lob", lob);
@@ -5130,8 +5117,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("apiId", resultSet.getString("api_id"));
                     map.put("apiName", resultSet.getString("api_name"));
                     map.put("apiDesc", resultSet.getString("api_desc"));
-                    map.put("operationOwner", resultSet.getString("operation_owner"));
-                    map.put("deliveryOwner", resultSet.getString("delivery_owner"));
+                    map.put("operationOwner", resultSet.getObject("operation_owner", UUID.class));
+                    map.put("deliveryOwner", resultSet.getObject("delivery_owner", UUID.class));
                     map.put("region", resultSet.getString("region"));
                     map.put("businessGroup", resultSet.getString("business_group"));
                     map.put("lob", resultSet.getString("lob"));
