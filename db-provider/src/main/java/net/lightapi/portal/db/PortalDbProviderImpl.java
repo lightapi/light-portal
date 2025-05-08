@@ -12804,8 +12804,37 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createRoleRowFilter(Map<String, Object> event) {
-        final String insertRole = "INSERT INTO role_row_filter_t (host_id, role_id, api_id, api_version, endpoint, col_name, operator, col_value, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        final String insertRole = """
+                INSERT INTO role_row_filter_t (
+                    host_id,
+                    role_id,
+                    endpoint_id,  -- Now using the resolved endpoint_id
+                    col_name,
+                    operator,
+                    col_value,
+                    update_user,
+                    update_ts
+                )
+                SELECT
+                    ?,              -- host_id parameter
+                    ?,              -- role_id parameter
+                    e.endpoint_id,  -- Resolved from the join
+                    ?,              -- col_name parameter
+                    ?,              -- operator parameter
+                    ?,              -- col_value parameter
+                    ?,              -- update_user parameter
+                    ?               -- update_ts parameter (or use DEFAULT for CURRENT_TIMESTAMP)
+                FROM
+                    api_endpoint_t e
+                JOIN
+                    api_version_t v ON e.host_id = v.host_id
+                                   AND e.api_version_id = v.api_version_id
+                WHERE
+                    e.host_id = ?                  -- Same as the first host_id parameter
+                    AND v.api_id = ?               -- api_id parameter
+                    AND v.api_version = ?          -- api_version parameter
+                    AND e.endpoint = ?;            -- endpoint parameter
+                """;
 
         Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -12815,14 +12844,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(insertRole)) {
                 statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("roleId"));
-                statement.setString(3, (String)map.get("apiId"));
-                statement.setString(4, (String)map.get("apiVersion"));
-                statement.setString(5, (String)map.get("endpoint"));
-                statement.setString(6, (String)map.get("colName"));
-                statement.setString(7, (String)map.get("operator"));
-                statement.setString(8, (String)map.get("colValue"));
-                statement.setString(9, (String)event.get(Constants.USER));
-                statement.setObject(10, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setString(3, (String)map.get("colName"));
+                statement.setString(4, (String)map.get("operator"));
+                statement.setString(5, (String)map.get("colValue"));
+                statement.setString(6, (String)event.get(Constants.USER));
+                statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setObject(8, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setString(9, (String)map.get("apiId"));
+                statement.setString(10, (String)map.get("apiVersion"));
+                statement.setString(11, (String)map.get("endpoint"));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -12851,8 +12881,29 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateRoleRowFilter(Map<String, Object> event) {
-        final String updateRole = "UPDATE role_row_filter_t SET operator = ?, col_value = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? AND role_id = ? AND api_id = ? AND api_version = ? AND endpoint = ? AND col_name = ?";
+        final String updateRole =
+                """
+                        UPDATE role_row_filter_t
+                        SET
+                            operator = ?,
+                            col_value = ?,
+                            update_user = ?,
+                            update_ts = ?
+                        WHERE
+                            host_id = ?
+                            AND role_id = ?
+                            AND col_name = ?
+                            AND endpoint_id IN (
+                                SELECT e.endpoint_id
+                                FROM api_endpoint_t e
+                                JOIN api_version_t v ON e.host_id = v.host_id
+                                                    AND e.api_version_id = v.api_version_id
+                                WHERE e.host_id = ?
+                                  AND v.api_id = ?
+                                  AND v.api_version = ?
+                                  AND e.endpoint = ?
+                            )
+                """;
 
         Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -12866,10 +12917,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
                 statement.setObject(5, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(6, (String)map.get("roleId"));
-                statement.setString(7, (String)map.get("apiId"));
-                statement.setString(8, (String)map.get("apiVersion"));
-                statement.setString(9, (String)map.get("endpoint"));
-                statement.setString(10, (String)map.get("colName"));
+                statement.setString(7, (String)map.get("colName"));
+                statement.setObject(8, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setString(9, (String)map.get("apiId"));
+                statement.setString(10, (String)map.get("apiVersion"));
+                statement.setString(11, (String)map.get("endpoint"));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -12971,8 +13023,34 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createRoleColFilter(Map<String, Object> event) {
-        final String insertRole = "INSERT INTO role_col_filter_t (host_id, role_id, api_id, api_version, endpoint, columns, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        final String insertRole =
+                """
+                    INSERT INTO role_col_filter_t (
+                        host_id,
+                        role_id,
+                        endpoint_id,  -- Using resolved endpoint_id instead of api_id/api_version/endpoint
+                        columns,
+                        update_user,
+                        update_ts
+                    )
+                    SELECT
+                        ?,              -- host_id parameter
+                        ?,              -- role_id parameter
+                        e.endpoint_id,  -- Resolved from the join
+                        ?,              -- columns parameter
+                        ?,              -- update_user parameter
+                        ?               -- update_ts parameter (or use DEFAULT for CURRENT_TIMESTAMP)
+                    FROM
+                        api_endpoint_t e
+                    JOIN
+                        api_version_t v ON e.host_id = v.host_id
+                                       AND e.api_version_id = v.api_version_id
+                    WHERE
+                        e.host_id = ?                  -- Same as the first host_id parameter
+                        AND v.api_id = ?               -- api_id parameter
+                        AND v.api_version = ?          -- api_version parameter
+                        AND e.endpoint = ?;            -- endpoint parameter
+                """;
 
         Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -12982,12 +13060,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(insertRole)) {
                 statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("roleId"));
-                statement.setString(3, (String)map.get("apiId"));
-                statement.setString(4, (String)map.get("apiVersion"));
-                statement.setString(5, (String)map.get("endpoint"));
-                statement.setString(6, (String)map.get("columns"));
-                statement.setString(7, (String)event.get(Constants.USER));
-                statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setString(3, (String)map.get("columns"));
+                statement.setString(4, (String)event.get(Constants.USER));
+                statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setString(7, (String)map.get("apiId"));
+                statement.setString(8, (String)map.get("apiVersion"));
+                statement.setString(9, (String)map.get("endpoint"));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -13016,7 +13095,25 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> deleteRoleColFilter(Map<String, Object> event) {
-        final String deleteRole = "DELETE from role_col_filter_t WHERE host_id = ? AND role_id = ? AND api_id = ? AND api_version = ? AND endpoint = ?";
+        final String deleteRole =
+        """
+            DELETE FROM role_col_filter_t rcf
+            WHERE rcf.host_id = ?
+              AND rcf.role_id = ?
+              AND rcf.endpoint_id IN (
+                SELECT e.endpoint_id
+                FROM api_endpoint_t e
+                JOIN api_version_t v ON e.host_id = v.host_id
+                                    AND e.api_version_id = v.api_version_id
+                WHERE e.host_id = ?          -- Same host_id as above
+                  AND v.api_id = ?           -- Your api_id parameter
+                  AND v.api_version = ?      -- Your api_version parameter
+                  AND e.endpoint = ?         -- Your endpoint parameter
+              );
+
+        DELETE from role_col_filter_t WHERE host_id = ? AND role_id = ? AND api_id = ? AND api_version = ? AND endpoint = ?
+        """;
+
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
@@ -13024,9 +13121,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(deleteRole)) {
                 statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("roleId"));
-                statement.setString(3, (String)map.get("apiId"));
-                statement.setString(4, (String)map.get("apiVersion"));
-                statement.setString(5, (String)map.get("endpoint"));
+                statement.setObject(3, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setString(4, (String)map.get("apiId"));
+                statement.setString(5, (String)map.get("apiVersion"));
+                statement.setString(6, (String)map.get("endpoint"));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -13055,8 +13153,27 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateRoleColFilter(Map<String, Object> event) {
-        final String updateRole = "UPDATE role_col_filter_t SET columns = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? AND role_id = ? AND api_id = ? AND api_version = ? AND endpoint = ?";
+        final String updateRole =
+                """
+                        UPDATE role_col_filter_t
+                        SET
+                            columns = ?,
+                            update_user = ?,
+                            update_ts = ?
+                        WHERE
+                            host_id = ?
+                            AND role_id = ?
+                            AND endpoint_id IN (
+                                SELECT e.endpoint_id
+                                FROM api_endpoint_t e
+                                JOIN api_version_t v ON e.host_id = v.host_id
+                                                    AND e.api_version_id = v.api_version_id
+                                WHERE e.host_id = ?
+                                  AND v.api_id = ?
+                                  AND v.api_version = ?
+                                  AND e.endpoint = ?
+                            )
+                """;
 
         Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -13069,9 +13186,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
                 statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(5, (String)map.get("roleId"));
-                statement.setString(6, (String)map.get("apiId"));
-                statement.setString(7, (String)map.get("apiVersion"));
-                statement.setString(8, (String)map.get("endpoint"));
+                statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setString(7, (String)map.get("apiId"));
+                statement.setString(8, (String)map.get("apiVersion"));
+                statement.setString(9, (String)map.get("endpoint"));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -13496,7 +13614,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> createGroupPermission(Map<String, Object> event) {
         final String insertGroup =
                 """
-                    INSERT INTO role_permission_t (host_id, group_id, endpoint_id, update_user, update_ts)
+                    INSERT INTO group_permission_t (host_id, group_id, endpoint_id, update_user, update_ts)
                     VALUES (
                         ?,
                         ?,
@@ -13831,8 +13949,39 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createGroupRowFilter(Map<String, Object> event) {
-        final String insertGroup = "INSERT INTO group_row_filter_t (host_id, group_id, api_id, api_version, endpoint, col_name, operator, col_value, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        final String insertGroup =
+                """
+                    INSERT INTO group_row_filter_t (
+                        host_id,
+                        group_id,
+                        endpoint_id,  -- Using resolved endpoint_id instead of direct API references
+                        col_name,
+                        operator,
+                        col_value,
+                        update_user,
+                        update_ts
+                    )
+                    SELECT
+                        ?,              -- host_id parameter (1st)
+                        ?,              -- group_id parameter
+                        e.endpoint_id,  -- Resolved from join
+                        ?,              -- col_name parameter
+                        ?,              -- operator parameter
+                        ?,              -- col_value parameter
+                        ?,              -- update_user parameter
+                        ?               -- update_ts parameter (or use DEFAULT)
+                    FROM
+                        api_endpoint_t e
+                    JOIN
+                        api_version_t v ON e.host_id = v.host_id
+                                       AND e.api_version_id = v.api_version_id
+                    WHERE
+                        e.host_id = ?                  -- Same as first host_id parameter
+                        AND v.api_id = ?               -- api_id parameter
+                        AND v.api_version = ?          -- api_version parameter
+                        AND e.endpoint = ?             -- endpoint parameter
+
+                """;
 
         Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -13842,14 +13991,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
                 statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("groupId"));
-                statement.setString(3, (String)map.get("apiId"));
-                statement.setString(4, (String)map.get("apiVersion"));
-                statement.setString(5, (String)map.get("endpoint"));
-                statement.setString(6, (String)map.get("colName"));
-                statement.setString(7, (String)map.get("operator"));
-                statement.setString(8, (String)map.get("colValue"));
-                statement.setString(9, (String)event.get(Constants.USER));
-                statement.setObject(10, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setString(3, (String)map.get("colName"));
+                statement.setString(4, (String)map.get("operator"));
+                statement.setString(5, (String)map.get("colValue"));
+                statement.setString(6, (String)event.get(Constants.USER));
+                statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setObject(8, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setString(9, (String)map.get("apiId"));
+                statement.setString(10, (String)map.get("apiVersion"));
+                statement.setString(11, (String)map.get("endpoint"));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -13878,8 +14028,29 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateGroupRowFilter(Map<String, Object> event) {
-        final String updateGroup = "UPDATE group_row_filter_t SET operator = ?, col_value = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? AND group_id = ? AND api_id = ? AND api_version = ? AND endpoint = ? AND col_name = ?";
+        final String updateGroup =
+                """
+                    UPDATE group_row_filter_t
+                    SET\s
+                        operator = ?,
+                        col_value = ?,
+                        update_user = ?,
+                        update_ts = ?
+                    WHERE\s
+                        host_id = ?
+                        AND group_id = ?
+                        AND col_name = ?
+                        AND endpoint_id IN (
+                            SELECT e.endpoint_id
+                            FROM api_endpoint_t e
+                            JOIN api_version_t v ON e.host_id = v.host_id\s
+                                                AND e.api_version_id = v.api_version_id
+                            WHERE e.host_id = ?
+                              AND v.api_id = ?
+                              AND v.api_version = ?
+                              AND e.endpoint = ?
+                        )
+                """;
 
         Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -13893,10 +14064,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
                 statement.setObject(5, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(6, (String)map.get("groupId"));
-                statement.setString(7, (String)map.get("apiId"));
-                statement.setString(8, (String)map.get("apiVersion"));
-                statement.setString(9, (String)map.get("endpoint"));
-                statement.setString(10, (String)map.get("colName"));
+                statement.setString(7, (String)map.get("colName"));
+                statement.setObject(8, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setString(9, (String)map.get("apiId"));
+                statement.setString(10, (String)map.get("apiVersion"));
+                statement.setString(11, (String)map.get("endpoint"));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -13925,7 +14097,23 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> deleteGroupRowFilter(Map<String, Object> event) {
-        final String deleteGroup = "DELETE from group_row_filter_t WHERE host_id = ? AND group_id = ? AND api_id = ? AND api_version = ? AND endpoint = ? AND col_name = ?";
+        final String deleteGroup =
+        """
+            DELETE FROM group_row_filter_t
+            WHERE host_id = ?
+              AND group_id = ?
+              AND col_name = ?
+              AND endpoint_id IN (
+                  SELECT e.endpoint_id
+                  FROM api_endpoint_t e
+                  JOIN api_version_t v ON e.host_id = v.host_id\s
+                                      AND e.api_version_id = v.api_version_id
+                  WHERE e.host_id = ?
+                    AND v.api_id = ?
+                    AND v.api_version = ?
+                    AND e.endpoint = ?
+              )
+        """;
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
@@ -13933,10 +14121,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
                 statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("groupId"));
-                statement.setString(3, (String)map.get("apiId"));
-                statement.setString(4, (String)map.get("apiVersion"));
-                statement.setString(5, (String)map.get("endpoint"));
-                statement.setString(6, (String)map.get("colName"));
+                statement.setString(3, (String)map.get("colName"));
+                statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setString(5, (String)map.get("apiId"));
+                statement.setString(6, (String)map.get("apiVersion"));
+                statement.setString(7, (String)map.get("endpoint"));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -14038,8 +14227,34 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createGroupColFilter(Map<String, Object> event) {
-        final String insertGroup = "INSERT INTO group_col_filter_t (host_id, group_id, api_id, api_version, endpoint, columns, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        final String insertGroup =
+                """
+                    INSERT INTO group_col_filter_t (
+                        host_id,
+                        group_id,
+                        endpoint_id,  -- Using resolved endpoint_id instead of direct API references
+                        columns,
+                        update_user,
+                        update_ts
+                    )
+                    SELECT
+                        ?,              -- host_id parameter (1st)
+                        ?,              -- group_id parameter
+                        e.endpoint_id,  -- Resolved from join
+                        ?,              -- columns parameter
+                        ?,              -- update_user parameter
+                        ?               -- update_ts parameter (or use DEFAULT)
+                    FROM
+                        api_endpoint_t e
+                    JOIN
+                        api_version_t v ON e.host_id = v.host_id
+                                       AND e.api_version_id = v.api_version_id
+                    WHERE
+                        e.host_id = ?                  -- Same as first host_id parameter
+                        AND v.api_id = ?               -- api_id parameter
+                        AND v.api_version = ?          -- api_version parameter
+                        AND e.endpoint = ?            -- endpoint parameter
+                """;
 
         Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -14049,12 +14264,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
                 statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("groupId"));
-                statement.setString(3, (String)map.get("apiId"));
-                statement.setString(4, (String)map.get("apiVersion"));
-                statement.setString(5, (String)map.get("endpoint"));
-                statement.setString(6, (String)map.get("columns"));
-                statement.setString(7, (String)event.get(Constants.USER));
-                statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setString(3, (String)map.get("columns"));
+                statement.setString(4, (String)event.get(Constants.USER));
+                statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setString(7, (String)map.get("apiId"));
+                statement.setString(8, (String)map.get("apiVersion"));
+                statement.setString(9, (String)map.get("endpoint"));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -14083,8 +14299,27 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateGroupColFilter(Map<String, Object> event) {
-        final String updateGroup = "UPDATE group_col_filter_t SET columns = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? AND group_id = ? AND api_id = ? AND api_version = ? AND endpoint = ?";
+        final String updateGroup =
+                """
+                    UPDATE group_col_filter_t
+                    SET
+                        columns = ?,
+                        update_user = ?,
+                        update_ts = ?
+                    WHERE
+                        host_id = ?
+                        AND group_id = ?
+                        AND endpoint_id IN (
+                            SELECT e.endpoint_id
+                            FROM api_endpoint_t e
+                            JOIN api_version_t v ON e.host_id = v.host_id
+                                                AND e.api_version_id = v.api_version_id
+                            WHERE e.host_id = ?
+                              AND v.api_id = ?
+                              AND v.api_version = ?
+                              AND e.endpoint = ?
+                        )
+                """;
 
         Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -14097,9 +14332,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
                 statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(5, (String)map.get("groupId"));
-                statement.setString(6, (String)map.get("apiId"));
-                statement.setString(7, (String)map.get("apiVersion"));
-                statement.setString(8, (String)map.get("endpoint"));
+                statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setString(7, (String)map.get("apiId"));
+                statement.setString(8, (String)map.get("apiVersion"));
+                statement.setString(9, (String)map.get("endpoint"));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -14128,7 +14364,22 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> deleteGroupColFilter(Map<String, Object> event) {
-        final String deleteGroup = "DELETE from group_col_filter_t WHERE host_id = ? AND group_id = ? AND api_id = ? AND api_version = ? AND endpoint = ?";
+        final String deleteGroup =
+        """
+            DELETE FROM group_col_filter_t
+            WHERE host_id = ?
+              AND group_id = ?
+              AND endpoint_id IN (
+                  SELECT e.endpoint_id
+                  FROM api_endpoint_t e
+                  JOIN api_version_t v ON e.host_id = v.host_id\s
+                                      AND e.api_version_id = v.api_version_id
+                  WHERE e.host_id = ?
+                    AND v.api_id = ?
+                    AND v.api_version = ?
+                    AND e.endpoint = ?
+              )
+        """;
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
@@ -14136,9 +14387,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
                 statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("groupId"));
-                statement.setString(3, (String)map.get("apiId"));
-                statement.setString(4, (String)map.get("apiVersion"));
-                statement.setString(5, (String)map.get("endpoint"));
+                statement.setObject(3, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setString(4, (String)map.get("apiId"));
+                statement.setString(5, (String)map.get("apiVersion"));
+                statement.setString(6, (String)map.get("endpoint"));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -14931,8 +15183,38 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createPositionRowFilter(Map<String, Object> event) {
-        final String insertGroup = "INSERT INTO position_row_filter_t (host_id, position_id, api_id, api_version, endpoint, col_name, operator, col_value, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        final String insertGroup =
+                """
+                    INSERT INTO position_row_filter_t (
+                        host_id,
+                        position_id,
+                        endpoint_id,  -- Using resolved endpoint_id instead of direct API references
+                        col_name,
+                        operator,
+                        col_value,
+                        update_user,
+                        update_ts
+                    )
+                    SELECT
+                        ?,              -- host_id parameter (1st)
+                        ?,              -- position_id parameter
+                        e.endpoint_id,  -- Resolved from join
+                        ?,              -- col_name parameter
+                        ?,              -- operator parameter
+                        ?,              -- col_value parameter
+                        ?,              -- update_user parameter
+                        ?               -- update_ts parameter (or use DEFAULT)
+                    FROM
+                        api_endpoint_t e
+                    JOIN
+                        api_version_t v ON e.host_id = v.host_id
+                                       AND e.api_version_id = v.api_version_id
+                    WHERE
+                        e.host_id = ?                  -- Same as first host_id parameter
+                        AND v.api_id = ?               -- api_id parameter
+                        AND v.api_version = ?          -- api_version parameter
+                        AND e.endpoint = ?            -- endpoint parameter
+                """;
 
         Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -14942,14 +15224,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
                 statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("positionId"));
-                statement.setString(3, (String)map.get("apiId"));
-                statement.setString(4, (String)map.get("apiVersion"));
-                statement.setString(5, (String)map.get("endpoint"));
-                statement.setString(6, (String)map.get("colName"));
-                statement.setString(7, (String)map.get("operator"));
-                statement.setString(8, (String)map.get("colValue"));
-                statement.setString(9, (String)event.get(Constants.USER));
-                statement.setObject(10, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setString(3, (String)map.get("colName"));
+                statement.setString(4, (String)map.get("operator"));
+                statement.setString(5, (String)map.get("colValue"));
+                statement.setString(6, (String)event.get(Constants.USER));
+                statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setObject(8, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setString(9, (String)map.get("apiId"));
+                statement.setString(10, (String)map.get("apiVersion"));
+                statement.setString(11, (String)map.get("endpoint"));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -14978,8 +15261,29 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updatePositionRowFilter(Map<String, Object> event) {
-        final String updateGroup = "UPDATE position_row_filter_t SET operator = ?, col_value = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? AND position_id = ? AND api_id = ? AND api_version = ? AND endpoint = ? AND col_name = ?";
+        final String updateGroup =
+                """
+                    UPDATE position_row_filter_t
+                    SET
+                        operator = ?,
+                        col_value = ?,
+                        update_user = ?,
+                        update_ts = ?
+                    WHERE
+                        host_id = ?
+                        AND position_id = ?
+                        AND col_name = ?
+                        AND endpoint_id IN (
+                            SELECT e.endpoint_id
+                            FROM api_endpoint_t e
+                            JOIN api_version_t v ON e.host_id = v.host_id
+                                                AND e.api_version_id = v.api_version_id
+                            WHERE e.host_id = ?
+                              AND v.api_id = ?
+                              AND v.api_version = ?
+                              AND e.endpoint = ?
+                        )
+                """;
 
         Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -14993,10 +15297,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
                 statement.setObject(5, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(6, (String)map.get("positionId"));
-                statement.setString(7, (String)map.get("apiId"));
-                statement.setString(8, (String)map.get("apiVersion"));
-                statement.setString(9, (String)map.get("endpoint"));
-                statement.setString(10, (String)map.get("colName"));
+                statement.setString(7, (String)map.get("colName"));
+                statement.setObject(8, UUID.fromString((String)event.get(Constants.HOST)));
+
+                statement.setString(9, (String)map.get("apiId"));
+                statement.setString(10, (String)map.get("apiVersion"));
+                statement.setString(11, (String)map.get("endpoint"));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -15025,7 +15331,23 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> deletePositionRowFilter(Map<String, Object> event) {
-        final String deleteGroup = "DELETE from position_row_filter_t WHERE host_id = ? AND position_id = ? AND api_id = ? AND api_version = ? AND endpoint = ? AND col_name = ?";
+        final String deleteGroup =
+        """
+            DELETE FROM position_row_filter_t
+            WHERE host_id = ?
+              AND position_id = ?
+              AND col_name = ?
+              AND endpoint_id IN (
+                  SELECT e.endpoint_id
+                  FROM api_endpoint_t e
+                  JOIN api_version_t v ON e.host_id = v.host_id
+                                      AND e.api_version_id = v.api_version_id
+                  WHERE e.host_id = ?
+                    AND v.api_id = ?
+                    AND v.api_version = ?
+                    AND e.endpoint = ?
+              )
+        """;
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
@@ -15033,10 +15355,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
                 statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("positionId"));
-                statement.setString(3, (String)map.get("apiId"));
-                statement.setString(4, (String)map.get("apiVersion"));
-                statement.setString(5, (String)map.get("endpoint"));
-                statement.setString(6, (String)map.get("colName"));
+                statement.setString(3, (String)map.get("colName"));
+                statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setString(5, (String)map.get("apiId"));
+                statement.setString(6, (String)map.get("apiVersion"));
+                statement.setString(7, (String)map.get("endpoint"));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -15137,8 +15460,34 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createPositionColFilter(Map<String, Object> event) {
-        final String insertGroup = "INSERT INTO position_col_filter_t (host_id, position_id, api_id, api_version, endpoint, columns, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        final String insertGroup =
+                """
+                    INSERT INTO position_col_filter_t (
+                        host_id,
+                        position_id,
+                        endpoint_id,  -- Using resolved endpoint_id instead of direct API references
+                        columns,
+                        update_user,
+                        update_ts
+                    )
+                    SELECT
+                        ?,              -- host_id parameter (1st)
+                        ?,              -- position_id parameter
+                        e.endpoint_id,  -- Resolved from join
+                        ?,              -- columns parameter
+                        ?,              -- update_user parameter
+                        ?               -- update_ts parameter (or use DEFAULT)
+                    FROM
+                        api_endpoint_t e
+                    JOIN
+                        api_version_t v ON e.host_id = v.host_id
+                                       AND e.api_version_id = v.api_version_id
+                    WHERE
+                        e.host_id = ?                  -- Same as first host_id parameter
+                        AND v.api_id = ?               -- api_id parameter
+                        AND v.api_version = ?          -- api_version parameter
+                        AND e.endpoint = ?             -- endpoint parameter
+                """;
 
         Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -15148,12 +15497,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
                 statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("positionId"));
-                statement.setString(3, (String)map.get("apiId"));
-                statement.setString(4, (String)map.get("apiVersion"));
-                statement.setString(5, (String)map.get("endpoint"));
-                statement.setString(6, (String)map.get("columns"));
-                statement.setString(7, (String)event.get(Constants.USER));
-                statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setString(3, (String)map.get("columns"));
+                statement.setString(4, (String)event.get(Constants.USER));
+                statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setString(7, (String)map.get("apiId"));
+                statement.setString(8, (String)map.get("apiVersion"));
+                statement.setString(9, (String)map.get("endpoint"));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -15182,8 +15532,27 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updatePositionColFilter(Map<String, Object> event) {
-        final String updateGroup = "UPDATE position_col_filter_t SET columns = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? AND position_id = ? AND api_id = ? AND api_version = ? AND endpoint = ?";
+        final String updateGroup =
+                """
+                    UPDATE position_col_filter_t
+                    SET
+                        columns = ?,
+                        update_user = ?,
+                        update_ts = ?
+                    WHERE
+                        host_id = ?
+                        AND position_id = ?
+                        AND endpoint_id IN (
+                            SELECT e.endpoint_id
+                            FROM api_endpoint_t e
+                            JOIN api_version_t v ON e.host_id = v.host_id
+                                                AND e.api_version_id = v.api_version_id
+                            WHERE e.host_id = ?
+                              AND v.api_id = ?
+                              AND v.api_version = ?
+                              AND e.endpoint = ?
+                        )
+                """;
 
         Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -15196,9 +15565,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
                 statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(5, (String)map.get("positionId"));
-                statement.setString(6, (String)map.get("apiId"));
-                statement.setString(7, (String)map.get("apiVersion"));
-                statement.setString(8, (String)map.get("endpoint"));
+                statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setString(7, (String)map.get("apiId"));
+                statement.setString(8, (String)map.get("apiVersion"));
+                statement.setString(9, (String)map.get("endpoint"));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -15227,7 +15597,22 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> deletePositionColFilter(Map<String, Object> event) {
-        final String deleteGroup = "DELETE from position_col_filter_t WHERE host_id = ? AND position_id = ? AND api_id = ? AND api_version = ? AND endpoint = ?";
+        final String deleteGroup =
+        """
+            DELETE FROM position_col_filter_t
+            WHERE host_id = ?
+              AND position_id = ?
+              AND endpoint_id IN (
+                  SELECT e.endpoint_id
+                  FROM api_endpoint_t e
+                  JOIN api_version_t v ON e.host_id = v.host_id
+                                      AND e.api_version_id = v.api_version_id
+                  WHERE e.host_id = ?
+                    AND v.api_id = ?
+                    AND v.api_version = ?
+                    AND e.endpoint = ?
+              )
+        """;
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
@@ -15235,9 +15620,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
                 statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("positionId"));
-                statement.setString(3, (String)map.get("apiId"));
-                statement.setString(4, (String)map.get("apiVersion"));
-                statement.setString(5, (String)map.get("endpoint"));
+                statement.setObject(3, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setString(4, (String)map.get("apiId"));
+                statement.setString(5, (String)map.get("apiVersion"));
+                statement.setString(6, (String)map.get("endpoint"));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -15696,7 +16082,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     VALUES (
                         ?,
                         ?,
-                        ?
+                        ?,
                         (SELECT e.endpoint_id
                          FROM api_endpoint_t e
                          JOIN api_version_t v ON e.host_id = v.host_id
@@ -16110,8 +16496,40 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createAttributeRowFilter(Map<String, Object> event) {
-        final String insertGroup = "INSERT INTO attribute_row_filter_t (host_id, attribute_id, attribute_value, api_id, api_version, endpoint, col_name, operator, col_value, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        final String insertGroup =
+                """
+                    INSERT INTO attribute_row_filter_t (
+                        host_id,
+                        attribute_id,
+                        attribute_value,
+                        endpoint_id,  -- Using resolved endpoint_id instead of direct API references
+                        col_name,
+                        operator,
+                        col_value,
+                        update_user,
+                        update_ts
+                    )
+                    SELECT
+                        ?,              -- host_id parameter (1st)
+                        ?,              -- attribute_id parameter
+                        ?,              -- attribute_value parameter
+                        e.endpoint_id,  -- Resolved from join
+                        ?,              -- col_name parameter
+                        ?,              -- operator parameter
+                        ?,              -- col_value parameter
+                        ?,              -- update_user parameter
+                        ?               -- update_ts parameter (or use DEFAULT)
+                    FROM
+                        api_endpoint_t e
+                    JOIN
+                        api_version_t v ON e.host_id = v.host_id
+                                       AND e.api_version_id = v.api_version_id
+                    WHERE
+                        e.host_id = ?                  -- Same as first host_id parameter
+                        AND v.api_id = ?               -- api_id parameter
+                        AND v.api_version = ?          -- api_version parameter
+                        AND e.endpoint = ?             -- endpoint parameter
+                """;
 
         Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -16122,14 +16540,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("attributeId"));
                 statement.setString(3, (String)map.get("attributeValue"));
-                statement.setString(4, (String)map.get("apiId"));
-                statement.setString(5, (String)map.get("apiVersion"));
-                statement.setString(6, (String)map.get("endpoint"));
-                statement.setString(7, (String)map.get("colName"));
-                statement.setString(8, (String)map.get("operator"));
-                statement.setString(9, (String)map.get("colValue"));
-                statement.setString(10, (String)event.get(Constants.USER));
-                statement.setObject(11, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setString(4, (String)map.get("colName"));
+                statement.setString(5, (String)map.get("operator"));
+                statement.setString(6, (String)map.get("colValue"));
+                statement.setString(7, (String)event.get(Constants.USER));
+                statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setObject(9, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setString(10, (String)map.get("apiId"));
+                statement.setString(11, (String)map.get("apiVersion"));
+                statement.setString(12, (String)map.get("endpoint"));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -16158,8 +16577,30 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateAttributeRowFilter(Map<String, Object> event) {
-        final String updateGroup = "UPDATE attribute_row_filter_t SET attribute_value = ?, api_id = ?, api_version = ?, endpoint = ?, col_name = ?, operator = ?, col_value = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? AND attribute_id = ?";
+        final String updateGroup =
+                """
+                        UPDATE attribute_row_filter_t arf
+                        SET
+                            attribute_value = ?,
+                            endpoint_id = (
+                                SELECT e.endpoint_id
+                                FROM api_endpoint_t e
+                                JOIN api_version_t v ON e.host_id = v.host_id
+                                                   AND e.api_version_id = v.api_version_id
+                                WHERE e.host_id = arf.host_id
+                                  AND v.api_id = ?
+                                  AND v.api_version = ?
+                                  AND e.endpoint = ?
+                            ),
+                            col_name = ?,
+                            operator = ?,
+                            col_value = ?,
+                            update_user = ?,
+                            update_ts = ?
+                        WHERE
+                            arf.host_id = ?
+                            AND arf.attribute_id = ?
+                """;
 
         Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -16175,7 +16616,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(7, (String)map.get("colValue"));
                 statement.setString(8, (String)event.get(Constants.USER));
                 statement.setObject(9, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-
                 statement.setObject(10, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(11, (String)map.get("attributeId"));
 
@@ -16206,8 +16646,22 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> deleteAttributeRowFilter(Map<String, Object> event) {
-        final String deleteGroup = "DELETE from attribute_row_filter_t WHERE host_id = ? AND attribute_id = ? " +
-                "AND api_id = ? AND api_version = ? AND endpoint = ?";
+        final String deleteGroup =
+                """
+                    DELETE FROM attribute_row_filter_t
+                    WHERE host_id = ?
+                      AND attribute_id = ?
+                      AND endpoint_id IN (
+                          SELECT e.endpoint_id
+                          FROM api_endpoint_t e
+                          JOIN api_version_t v ON e.host_id = v.host_id
+                                              AND e.api_version_id = v.api_version_id
+                          WHERE e.host_id = ?
+                            AND v.api_id = ?
+                            AND v.api_version = ?
+                            AND e.endpoint = ?
+                      )
+                """;
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
@@ -16215,9 +16669,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
                 statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("attributeId"));
-                statement.setString(3, (String)map.get("apiId"));
-                statement.setString(4, (String)map.get("apiVersion"));
-                statement.setString(5, (String)map.get("endpoint"));
+                statement.setObject(3, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setString(4, (String)map.get("apiId"));
+                statement.setString(5, (String)map.get("apiVersion"));
+                statement.setString(6, (String)map.get("endpoint"));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -16323,8 +16778,36 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createAttributeColFilter(Map<String, Object> event) {
-        final String insertGroup = "INSERT INTO attribute_col_filter_t (host_id, attribute_id, attribute_value, api_id, api_version, endpoint, columns, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        final String insertGroup =
+                """
+                    INSERT INTO attribute_col_filter_t (
+                        host_id,
+                        attribute_id,
+                        attribute_value,
+                        endpoint_id,  -- Using resolved endpoint_id instead of direct API references
+                        columns,
+                        update_user,
+                        update_ts
+                    )
+                    SELECT
+                        ?,              -- host_id parameter (1st)
+                        ?,              -- attribute_id parameter
+                        ?,              -- attribute_value parameter
+                        e.endpoint_id,  -- Resolved from join
+                        ?,              -- columns parameter
+                        ?,              -- update_user parameter
+                        ?               -- update_ts parameter (or use DEFAULT)
+                    FROM
+                        api_endpoint_t e
+                    JOIN
+                        api_version_t v ON e.host_id = v.host_id
+                                       AND e.api_version_id = v.api_version_id
+                    WHERE
+                        e.host_id = ?                  -- Same as first host_id parameter
+                        AND v.api_id = ?               -- api_id parameter
+                        AND v.api_version = ?          -- api_version parameter
+                        AND e.endpoint = ?             -- endpoint parameter
+                """;
 
         Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -16335,12 +16818,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(2, (String)map.get("attributeId"));
                 statement.setString(3, (String)map.get("attributeValue"));
-                statement.setString(4, (String)map.get("apiId"));
-                statement.setString(5, (String)map.get("apiVersion"));
-                statement.setString(6, (String)map.get("endpoint"));
-                statement.setString(7, (String)map.get("columns"));
-                statement.setString(8, (String)event.get(Constants.USER));
-                statement.setObject(9, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setString(4, (String)map.get("columns"));
+                statement.setString(5, (String)event.get(Constants.USER));
+                statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setObject(7, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setString(8, (String)map.get("apiId"));
+                statement.setString(9, (String)map.get("apiVersion"));
+                statement.setString(10, (String)map.get("endpoint"));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -16369,8 +16853,28 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateAttributeColFilter(Map<String, Object> event) {
-        final String updateGroup = "UPDATE attribute_col_filter_t SET attribute_value = ?, api_id = ?, api_version = ?, endpoint = ?, columns = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? AND attribute_id = ?";
+        final String updateGroup =
+                """
+                    UPDATE attribute_col_filter_t acf
+                    SET
+                        attribute_value = ?,
+                        endpoint_id = (
+                            SELECT e.endpoint_id
+                            FROM api_endpoint_t e
+                            JOIN api_version_t v ON e.host_id = v.host_id
+                                               AND e.api_version_id = v.api_version_id
+                            WHERE e.host_id = acf.host_id
+                              AND v.api_id = ?
+                              AND v.api_version = ?
+                              AND e.endpoint = ?
+                        ),
+                        columns = ?,
+                        update_user = ?,
+                        update_ts = ?
+                    WHERE
+                        acf.host_id = ?
+                        AND acf.attribute_id = ?
+                """;
 
         Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -16384,7 +16888,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(5, (String)map.get("columns"));
                 statement.setString(6, (String)event.get(Constants.USER));
                 statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-
                 statement.setObject(8, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setString(9, (String)map.get("attributeId"));
 
@@ -16415,8 +16918,23 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> deleteAttributeColFilter(Map<String, Object> event) {
-        final String deleteGroup = "DELETE from attribute_col_filter_t WHERE host_id = ? AND attribute_id = ? " +
-                "AND api_id = ? AND api_version = ? AND endpoint = ?";
+        final String deleteGroup =
+                """
+                    DELETE FROM attribute_col_filter_t acf
+                    WHERE
+                        acf.host_id = ?
+                        AND acf.attribute_id = ?
+                        AND acf.endpoint_id IN (
+                            SELECT e.endpoint_id
+                            FROM api_endpoint_t e
+                            JOIN api_version_t v ON e.host_id = v.host_id
+                                               AND e.api_version_id = v.api_version_id
+                            WHERE e.host_id = acf.host_id
+                              AND v.api_id = ?
+                              AND v.api_version = ?
+                              AND e.endpoint = ?
+                        )
+                """;
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
