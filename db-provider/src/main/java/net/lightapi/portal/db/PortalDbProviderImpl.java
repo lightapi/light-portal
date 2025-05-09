@@ -18407,7 +18407,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                                       String clientType, String handlerClass, String clientUrl, String credentials, String proxyUrl, Integer proxyPort,
                                       String consoleUrl, String environment, String zone, String region, String lob) {
         Result<String> result = null;
-        String sql =
+        String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
                 host_id, platform_id, platform_name, platform_version, client_type, handler_class, client_url,
@@ -18416,7 +18416,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 WHERE 1=1
                 """;
 
-        StringBuilder sqlBuilder = new StringBuilder(sql);
+        StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
 
         StringBuilder whereClause = new StringBuilder();
@@ -18743,7 +18743,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                                         String instanceId, String deploymentStatus,
                                         String deploymentType, String platformJobId) {
         Result<String> result = null;
-        String sql =
+        String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
                 host_id, deployment_id, instance_id, deployment_status, deployment_type,
@@ -18753,7 +18753,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 """;
 
 
-        StringBuilder sqlBuilder = new StringBuilder(sql);
+        StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
         StringBuilder whereClause = new StringBuilder();
 
