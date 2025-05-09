@@ -17745,7 +17745,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createPipeline(Map<String, Object> event) {
-        final String sql = "INSERT INTO pipeline_t(host_id, pipeline_id, platform_id, endpoint, request_schema, response_schema, update_user, update_ts) " +
+        final String sql = "INSERT INTO pipeline_t(host_id, pipeline_id, platform_id, pipeline_version, pipeline_name, " +
+                "current, endpoint, version_status, request_schema, response_schema, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -18195,9 +18196,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> createPlatform(Map<String, Object> event) {
         final String sql = "INSERT INTO platform_t(host_id, platform_id, platform_name, platform_version, " +
-                "client_type, client_url, credentials, proxy_url, proxy_port, environment, system_env, runtime_env, " +
-                "zone, region, lob, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                "client_type, handler_class, client_url, credentials, proxy_url, proxy_port, console_url, " +
+                "environment, zone, region, lob, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?)";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
@@ -18208,31 +18209,27 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(3, (String)map.get("platformName"));
                 statement.setString(4, (String)map.get("platformVersion"));
                 statement.setString(5, (String)map.get("clientType"));
-                statement.setString(6, (String)map.get("clientUrl"));
-                statement.setString(7, (String)map.get("credentials"));
+                statement.setString(6, (String)map.get("handlerClass"));
+                statement.setString(7, (String)map.get("clientUrl"));
+                statement.setString(8, (String)map.get("credentials"));
 
                 if (map.containsKey("proxyUrl")) {
-                    statement.setString(8, (String) map.get("proxyUrl"));
+                    statement.setString(9, (String) map.get("proxyUrl"));
                 } else {
-                    statement.setNull(8, Types.VARCHAR);
+                    statement.setNull(9, Types.VARCHAR);
                 }
                 if (map.containsKey("proxyPort")) {
-                    statement.setInt(9, (Integer)map.get("proxyPort"));
+                    statement.setInt(10, (Integer)map.get("proxyPort"));
                 } else {
-                    statement.setNull(9, Types.INTEGER);
+                    statement.setNull(10, Types.INTEGER);
                 }
-                if (map.containsKey("environment")) {
-                    statement.setString(10, (String) map.get("environment"));
-                } else {
-                    statement.setNull(10, Types.VARCHAR);
-                }
-                if(map.containsKey("systemEnv")) {
-                    statement.setString(11, (String) map.get("systemEnv"));
+                if (map.containsKey("consoleUrl")) {
+                    statement.setString(11, (String) map.get("consoleUrl"));
                 } else {
                     statement.setNull(11, Types.VARCHAR);
                 }
-                if(map.containsKey("runtimeEnv")) {
-                    statement.setString(12, (String) map.get("runtimeEnv"));
+                if (map.containsKey("environment")) {
+                    statement.setString(12, (String) map.get("environment"));
                 } else {
                     statement.setNull(12, Types.VARCHAR);
                 }
@@ -18284,8 +18281,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> updatePlatform(Map<String, Object> event) {
         final String sql = "UPDATE platform_t SET platform_name = ?, platform_version = ?, " +
-                "client_type = ?, client_url = ?, credentials = ?, proxy_url = ?, proxy_port = ?, " +
-                "environment = ?, system_env = ?, runtime_env = ?, zone = ?, region = ?, lob = ?, " +
+                "client_type = ?, handler_class = ?, client_url = ?, credentials = ?, proxy_url = ?, proxy_port = ?, " +
+                "console_url = ?, environment = ?, zone = ?, region = ?, lob = ?, " +
                 "update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? and platform_id = ?";
         Result<String> result;
@@ -18296,30 +18293,26 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(1, (String)map.get("platformName"));
                 statement.setString(2, (String)map.get("platformVersion"));
                 statement.setString(3, (String)map.get("clientType"));
-                statement.setString(4, (String)map.get("clientUrl"));
-                statement.setString(5, (String)map.get("credentials"));
+                statement.setString(4, (String)map.get("handlerClass"));
+                statement.setString(5, (String)map.get("clientUrl"));
+                statement.setString(6, (String)map.get("credentials"));
                 if (map.containsKey("proxyUrl")) {
-                    statement.setString(6, (String) map.get("proxyUrl"));
+                    statement.setString(7, (String) map.get("proxyUrl"));
                 } else {
-                    statement.setNull(6, Types.VARCHAR);
+                    statement.setNull(7, Types.VARCHAR);
                 }
                 if (map.containsKey("proxyPort")) {
-                    statement.setInt(7, (Integer) map.get("proxyPort"));
+                    statement.setInt(8, (Integer) map.get("proxyPort"));
                 } else {
-                    statement.setNull(7, Types.INTEGER);
+                    statement.setNull(8, Types.INTEGER);
                 }
-                if (map.containsKey("environment")) {
-                    statement.setString(8, (String) map.get("environment"));
-                } else {
-                    statement.setNull(8, Types.VARCHAR);
-                }
-                if(map.containsKey("systemEnv")) {
-                    statement.setString(9, (String) map.get("systemEnv"));
+                if (map.containsKey("consoleUrl")) {
+                    statement.setString(9, (String) map.get("consoleUrl"));
                 } else {
                     statement.setNull(9, Types.VARCHAR);
                 }
-                if(map.containsKey("runtimeEnv")) {
-                    statement.setString(10, (String) map.get("runtimeEnv"));
+                if (map.containsKey("environment")) {
+                    statement.setString(10, (String) map.get("environment"));
                 } else {
                     statement.setNull(10, Types.VARCHAR);
                 }
@@ -18411,19 +18404,20 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> getPlatform(int offset, int limit, String hostId, String platformId, String platformName, String platformVersion,
-                                      String clientType, String clientUrl, String credentials, String proxyUrl, Integer proxyPort,
-                                      String environment, String systemEnv, String runtimeEnv, String zone, String region, String lob) {
+                                      String clientType, String handlerClass, String clientUrl, String credentials, String proxyUrl, Integer proxyPort,
+                                      String consoleUrl, String environment, String zone, String region, String lob) {
         Result<String> result = null;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "host_id, platform_id, platform_name, platform_version, client_type, client_url, " +
-                "credentials, proxy_url, " +
-                "proxy_port, environment, system_env, runtime_env, zone, region, lob, update_user, update_ts \n" +
-                "FROM platform_t\n" +
-                "WHERE 1=1\n");
+        String sql =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                host_id, platform_id, platform_name, platform_version, client_type, handler_class, client_url,
+                credentials, proxy_url, proxy_port, console_url, environment, zone, region, lob, update_user, update_ts
+                FROM platform_t
+                WHERE 1=1
+                """;
 
+        StringBuilder sqlBuilder = new StringBuilder(sql);
         List<Object> parameters = new ArrayList<>();
-
 
         StringBuilder whereClause = new StringBuilder();
         addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
@@ -18431,17 +18425,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         addCondition(whereClause, parameters, "platform_name", platformName);
         addCondition(whereClause, parameters, "platform_version", platformVersion);
         addCondition(whereClause, parameters, "client_type", clientType);
+        addCondition(whereClause, parameters, "handler_class", handlerClass);
         addCondition(whereClause, parameters, "client_url", clientUrl);
         addCondition(whereClause, parameters, "credentials", credentials);
         addCondition(whereClause, parameters, "proxy_url", proxyUrl);
         addCondition(whereClause, parameters, "proxy_port", proxyPort);
+        addCondition(whereClause, parameters, "console_url", consoleUrl);
         addCondition(whereClause, parameters, "environment", environment);
-        addCondition(whereClause, parameters, "system_env", systemEnv);
-        addCondition(whereClause, parameters, "runtime_env", runtimeEnv);
         addCondition(whereClause, parameters, "zone", zone);
         addCondition(whereClause, parameters, "region", region);
         addCondition(whereClause, parameters, "lob", lob);
-
 
         if (!whereClause.isEmpty()) {
             sqlBuilder.append("AND ").append(whereClause);
@@ -18478,18 +18471,17 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("platformName", resultSet.getString("platform_name"));
                     map.put("platformVersion", resultSet.getString("platform_version"));
                     map.put("clientType", resultSet.getString("client_type"));
+                    map.put("handlerClass", resultSet.getString("handler_class"));
                     map.put("clientUrl", resultSet.getString("client_url"));
                     map.put("credentials", resultSet.getString("credentials"));
                     map.put("proxyUrl", resultSet.getString("proxy_url"));
                     map.put("proxyPort", resultSet.getInt("proxy_port"));
+                    map.put("consoleUrl", resultSet.getString("console_url"));
                     map.put("environment", resultSet.getString("environment"));
-                    map.put("systemEnv", resultSet.getString("system_env"));
-                    map.put("runtimeEnv", resultSet.getString("runtime_env"));
                     map.put("zone", resultSet.getString("zone"));
                     map.put("region", resultSet.getString("region"));
                     map.put("lob", resultSet.getString("lob"));
                     map.put("updateUser", resultSet.getString("update_user"));
-                    // handling date properly
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
 
                     platforms.add(map);
@@ -18751,15 +18743,18 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                                         String instanceId, String deploymentStatus,
                                         String deploymentType, String platformJobId) {
         Result<String> result = null;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "host_id, deployment_id, instance_id, deployment_status, deployment_type, " +
-                "schedule_ts, platform_job_id, update_user, update_ts\n" +
-                "FROM deployment_t\n" +
-                "WHERE 1=1\n");
+        String sql =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                host_id, deployment_id, instance_id, deployment_status, deployment_type,
+                schedule_ts, platform_job_id, update_user, update_ts
+                FROM deployment_t
+                WHERE 1=1
+                """;
 
+
+        StringBuilder sqlBuilder = new StringBuilder(sql);
         List<Object> parameters = new ArrayList<>();
-
         StringBuilder whereClause = new StringBuilder();
 
         addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
