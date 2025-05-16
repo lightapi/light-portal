@@ -11283,10 +11283,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         String s =
                 """
                         SELECT COUNT(*) OVER () AS total,
-                        pvp.host_id, pvp.product_id, pvp.product_version, p.config_id, p.property_name,
+                        pvp.host_id, pv.product_id, pv.product_version, p.config_id, p.property_name,
                         pvp.property_value, pvp.property_file, pvp.update_user, pvp.update_ts,
                         c.config_name
                         FROM product_version_property_t pvp
+                        INNER JOIN product_version_t pv ON pv.product_version_id = pvp.product_version_id
                         INNER JOIN config_property_t p ON p.property_id = pvp.property_id
                         INNER JOIN config_t c ON p.config_id = c.config_id
                         WHERE 1=1
@@ -11298,8 +11299,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         StringBuilder whereClause = new StringBuilder();
         addCondition(whereClause, parameters, "pvp.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "pvp.product_id", productId);
-        addCondition(whereClause, parameters, "pvp.product_version", productVersion);
+        addCondition(whereClause, parameters, "pv.product_id", productId);
+        addCondition(whereClause, parameters, "pv.product_version", productVersion);
         addCondition(whereClause, parameters, "p.config_id", configId != null ? UUID.fromString(configId) : null);
         addCondition(whereClause, parameters, "c.config_name", configName);
         addCondition(whereClause, parameters, "pvp.property_id", propertyId != null ? UUID.fromString(propertyId) : null);
@@ -11312,7 +11313,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append(" ORDER BY pvp.host_id, pvp.product_id, pvp.product_version, pvp.config_id, pvp.property_name\n" +
+        sqlBuilder.append(" ORDER BY pvp.host_id, pv.product_id, pv.product_version, p.config_id, p.property_name\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -16960,10 +16961,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createProduct(Map<String, Object> event) {
-        final String sql = "INSERT INTO product_version_t(host_id, product_id, product_version, " +
+        final String sql = "INSERT INTO product_version_t(host_id, product_version_id, product_id, product_version, " +
                 "light4j_version, break_code, break_config, release_note, version_desc, release_type, current, " +
                 "version_status, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         final String sqlUpdate = "UPDATE product_version_t SET current = false \n" +
                 "WHERE host_id = ?\n" +
                 "AND product_id = ?\n" +
@@ -16974,34 +16975,35 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("productId"));
-                statement.setString(3, (String)map.get("productVersion"));
-                statement.setString(4, (String)map.get("light4jVersion"));
+                statement.setObject(2, UUID.fromString((String)map.get("productVersionId")));
+                statement.setString(3, (String)map.get("productId"));
+                statement.setString(4, (String)map.get("productVersion"));
+                statement.setString(5, (String)map.get("light4jVersion"));
                 if (map.containsKey("breakCode")) {
-                    statement.setBoolean(5, (Boolean) map.get("breakCode"));
-                } else {
-                    statement.setNull(5, Types.BOOLEAN);
-                }
-                if (map.containsKey("breakConfig")) {
-                    statement.setBoolean(6, (Boolean) map.get("breakConfig"));
+                    statement.setBoolean(6, (Boolean) map.get("breakCode"));
                 } else {
                     statement.setNull(6, Types.BOOLEAN);
                 }
-                if (map.containsKey("releaseNote")) {
-                    statement.setString(7, (String) map.get("releaseNote"));
+                if (map.containsKey("breakConfig")) {
+                    statement.setBoolean(7, (Boolean) map.get("breakConfig"));
                 } else {
-                    statement.setNull(7, Types.VARCHAR);
+                    statement.setNull(7, Types.BOOLEAN);
                 }
-                if (map.containsKey("versionDesc")) {
-                    statement.setString(8, (String) map.get("versionDesc"));
+                if (map.containsKey("releaseNote")) {
+                    statement.setString(8, (String) map.get("releaseNote"));
                 } else {
                     statement.setNull(8, Types.VARCHAR);
                 }
-                statement.setString(9, (String)map.get("releaseType"));
-                statement.setBoolean(10, (Boolean)map.get("current"));
-                statement.setString(11, (String)map.get("versionStatus"));
-                statement.setString(12, (String)event.get(Constants.USER));
-                statement.setObject(13, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                if (map.containsKey("versionDesc")) {
+                    statement.setString(9, (String) map.get("versionDesc"));
+                } else {
+                    statement.setNull(9, Types.VARCHAR);
+                }
+                statement.setString(10, (String)map.get("releaseType"));
+                statement.setBoolean(11, (Boolean)map.get("current"));
+                statement.setString(12, (String)map.get("versionStatus"));
+                statement.setString(13, (String)event.get(Constants.USER));
+                statement.setObject(14, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -17041,7 +17043,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> updateProduct(Map<String, Object> event) {
         final String sql = "UPDATE product_version_t SET light4j_version = ?, break_code = ?, break_config = ?, " +
                 "release_note = ?, version_desc = ?, release_type = ?, current = ?, version_status = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? and product_id = ? and product_version = ?";
+                "WHERE host_id = ? AND product_version_id = ?";
         final String sqlUpdate = "UPDATE product_version_t SET current = false \n" +
                 "WHERE host_id = ?\n" +
                 "AND product_id = ?\n" +
@@ -17080,8 +17082,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(9, (String)event.get(Constants.USER));
                 statement.setObject(10, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
                 statement.setObject(11, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(12, (String)map.get("productId"));
-                statement.setString(13, (String)map.get("productVersion"));
+                statement.setObject(12, UUID.fromString((String)map.get("productVersionId")));
+
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("failed to update the product with id " + map.get("productId"));
@@ -17119,16 +17121,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> deleteProduct(Map<String, Object> event) {
         final String sql = "DELETE FROM product_version_t WHERE host_id = ? " +
-                "AND product_id = ? AND product_version = ?";
+                "AND product_version_id = ?";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("productId"));
-                statement.setString(3, (String)map.get("productVersion"));
-
+                statement.setObject(2, UUID.fromString((String)map.get("productVersionId")));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -17159,21 +17159,23 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> getProduct(int offset, int limit, String hostId, String productId, String productVersion,
+    public Result<String> getProduct(int offset, int limit, String hostId, String productVersionId, String productId, String productVersion,
                                      String light4jVersion, Boolean breakCode, Boolean breakConfig, String releaseNote,
                                      String versionDesc, String releaseType, Boolean current, String versionStatus) {
         Result<String> result = null;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "host_id, product_id, product_version, light4j_version, break_code, break_config, release_note,\n" +
-                "version_desc, release_type, current, version_status, update_user, update_ts\n" +
-                "FROM product_version_t\n" +
-                "WHERE 1=1\n");
+        String s = """
+                SELECT COUNT(*) OVER () AS total,
+                host_id, product_version_id, product_id, product_version, light4j_version, break_code, break_config,
+                release_note, version_desc, release_type, current, version_status, update_user, update_ts
+                FROM product_version_t
+                WHERE 1=1
+                """;
 
+        StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
-
         StringBuilder whereClause = new StringBuilder();
         addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "product_version_id", productVersionId != null ? UUID.fromString(productVersionId) : null);
         addCondition(whereClause, parameters, "product_id", productId);
         addCondition(whereClause, parameters, "product_version", productVersion);
         addCondition(whereClause, parameters, "light4j_version", light4jVersion);
@@ -17185,7 +17187,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         addCondition(whereClause, parameters, "current", current);
         addCondition(whereClause, parameters, "version_status", versionStatus);
 
-        if (whereClause.length() > 0) {
+        if (!whereClause.isEmpty()) {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
@@ -17215,6 +17217,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         isFirstRow = false;
                     }
                     map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("productVersionId", resultSet.getObject("product_version_id", UUID.class));
                     map.put("productId", resultSet.getString("product_id"));
                     map.put("productVersion", resultSet.getString("product_version"));
                     map.put("light4jVersion", resultSet.getString("light4j_version"));
@@ -18404,14 +18407,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> getPlatform(int offset, int limit, String hostId, String platformId, String platformName, String platformVersion,
-                                      String clientType, String handlerClass, String clientUrl, String credentials, String proxyUrl, Integer proxyPort,
-                                      String consoleUrl, String environment, String zone, String region, String lob) {
+                                      String clientType, String clientUrl, String credentials, String proxyUrl, Integer proxyPort,
+                                      String handlerClass, String consoleUrl, String environment, String zone, String region, String lob) {
         Result<String> result = null;
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
-                host_id, platform_id, platform_name, platform_version, client_type, handler_class, client_url,
-                credentials, proxy_url, proxy_port, console_url, environment, zone, region, lob, update_user, update_ts
+                host_id, platform_id, platform_name, platform_version, client_type, client_url,
+                credentials, proxy_url, proxy_port, handler_class, console_url, environment, zone, region, lob, update_user, update_ts
                 FROM platform_t
                 WHERE 1=1
                 """;
@@ -18471,11 +18474,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("platformName", resultSet.getString("platform_name"));
                     map.put("platformVersion", resultSet.getString("platform_version"));
                     map.put("clientType", resultSet.getString("client_type"));
-                    map.put("handlerClass", resultSet.getString("handler_class"));
                     map.put("clientUrl", resultSet.getString("client_url"));
                     map.put("credentials", resultSet.getString("credentials"));
                     map.put("proxyUrl", resultSet.getString("proxy_url"));
                     map.put("proxyPort", resultSet.getInt("proxy_port"));
+                    map.put("handlerClass", resultSet.getString("handler_class"));
                     map.put("consoleUrl", resultSet.getString("console_url"));
                     map.put("environment", resultSet.getString("environment"));
                     map.put("zone", resultSet.getString("zone"));

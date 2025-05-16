@@ -347,7 +347,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> createProduct(Map<String, Object> event);
     Result<String> updateProduct(Map<String, Object> event);
     Result<String> deleteProduct(Map<String, Object> event);
-    Result<String> getProduct(int offset, int limit, String hostId, String productId, String productVersion, String light4jVersion,
+    Result<String> getProduct(int offset, int limit, String hostId, String productVersionId, String productId, String productVersion, String light4jVersion,
                               Boolean breakCode, Boolean breakConfig, String releaseNote,
                               String versionDesc, String releaseType, Boolean current, String versionStatus);
     Result<String> getProductIdLabel(String hostId);
@@ -381,8 +381,8 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> updatePlatform(Map<String, Object> event);
     Result<String> deletePlatform(Map<String, Object> event);
     Result<String> getPlatform(int offset, int limit, String hostId, String platformId, String platformName, String platformVersion,
-                               String clientType, String handlerClass, String clientUrl, String credentials, String proxyUrl, Integer proxyPort,
-                               String consoleUrl, String environment, String zone, String region, String lob);
+                               String clientType, String clientUrl, String credentials, String proxyUrl, Integer proxyPort,
+                               String handlerClass, String consoleUrl, String environment, String zone, String region, String lob);
     Result<String> getPlatformLabel(String hostId);
     Result<String> createDeployment(Map<String, Object> event);
     Result<String> updateDeployment(Map<String, Object> event);
