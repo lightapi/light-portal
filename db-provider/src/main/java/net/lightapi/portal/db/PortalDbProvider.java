@@ -366,8 +366,9 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> createPipeline(Map<String, Object> event);
     Result<String> updatePipeline(Map<String, Object> event);
     Result<String> deletePipeline(Map<String, Object> event);
-    Result<String> getPipeline(int offset, int limit, String hostId, String pipelineId, String platformId, String endpoint,
-                               String requestSchema, String responseSchema);
+    Result<String> getPipeline(int offset, int limit, String hostId, String pipelineId, String platformId, String pipelineVersion,
+                               String pipelineName, Boolean current, String endpoint, String versionStatus, String systemEnv,
+                               String runtimeEnv, String requestSchema, String responseSchema);
     Result<String> getPipelineLabel(String hostId);
 
     Result<String> createInstancePipeline(Map<String, Object> event);
@@ -384,6 +385,14 @@ public interface PortalDbProvider extends DbProvider {
                                String clientType, String clientUrl, String credentials, String proxyUrl, Integer proxyPort,
                                String handlerClass, String consoleUrl, String environment, String zone, String region, String lob);
     Result<String> getPlatformLabel(String hostId);
+
+    Result<String> createDeploymentInstance(Map<String, Object> event);
+    Result<String> updateDeploymentInstance(Map<String, Object> event);
+    Result<String> deleteDeploymentInstance(Map<String, Object> event);
+    Result<String> getDeploymentInstance(int offset, int limit, String hostId, String instanceId, String deploymentInstanceId,
+                                         String serviceId, String ipAddress, Integer portNumber, String systemEnv, String runtimeEnv,
+                                         String pipelineId, String deployStatus);
+
     Result<String> createDeployment(Map<String, Object> event);
     Result<String> updateDeployment(Map<String, Object> event);
     Result<String> updateDeploymentJobId(Map<String, Object> event);

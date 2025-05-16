@@ -17749,21 +17749,45 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> createPipeline(Map<String, Object> event) {
         final String sql = "INSERT INTO pipeline_t(host_id, pipeline_id, platform_id, pipeline_version, pipeline_name, " +
-                "current, endpoint, version_status, request_schema, response_schema, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                "current, endpoint, version_status, system_env, runtime_env, request_schema, response_schema, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?, ?)";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("pipelineId"));
+                statement.setObject(2, UUID.fromString((String)map.get("pipelineId")));
                 statement.setObject(3, UUID.fromString((String)map.get("platformId")));
-                statement.setString(4, (String)map.get("endpoint"));
-                statement.setString(5, (String)map.get("requestSchema"));
-                statement.setString(6, (String)map.get("responseSchema"));
-                statement.setString(7, (String)event.get(Constants.USER));
-                statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setString(4, (String)map.get("pipelineVersion"));
+                statement.setString(5, (String)map.get("pipelineName"));
+                Boolean current = (Boolean)map.get("current");
+                if (current != null) {
+                    statement.setBoolean(6, current);
+                } else {
+                    statement.setNull(6, Types.BOOLEAN);
+                }
+
+                statement.setString(7, (String)map.get("endpoint"));
+
+                String versionStatus = (String)map.get("versionStatus");
+                if (versionStatus != null && !versionStatus.isEmpty()) {
+                    statement.setString(8, versionStatus);
+                } else {
+                    statement.setNull(8, Types.VARCHAR);
+                }
+                statement.setString(9, (String)map.get("systemEnv"));
+
+                String runtimeEnv = (String)map.get("runtimeEnv");
+                if (runtimeEnv != null && !runtimeEnv.isEmpty()) {
+                    statement.setString(10, runtimeEnv);
+                } else {
+                    statement.setNull(10, Types.VARCHAR);
+                }
+                statement.setString(11, (String)map.get("requestSchema"));
+                statement.setString(12, (String)map.get("responseSchema"));
+                statement.setString(13, (String)event.get(Constants.USER));
+                statement.setObject(14, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -17792,21 +17816,45 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updatePipeline(Map<String, Object> event) {
-        final String sql = "UPDATE pipeline_t SET platform_id = ?, endpoint = ?, request_schema = ?, response_schema = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? and pipeline_id = ?";
+        final String sql = "UPDATE pipeline_t SET platform_id = ?, pipeline_version = ?, pipeline_name = ?, current = ?, " +
+                "endpoint = ?, version_status = ?, system_env = ?, runtime_env = ?, request_schema = ?, response_schema = ?, " +
+                "update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? AND pipeline_id = ?";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setObject(1, UUID.fromString((String)map.get("platformId")));
-                statement.setString(2, (String)map.get("endpoint"));
-                statement.setString(3, (String)map.get("requestSchema"));
-                statement.setString(4, (String)map.get("responseSchema"));
-                statement.setString(5,(String) event.get(Constants.USER));
-                statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(7, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(8, (String)map.get("pipelineId"));
+                statement.setString(2, (String)map.get("pipelineVersion"));
+                statement.setString(3, (String)map.get("pipelineName"));
+                Boolean current = (Boolean)map.get("current");
+                if (current != null) {
+                    statement.setBoolean(4, current);
+                } else {
+                    statement.setNull(4, Types.BOOLEAN);
+                }
+                statement.setString(5, (String)map.get("endpoint"));
+                String versionStatus = (String)map.get("versionStatus");
+                if (versionStatus != null && !versionStatus.isEmpty()) {
+                    statement.setString(6, versionStatus);
+                } else {
+                    statement.setNull(6, Types.VARCHAR);
+                }
+                statement.setString(7, (String)map.get("systemEnv"));
+                String runtimeEnv = (String)map.get("runtimeEnv");
+                if (runtimeEnv != null && !runtimeEnv.isEmpty()) {
+                    statement.setString(8, runtimeEnv);
+                } else {
+                    statement.setNull(8, Types.VARCHAR);
+                }
+
+                statement.setString(9, (String)map.get("requestSchema"));
+                statement.setString(10, (String)map.get("responseSchema"));
+                statement.setString(11,(String) event.get(Constants.USER));
+                statement.setObject(12, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setObject(13, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setString(14, (String)map.get("pipelineId"));
 
 
                 int count = statement.executeUpdate();
@@ -17844,7 +17892,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("pipelineId"));
+                statement.setObject(2, UUID.fromString((String)map.get("pipelineId")));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -17873,22 +17921,32 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
 
     @Override
-    public Result<String> getPipeline(int offset, int limit, String hostId, String pipelineId, String platformId, String endpoint,
-                                      String requestSchema, String responseSchema) {
+    public Result<String> getPipeline(int offset, int limit, String hostId, String pipelineId, String platformId, String pipelineVersion,
+                                      String pipelineName, Boolean current, String endpoint, String versionStatus, String systemEnv,
+                                      String runtimeEnv, String requestSchema, String responseSchema) {
         Result<String> result = null;
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                host_id, pipeline_id, platform_id, pipeline_version, pipeline_name, current, endpoint, version_status,
+                system_env, runtime_env, request_schema, response_schema, update_user, update_ts
+                FROM pipeline_t
+                WHERE 1=1
+                """;
+
         StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "host_id, pipeline_id, platform_id, endpoint, request_schema, response_schema, update_user, update_ts\n" +
-                "FROM pipeline_t\n" +
-                "WHERE 1=1\n");
-
         List<Object> parameters = new ArrayList<>();
-
         StringBuilder whereClause = new StringBuilder();
         addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "pipeline_id", pipelineId);
+        addCondition(whereClause, parameters, "pipeline_id", pipelineId != null ? UUID.fromString(pipelineId) : null);
         addCondition(whereClause, parameters, "platform_id", platformId != null ? UUID.fromString(platformId) : null);
+        addCondition(whereClause, parameters, "pipeline_version", pipelineVersion);
+        addCondition(whereClause, parameters, "pipeline_name", pipelineName);
+        addCondition(whereClause, parameters, "current", current);
         addCondition(whereClause, parameters, "endpoint", endpoint);
+        addCondition(whereClause, parameters, "version_status", versionStatus);
+        addCondition(whereClause, parameters, "system_env", systemEnv);
+        addCondition(whereClause, parameters, "runtime_env", runtimeEnv);
         addCondition(whereClause, parameters, "request_schema", requestSchema);
         addCondition(whereClause, parameters, "response_schema", responseSchema);
 
@@ -17924,9 +17982,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         isFirstRow = false;
                     }
                     map.put("hostId", resultSet.getObject("host_id", UUID.class));
-                    map.put("pipelineId", resultSet.getString("pipeline_id"));
+                    map.put("pipelineId", resultSet.getObject("pipeline_id", UUID.class));
                     map.put("platformId", resultSet.getObject("platform_id", UUID.class));
+                    map.put("pipelineVersion", resultSet.getString("pipeline_version"));
+                    map.put("pipelineName", resultSet.getString("pipeline_name"));
+                    map.put("current", resultSet.getBoolean("current"));
                     map.put("endpoint", resultSet.getString("endpoint"));
+                    map.put("versionStatus", resultSet.getString("version_status"));
+                    map.put("systemEnv", resultSet.getString("system_env"));
+                    map.put("runtimeEnv", resultSet.getString("runtime_env"));
                     map.put("requestSchema", resultSet.getString("request_schema"));
                     map.put("responseSchema", resultSet.getString("response_schema"));
                     map.put("updateUser", resultSet.getString("update_user"));
@@ -17954,7 +18018,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override
     public Result<String> getPipelineLabel(String hostId) {
         Result<String> result = null;
-        String sql = "SELECT pipeline_id, pipeline_id FROM pipeline_t WHERE host_id = ?";
+        String sql = "SELECT pipeline_id, pipeline_name, pipeline_version FROM pipeline_t WHERE host_id = ?";
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
@@ -17962,9 +18026,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
-                    String pipelineId = resultSet.getString("pipeline_id");
+                    String pipelineId = resultSet.getObject("pipeline_id", UUID.class).toString();
+                    String pipelineName = resultSet.getString("pipeline_name");
+                    String pipelineVersion = resultSet.getString("pipeline_version");
                     map.put("id", pipelineId);
-                    map.put("label", pipelineId);
+                    map.put("label", pipelineName + "|" + pipelineVersion);
                     labels.add(map);
                 }
             }
@@ -18527,6 +18593,346 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
         } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+
+    @Override
+    public Result<String> createDeploymentInstance(Map<String, Object> event) {
+        final String sql = "INSERT INTO deployment_instance_t(host_id, instance_id, deployment_instance_id, " +
+                "service_id, ip_address, port_number, system_env, runtime_env, pipeline_id, " +
+                "deploy_status, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setObject(1, UUID.fromString((String) event.get(Constants.HOST)));
+                statement.setObject(2, UUID.fromString((String) map.get("instanceId")));
+                statement.setObject(3, UUID.fromString((String) map.get("deploymentInstanceId")));
+                statement.setString(4, (String) map.get("serviceId"));
+                String ipAddress = (String) map.get("ipAddress");
+                if(ipAddress != null && !ipAddress.isEmpty()) {
+                    statement.setString(5, ipAddress);
+                } else {
+                    statement.setNull(5, Types.VARCHAR); // Set to SQL NULL if null or empty
+                }
+
+                // Handle nullable integer for port_number
+                Object portNumberObj = map.get("portNumber");
+                if (portNumberObj != null) {
+                    if (portNumberObj instanceof String && !((String) portNumberObj).isEmpty()) {
+                        statement.setInt(6, Integer.parseInt((String) portNumberObj));
+                    } else if (portNumberObj instanceof Number) {
+                        statement.setInt(6, ((Number) portNumberObj).intValue());
+                    } else {
+                        statement.setNull(6, java.sql.Types.INTEGER); // Set to SQL NULL if not a valid number or empty string
+                    }
+                } else {
+                    statement.setNull(6, java.sql.Types.INTEGER); // Set to SQL NULL if null
+                }
+
+                statement.setString(7, (String) map.get("systemEnv"));
+                statement.setString(8, (String) map.get("runtimeEnv"));
+                statement.setObject(9, UUID.fromString((String) map.get("pipelineId")));
+                statement.setString(10, (String) map.get("deployStatus"));
+                statement.setString(11, (String) event.get(Constants.USER));
+                statement.setObject(12, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert the deployment instance with id " + map.get("deploymentInstanceId"));
+                }
+                conn.commit();
+                result = Success.of((String) map.get("deploymentInstanceId"));
+                // Assuming you have a similar notification mechanism for deployment instances
+                // insertDeploymentInstanceNotification(event, true, null); // You'd need to create this method
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                // insertDeploymentInstanceNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                // insertDeploymentInstanceNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException on getting connection:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> updateDeploymentInstance(Map<String, Object> event) {
+        // Template assumes all these fields are expected in the map for an update.
+        // If a field is not meant to be updated, its current value should be passed.
+        // To set a field to NULL, pass null for its value in the map.
+        // IMPORTANT: instance_id is a Foreign Key. Updating it is unusual.
+        // If instance_id is NOT updatable, remove "instance_id = ?, " from SQL and the corresponding statement.setObject().
+        final String sql = "UPDATE deployment_instance_t SET " +
+                "instance_id = ?, " +         // FK - updatable?
+                "service_id = ?, " +
+                "ip_address = ?, " +
+                "port_number = ?, " +
+                "system_env = ?, " +
+                "runtime_env = ?, " +
+                "pipeline_id = ?, " +
+                "deploy_status = ?, " +
+                "update_user = ?, " +
+                "update_ts = ? " +
+                "WHERE host_id = ? AND deployment_instance_id = ?";
+
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
+        String deploymentInstanceId = (String) map.get("deploymentInstanceId"); // For messages
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                // Set parameters in the order they appear in the SQL SET clause, then WHERE clause
+                int paramIdx = 1;
+
+                // instance_id (FK - if updatable)
+                // If not updatable, remove this line and adjust SQL & subsequent indices
+                statement.setObject(paramIdx++, UUID.fromString((String) map.get("instanceId")));
+
+                // service_id
+                statement.setString(paramIdx++, (String) map.get("serviceId"));
+
+                // ip_address (handles null if map.get("ipAddress") returns null)
+                statement.setString(paramIdx++, (String) map.get("ipAddress"));
+
+                // port_number
+                Object portNumberObj = map.get("portNumber");
+                if (portNumberObj != null) {
+                    // Attempt to parse if it's a string, otherwise assume it's a number or handle appropriately
+                    if (portNumberObj instanceof String && !((String) portNumberObj).isEmpty()) {
+                        statement.setInt(paramIdx++, Integer.parseInt((String) portNumberObj));
+                    } else if (portNumberObj instanceof Number) {
+                        statement.setInt(paramIdx++, ((Number) portNumberObj).intValue());
+                    } else { // If it's an empty string or unexpected type intended to be null for port_number
+                        statement.setNull(paramIdx++, java.sql.Types.INTEGER);
+                    }
+                } else {
+                    statement.setNull(paramIdx++, java.sql.Types.INTEGER);
+                }
+
+                // system_env
+                statement.setString(paramIdx++, (String) map.get("systemEnv"));
+                // runtime_env
+                statement.setString(paramIdx++, (String) map.get("runtimeEnv"));
+                // pipeline_id
+                statement.setObject(paramIdx++, UUID.fromString((String) map.get("pipelineId")));
+                // deploy_status
+                statement.setString(paramIdx++, (String) map.get("deployStatus"));
+
+                // update_user
+                statement.setString(paramIdx++, (String) event.get(Constants.USER));
+                // update_ts
+                statement.setObject(paramIdx++, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+
+                // WHERE clause parameters
+                statement.setObject(paramIdx++, UUID.fromString((String) event.get(Constants.HOST)));
+                statement.setObject(paramIdx++, UUID.fromString(deploymentInstanceId));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    // Rollback before creating Failure, consistent with template's SQLException handling
+                    conn.rollback();
+                    String errorMessage = "failed to update the deployment instance with id " + deploymentInstanceId + " (not found or no changes)";
+                    logger.warn(errorMessage);
+                    // insertDeploymentInstanceNotification(event, false, "Deployment instance not found or no effective change.");
+                    // The template throws SQLException, which then gets caught. Let's align more closely.
+                    // However, "not found" is distinct. For closer alignment to template throwing SQLException for 0 count:
+                    throw new SQLException("failed to update the deployment instance with id " + deploymentInstanceId + " (record not found or no changes made)");
+                }
+                conn.commit();
+                result = Success.of(deploymentInstanceId);
+                // insertDeploymentInstanceNotification(event, true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException during updateDeploymentInstance:", e);
+                conn.rollback();
+                // insertDeploymentInstanceNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) { // Generic catch for other runtime errors like NullPointerException if map keys are missing
+                logger.error("Exception during updateDeploymentInstance:", e);
+                conn.rollback();
+                // insertDeploymentInstanceNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) { // For conn = ds.getConnection() failure
+            logger.error("SQLException obtaining connection for updateDeploymentInstance:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deleteDeploymentInstance(Map<String, Object> event) {
+        final String sql = "DELETE FROM deployment_instance_t WHERE host_id = ? AND deployment_instance_id = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
+        // String deploymentInstanceId = (String) map.get("deploymentInstanceId"); // Not strictly needed if we follow template's success return
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setObject(1, UUID.fromString((String) event.get(Constants.HOST)));
+                statement.setObject(2, UUID.fromString((String) map.get("deploymentInstanceId")));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    // Following template: throw SQLException if no rows affected
+                    throw new SQLException("failed to delete the deployment instance with id " + map.get("deploymentInstanceId") + " and host " + event.get(Constants.HOST));
+                }
+                conn.commit();
+                // Template returns the ID used in the WHERE clause for update, let's return deploymentInstanceId for delete
+                result = Success.of((String) map.get("deploymentInstanceId"));
+                // Assuming a similar notification mechanism for deployment instances.
+                // You would need to create/adapt this method: insertDeploymentInstanceNotification(event, true, null);
+                // For now, using the template's notification method name as a placeholder for structure:
+                // insertNotification(event, true, null); // If you have a generic one or adapt this.
+            } catch (SQLException e) {
+                logger.error("SQLException during deleteDeploymentInstance:", e);
+                conn.rollback();
+                // insertDeploymentInstanceNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) { // Catch other potential runtime errors like NullPointerException or IllegalArgumentException
+                logger.error("Exception during deleteDeploymentInstance:", e);
+                conn.rollback();
+                // insertDeploymentInstanceNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) { // For conn = ds.getConnection() failure
+            logger.error("SQLException obtaining connection for deleteDeploymentInstance:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getDeploymentInstance(int offset, int limit, String hostId, String instanceId, String deploymentInstanceId,
+                                                String serviceId, String ipAddress, Integer portNumber, String systemEnv, String runtimeEnv,
+                                                String pipelineId, String deployStatus) {
+        Result<String> result = null;
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                host_id, instance_id, deployment_instance_id, service_id, ip_address,
+                port_number, system_env, runtime_env, pipeline_id, deploy_status,
+                update_user, update_ts
+                FROM deployment_instance_t
+                WHERE 1=1
+                """;
+
+        StringBuilder sqlBuilder = new StringBuilder(s);
+        List<Object> parameters = new ArrayList<>();
+        StringBuilder whereClause = new StringBuilder();
+
+        // Add conditions based on input parameters
+        addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
+        addCondition(whereClause, parameters, "deployment_instance_id", deploymentInstanceId != null ? UUID.fromString(deploymentInstanceId) : null);
+        addCondition(whereClause, parameters, "service_id", serviceId);
+        addCondition(whereClause, parameters, "ip_address", ipAddress);
+        addCondition(whereClause, parameters, "port_number", portNumber); // Integer, addCondition should handle it or be adapted
+        addCondition(whereClause, parameters, "system_env", systemEnv);
+        addCondition(whereClause, parameters, "runtime_env", runtimeEnv);
+        addCondition(whereClause, parameters, "pipeline_id", pipelineId != null ? UUID.fromString(pipelineId) : null);
+        addCondition(whereClause, parameters, "deploy_status", deployStatus);
+
+
+        if (!whereClause.isEmpty()) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        // It's good practice to order by a consistent key, e.g., the primary key or a creation timestamp.
+        // Using deployment_instance_id for ordering.
+        sqlBuilder.append(" ORDER BY host_id, deployment_instance_id\n") // Or just deployment_instance_id if host_id is always filtered
+                .append("LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> deploymentInstances = new ArrayList<>(); // Changed variable name
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                // Handle null Integer specifically for port_number if addCondition doesn't
+                if (parameters.get(i) == null && (i < parameters.size() - 2) /* not limit or offset */ ) {
+                    // This check assumes portNumber is the only nullable Integer filter.
+                    // A more robust way would be to pass the SQL type to addCondition or have type-specific addCondition.
+                    // For now, assuming addCondition correctly handles nulls or setObject works.
+                    // If 'port_number' was the parameter and it's null:
+                    // String columnNameForNullCheck = ... ; // Need a way to know which column this null is for.
+                    // if ("port_number".equals(columnNameForNullCheck)) {
+                    //    preparedStatement.setNull(i + 1, java.sql.Types.INTEGER);
+                    // } else {
+                    //    preparedStatement.setObject(i + 1, null); // Or specific type if known
+                    // }
+                    // The template's addCondition likely handles setObject(..., null) which works for most types.
+                    // For Integers specifically, setObject(i + 1, null) might not map to SQL NULL correctly for all drivers,
+                    // setNull(i+1, Types.INTEGER) is safer.
+                    // Given the template uses setObject for all, we'll follow that.
+                    preparedStatement.setObject(i + 1, null);
+                } else {
+                    preparedStatement.setObject(i + 1, parameters.get(i));
+                }
+            }
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
+                    map.put("deploymentInstanceId", resultSet.getObject("deployment_instance_id", UUID.class));
+                    map.put("serviceId", resultSet.getString("service_id"));
+                    map.put("ipAddress", resultSet.getString("ip_address"));
+
+                    // Handle nullable Integer for port_number from ResultSet
+                    int portNum = resultSet.getInt("port_number");
+                    if (resultSet.wasNull()) {
+                        map.put("portNumber", null);
+                    } else {
+                        map.put("portNumber", portNum);
+                    }
+
+                    map.put("systemEnv", resultSet.getString("system_env"));
+                    map.put("runtimeEnv", resultSet.getString("runtime_env"));
+                    map.put("pipelineId", resultSet.getObject("pipeline_id", UUID.class));
+                    map.put("deployStatus", resultSet.getString("deploy_status"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    deploymentInstances.add(map); // Changed variable name
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("deploymentInstances", deploymentInstances); // Changed key name
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) { // Catching potential UUID parsing errors or other runtime issues
             logger.error("Exception:", e);
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
