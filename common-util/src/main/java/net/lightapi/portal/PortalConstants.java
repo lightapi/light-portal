@@ -223,6 +223,11 @@ public class PortalConstants {
     public static final String DEPLOYMENT_STATUS_UPDATED_EVENT = "DeploymentStatusUpdatedEvent";
     public static final String DEPLOYMENT_DELETED_EVENT = "DeploymentDeletedEvent";
 
+    // --- Deployment Instance Events ---
+    public static final String DEPLOYMENT_INSTANCE_CREATED_EVENT = "DeploymentInstanceCreatedEvent";
+    public static final String DEPLOYMENT_INSTANCE_UPDATED_EVENT = "DeploymentInstanceUpdatedEvent";
+    public static final String DEPLOYMENT_INSTANCE_DELETED_EVENT = "DeploymentInstanceDeletedEvent";
+
     // --- Config Events ---
     public static final String CONFIG_CREATED_EVENT = "ConfigCreatedEvent";
     public static final String CONFIG_UPDATED_EVENT = "ConfigUpdatedEvent";

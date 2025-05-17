@@ -18719,9 +18719,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateDeploymentInstance(Map<String, Object> event) {
-        // Template assumes all these fields are expected in the map for an update.
-        // If a field is not meant to be updated, its current value should be passed.
-        // To set a field to NULL, pass null for its value in the map.
         // IMPORTANT: instance_id is a Foreign Key. Updating it is unusual.
         // If instance_id is NOT updatable, remove "instance_id = ?, " from SQL and the corresponding statement.setObject().
         final String sql = "UPDATE deployment_instance_t SET " +
