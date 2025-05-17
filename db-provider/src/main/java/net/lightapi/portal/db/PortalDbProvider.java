@@ -352,13 +352,14 @@ public interface PortalDbProvider extends DbProvider {
                               String versionDesc, String releaseType, Boolean current, String versionStatus);
     Result<String> getProductIdLabel(String hostId);
     Result<String> getProductVersionLabel(String hostId, String productId);
+    Result<String> getProductVersionIdLabel(String hostId);
     Result<String> createInstance(Map<String, Object> event);
     Result<String> updateInstance(Map<String, Object> event);
     Result<String> deleteInstance(Map<String, Object> event);
     Result<String> getInstance(int offset, int limit, String hostId, String instanceId, String instanceName,
                                String productVersionId, String productId, String productVersion, String serviceId, Boolean current,
                                Boolean readonly, String environment, String serviceDesc, String instanceDesc, String zone,
-                               String region, String lob, String resourceName, String businessName,
+                               String region, String lob, String resourceName, String businessName, String envTag,
                                String topicClassification);
     Result<String> getInstanceLabel(String hostId);
 
