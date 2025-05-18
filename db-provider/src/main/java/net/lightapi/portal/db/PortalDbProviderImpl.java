@@ -18126,6 +18126,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         final String sql = "INSERT INTO pipeline_t(host_id, pipeline_id, platform_id, pipeline_version, pipeline_name, " +
                 "current, endpoint, version_status, system_env, runtime_env, request_schema, response_schema, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?, ?)";
+        final String sqlUpdateCurrent =
+                """
+                UPDATE pipeline_t
+                SET current = false
+                WHERE host_id = ?
+                AND pipeline_name = ?
+                AND pipeline_id != ?
+                """;
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
@@ -18168,6 +18176,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 if (count == 0) {
                     throw new SQLException("failed to insert the pipeline with id " + map.get("pipelineId"));
                 }
+                // try to update current to false for others if current is true.
+                if(current != null && current) {
+                    try (PreparedStatement statementUpdate = conn.prepareStatement(sqlUpdateCurrent)) {
+                        statementUpdate.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+                        statementUpdate.setString(2, (String)map.get("pipelineName"));
+                        statementUpdate.setObject(3, UUID.fromString((String)map.get("pipelineId")));
+                        statementUpdate.executeUpdate();
+                    }
+                }
                 conn.commit();
                 result = Success.of((String)map.get("pipelineId"));
                 insertNotification(event, true, null);
@@ -18195,6 +18212,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 "endpoint = ?, version_status = ?, system_env = ?, runtime_env = ?, request_schema = ?, response_schema = ?, " +
                 "update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? AND pipeline_id = ?";
+        final String sqlUpdateCurrent =
+                """
+                UPDATE pipeline_t
+                SET current = false
+                WHERE host_id = ?
+                AND pipeline_name = ?
+                AND pipeline_id != ?
+                """;
+
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
@@ -18235,6 +18261,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("failed to update the pipeline with id " + map.get("pipelineId"));
+                }
+                // try to update current to false for others if current is true.
+                if(current != null && current) {
+                    try (PreparedStatement statementUpdate = conn.prepareStatement(sqlUpdateCurrent)) {
+                        statementUpdate.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+                        statementUpdate.setString(2, (String)map.get("pipelineName"));
+                        statementUpdate.setObject(3, UUID.fromString((String)map.get("pipelineId")));
+                        statementUpdate.executeUpdate();
+                    }
                 }
                 conn.commit();
                 result = Success.of((String)map.get("pipelineId"));
