@@ -379,9 +379,10 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> createPipeline(Map<String, Object> event);
     Result<String> updatePipeline(Map<String, Object> event);
     Result<String> deletePipeline(Map<String, Object> event);
-    Result<String> getPipeline(int offset, int limit, String hostId, String pipelineId, String platformId, String pipelineVersion,
-                               String pipelineName, Boolean current, String endpoint, String versionStatus, String systemEnv,
-                               String runtimeEnv, String requestSchema, String responseSchema);
+    Result<String> getPipeline(int offset, int limit, String hostId, String pipelineId, String platformId,
+                               String platformName, String platformVersion, String pipelineVersion,
+                               String pipelineName, Boolean current, String endpoint, String versionStatus,
+                               String systemEnv, String runtimeEnv, String requestSchema, String responseSchema);
     Result<String> getPipelineLabel(String hostId);
 
     Result<String> createInstancePipeline(Map<String, Object> event);

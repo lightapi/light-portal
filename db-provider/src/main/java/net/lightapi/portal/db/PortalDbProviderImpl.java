@@ -17508,8 +17508,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setObject(2, UUID.fromString((String)map.get("productVersionId")));
                 statement.setObject(3, UUID.fromString((String)map.get("pipelineId")));
-                statement.setString(5, (String)event.get(Constants.USER));
-                statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setString(4, (String)event.get(Constants.USER));
+                statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -18331,48 +18331,53 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
 
     @Override
-    public Result<String> getPipeline(int offset, int limit, String hostId, String pipelineId, String platformId, String pipelineVersion,
-                                      String pipelineName, Boolean current, String endpoint, String versionStatus, String systemEnv,
-                                      String runtimeEnv, String requestSchema, String responseSchema) {
+    public Result<String> getPipeline(int offset, int limit, String hostId, String pipelineId, String platformId,
+                                      String platformName, String platformVersion, String pipelineVersion,
+                                      String pipelineName, Boolean current, String endpoint, String versionStatus,
+                                      String systemEnv, String runtimeEnv, String requestSchema, String responseSchema) {
         Result<String> result = null;
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
-                host_id, pipeline_id, platform_id, pipeline_version, pipeline_name, current, endpoint, version_status,
-                system_env, runtime_env, request_schema, response_schema, update_user, update_ts
-                FROM pipeline_t
+                p.host_id, p.pipeline_id, p.platform_id, pf.platform_name, pf.platform_version,
+                p.pipeline_version, p.pipeline_name, p.current, p.endpoint, p.version_status,
+                p.system_env, p.runtime_env, p.request_schema, p.response_schema, p.update_user, p.update_ts
+                FROM pipeline_t p
+                INNER JOIN platform_t pf ON pf.platform_id = p.platform_id
                 WHERE 1=1
                 """;
 
         StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
         StringBuilder whereClause = new StringBuilder();
-        addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "pipeline_id", pipelineId != null ? UUID.fromString(pipelineId) : null);
-        addCondition(whereClause, parameters, "platform_id", platformId != null ? UUID.fromString(platformId) : null);
-        addCondition(whereClause, parameters, "pipeline_version", pipelineVersion);
-        addCondition(whereClause, parameters, "pipeline_name", pipelineName);
-        addCondition(whereClause, parameters, "current", current);
-        addCondition(whereClause, parameters, "endpoint", endpoint);
-        addCondition(whereClause, parameters, "version_status", versionStatus);
-        addCondition(whereClause, parameters, "system_env", systemEnv);
-        addCondition(whereClause, parameters, "runtime_env", runtimeEnv);
-        addCondition(whereClause, parameters, "request_schema", requestSchema);
-        addCondition(whereClause, parameters, "response_schema", responseSchema);
+        addCondition(whereClause, parameters, "p.host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "p.pipeline_id", pipelineId != null ? UUID.fromString(pipelineId) : null);
+        addCondition(whereClause, parameters, "p.platform_id", platformId != null ? UUID.fromString(platformId) : null);
+        addCondition(whereClause, parameters, "pf.platform_name", platformName);
+        addCondition(whereClause, parameters, "pf.platform_version", platformVersion);
+        addCondition(whereClause, parameters, "p.pipeline_version", pipelineVersion);
+        addCondition(whereClause, parameters, "p.pipeline_name", pipelineName);
+        addCondition(whereClause, parameters, "p.current", current);
+        addCondition(whereClause, parameters, "p.endpoint", endpoint);
+        addCondition(whereClause, parameters, "p.version_status", versionStatus);
+        addCondition(whereClause, parameters, "p.system_env", systemEnv);
+        addCondition(whereClause, parameters, "p.runtime_env", runtimeEnv);
+        addCondition(whereClause, parameters, "p.request_schema", requestSchema);
+        addCondition(whereClause, parameters, "p.response_schema", responseSchema);
 
 
         if (!whereClause.isEmpty()) {
             sqlBuilder.append(" AND ").append(whereClause);
         }
 
-        sqlBuilder.append(" ORDER BY pipeline_id\n" +
+        sqlBuilder.append(" ORDER BY p.pipeline_id\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
         parameters.add(offset);
 
         String sql = sqlBuilder.toString();
-        if(logger.isTraceEnabled()) logger.trace("sql = {}", sql);
+        // if(logger.isTraceEnabled()) logger.trace("sql = {}", sql);
         int total = 0;
         List<Map<String, Object>> pipelines = new ArrayList<>();
 
@@ -18395,6 +18400,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("pipelineId", resultSet.getObject("pipeline_id", UUID.class));
                     map.put("platformId", resultSet.getObject("platform_id", UUID.class));
+                    map.put("platformName", resultSet.getString("platform_name"));
+                    map.put("platformVersion", resultSet.getString("platform_version"));
                     map.put("pipelineVersion", resultSet.getString("pipeline_version"));
                     map.put("pipelineName", resultSet.getString("pipeline_name"));
                     map.put("current", resultSet.getBoolean("current"));
