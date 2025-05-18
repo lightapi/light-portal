@@ -17334,6 +17334,333 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
+    public Result<String> createProductVersionEnvironment(Map<String, Object> event) {
+        final String sql = "INSERT INTO product_version_environment_t(host_id, product_version_id, " +
+                "system_env, runtime_env, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?)";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(2, UUID.fromString((String)map.get("productVersionId")));
+                statement.setString(3, (String)map.get("systemEnv"));
+                statement.setString(4, (String)map.get("runtimeEnv"));
+                statement.setString(5, (String)event.get(Constants.USER));
+                statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert the product version environment with id " + map.get("productVersionId"));
+                }
+                conn.commit();
+                result = Success.of((String)map.get("productVersionId"));
+                insertNotification(event, true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deleteProductVersionEnvironment(Map<String, Object> event) {
+        final String sql = "DELETE FROM product_version_environment_t WHERE host_id = ? " +
+                "AND product_version_id = ? AND system_env = ? AND runtime_env = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(2, UUID.fromString((String)map.get("productVersionId")));
+                statement.setString(3, (String)map.get("systemEnv"));
+                statement.setString(4, (String)map.get("runtimeEnv"));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to delete the product version environment with id " + map.get("productVersionId"));
+                }
+                conn.commit();
+                result = Success.of((String)map.get("productVersionId"));
+                insertNotification(event, true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            }
+            catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
+    public Result<String> getProductVersionEnvironment(int offset, int limit, String hostId, String productVersionId,
+                                                String productId, String productVersion, String systemEnv, String runtimeEnv) {
+        Result<String> result = null;
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                pve.host_id, pve.product_version_id, pv.product_id, pv.product_version,
+                pve.system_env, pve.runtime_env, pve.update_user, pve.update_ts
+                FROM product_version_environment_t pve
+                INNER JOIN product_version_t pv ON pv.product_version_id = pve.product_version_id
+                WHERE 1=1
+                """;
+
+        StringBuilder sqlBuilder = new StringBuilder(s);
+        List<Object> parameters = new ArrayList<>();
+        StringBuilder whereClause = new StringBuilder();
+        addCondition(whereClause, parameters, "pve.host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "pve.product_version_id", productVersionId != null ? UUID.fromString(productVersionId) : null);
+        addCondition(whereClause, parameters, "pv.product_id", productId);
+        addCondition(whereClause, parameters, "pv.product_version", productVersion);
+        addCondition(whereClause, parameters, "pve.system_env", systemEnv);
+        addCondition(whereClause, parameters, "pve.runtime_env", runtimeEnv);
+
+        if (!whereClause.isEmpty()) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append(" ORDER BY pv.product_id, pv.product_version, pve.system_env, pve.runtime_env DESC\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> productEnvironments = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("productVersionId", resultSet.getObject("product_version_id", UUID.class));
+                    map.put("productId", resultSet.getString("product_id"));
+                    map.put("productVersion", resultSet.getString("product_version"));
+                    map.put("systemEnv", resultSet.getString("system_env"));
+                    map.put("runtimeEnv", resultSet.getString("runtime_env"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    productEnvironments.add(map);
+                }
+            }
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("productEnvironments", productEnvironments);
+            result = Success.of(JsonMapper.toJson(resultMap));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
+    public Result<String> createProductVersionPipeline(Map<String, Object> event) {
+        final String sql = "INSERT INTO product_version_pipeline_t(host_id, product_version_id, " +
+                "pipeline_id, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?)";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(2, UUID.fromString((String)map.get("productVersionId")));
+                statement.setObject(3, UUID.fromString((String)map.get("pipelineId")));
+                statement.setString(5, (String)event.get(Constants.USER));
+                statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert the product version pipeline with id " + map.get("productVersionId"));
+                }
+                conn.commit();
+                result = Success.of((String)map.get("productVersionId"));
+                insertNotification(event, true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deleteProductVersionPipeline(Map<String, Object> event) {
+        final String sql = "DELETE FROM product_version_pipeline_t WHERE host_id = ? " +
+                "AND product_version_id = ? AND pipeline_id = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(2, UUID.fromString((String)map.get("productVersionId")));
+                statement.setObject(3, UUID.fromString((String)map.get("pipelineId")));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to delete the product version pipeline with id " + map.get("productVersionId"));
+                }
+                conn.commit();
+                result = Success.of((String)map.get("productVersionId"));
+                insertNotification(event, true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            }
+            catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getProductVersionPipeline(int offset, int limit, String hostId, String productVersionId,
+                                             String productId, String productVersion, String pipelineId,
+                                             String pipelineName, String pipelineVersion) {
+        Result<String> result = null;
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                pvp.host_id, pvp.product_version_id, pv.product_id, pv.product_version,
+                pvp.pipeline_id, p.pipeline_name, p.pipeline_version, pvp.update_user, pvp.update_ts
+                FROM product_version_pipeline_t pvp
+                INNER JOIN product_version_t pv ON pv.product_version_id = pvp.product_version_id
+                INNER JOIN pipeline_t p ON p.pipeline_id = pvp.pipeline_id
+                WHERE 1=1
+                """;
+
+        StringBuilder sqlBuilder = new StringBuilder(s);
+        List<Object> parameters = new ArrayList<>();
+        StringBuilder whereClause = new StringBuilder();
+        addCondition(whereClause, parameters, "pvp.host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "pvp.product_version_id", productVersionId != null ? UUID.fromString(productVersionId) : null);
+        addCondition(whereClause, parameters, "pv.product_id", productId);
+        addCondition(whereClause, parameters, "pv.product_version", productVersion);
+        addCondition(whereClause, parameters, "pvp.pipeline_id", pipelineId != null ? UUID.fromString(pipelineId) : null);
+        addCondition(whereClause, parameters, "p.pipeline_name", pipelineName);
+        addCondition(whereClause, parameters, "p.pipeline_version", pipelineVersion);
+
+        if (!whereClause.isEmpty()) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append(" ORDER BY pv.product_id, pv.product_version, p.pipeline_name, p.pipeline_version DESC\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> productPipelines = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("productVersionId", resultSet.getObject("product_version_id", UUID.class));
+                    map.put("productId", resultSet.getString("product_id"));
+                    map.put("productVersion", resultSet.getString("product_version"));
+                    map.put("pipelineId", resultSet.getObject("pipeline_id", UUID.class));
+                    map.put("pipelineName", resultSet.getString("pipeline_name"));
+                    map.put("pipelineVersion", resultSet.getString("pipeline_version"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    productPipelines.add(map);
+                }
+            }
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("productPipelines", productPipelines);
+            result = Success.of(JsonMapper.toJson(resultMap));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+
+
+    @Override
     public Result<String> createInstance(Map<String, Object> event) {
         final String sql =
                 """
@@ -17982,7 +18309,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 WHERE 1=1
                 """;
 
-        StringBuilder sqlBuilder = new StringBuilder();
+        StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
         StringBuilder whereClause = new StringBuilder();
         addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
@@ -18000,7 +18327,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
 
         if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
+            sqlBuilder.append(" AND ").append(whereClause);
         }
 
         sqlBuilder.append(" ORDER BY pipeline_id\n" +
@@ -18010,6 +18337,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         parameters.add(offset);
 
         String sql = sqlBuilder.toString();
+        if(logger.isTraceEnabled()) logger.trace("sql = {}", sql);
         int total = 0;
         List<Map<String, Object>> pipelines = new ArrayList<>();
 

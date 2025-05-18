@@ -184,6 +184,14 @@ public class PortalConstants {
     public static final String PRODUCT_UPDATED_EVENT = "ProductUpdatedEvent";
     public static final String PRODUCT_DELETED_EVENT = "ProductDeletedEvent";
 
+    // --- Product Version Environment Events ---
+    public static final String PRODUCT_VERSION_ENVIRONMENT_CREATED_EVENT = "ProductVersionEnvironmentCreatedEvent";
+    public static final String PRODUCT_VERSION_ENVIRONMENT_DELETED_EVENT = "ProductVersionEnvironmentDeletedEvent";
+
+    // --- Product Version Pipeline Events ---
+    public static final String PRODUCT_VERSION_PIPELINE_CREATED_EVENT = "ProductVersionPipelineCreatedEvent";
+    public static final String PRODUCT_VERSION_PIPELINE_DELETED_EVENT = "ProductVersionPipelineDeletedEvent";
+
     // --- Pipeline Events ---
     public static final String PIPELINE_CREATED_EVENT = "PipelineCreatedEvent";
     public static final String PIPELINE_UPDATED_EVENT = "PipelineUpdatedEvent";
