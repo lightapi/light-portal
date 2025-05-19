@@ -19422,12 +19422,38 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     }
 
+    @Override
+    public Result<String> getDeploymentInstanceLabel(String hostId) {
+        Result<String> result = null;
+        String sql = "SELECT deployment_instance_id, service_id FROM deployment_instance_t WHERE host_id = ?";
+        List<Map<String, Object>> labels = new ArrayList<>();
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setObject(1, UUID.fromString(hostId));
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", resultSet.getString("deployment_instance_id"));
+                    map.put("label", resultSet.getString("service_id"));
+                    labels.add(map);
+                }
+            }
+            result = Success.of(JsonMapper.toJson(labels));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
 
     @Override
     public Result<String> createDeployment(Map<String, Object> event) {
-        final String sql = "INSERT INTO deployment_t(host_id, deployment_id, instance_id, " +
+        final String sql = "INSERT INTO deployment_t(host_id, deployment_id, deployment_instance_id, " +
                 "deployment_status, deployment_type, schedule_ts, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                "VALUES (?, ?, ?, ?, ?,  ?, ?, ?)";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
@@ -19435,7 +19461,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setObject(2, UUID.fromString((String)map.get("deploymentId")));
-                statement.setObject(3, UUID.fromString((String)map.get("instanceId")));
+                statement.setObject(3, UUID.fromString((String)map.get("deploymentInstanceId")));
                 statement.setString(4, (String)map.get("deploymentStatus"));
                 statement.setString(5, (String)map.get("deploymentType"));
                 statement.setObject(6, map.get("scheduleTs") != null ? OffsetDateTime.parse((String)map.get("scheduleTs")) : OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
@@ -19469,7 +19495,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateDeployment(Map<String, Object> event) {
-        final String sql = "UPDATE deployment_t SET instance_id = ?, deployment_status = ?, deployment_type = ?, " +
+        final String sql = "UPDATE deployment_t SET deployment_status = ?, deployment_type = ?, " +
                 "schedule_ts = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? and deployment_id = ?";
         Result<String> result;
@@ -19479,15 +19505,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String)map.get("instanceId")));
-                statement.setString(2, (String)map.get("deploymentStatus"));
-                statement.setString(3, (String)map.get("deploymentType"));
+                statement.setString(1, (String)map.get("deploymentStatus"));
+                statement.setString(2, (String)map.get("deploymentType"));
                 // use the event time if schedule time is not provided. We cannot use now as this event might be replayed.
-                statement.setObject(4, map.get("scheduleTs") != null ? OffsetDateTime.parse((String)map.get("scheduleTs")) : OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(5, (String)event.get(Constants.USER));
-                statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(7, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(8, UUID.fromString((String)map.get("deploymentId")));
+                statement.setObject(3, map.get("scheduleTs") != null ? OffsetDateTime.parse((String)map.get("scheduleTs")) : OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setString(4, (String)event.get(Constants.USER));
+                statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(7, UUID.fromString((String)map.get("deploymentId")));
                 int count = statement.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("failed to update the deployment with id " + map.get("deploymentId"));
@@ -19633,15 +19658,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> getDeployment(int offset, int limit, String hostId, String deploymentId,
-                                        String instanceId, String deploymentStatus,
+                                        String deploymentInstanceId, String serviceId, String deploymentStatus,
                                         String deploymentType, String platformJobId) {
         Result<String> result = null;
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
-                host_id, deployment_id, instance_id, deployment_status, deployment_type,
-                schedule_ts, platform_job_id, update_user, update_ts
-                FROM deployment_t
+                d.host_id, d.deployment_id, d.deployment_instance_id, di.service_id, d.deployment_status,
+                d.deployment_type, d.schedule_ts, d.platform_job_id, d.update_user, d.update_ts
+                FROM deployment_t d
+                INNER JOIN deployment_instance_t di ON di.deployment_instance_id = d.deployment_instance_id
                 WHERE 1=1
                 """;
 
@@ -19650,18 +19676,19 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         List<Object> parameters = new ArrayList<>();
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "deployment_id", deploymentId != null ? UUID.fromString(deploymentId) : null);
-        addCondition(whereClause, parameters, "instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
-        addCondition(whereClause, parameters, "deployment_status", deploymentStatus);
-        addCondition(whereClause, parameters, "deployment_type", deploymentType);
-        addCondition(whereClause, parameters, "platform_job_id", platformJobId);
+        addCondition(whereClause, parameters, "d.host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "d.deployment_id", deploymentId != null ? UUID.fromString(deploymentId) : null);
+        addCondition(whereClause, parameters, "d.deployment_instance_id", deploymentInstanceId != null ? UUID.fromString(deploymentInstanceId) : null);
+        addCondition(whereClause, parameters, "di.service_id", serviceId);
+        addCondition(whereClause, parameters, "d.deployment_status", deploymentStatus);
+        addCondition(whereClause, parameters, "d.deployment_type", deploymentType);
+        addCondition(whereClause, parameters, "d.platform_job_id", platformJobId);
 
         if (!whereClause.isEmpty()) {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append(" ORDER BY deployment_id\n" +
+        sqlBuilder.append(" ORDER BY d.deployment_id\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -19688,7 +19715,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                     map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("deploymentId", resultSet.getObject("deployment_id", UUID.class));
-                    map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
+                    map.put("deploymentInstanceId", resultSet.getObject("deployment_instance_id", UUID.class));
+                    map.put("serviceId", resultSet.getString("service_id"));
                     map.put("deploymentStatus", resultSet.getString("deployment_status"));
                     map.put("deploymentType", resultSet.getString("deployment_type"));
                     map.put("scheduleTs", resultSet.getObject("schedule_ts") != null ? resultSet.getObject("schedule_ts", OffsetDateTime.class) : null);

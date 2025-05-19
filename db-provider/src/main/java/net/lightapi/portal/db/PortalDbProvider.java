@@ -407,6 +407,7 @@ public interface PortalDbProvider extends DbProvider {
                                          String serviceId, String ipAddress, Integer portNumber, String systemEnv, String runtimeEnv,
                                          String pipelineId, String pipelineName, String pipelineVersion, String deployStatus);
     Result<String> getDeploymentInstancePipeline(String hostId, String instanceId, String systemEnv, String runtimeEnv);
+    Result<String> getDeploymentInstanceLabel(String hostId);
 
 
     Result<String> createDeployment(Map<String, Object> event);
@@ -414,7 +415,8 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> updateDeploymentJobId(Map<String, Object> event);
     Result<String> updateDeploymentStatus(Map<String, Object> event);
     Result<String> deleteDeployment(Map<String, Object> event);
-    Result<String> getDeployment(int offset, int limit, String hostId, String deploymentId, String instanceId, String deploymentStatus,
+    Result<String> getDeployment(int offset, int limit, String hostId, String deploymentId,
+                                 String deploymentInstanceId, String serviceId, String deploymentStatus,
                                  String deploymentType, String platformJobId);
 
     Result<String> createCategory(Map<String, Object> event);
