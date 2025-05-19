@@ -1443,4 +1443,23 @@ public class HybridQueryClient {
         }
     }
 
+    /**
+     * Get pipelineId when creating deployment_instance_t entity. This is called in handler to create deployment_instance_t.
+     *
+     * @param exchange HttpServerExchange
+     * @param hostId host id
+     * @param instanceId instance id
+     * @param systemEnv system environment
+     * @param runtimeEnv runtime environment
+     * @return Result the pipelineId
+     */
+    public static Result<String> getDeploymentInstancePipeline(HttpServerExchange exchange, String hostId, String instanceId, String systemEnv, String runtimeEnv) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"deployment\",\"action\":\"getDeploymentInstancePipeline\",\"version\":\"0.1.0\",\"data\":{\"hostId\":\"%s\",\"instanceId\":\"%s\",\"systemEnv\":\"%s\",\"runtimeEnv\":\"%s\"}}", hostId, instanceId, systemEnv, runtimeEnv);
+        if (config.isPortalByServiceUrl()) {
+            return callQueryExchangeUrl(s, exchange, config.getPortalQueryServiceUrl());
+        } else {
+            return callQueryExchange(s, exchange);
+        }
+    }
+
 }

@@ -403,9 +403,11 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> createDeploymentInstance(Map<String, Object> event);
     Result<String> updateDeploymentInstance(Map<String, Object> event);
     Result<String> deleteDeploymentInstance(Map<String, Object> event);
-    Result<String> getDeploymentInstance(int offset, int limit, String hostId, String instanceId, String deploymentInstanceId,
+    Result<String> getDeploymentInstance(int offset, int limit, String hostId, String instanceId, String instanceName, String deploymentInstanceId,
                                          String serviceId, String ipAddress, Integer portNumber, String systemEnv, String runtimeEnv,
-                                         String pipelineId, String deployStatus);
+                                         String pipelineId, String pipelineName, String pipelineVersion, String deployStatus);
+    Result<String> getDeploymentInstancePipeline(String hostId, String instanceId, String systemEnv, String runtimeEnv);
+
 
     Result<String> createDeployment(Map<String, Object> event);
     Result<String> updateDeployment(Map<String, Object> event);

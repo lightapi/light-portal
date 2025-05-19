@@ -19020,10 +19020,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createDeploymentInstance(Map<String, Object> event) {
+        // deployStatus is not set here but use the default value.
         final String sql = "INSERT INTO deployment_instance_t(host_id, instance_id, deployment_instance_id, " +
                 "service_id, ip_address, port_number, system_env, runtime_env, pipeline_id, " +
-                "deploy_status, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                "update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
         try (Connection conn = ds.getConnection()) {
@@ -19057,9 +19058,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(7, (String) map.get("systemEnv"));
                 statement.setString(8, (String) map.get("runtimeEnv"));
                 statement.setObject(9, UUID.fromString((String) map.get("pipelineId")));
-                statement.setString(10, (String) map.get("deployStatus"));
-                statement.setString(11, (String) event.get(Constants.USER));
-                statement.setObject(12, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                statement.setString(10, (String) event.get(Constants.USER));
+                statement.setObject(11, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -19089,17 +19089,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> updateDeploymentInstance(Map<String, Object> event) {
-        // IMPORTANT: instance_id is a Foreign Key. Updating it is unusual.
-        // If instance_id is NOT updatable, remove "instance_id = ?, " from SQL and the corresponding statement.setObject().
+        // instanceId is FK and deployStatus is not updated here.
         final String sql = "UPDATE deployment_instance_t SET " +
-                "instance_id = ?, " +         // FK - updatable?
                 "service_id = ?, " +
                 "ip_address = ?, " +
                 "port_number = ?, " +
                 "system_env = ?, " +
                 "runtime_env = ?, " +
                 "pipeline_id = ?, " +
-                "deploy_status = ?, " +
                 "update_user = ?, " +
                 "update_ts = ? " +
                 "WHERE host_id = ? AND deployment_instance_id = ?";
@@ -19113,10 +19110,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 // Set parameters in the order they appear in the SQL SET clause, then WHERE clause
                 int paramIdx = 1;
-
-                // instance_id (FK - if updatable)
-                // If not updatable, remove this line and adjust SQL & subsequent indices
-                statement.setObject(paramIdx++, UUID.fromString((String) map.get("instanceId")));
 
                 // service_id
                 statement.setString(paramIdx++, (String) map.get("serviceId"));
@@ -19145,8 +19138,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 statement.setString(paramIdx++, (String) map.get("runtimeEnv"));
                 // pipeline_id
                 statement.setObject(paramIdx++, UUID.fromString((String) map.get("pipelineId")));
-                // deploy_status
-                statement.setString(paramIdx++, (String) map.get("deployStatus"));
 
                 // update_user
                 statement.setString(paramIdx++, (String) event.get(Constants.USER));
@@ -19233,17 +19224,19 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> getDeploymentInstance(int offset, int limit, String hostId, String instanceId, String deploymentInstanceId,
+    public Result<String> getDeploymentInstance(int offset, int limit, String hostId, String instanceId, String instanceName, String deploymentInstanceId,
                                                 String serviceId, String ipAddress, Integer portNumber, String systemEnv, String runtimeEnv,
-                                                String pipelineId, String deployStatus) {
+                                                String pipelineId, String pipelineName, String pipelineVersion, String deployStatus) {
         Result<String> result = null;
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
-                host_id, instance_id, deployment_instance_id, service_id, ip_address,
-                port_number, system_env, runtime_env, pipeline_id, deploy_status,
-                update_user, update_ts
-                FROM deployment_instance_t
+                di.host_id, di.instance_id, i.instance_name, di.deployment_instance_id, di.service_id, di.ip_address,
+                di.port_number, di.system_env, di.runtime_env, di.pipeline_id, p.pipeline_name, p.pipeline_version,
+                di.deploy_status, di.update_user, di.update_ts
+                FROM deployment_instance_t di
+                INNER JOIN instance_t i ON i.instance_id = di.instance_id
+                INNER JOIN pipeline_t p ON p.pipeline_id = di.pipeline_id
                 WHERE 1=1
                 """;
 
@@ -19252,16 +19245,19 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         StringBuilder whereClause = new StringBuilder();
 
         // Add conditions based on input parameters
-        addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
-        addCondition(whereClause, parameters, "deployment_instance_id", deploymentInstanceId != null ? UUID.fromString(deploymentInstanceId) : null);
-        addCondition(whereClause, parameters, "service_id", serviceId);
-        addCondition(whereClause, parameters, "ip_address", ipAddress);
-        addCondition(whereClause, parameters, "port_number", portNumber); // Integer, addCondition should handle it or be adapted
-        addCondition(whereClause, parameters, "system_env", systemEnv);
-        addCondition(whereClause, parameters, "runtime_env", runtimeEnv);
-        addCondition(whereClause, parameters, "pipeline_id", pipelineId != null ? UUID.fromString(pipelineId) : null);
-        addCondition(whereClause, parameters, "deploy_status", deployStatus);
+        addCondition(whereClause, parameters, "di.host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "di.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
+        addCondition(whereClause, parameters, "i.instance_name", instanceName);
+        addCondition(whereClause, parameters, "di.deployment_instance_id", deploymentInstanceId != null ? UUID.fromString(deploymentInstanceId) : null);
+        addCondition(whereClause, parameters, "di.service_id", serviceId);
+        addCondition(whereClause, parameters, "di.ip_address", ipAddress);
+        addCondition(whereClause, parameters, "di.port_number", portNumber); // Integer, addCondition should handle it or be adapted
+        addCondition(whereClause, parameters, "di.system_env", systemEnv);
+        addCondition(whereClause, parameters, "di.runtime_env", runtimeEnv);
+        addCondition(whereClause, parameters, "di.pipeline_id", pipelineId != null ? UUID.fromString(pipelineId) : null);
+        addCondition(whereClause, parameters, "p.pipeline_name", pipelineName);
+        addCondition(whereClause, parameters, "p.pipeline_version", pipelineVersion);
+        addCondition(whereClause, parameters, "di.deploy_status", deployStatus);
 
 
         if (!whereClause.isEmpty()) {
@@ -19270,7 +19266,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         // It's good practice to order by a consistent key, e.g., the primary key or a creation timestamp.
         // Using deployment_instance_id for ordering.
-        sqlBuilder.append(" ORDER BY host_id, deployment_instance_id\n") // Or just deployment_instance_id if host_id is always filtered
+        sqlBuilder.append(" ORDER BY di.host_id, di.deployment_instance_id\n") // Or just deployment_instance_id if host_id is always filtered
                 .append("LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -19316,6 +19312,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                     map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
+                    map.put("instanceName", resultSet.getString("instance_name"));
                     map.put("deploymentInstanceId", resultSet.getObject("deployment_instance_id", UUID.class));
                     map.put("serviceId", resultSet.getString("service_id"));
                     map.put("ipAddress", resultSet.getString("ip_address"));
@@ -19331,6 +19328,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     map.put("systemEnv", resultSet.getString("system_env"));
                     map.put("runtimeEnv", resultSet.getString("runtime_env"));
                     map.put("pipelineId", resultSet.getObject("pipeline_id", UUID.class));
+                    map.put("pipelineName", resultSet.getString("pipeline_name"));
+                    map.put("pipelineVersion", resultSet.getString("pipeline_version"));
                     map.put("deployStatus", resultSet.getString("deploy_status"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
@@ -19341,9 +19340,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
             Map<String, Object> resultMap = new HashMap<>();
             resultMap.put("total", total);
-            resultMap.put("deploymentInstances", deploymentInstances); // Changed key name
+            resultMap.put("deploymentInstances", deploymentInstances);
             result = Success.of(JsonMapper.toJson(resultMap));
-
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
@@ -19353,6 +19351,77 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         }
         return result;
     }
+
+    @Override
+    public Result<String> getDeploymentInstancePipeline(String hostId, String instanceId, String systemEnv, String runtimeEnv) {
+        final String s =
+                """
+                WITH InstanceProductVersion AS (
+                    -- Get the product_version_id for the given instance_id
+                    SELECT product_version_id
+                    FROM instance_t
+                    WHERE host_id = ? AND instance_id = ? -- Parameter 2: instance_id (e.g., '0196e658-8a14-72a8-802f-1fea0de8843a')
+                ),
+                ProductPipelines AS (
+                    -- Get all pipeline_ids associated with that product_version_id
+                    SELECT pvp.pipeline_id
+                    FROM product_version_pipeline_t pvp
+                    JOIN InstanceProductVersion ipv ON pvp.product_version_id = ipv.product_version_id
+                )
+                -- Query 1: Exact match for system_env AND runtime_env
+                SELECT
+                    p.*,
+                    1 AS preference -- Higher preference for exact runtime_env match
+                FROM pipeline_t p
+                JOIN ProductPipelines pp ON p.pipeline_id = pp.pipeline_id
+                WHERE p.system_env = ?     -- Parameter 3: system_env (e.g., 'VM Ubuntu 24.04' or 'Kubernetes')
+                  AND p.runtime_env = ?    -- Parameter 4: runtime_env (e.g., 'OpenJDK 21')
+                  AND p.current = true
+
+                UNION ALL
+
+                -- Query 2: Match for system_env AND runtime_env IS NULL
+                SELECT
+                    p.*,
+                    2 AS preference -- Lower preference for NULL runtime_env
+                FROM pipeline_t p
+                JOIN ProductPipelines pp ON p.pipeline_id = pp.pipeline_id
+                WHERE p.system_env = ?     -- Parameter 5: system_env (same as Parameter 2)
+                  AND p.runtime_env IS NULL
+                  AND p.current = true
+
+                ORDER BY preference ASC, pipeline_id -- Ensure deterministic order if multiple pipelines have same preference
+                LIMIT 1
+                """;
+        Result<String> result = null;
+        String pipelineId = null;
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(s)) {
+            preparedStatement.setObject(1, UUID.fromString(hostId));
+            preparedStatement.setObject(2, UUID.fromString(instanceId));
+            preparedStatement.setString(3, systemEnv);
+            preparedStatement.setString(4, runtimeEnv);
+            preparedStatement.setString(5, systemEnv); // Reusing system_env for the second query
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    pipelineId = resultSet.getString("pipeline_id");
+                }
+            }
+            if (pipelineId == null) {
+                throw new SQLException("No pipeline found for the given parameters.");
+            }
+            result = Success.of(pipelineId);
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
 
     @Override
     public Result<String> createDeployment(Map<String, Object> event) {
