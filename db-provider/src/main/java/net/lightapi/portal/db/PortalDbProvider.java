@@ -120,6 +120,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> queryService(int offset, int limit, String hostId, String apiId, String apiName,
                                 String apiDesc, String operationOwner, String deliveryOwner, String region, String businessGroup,
                                 String lob, String platform, String capability, String gitRepo, String apiTags, String apiStatus);
+    Result<String> getApiVersionIdLabel(String hostId);
     Result<String> queryApiLabel(String hostId);
     Result<String> queryApiVersionLabel(String hostId, String apiId);
     Result<String> queryEndpointLabel(String hostId, String apiId, String apiVersion);
@@ -169,18 +170,20 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> createConfigProperty(Map<String, Object> event);
     Result<String> updateConfigProperty(Map<String, Object> event);
     Result<String> deleteConfigProperty(Map<String, Object> event);
-    Result<String> getConfigProperty(int offset, int limit, String configId, String propertyId, String configName, String propertyName,
-                                                  String propertyType, String light4jVersion, Integer displayOrder, Boolean required,
-                                                  String propertyDesc, String propertyValue, String valueType, String propertyFile,
-                                                  String resourceType);
+
+    Result<String> getConfigProperty(int offset, int limit, String configId, String configName, String propertyId,
+                                            String propertyName, String propertyType, String light4jVersion, Integer displayOrder,
+                                            Boolean required, String propertyDesc, String propertyValue, String valueType,
+                                            String resourceType);
+
     Result<String> queryConfigPropertyById(String configId);
-    Result<String> queryConfigPropertyByIdName(String configId, String propertyName);
+    Result<String> queryConfigPropertyByPropertyId(String configId, String propertyId);
 
     Result<String> createConfigEnvironment(Map<String, Object> event);
     Result<String> updateConfigEnvironment(Map<String, Object> event);
     Result<String> deleteConfigEnvironment(Map<String, Object> event);
     Result<String> getConfigEnvironment(int offset, int limit, String hostId, String environment, String configId, String configName,
-                                                  String propertyId, String propertyName, String propertyValue, String propertyFile);
+                                                  String propertyId, String propertyName, String propertyValue);
 
     Result<String> createInstanceApi(Map<String, Object> event);
     Result<String> updateInstanceApi(Map<String, Object> event);
@@ -207,8 +210,8 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> updateConfigInstanceApi(Map<String, Object> event);
     Result<String> deleteConfigInstanceApi(Map<String, Object> event);
     Result<String> getConfigInstanceApi(int offset, int limit, String hostId, String instanceId, String instanceName,
-                                        String apiId, String apiVersion, String configId, String configName, String propertyId,
-                                        String propertyName, String propertyValue, String propertyFile);
+                                        String apiVersionId, String apiId, String apiVersion, String configId,
+                                        String configName, String propertyId, String propertyName, String propertyValue);
 
     Result<String> createInstanceApp(Map<String, Object> event);
     Result<String> updateInstanceApp(Map<String, Object> event);
@@ -222,7 +225,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> deleteConfigInstanceApp(Map<String, Object> event);
     Result<String> getConfigInstanceApp(int offset, int limit, String hostId, String instanceId, String instanceName,
                                         String appId, String appVersion,String configId, String configName,
-                                        String propertyId, String propertyName, String propertyValue, String propertyFile);
+                                        String propertyId, String propertyName, String propertyValue);
 
     Result<String> createConfigInstance(Map<String, Object> event);
     Result<String> updateConfigInstance(Map<String, Object> event);
@@ -230,22 +233,22 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> commitConfigInstance(Map<String, Object> event);
     Result<String> rollbackConfigInstance(Map<String, Object> event);
     Result<String> getConfigInstance(int offset, int limit, String hostId, String instanceId,
-                                                     String configId, String configName, String propertyId,
-                                                     String propertyName, String propertyValue, String propertyFile);
+                                     String instanceName, String configId, String configName,
+                                     String propertyId, String propertyName, String propertyValue);
 
     Result<String> createConfigProduct(Map<String, Object> event);
     Result<String> updateConfigProduct(Map<String, Object> event);
     Result<String> deleteConfigProduct(Map<String, Object> event);
     Result<String> getConfigProduct(int offset, int limit, String productId,
                                                   String configId, String configName, String propertyId,
-                                                  String propertyName, String propertyValue, String propertyFile);
+                                                  String propertyName, String propertyValue);
 
     Result<String> createConfigProductVersion(Map<String, Object> event);
     Result<String> updateConfigProductVersion(Map<String, Object> event);
     Result<String> deleteConfigProductVersion(Map<String, Object> event);
     Result<String> getConfigProductVersion(int offset, int limit, String hostId, String productId, String productVersion,
                                                  String configId, String configName, String propertyId,
-                                                 String propertyName, String propertyValue, String propertyFile);
+                                                 String propertyName, String propertyValue);
 
     Result<String> createRule(Map<String, Object> event);
     Result<String> updateRule(Map<String, Object> event);

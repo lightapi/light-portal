@@ -95,7 +95,7 @@ public class Db2EventTest {
         LocalDateTime now = LocalDateTime.now();
         String formattedDateTime = now.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         String filename = "/home/steve/lightapi/events/config-property-" + formattedDateTime + ".txt";
-        Result<String> result = dbProvider.getConfigProperty(0, Integer.MAX_VALUE, null, null, null, null, null, null, null, null, null, null, null, null, null);
+        Result<String> result = dbProvider.getConfigProperty(0, Integer.MAX_VALUE, null, null, null, null, null, null, null, null, null, null, null, null);
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {

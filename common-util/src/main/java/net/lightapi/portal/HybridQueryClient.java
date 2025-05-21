@@ -1434,8 +1434,8 @@ public class HybridQueryClient {
      * @param propertyName property name
      * @return Result the config property object in JSON
      */
-    public static Result<String> getConfigPropertyByIdName(HttpServerExchange exchange, String configId, String propertyName) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"config\",\"action\":\"getConfigPropertyByIdName\",\"version\":\"0.1.0\",\"data\":{\"configId\":\"%s\",\"propertyName\":\"%s\"}}", configId, propertyName);
+    public static Result<String> getConfigPropertyByPropertyId(HttpServerExchange exchange, String configId, String propertyId) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"config\",\"action\":\"getConfigPropertyByPropertyId\",\"version\":\"0.1.0\",\"data\":{\"configId\":\"%s\",\"propertyId\":\"%s\"}}", configId, propertyId);
         if (config.isPortalByServiceUrl()) {
             return callQueryExchangeUrl(s, exchange, config.getPortalQueryServiceUrl());
         } else {
