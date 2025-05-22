@@ -8628,8 +8628,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
-                    map.put("id", resultSet.getString("instance_id"));
-                    map.put("label", resultSet.getString("instance_name") + "|" + resultSet.getString("api_id") + "|" + resultSet.getString("api_version"));
+                    map.put("id", resultSet.getString("instance_api_id"));
+                    map.put("label", resultSet.getString("api_id") + "|" + resultSet.getString("api_version") +  "|" + resultSet.getString("instance_name"));
                     labels.add(map);
                 }
             }
@@ -9585,8 +9585,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
-                    map.put("id", resultSet.getString("instance_id"));
-                    map.put("label", resultSet.getString("instance_name") + "|" + resultSet.getString("app_id") + "|" + resultSet.getString("app_version"));
+                    map.put("id", resultSet.getString("instance_app_id"));
+                    map.put("label", resultSet.getString("app_id") + "|" + resultSet.getString("app_version") + "|" + resultSet.getString("instance_name"));
                     labels.add(map);
                 }
             }
