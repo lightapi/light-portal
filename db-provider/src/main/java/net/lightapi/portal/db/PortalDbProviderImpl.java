@@ -8554,7 +8554,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append("ORDER BY instance_id, api_version_id\n" + // Added ordering
+        sqlBuilder.append(" ORDER BY instance_id, api_version_id\n" + // Added ordering
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
