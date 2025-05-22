@@ -9513,13 +9513,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append("ORDER BY instance_id, app_id, app_version\n" +
+        sqlBuilder.append(" ORDER BY instance_id, app_id, app_version\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
         parameters.add(offset);
 
         String sql = sqlBuilder.toString();
+        if(logger.isTraceEnabled()) logger.trace("sql = {}", sql);
         int total = 0;
         List<Map<String, Object>> instanceApps = new ArrayList<>();
 
