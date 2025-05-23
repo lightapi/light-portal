@@ -191,7 +191,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> getInstanceApi(int offset, int limit, String hostId, String instanceApiId, String instanceId, String instanceName,
                                   String productId, String productVersion, String apiVersionId, String apiId, String apiVersion,
                                   Boolean active);
-    Result<String> getInstanceApiLabel(String hostId);
+    Result<String> getInstanceApiLabel(String hostId, String instanceId);
 
     Result<String> createInstanceApiPathPrefix(Map<String, Object> event);
     Result<String> updateInstanceApiPathPrefix(Map<String, Object> event);
@@ -202,9 +202,10 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> createInstanceAppApi(Map<String, Object> event);
     Result<String> updateInstanceAppApi(Map<String, Object> event);
     Result<String> deleteInstanceAppApi(Map<String, Object> event);
-    Result<String> getInstanceAppApi(int offset, int limit, String hostId, String instanceAppId, String appId, String appVersion,
-                                     String instanceApiId, String instanceName, String productId, String productVersion,
-                                     String apiId, String apiVersion, Boolean active);
+    Result<String> getInstanceAppApi(int offset, int limit, String hostId, String instanceAppId, String instanceApiId,
+                                     String instanceId, String instanceName, String productId, String productVersion,
+                                     String appId, String appVersion, String apiVersionId, String apiId,
+                                     String apiVersion, Boolean active);
 
     Result<String> createConfigInstanceApi(Map<String, Object> event);
     Result<String> updateConfigInstanceApi(Map<String, Object> event);
@@ -218,7 +219,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> deleteInstanceApp(Map<String, Object> event);
     Result<String> getInstanceApp(int offset, int limit, String hostId, String instanceAppId, String instanceId, String instanceName,
                                   String productId, String productVersion, String appId, String appVersion, Boolean active);
-    Result<String> getInstanceAppLabel(String hostId);
+    Result<String> getInstanceAppLabel(String hostId, String instanceId);
 
     Result<String> createConfigInstanceApp(Map<String, Object> event);
     Result<String> updateConfigInstanceApp(Map<String, Object> event);

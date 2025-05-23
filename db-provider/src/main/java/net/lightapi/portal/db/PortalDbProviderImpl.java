@@ -7048,7 +7048,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append("ORDER BY domain\n" +
+        sqlBuilder.append(" ORDER BY domain\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -8611,7 +8611,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         return result;
     }
 
-    public Result<String> getInstanceApiLabel(String hostId) {
+    public Result<String> getInstanceApiLabel(String hostId, String instanceId) {
         Result<String> result = null;
         String sql =
                 """
@@ -8621,10 +8621,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         INNER JOIN api_version_t av ON av.api_version_id = ia.api_version_id
                         WHERE ia.host_id = ?
                 """;
+        if(instanceId != null) sql += " AND ia.instance_id = ?";
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
             preparedStatement.setObject(1, UUID.fromString(hostId));
+            if(instanceId != null) {
+                preparedStatement.setObject(2, UUID.fromString(instanceId));
+            }
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
@@ -8807,7 +8811,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append("ORDER BY instance_name, api_id, api_version\n" + // Added ordering
+        sqlBuilder.append(" ORDER BY instance_name, api_id, api_version\n" + // Added ordering
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -8883,7 +8887,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     statement.setNull(4, Types.BOOLEAN);
                 }
                 statement.setString(5, (String)event.get(Constants.USER));
-                statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
@@ -8893,7 +8897,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 result = Success.of(String.format("Instance app api created for hostId: %s, instanceAppId: %s, instanceApiId: %s",
                         event.get(Constants.HOST), map.get("instanceAppId"), map.get("instanceApiId")));
                 insertNotification(event, true, null);
-
             }   catch (SQLException e) {
                 logger.error("SQLException:", e);
                 conn.rollback();
@@ -9004,16 +9007,17 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
 
     @Override
-    public Result<String> getInstanceAppApi(int offset, int limit, String hostId, String instanceAppId, String appId, String appVersion,
-                                            String instanceApiId, String instanceName, String productId, String productVersion,
-                                            String apiId, String apiVersion, Boolean active) {
+    public Result<String> getInstanceAppApi(int offset, int limit, String hostId, String instanceAppId, String instanceApiId,
+                                            String instanceId, String instanceName, String productId, String productVersion,
+                                            String appId, String appVersion, String apiVersionId, String apiId,
+                                            String apiVersion, Boolean active) {
         Result<String> result = null;
         String s =
                 """
                                 SELECT COUNT(*) OVER () AS total,
                                 iaa.host_id, iaa.instance_app_id, iap.app_id, iap.app_version,
-                                iaa.instance_api_id, i.instance_name, pv.product_id,
-                                pv.product_version, av.api_id, av.api_version, iaa.active,
+                                iaa.instance_api_id, iai.instance_id, i.instance_name, pv.product_id,
+                                pv.product_version, iai.api_version_id, av.api_id, av.api_version, iaa.active,
                                 iaa.update_user, iaa.update_ts
                                 FROM instance_app_api_t iaa
                                 INNER JOIN instance_app_t iap ON iaa.instance_app_id = iap.instance_app_id
@@ -9034,12 +9038,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         addCondition(whereClause, parameters, "iaa.host_id", hostId != null ? UUID.fromString(hostId) : null);
         addCondition(whereClause, parameters, "iaa.instance_app_id", instanceAppId != null ? UUID.fromString(instanceAppId) : null);
-        addCondition(whereClause, parameters, "iap.app_id", appId);
-        addCondition(whereClause, parameters, "iap.app_version", appVersion);
         addCondition(whereClause, parameters, "iaa.instance_api_id", instanceApiId != null ? UUID.fromString(instanceApiId) : null);
+        addCondition(whereClause, parameters, "iai.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
         addCondition(whereClause, parameters, "i.instance_name", instanceName);
         addCondition(whereClause, parameters, "pv.product_id", productId);
         addCondition(whereClause, parameters, "pv.product_version", productVersion);
+        addCondition(whereClause, parameters, "iap.app_id", appId);
+        addCondition(whereClause, parameters, "iap.app_version", appVersion);
+        addCondition(whereClause, parameters, "iai.api_version_id", apiVersionId != null ? UUID.fromString(apiVersionId) : null);
         addCondition(whereClause, parameters, "av.api_id", apiId);
         addCondition(whereClause, parameters, "av.api_version", apiVersion);
         addCondition(whereClause, parameters, "active", active);
@@ -9048,7 +9054,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append("ORDER BY i.instance_name, iap.app_id, av.api_id\n" +
+        sqlBuilder.append(" ORDER BY i.instance_name, iap.app_id, av.api_id\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -9075,12 +9081,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                     map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("instanceAppId", resultSet.getObject("instance_app_id", UUID.class));
-                    map.put("appId", resultSet.getString("app_id"));
-                    map.put("appVersion", resultSet.getString("app_version"));
                     map.put("instanceApiId", resultSet.getObject("instance_api_id", UUID.class));
+                    map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
                     map.put("instanceName", resultSet.getString("instance_name"));
                     map.put("productId", resultSet.getString("product_id"));
                     map.put("productVersion", resultSet.getString("product_version"));
+                    map.put("appId", resultSet.getString("app_id"));
+                    map.put("appVersion", resultSet.getString("app_version"));
+                    map.put("apiVersionId", resultSet.getObject("api_version_id", UUID.class));
                     map.put("apiId", resultSet.getString("api_id"));
                     map.put("apiVersion", resultSet.getString("api_version"));
                     map.put("active", resultSet.getBoolean("active"));
@@ -9569,7 +9577,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         return result;
     }
 
-    public Result<String> getInstanceAppLabel(String hostId) {
+    public Result<String> getInstanceAppLabel(String hostId, String instanceId) {
         Result<String> result = null;
         String sql =
                 """
@@ -9578,10 +9586,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         INNER JOIN instance_t i ON i.instance_id = ia.instance_id
                         WHERE ia.host_id = ?
                 """;
+        if(instanceId != null) {
+            sql += " AND ia.instance_id = ?";
+        }
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
             preparedStatement.setObject(1, UUID.fromString(hostId));
+            if(instanceId != null) {
+                preparedStatement.setObject(2, UUID.fromString(instanceId));
+            }
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
@@ -11782,7 +11796,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
             sqlBuilder.append("                 ) AS combined_rules\n");
 
-            sqlBuilder.append("ORDER BY rule_id\n" +
+            sqlBuilder.append(" ORDER BY rule_id\n" +
                     "LIMIT ? OFFSET ?");
 
             parameters.add(limit);
