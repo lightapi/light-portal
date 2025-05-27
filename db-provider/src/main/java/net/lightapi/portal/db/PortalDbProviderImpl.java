@@ -7657,10 +7657,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> getPropertyNameApiAppLabel(String configId, String resourceType) {
+    public Result<String> getPropertyIdApiAppLabel(String configId, String resourceType) {
         final String sql =
                 """
-                SELECT property_name
+                SELECT property_id, property_name
                 FROM config_property_t
                 WHERE config_id = ?
                 AND (value_type = 'map' or value_type = 'list')
@@ -7676,7 +7676,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                 try (ResultSet resultSet = statement.executeQuery()) {
                     while (resultSet.next()) {
                         Map<String, Object> map = new HashMap<>();
-                        map.put("id", resultSet.getString("property_name"));
+                        map.put("id", resultSet.getString("property_id"));
                         map.put("label", resultSet.getString("property_name"));
                         list.add(map);
                     }
@@ -9253,14 +9253,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> getConfigInstanceApi(int offset, int limit, String hostId, String instanceId, String instanceName,
-                                               String apiVersionId, String apiId, String apiVersion, String configId, String configName,
-                                               String propertyId, String propertyName, String propertyValue) {
+    public Result<String> getConfigInstanceApi(int offset, int limit, String hostId, String instanceApiId, String instanceId,
+                                               String instanceName, String apiVersionId, String apiId, String apiVersion,
+                                               String configId, String configName, String propertyId, String propertyName,
+                                               String propertyValue) {
         Result<String> result = null;
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
-                ia.host_id, ia.instance_id, i.instance_name, ia.api_version_id, av.api_id, av.api_version, ia.active,
+                iap.host_id, iap.instance_api_id, ia.instance_id, i.instance_name, ia.api_version_id, av.api_id, av.api_version, ia.active,
                 ia.update_user, ia.update_ts, p.config_id, c.config_name, iap.property_id, p.property_name, iap.property_value
                 FROM instance_api_t ia
                 INNER JOIN api_version_t av ON av.api_version_id = ia.api_version_id
@@ -9276,7 +9277,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         List<Object> parameters = new ArrayList<>();
 
         StringBuilder whereClause = new StringBuilder();
-        addCondition(whereClause, parameters, "ia.host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "iap.host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "iap.instance_api_id", instanceApiId != null ? UUID.fromString(instanceApiId) : null);
         addCondition(whereClause, parameters, "ia.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
         addCondition(whereClause, parameters, "i.instance_name", instanceName);
         addCondition(whereClause, parameters, "ia.api_version_id", apiVersionId != null ? UUID.fromString(apiVersionId) : null);
@@ -9293,7 +9295,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append(" ORDER BY ia.host_id, ia.instance_id, av.api_id, av.api_version, p.config_id, p.display_order\n" +
+        sqlBuilder.append(" ORDER BY iap.host_id, ia.instance_id, av.api_id, av.api_version, p.config_id, p.display_order\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -9320,6 +9322,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
 
                     map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceApiId", resultSet.getObject("instance_api_id", UUID.class));
                     map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
                     map.put("instanceName", resultSet.getString("instance_name"));
                     map.put("apiVersionId", resultSet.getObject("api_version_id", UUID.class));

@@ -165,7 +165,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> getConfigIdLabel();
     Result<String> getPropertyIdLabel(String configId);
     Result<String> getConfigIdApiAppLabel(String resourceType);
-    Result<String> getPropertyNameApiAppLabel(String configId, String resourceType);
+    Result<String> getPropertyIdApiAppLabel(String configId, String resourceType);
 
     Result<String> createConfigProperty(Map<String, Object> event);
     Result<String> updateConfigProperty(Map<String, Object> event);
@@ -210,9 +210,10 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> createConfigInstanceApi(Map<String, Object> event);
     Result<String> updateConfigInstanceApi(Map<String, Object> event);
     Result<String> deleteConfigInstanceApi(Map<String, Object> event);
-    Result<String> getConfigInstanceApi(int offset, int limit, String hostId, String instanceId, String instanceName,
-                                        String apiVersionId, String apiId, String apiVersion, String configId,
-                                        String configName, String propertyId, String propertyName, String propertyValue);
+    Result<String> getConfigInstanceApi(int offset, int limit, String hostId, String instanceApiId, String instanceId,
+                                        String instanceName, String apiVersionId, String apiId, String apiVersion,
+                                        String configId, String configName, String propertyId, String propertyName,
+                                        String propertyValue);
 
     Result<String> createInstanceApp(Map<String, Object> event);
     Result<String> updateInstanceApp(Map<String, Object> event);
