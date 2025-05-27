@@ -9627,7 +9627,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false);
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)event.get(Constants.HOST));
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
                 statement.setObject(2, UUID.fromString((String)map.get("instanceAppId")));
                 statement.setObject(3, UUID.fromString((String)map.get("propertyId")));
                 if (map.containsKey("propertyValue")) {
@@ -9759,15 +9759,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> getConfigInstanceApp(int offset, int limit, String hostId, String instanceId, String instanceName,
-                                               String appId, String appVersion, String configId, String configName,
+    public Result<String> getConfigInstanceApp(int offset, int limit, String hostId, String instanceAppId, String instanceId,
+                                               String instanceName, String appId, String appVersion, String configId, String configName,
                                                String propertyId, String propertyName, String propertyValue) {
         Result<String> result = null;
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
-                ia.host_id, ia.instance_id, i.instance_name, ia.app_id, ia.app_version, ia.active, ia.update_user, ia.update_ts,
-                p.config_id, c.config_name, iap.property_id, p.property_name, iap.property_value
+                iap.host_id, iap.instance_app_id, ia.instance_id, i.instance_name, ia.app_id, ia.app_version, ia.active,\s
+                ia.update_user, ia.update_ts, p.config_id, c.config_name, iap.property_id, p.property_name, iap.property_value
                 FROM instance_app_t ia
                 INNER JOIN instance_t i ON ia.host_id =i.host_id AND ia.instance_id = i.instance_id
                 INNER JOIN instance_app_property_t iap ON ia.host_id = iap.host_id AND ia.instance_app_id = iap.instance_app_id
@@ -9781,7 +9781,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         List<Object> parameters = new ArrayList<>();
 
         StringBuilder whereClause = new StringBuilder();
-        addCondition(whereClause, parameters, "ia.host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "iap.host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "iap.instance_app_id", instanceAppId != null ? UUID.fromString(instanceAppId) : null);
         addCondition(whereClause, parameters, "ia.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
         addCondition(whereClause, parameters, "i.instance_name", instanceName);
         addCondition(whereClause, parameters, "ia.app_id", appId);
@@ -9797,7 +9798,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append(" ORDER BY ia.host_id, ia.instance_id, ia.app_id, ia.app_version, iap.config_id, iap.property_name\n" +
+        sqlBuilder.append(" ORDER BY iap.host_id, ia.instance_id, ia.app_id, ia.app_version, p.config_id, p.property_name\n" +
                 "LIMIT ? OFFSET ?");
 
 
@@ -9824,6 +9825,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         isFirstRow = false;
                     }
                     map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceAppId", resultSet.getObject("instance_app_id", UUID.class));
                     map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
                     map.put("instanceName", resultSet.getString("instance_name"));
                     map.put("appId", resultSet.getString("app_id"));
@@ -9852,7 +9854,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         }
         return result;
     }
-
 
     @Override
     public Result<String> createConfigInstance(Map<String, Object> event) {
