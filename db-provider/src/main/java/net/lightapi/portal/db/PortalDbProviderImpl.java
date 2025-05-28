@@ -8773,14 +8773,15 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> getInstanceApiPathPrefix(int offset, int limit, String hostId, String instanceApiId, String instanceName,
-                                                   String productId, String productVersion, String apiId, String apiVersion, String pathPrefix) {
+    public Result<String> getInstanceApiPathPrefix(int offset, int limit, String hostId, String instanceApiId, String instanceId,
+                                                   String instanceName, String productId, String productVersion, String apiVersionId,
+                                                   String apiId, String apiVersion, String pathPrefix) {
         Result<String> result = null;
         String s =
                 """
                         SELECT COUNT(*) OVER () AS total,
-                        iapp.host_id, iapp.instance_api_id, i.instance_name,\s
-                        pv.product_id, pv.product_version, av.api_id,\s
+                        iapp.host_id, iapp.instance_api_id, iai.instance_id, i.instance_name,
+                        pv.product_id, pv.product_version, iai.api_version_id, av.api_id,
                         av.api_version, iapp.path_prefix, iapp.update_user, iapp.update_ts
                         FROM instance_api_path_prefix_t iapp
                         INNER JOIN instance_api_t iai ON iapp.instance_api_id = iai.instance_api_id
@@ -8799,9 +8800,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
         addCondition(whereClause, parameters, "iapp.host_id", hostId != null ? UUID.fromString(hostId) : null);
         addCondition(whereClause, parameters, "iapp.instance_api_id", instanceApiId != null ? UUID.fromString(instanceApiId) : null);
+        addCondition(whereClause, parameters, "iai.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
         addCondition(whereClause, parameters, "i.instance_name", instanceName);
         addCondition(whereClause, parameters, "pv.product_id", productId);
         addCondition(whereClause, parameters, "pv.product_version", productVersion);
+        addCondition(whereClause, parameters, "iai.api_version_id", apiVersionId != null ? UUID.fromString(apiVersionId) : null);
         addCondition(whereClause, parameters, "av.api_id", apiId);
         addCondition(whereClause, parameters, "av.api_version", apiVersion);
         addCondition(whereClause, parameters, "iapp.path_prefix", pathPrefix);
@@ -8811,7 +8814,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append(" ORDER BY instance_name, api_id, api_version\n" + // Added ordering
+        sqlBuilder.append(" ORDER BY iai.instance_id, iapp.instance_api_id, iapp.path_prefix\n" + // Added ordering
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -8838,12 +8841,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     }
                     map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("instanceApiId", resultSet.getObject("instance_api_id", UUID.class));
+                    map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
                     map.put("instanceName", resultSet.getString("instance_name"));
                     map.put("productId", resultSet.getString("product_id"));
                     map.put("productVersion", resultSet.getString("product_version"));
+                    map.put("apiVersionId", resultSet.getObject("api_version_id", UUID.class));
                     map.put("apiId", resultSet.getString("api_id"));
                     map.put("apiVersion", resultSet.getString("api_version"));
-                    map.put("pathPrefix", resultSet.getBoolean("path_prefix"));
+                    map.put("pathPrefix", resultSet.getString("path_prefix"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     instanceApiPathPrefixes.add(map);

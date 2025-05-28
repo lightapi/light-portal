@@ -196,8 +196,9 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> createInstanceApiPathPrefix(Map<String, Object> event);
     Result<String> updateInstanceApiPathPrefix(Map<String, Object> event);
     Result<String> deleteInstanceApiPathPrefix(Map<String, Object> event);
-    Result<String> getInstanceApiPathPrefix(int offset, int limit, String hostId, String instanceApiId, String instanceName,
-                                            String productId, String productVersion, String apiId, String apiVersion, String pathPrefix);
+    Result<String> getInstanceApiPathPrefix(int offset, int limit, String hostId, String instanceApiId, String instanceId,
+                                            String instanceName, String productId, String productVersion, String apiVersionId,
+                                            String apiId, String apiVersion, String pathPrefix);
 
     Result<String> createInstanceAppApi(Map<String, Object> event);
     Result<String> updateInstanceAppApi(Map<String, Object> event);
