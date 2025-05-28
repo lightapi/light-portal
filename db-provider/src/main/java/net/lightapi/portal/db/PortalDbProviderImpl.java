@@ -9856,6 +9856,253 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
+    public Result<String> createConfigInstanceAppApi(Map<String, Object> event) {
+        final String sql = "INSERT INTO instance_app_api_property_t (host_id, instance_app_id, instance_api_id, property_id, property_value, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?,  ?, ?)";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(2, UUID.fromString((String)map.get("instanceAppId")));
+                statement.setObject(3, UUID.fromString((String)map.get("instanceApiId")));
+                statement.setObject(4, UUID.fromString((String)map.get("propertyId")));
+                if (map.containsKey("propertyValue")) {
+                    statement.setString(5, (String)map.get("propertyValue"));
+                } else {
+                    statement.setNull(5, Types.VARCHAR);
+                }
+                statement.setString(6, (String)event.get(Constants.USER));
+                statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("Failed to insert instance app api for host_id: " + event.get(Constants.HOST) +
+                            ", instance_app_id: " + map.get("instanceAppId") + ", instance_api_id: " + map.get("instanceApiId"));
+                }
+                conn.commit();
+                result = Success.of(event.get(Constants.HOST) + "|" + map.get("instanceAppId") + "|" + map.get("instanceApiId"));
+                insertNotification(event, true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+        }
+        return result;
+    }
+
+
+    @Override
+    public Result<String> updateConfigInstanceAppApi(Map<String, Object> event) {
+        final String sql = "UPDATE instance_app_api_property_t SET " +
+                "property_value = ?, update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? AND instance_app_id = ? AND instance_api_id = ? AND property_id = ?";
+
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                if (map.containsKey("propertyValue")) {
+                    statement.setString(1, (String)map.get("propertyValue"));
+                } else {
+                    statement.setNull(1, Types.VARCHAR);
+                }
+                statement.setString(2, (String)event.get(Constants.USER));
+                statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(5, UUID.fromString((String)map.get("instanceAppId")));
+                statement.setObject(6, UUID.fromString((String)map.get("instanceApiId")));
+                statement.setObject(7, UUID.fromString((String)map.get("propertyId")));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("Failed to update instance app api.  No rows affected for host_id: " + event.get(Constants.HOST) +
+                            ", instance_app_id: " + map.get("instanceAppId") + ", instance_api_id: " + map.get("instanceApiId") +
+                            ", property_id: " + map.get("propertyId"));
+                }
+                conn.commit();
+                result = Success.of(event.get(Constants.HOST) + "|" + map.get("instanceAppId")  + "|" +  map.get("instanceApiId") + "|" + map.get("propertyId"));
+                insertNotification(event, true, null);
+
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+        }
+        return result;
+    }
+
+
+    @Override
+    public Result<String> deleteConfigInstanceAppApi(Map<String, Object> event) {
+        final String sql = "DELETE FROM instance_app_api_property_t " +
+                "WHERE host_id = ? AND instance_app_id = ? AND instance_api_id = ? AND property_id = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(2, UUID.fromString((String)map.get("instanceAppId")));
+                statement.setObject(3, UUID.fromString((String)map.get("instanceApiId")));
+                statement.setObject(4, UUID.fromString((String)map.get("propertyId")));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("Failed to delete instance app api. No rows affected for host_id: " + event.get(Constants.HOST) +
+                            ", instance_app_id: " + map.get("instanceAppId")  + ", instance_api_id: " + map.get("instanceApiId"));
+                }
+                conn.commit();
+                result = Success.of(event.get(Constants.HOST) + "|" + map.get("instanceAppId") + "|" + map.get("instanceApiId"));
+                insertNotification(event, true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getConfigInstanceAppApi(int offset, int limit, String hostId, String instanceAppId, String instanceApiId, String instanceId,
+                                               String instanceName, String appId, String appVersion, String apiVersionId, String apiId, String apiVersion,
+                                               String configId, String configName, String propertyId, String propertyName, String propertyValue) {
+        Result<String> result = null;
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                iaap.host_id, iaap.instance_app_id, iaap.instance_api_id, i.instance_id, i.instance_name, iap.app_id, iap.app_version,
+                iai.api_version_id, av.api_id, av.api_version, p.config_id, c.config_name, iaap.property_id,
+                p.property_name, iaap.property_value, iaap.update_user, iaap.update_ts
+                FROM instance_app_t iap
+                INNER JOIN instance_t i ON iap.host_id =i.host_id AND iap.instance_id = i.instance_id
+                INNER JOIN instance_app_api_property_t iaap ON iaap.host_id = iap.host_id AND iaap.instance_app_id = iap.instance_app_id
+                INNER JOIN instance_api_t iai ON iai.host_id = iaap.host_id AND iai.instance_api_id = iaap.instance_api_id
+                INNER JOIN api_version_t av ON av.host_id = iai.host_id AND av.api_version_id = iai.api_version_id
+                INNER JOIN config_property_t p ON p.property_id = iaap.property_id
+                INNER JOIN config_t c ON p.config_id = c.config_id
+                WHERE 1=1
+                """;
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append(s).append("\n");
+
+        List<Object> parameters = new ArrayList<>();
+
+        StringBuilder whereClause = new StringBuilder();
+        addCondition(whereClause, parameters, "iaap.host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "iaap.instance_app_id", instanceAppId != null ? UUID.fromString(instanceAppId) : null);
+        addCondition(whereClause, parameters, "iaap.instance_api_id", instanceApiId != null ? UUID.fromString(instanceApiId) : null);
+        addCondition(whereClause, parameters, "i.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
+        addCondition(whereClause, parameters, "i.instance_name", instanceName);
+        addCondition(whereClause, parameters, "iap.app_id", appId);
+        addCondition(whereClause, parameters, "iap.app_version", appVersion);
+        addCondition(whereClause, parameters, "iai.api_version_id", apiVersionId != null ? UUID.fromString(apiVersionId) : null);
+        addCondition(whereClause, parameters, "av.api_id", apiId);
+        addCondition(whereClause, parameters, "av.api_version", apiVersion);
+        addCondition(whereClause, parameters, "p.config_id", configId != null ? UUID.fromString(configId) : null);
+        addCondition(whereClause, parameters, "c.config_name", configName);
+        addCondition(whereClause, parameters, "iaap.property_id", propertyId != null ? UUID.fromString(propertyId) : null);
+        addCondition(whereClause, parameters, "p.property_name", propertyName);
+        addCondition(whereClause, parameters, "iaap.property_value", propertyValue);
+
+        if (!whereClause.isEmpty()) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append(" ORDER BY iaap.host_id, i.instance_id, iap.app_id, iap.app_version, av.api_id, av.api_version, p.config_id, p.property_name\n" +
+                "LIMIT ? OFFSET ?");
+
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> instanceAppApis = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceAppId", resultSet.getObject("instance_app_id", UUID.class));
+                    map.put("instanceApiId", resultSet.getObject("instance_api_id", UUID.class));
+                    map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
+                    map.put("instanceName", resultSet.getString("instance_name"));
+                    map.put("appId", resultSet.getString("app_id"));
+                    map.put("appVersion", resultSet.getString("app_version"));
+                    map.put("apiVersionId", resultSet.getObject("api_version_id", UUID.class));
+                    map.put("apiId", resultSet.getString("api_id"));
+                    map.put("apiVersion", resultSet.getString("api_version"));
+                    map.put("configId", resultSet.getObject("config_id", UUID.class));
+                    map.put("configName", resultSet.getString("config_name"));
+                    map.put("propertyId", resultSet.getObject("property_id", UUID.class));
+                    map.put("propertyName", resultSet.getString("property_name"));
+                    map.put("propertyValue", resultSet.getString("property_value"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    instanceAppApis.add(map);
+                }
+            }
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("instanceAppApis", instanceAppApis);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
     public Result<String> createConfigInstance(Map<String, Object> event) {
         // The table is now instance_property_t, NOT instance_t
         final String sql = "INSERT INTO instance_property_t (host_id, instance_id, property_id, " +

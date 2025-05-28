@@ -252,6 +252,10 @@ public class PortalConstants {
     public static final String CONFIG_INSTANCE_APP_CREATED_EVENT = "ConfigInstanceAppCreatedEvent";
     public static final String CONFIG_INSTANCE_APP_UPDATED_EVENT = "ConfigInstanceAppUpdatedEvent";
     public static final String CONFIG_INSTANCE_APP_DELETED_EVENT = "ConfigInstanceAppDeletedEvent";
+    public static final String CONFIG_INSTANCE_APP_API_CREATED_EVENT = "ConfigInstanceAppApiCreatedEvent";
+    public static final String CONFIG_INSTANCE_APP_API_UPDATED_EVENT = "ConfigInstanceAppApiUpdatedEvent";
+    public static final String CONFIG_INSTANCE_APP_API_DELETED_EVENT = "ConfigInstanceAppApiDeletedEvent";
+
     public static final String CONFIG_INSTANCE_CREATED_EVENT = "ConfigInstanceCreatedEvent";
     public static final String CONFIG_INSTANCE_UPDATED_EVENT = "ConfigInstanceUpdatedEvent";
     public static final String CONFIG_INSTANCE_DELETED_EVENT = "ConfigInstanceDeletedEvent";

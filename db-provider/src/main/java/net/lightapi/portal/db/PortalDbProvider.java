@@ -229,6 +229,13 @@ public interface PortalDbProvider extends DbProvider {
                                         String appId, String appVersion,String configId, String configName,
                                         String propertyId, String propertyName, String propertyValue);
 
+    Result<String> createConfigInstanceAppApi(Map<String, Object> event);
+    Result<String> updateConfigInstanceAppApi(Map<String, Object> event);
+    Result<String> deleteConfigInstanceAppApi(Map<String, Object> event);
+    Result<String> getConfigInstanceAppApi(int offset, int limit, String hostId, String instanceAppId, String instanceApiId, String instanceId,
+                                           String instanceName, String appId, String appVersion, String apiVersionId, String apiId, String apiVersion,
+                                           String configId, String configName, String propertyId, String propertyName, String propertyValue);
+
     Result<String> createConfigInstance(Map<String, Object> event);
     Result<String> updateConfigInstance(Map<String, Object> event);
     Result<String> deleteConfigInstance(Map<String, Object> event);
