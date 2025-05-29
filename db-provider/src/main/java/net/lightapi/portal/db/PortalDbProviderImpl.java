@@ -11140,6 +11140,270 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         return result;
     }
 
+    @Override
+    public Result<String> createConfigInstanceFile(Map<String, Object> event) {
+        // The table is now instance_property_t, NOT instance_t
+        final String sql = "INSERT INTO instance_file_t (host_id, instance_file_id, instance_id, file_type, " +
+                "file_name, file_value, file_desc, expiration_ts, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?)";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(2, UUID.fromString((String)map.get("instanceFileId")));
+                statement.setObject(3, UUID.fromString((String)map.get("instanceId")));
+                statement.setString(4, (String)map.get("fileType"));
+                statement.setString(5, (String)map.get("fileName"));
+                statement.setString(6, (String)map.get("fileValue"));
+                statement.setString(7, (String)map.get("fileDesc"));
+                String expirationTs = (String)map.get("expirationTs");
+                if(expirationTs != null) {
+                    statement.setObject(8, OffsetDateTime.parse((String) map.get("expirationTs")));
+                } else {
+                    statement.setNull(8, Types.TIMESTAMP);
+                }
+                statement.setString(9, (String)event.get(Constants.USER));
+                statement.setObject(10, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("Failed to insert instance file for host_id: " + event.get(Constants.HOST) +
+                            ", instance_file_id: " + map.get("instanceFileId") + ", instance_id: " + map.get("instanceId"));
+                }
+                conn.commit();
+                result = Success.of(event.get(Constants.HOST) + "|" + map.get("instanceFileId") + "|" + map.get("instanceId"));
+                insertNotification(event, true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+        }
+        return result;
+
+    }
+
+
+    @Override
+    public Result<String> updateConfigInstanceFile(Map<String, Object> event) {
+        final String sql = "UPDATE instance_file_t SET file_type = ?, file_name = ?, file_value = ?, " +
+                "file_desc = ?, expiration_ts = ?, update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? AND instance_file_id = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+
+                String fileType = (String)map.get("fileType");
+                if (fileType != null) {
+                    statement.setString(1, fileType);
+                } else {
+                    statement.setNull(1, Types.VARCHAR);
+                }
+                String fileName = (String)map.get("fileName");
+                if (fileName != null) {
+                    statement.setString(2, fileName);
+                } else {
+                    statement.setNull(2, Types.VARCHAR);
+                }
+                String fileValue = (String)map.get("fileValue");
+                if (fileValue != null) {
+                    statement.setString(3, fileValue);
+                } else {
+                    statement.setNull(3, Types.VARCHAR);
+                }
+                String fileDesc = (String)map.get("fileDesc");
+                if (fileDesc != null) {
+                    statement.setString(4, fileDesc);
+                } else {
+                    statement.setNull(4, Types.VARCHAR);
+                }
+                String expirationTs = (String)map.get("expirationTs");
+                if (expirationTs != null) {
+                    statement.setObject(5, OffsetDateTime.parse(expirationTs));
+                } else {
+                    statement.setNull(5, Types.TIMESTAMP);
+                }
+
+                statement.setString(6, (String)event.get(Constants.USER));
+                statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+                statement.setObject(8, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(9, UUID.fromString((String)map.get("instanceFileId")));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("Failed to update instance file. No rows affected for host_id: " + event.get(Constants.HOST) +
+                            ", instance_file_id: " + map.get("instanceFileId"));
+                }
+                conn.commit();
+                result = Success.of(event.get(Constants.HOST) + "|" + map.get("instanceFileId"));
+
+                insertNotification(event, true, null);
+
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
+    public Result<String> deleteConfigInstanceFile(Map<String, Object> event) {
+        final String sql = "DELETE FROM instance_file_t WHERE host_id = ? AND instance_file_id = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(2, UUID.fromString((String)map.get("instanceFileId")));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("Failed to delete instance file. No rows affected for host_id: " + event.get(Constants.HOST) +
+                            ", instance_file_id: " + map.get("instanceFileId"));
+                }
+                conn.commit();
+                result = Success.of(event.get(Constants.HOST) + "|" + map.get("instanceFileId"));
+                insertNotification(event, true, null);
+
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+        }
+        return result;
+
+    }
+
+
+    @Override
+    public Result<String> getConfigInstanceFile(int offset, int limit, String hostId, String instanceFileId, String instanceId,
+                                         String instanceName, String fileType, String fileName, String fileValue, String fileDesc,
+                                         String expirationTs) {
+        Result<String> result = null;
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                ift.host_id, ift.instance_file_id, ift.instance_id, i.instance_name,\s
+                ift.file_type, ift.file_name, ift.file_value, ift.file_desc,\s
+                ift.expiration_ts, ift.update_user, ift.update_ts
+                FROM instance_file_t ift
+                INNER JOIN instance_t i ON i.instance_id = ift.instance_id
+                WHERE 1=1
+                """;
+
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append(s).append("\n");
+
+        List<Object> parameters = new ArrayList<>();
+
+        StringBuilder whereClause = new StringBuilder();
+        addCondition(whereClause, parameters, "ift.host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "ift.instance_file_id", instanceFileId != null ? UUID.fromString(instanceFileId) : null);
+        addCondition(whereClause, parameters, "ift.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
+        addCondition(whereClause, parameters, "i.instance_name", instanceName);
+        addCondition(whereClause, parameters, "ift.file_type", fileType);
+        addCondition(whereClause, parameters, "ift.file_name", fileName);
+        addCondition(whereClause, parameters, "ift.file_value", fileValue);
+        addCondition(whereClause, parameters, "ift.file_desc", fileDesc);
+        addCondition(whereClause, parameters, "ift.expiration_ts", expirationTs);
+
+        if (!whereClause.isEmpty()) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append(" ORDER BY ift.host_id, ift.instance_file_id, ift.instance_id\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> instanceFiles = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceFileId", resultSet.getObject("instance_file_id", UUID.class));
+                    map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
+                    map.put("instanceName", resultSet.getString("instance_name"));
+                    map.put("fileType", resultSet.getString("file_type"));
+                    map.put("fileName", resultSet.getString("file_name"));
+                    map.put("fileValue", resultSet.getString("file_value"));
+                    map.put("fileDesc", resultSet.getString("file_desc"));
+                    map.put("expirationTs", resultSet.getObject("expiration_ts") != null ? resultSet.getObject("expiration_ts", OffsetDateTime.class) : null);
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    instanceFiles.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("instanceFiles", instanceFiles);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+        }
+        return result;
+
+    }
 
     @Override
     public Result<String> createConfigProduct(Map<String, Object> event) {
