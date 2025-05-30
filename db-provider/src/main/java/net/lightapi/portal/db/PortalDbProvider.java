@@ -253,6 +253,12 @@ public interface PortalDbProvider extends DbProvider {
                                          String instanceName, String fileType, String fileName, String fileValue, String fileDesc,
                                          String expirationTs);
 
+    Result<String> createConfigDeploymentInstance(Map<String, Object> event);
+    Result<String> updateConfigDeploymentInstance(Map<String, Object> event);
+    Result<String> deleteConfigDeploymentInstance(Map<String, Object> event);
+    Result<String> getConfigDeploymentInstance(int offset, int limit, String hostId, String deploymentInstanceId, String instanceId,
+                                               String instanceName, String serviceId, String ipAddress, Integer portNumber, String configId,
+                                               String configName, String propertyId, String propertyName, String propertyValue);
 
     Result<String> createConfigProduct(Map<String, Object> event);
     Result<String> updateConfigProduct(Map<String, Object> event);
@@ -428,7 +434,7 @@ public interface PortalDbProvider extends DbProvider {
                                          String serviceId, String ipAddress, Integer portNumber, String systemEnv, String runtimeEnv,
                                          String pipelineId, String pipelineName, String pipelineVersion, String deployStatus);
     Result<String> getDeploymentInstancePipeline(String hostId, String instanceId, String systemEnv, String runtimeEnv);
-    Result<String> getDeploymentInstanceLabel(String hostId);
+    Result<String> getDeploymentInstanceLabel(String hostId, String instanceId);
 
 
     Result<String> createDeployment(Map<String, Object> event);

@@ -11142,7 +11142,6 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> createConfigInstanceFile(Map<String, Object> event) {
-        // The table is now instance_property_t, NOT instance_t
         final String sql = "INSERT INTO instance_file_t (host_id, instance_file_id, instance_id, file_type, " +
                 "file_name, file_value, file_desc, expiration_ts, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?)";
@@ -11392,6 +11391,248 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             Map<String, Object> resultMap = new HashMap<>();
             resultMap.put("total", total);
             resultMap.put("instanceFiles", instanceFiles);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
+    public Result<String> createConfigDeploymentInstance(Map<String, Object> event) {
+        final String sql = "INSERT INTO deployment_instance_property_t (host_id, deployment_instance_id, property_id, " +
+                "property_value, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?,  ?)";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(2, UUID.fromString((String)map.get("deploymentInstanceId")));
+                statement.setObject(3, UUID.fromString((String)map.get("propertyId")));
+                String propertyValue = (String) map.get("propertyValue");
+                if(propertyValue != null && !propertyValue.isEmpty()) {
+                    statement.setString(4, (String) map.get("propertyValue"));
+                } else {
+                    statement.setNull(4, Types.VARCHAR);
+                }
+                statement.setString(5, (String)event.get(Constants.USER));
+                statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("Failed to insert deployment instance property for host_id: " + event.get(Constants.HOST) +
+                            ", deployment_instance_id: " + map.get("deploymentInstanceId") + ", property_id: " + map.get("propertyId"));
+                }
+                conn.commit();
+                result = Success.of(event.get(Constants.HOST) + "|" + map.get("deploymentInstanceId") + "|" + map.get("propertyId"));
+                insertNotification(event, true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> updateConfigDeploymentInstance(Map<String, Object> event) {
+        final String sql = "UPDATE deployment_instance_property_t SET property_value = ?, " +
+                "update_user = ?, update_ts = ? " +
+                "WHERE host_id = ? AND deployment_instance_id = ? AND property_id = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+
+                String propertyValue = (String)map.get("propertyValue");
+                if (propertyValue != null && !propertyValue.isEmpty()) {
+                    statement.setString(1, propertyValue);
+                } else {
+                    statement.setNull(1, Types.VARCHAR);
+                }
+                statement.setString(2, (String)event.get(Constants.USER));
+                statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+                statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(5, UUID.fromString((String)map.get("deploymentInstanceId")));
+                statement.setObject(6, UUID.fromString((String)map.get("propertyId")));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("Failed to update deployment instance property. No rows affected for host_id: " + event.get(Constants.HOST) +
+                            ", deployment_instance_id: " + map.get("depoloymentInstanceId") + ", property_id: " + map.get("propertyId"));
+                }
+                conn.commit();
+                result = Success.of(event.get(Constants.HOST) + "|" + map.get("deploymentInstanceId") + "|" + map.get("propertyId"));
+                insertNotification(event, true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deleteConfigDeploymentInstance(Map<String, Object> event) {
+        final String sql = "DELETE FROM deployment_instance_property_t " +
+                "WHERE host_id = ? AND deployment_instance_id = ? AND property_id = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(2, UUID.fromString((String)map.get("deploymentInstanceId")));
+                statement.setObject(3, UUID.fromString((String)map.get("propertyId")));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("Failed to delete deployment instance property. No rows affected for host_id: " + event.get(Constants.HOST) +
+                            ", deployment_instance_id: " + map.get("deploymentInstanceId") + ", property_id: " + map.get("propertyId"));
+                }
+                conn.commit();
+                result = Success.of(event.get(Constants.HOST) + "|" + map.get("deploymentInstanceId") + "|" + map.get("propertyId"));
+                insertNotification(event, true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
+    public Result<String> getConfigDeploymentInstance(int offset, int limit, String hostId, String deploymentInstanceId, String instanceId,
+                                                      String instanceName, String serviceId, String ipAddress, Integer portNumber, String configId,
+                                                      String configName, String propertyId, String propertyName, String propertyValue) {
+        Result<String> result = null;
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                dip.host_id, dip.deployment_instance_id, di.instance_id, i.instance_name,
+                di.service_id, di.ip_address, di.port_number, cp.config_id, c.config_name,
+                dip.property_id, cp.property_name, dip.property_value, dip.update_user, dip.update_ts
+                FROM deployment_instance_property_t dip
+                INNER JOIN deployment_instance_t di ON di.host_id = dip.host_id
+                AND di.deployment_instance_id = dip.deployment_instance_id
+                INNER JOIN instance_t i ON i.host_id = di.host_id
+                AND i.instance_id = di.instance_id
+                INNER JOIN config_property_t cp ON dip.property_id = cp.property_id
+                INNER JOIN config_t c ON c.config_id = cp.config_id
+                WHERE 1=1
+                """;
+
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append(s).append("\n");
+
+        List<Object> parameters = new ArrayList<>();
+
+        StringBuilder whereClause = new StringBuilder();
+        addCondition(whereClause, parameters, "dip.host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "dip.deployment_instance_id", deploymentInstanceId != null ? UUID.fromString(deploymentInstanceId) : null);
+        addCondition(whereClause, parameters, "di.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
+        addCondition(whereClause, parameters, "i.instance_name", instanceName);
+        addCondition(whereClause, parameters, "di.service_id", serviceId);
+        addCondition(whereClause, parameters, "di.ip_address", ipAddress);
+        addCondition(whereClause, parameters, "di.port_number", portNumber);
+        addCondition(whereClause, parameters, "cp.config_id", configId != null ? UUID.fromString(configId) : null);
+        addCondition(whereClause, parameters, "c.config_name", configName);
+        addCondition(whereClause, parameters, "dip.property_id", propertyId != null ? UUID.fromString(propertyId) : null);
+        addCondition(whereClause, parameters, "cp.property_name", propertyName);
+        addCondition(whereClause, parameters, "dip.property_value", propertyValue);
+
+        if (!whereClause.isEmpty()) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append(" ORDER BY dip.host_id, di.service_id\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> deploymentInstances = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("deploymentInstanceId", resultSet.getObject("deployment_instance_id", UUID.class));
+                    map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
+                    map.put("instanceName", resultSet.getString("instance_name"));
+                    map.put("serviceId", resultSet.getString("service_id"));
+                    map.put("ipAddress", resultSet.getString("ip_address"));
+                    map.put("portNumber", resultSet.getInt("port_number"));
+                    map.put("configId", resultSet.getObject("config_id", UUID.class));
+                    map.put("configName", resultSet.getString("config_name"));
+                    map.put("propertyId", resultSet.getObject("property_id", UUID.class));
+                    map.put("propertyName", resultSet.getString("property_name"));
+                    map.put("propertyValue", resultSet.getString("property_value"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    deploymentInstances.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("deploymentInstances", deploymentInstances);
             result = Success.of(JsonMapper.toJson(resultMap));
 
         } catch (SQLException e) {
@@ -19918,13 +20159,17 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> getDeploymentInstanceLabel(String hostId) {
+    public Result<String> getDeploymentInstanceLabel(String hostId, String instanceId) {
         Result<String> result = null;
-        String sql = "SELECT deployment_instance_id, service_id FROM deployment_instance_t WHERE host_id = ?";
+        String sql = instanceId == null ? "SELECT deployment_instance_id, service_id FROM deployment_instance_t WHERE host_id = ?" :
+                "SELECT deployment_instance_id, service_id FROM deployment_instance_t WHERE host_id = ? AND instance_id = ?";
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
             preparedStatement.setObject(1, UUID.fromString(hostId));
+            if (instanceId != null) {
+                preparedStatement.setObject(2, UUID.fromString(instanceId));
+            }
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
