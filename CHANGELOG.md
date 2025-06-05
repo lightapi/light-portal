@@ -7,6 +7,8 @@
 
 
 - implemented platform handler for deployment executor [\#222](https://github.com/lightapi/light-portal/pull/222) ([sovanp](https://github.com/sovanp))
+
+
 ## [2.2.1](https://github.com/networknt/light-portal/tree/2.2.1) (2025-03-22)
 
 
