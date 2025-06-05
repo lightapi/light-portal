@@ -10256,12 +10256,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> commitConfigInstance(Map<String, Object> event) {
 
         // 1. Extract Input Parameters
-        UUID hostId = (UUID) event.get("hostId");
-        UUID instanceId = (UUID) event.get("instanceId");
-        String snapshotType = (String) event.getOrDefault("snapshotType", "USER_SAVE"); // Default type
+        UUID hostId = UUID.fromString((String) event.get("hostId"));
+        UUID instanceId = UUID.fromString((String) event.get("instanceId"));
+        String snapshotType = (String) event.getOrDefault("snapshotType", "USER_SAVE");
         String description = (String) event.get("description");
-        UUID userId = (UUID) event.get("userId"); // May be null
-        UUID deploymentId = (UUID) event.get("deploymentId"); // May be null
+        UUID userId = UUID.fromString((String) event.get("userId"));              // either userId or deploymentId is passed here.
+        UUID deploymentId = event.get("deploymentId") != null ? UUID.fromString((String) event.get("deploymentId")) : null;
 
         UUID snapshotId = UuidUtil.getUUID();
 
@@ -10330,19 +10330,18 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     // Placeholder for derived scope data structure
-    private record DerivedScope(String environment, String productId, String productVersion, UUID productVersionId, String serviceId /*, add API details if needed */) {}
+    private record DerivedScope(String environment, String productId, String productVersion, UUID productVersionId, String serviceId) {
+
+    }
 
     private DerivedScope deriveScopeInfo(Connection conn, UUID hostId, UUID instanceId) throws SQLException {
-        // Query instance_t LEFT JOIN product_version_t ... WHERE i.host_id = ? AND i.instance_id = ?
-        // Extract environment, service_id from instance_t
-        // Extract product_id, product_version from product_version_t (via product_version_id in instance_t)
-        // Return new DerivedScope(...) or null if not found
-        String sql = """
-            SELECT i.environment, i.service_id, pv.product_id, pv.product_version, i.product_version_id
+        String sql =
+            """
+            SELECT i.environment, i.service_id, pv.product_id, pv.product_version, pv.product_version_id
             FROM instance_t i
             LEFT JOIN product_version_t pv ON i.host_id = pv.host_id AND i.product_version_id = pv.product_version_id
             WHERE i.host_id = ? AND i.instance_id = ?
-        """;
+            """;
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setObject(1, hostId);
             ps.setObject(2, instanceId);
@@ -10367,9 +10366,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         String sql = """
             INSERT INTO config_snapshot_t
             (snapshot_id, snapshot_ts, snapshot_type, description, user_id, deployment_id,
-             scope_host_id, scope_environment, scope_product_id, scope_product_version_id, -- Changed col name
-             scope_service_id /*, scope_api_id, scope_api_version - Add if applicable */)
-            VALUES (?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?, ? /*, ?, ? */)
+             scope_host_id, scope_environment, scope_product_id, scope_service_id)
+            VALUES (?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setObject(1, snapshotId);
@@ -10380,13 +10378,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
             ps.setObject(6, hostId);
             ps.setString(7, scope.environment());
             ps.setString(8, scope.productId());
-            ps.setObject(9, scope.productVersionId()); // Store the ID
-            ps.setString(10, scope.serviceId());
-            // Set API scope if needed ps.setObject(11, ...); ps.setString(12, ...);
+            ps.setString(9, scope.serviceId());
             ps.executeUpdate();
         }
     }
-
 
     private void insertEffectiveConfigSnapshot(Connection conn, UUID snapshotId, UUID hostId, UUID instanceId, DerivedScope scope) throws SQLException {
         final String selectSql =
@@ -10402,14 +10397,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                     RelevantInstanceApis AS (
                         SELECT instance_api_id
                         FROM instance_api_t
-                        WHERE host_id = ? -- p_host_id
-                          AND instance_id = ? -- p_instance_id
+                        WHERE host_id = ? -- p_host_id 1
+                          AND instance_id = ? -- p_instance_id 2
                     ),
                     RelevantInstanceApps AS (
                         SELECT instance_app_id
                         FROM instance_app_t
-                        WHERE host_id = ? -- p_host_id
-                          AND instance_id = ? -- p_instance_id
+                        WHERE host_id = ? -- p_host_id 3
+                          AND instance_id = ? -- p_instance_id 4
                     ),
                     -- Pre-process Instance App API properties with merging logic
                     Merged_Instance_App_Api_Properties AS (
@@ -10450,7 +10445,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         FROM instance_app_api_property_t iaap
                         JOIN config_property_t cp ON iaap.property_id = cp.property_id
                         JOIN instance_app_api_t iaa ON iaa.host_id = iaap.host_id AND iaa.instance_app_id = iaap.instance_app_id AND iaa.instance_api_id = iaap.instance_api_id -- Join to potentially use its timestamp for ordering lists
-                        WHERE iaap.host_id = ? -- p_host_id
+                        WHERE iaap.host_id = ? -- p_host_id 5
                           AND iaap.instance_app_id IN (SELECT instance_app_id FROM RelevantInstanceApps)
                           AND iaap.instance_api_id IN (SELECT instance_api_id FROM RelevantInstanceApis)
                         GROUP BY iaap.host_id, iaap.instance_app_id, iaap.instance_api_id, iaap.property_id, cp.value_type -- Group to aggregate/merge
@@ -10466,7 +10461,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                             END AS effective_value
                         FROM instance_api_property_t iap
                         JOIN config_property_t cp ON iap.property_id = cp.property_id
-                        WHERE iap.host_id = ? -- p_host_id
+                        WHERE iap.host_id = ? -- p_host_id 6
                           AND iap.instance_api_id IN (SELECT instance_api_id FROM RelevantInstanceApis)
                         GROUP BY iap.host_id, iap.instance_api_id, iap.property_id, cp.value_type
                     ),
@@ -10481,7 +10476,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                             END AS effective_value
                         FROM instance_app_property_t iapp
                         JOIN config_property_t cp ON iapp.property_id = cp.property_id
-                        WHERE iapp.host_id = ? -- p_host_id
+                        WHERE iapp.host_id = ? -- p_host_id 7
                           AND iapp.instance_app_id IN (SELECT instance_app_id FROM RelevantInstanceApps)
                         GROUP BY iapp.host_id, iapp.instance_app_id, iapp.property_id, cp.value_type
                     ),
@@ -10521,8 +10516,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                             ip.property_value,
                             40 AS priority_level
                         FROM instance_property_t ip
-                        WHERE ip.host_id = ? -- p_host_id
-                          AND ip.instance_id = ? -- p_instance_id
+                        WHERE ip.host_id = ? -- p_host_id 8
+                          AND ip.instance_id = ? -- p_instance_id 9
                         UNION ALL
                         -- Priority 50: Product Version
                         SELECT
@@ -10530,8 +10525,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                             pvp.property_value,
                             50 AS priority_level
                         FROM product_version_property_t pvp
-                        WHERE pvp.host_id = ? -- p_host_id
-                          AND pvp.product_version_id = ? -- v_product_version_id
+                        JOIN product_version_t pv ON pv.host_id = pvp.host_id AND pv.product_version_id = pvp.product_version_id
+                        WHERE pvp.host_id = ?  -- pvp.host_id 10
+                        AND pv.product_id = ? AND pv.product_version = ?  -- pv.product_id 11, pv.product_version 12
                         UNION ALL
                         -- Priority 60: Environment
                         SELECT
@@ -10539,8 +10535,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                             ep.property_value,
                             60 AS priority_level
                         FROM environment_property_t ep
-                        WHERE ep.host_id = ? -- p_host_id
-                          AND ep.environment = ? -- v_environment
+                        WHERE ep.host_id = ? -- p_host_id 13
+                          AND ep.environment = ? -- v_environment 14
                         UNION ALL
                         -- Priority 70: Product (Host independent)
                         SELECT
@@ -10548,7 +10544,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                             pp.property_value,
                             70 AS priority_level
                         FROM product_property_t pp
-                        WHERE pp.product_id = ? -- v_product_id
+                        WHERE pp.product_id = ? -- v_product_id 15
                         UNION ALL
                         -- Priority 100: Default values
                         SELECT
@@ -10558,7 +10554,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
                         FROM config_property_t cp
                         -- Optimization: Filter defaults to only those applicable to the product version?
                         -- JOIN product_version_config_property_t pvcp ON cp.property_id = pvcp.property_id
-                        -- WHERE pvcp.host_id = ? AND pvcp.product_version_id = ?
+                        -- WHERE pvcp.host_id = ? AND pvcp.product_version_id = ? -- p_host_id 15 AND v_product_version_id 16
                     ),
                     RankedOverrides AS (
                         SELECT
@@ -10597,11 +10593,31 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
             // Set ALL parameters for the AGGREGATE_EFFECTIVE_CONFIG_SQL query
             int paramIndex = 1;
-            // Example: set parameters based on how AGGREGATE_EFFECTIVE_CONFIG_SQL is structured
-            // selectStmt.setObject(paramIndex++, hostId);
-            // selectStmt.setObject(paramIndex++, instanceId);
-            // ... set derived scope IDs (productVersionId, environment, productId) ...
-            // ... set parameters for all UNION branches and potential subqueries ...
+            selectStmt.setObject(paramIndex++, hostId);      // 1
+            selectStmt.setObject(paramIndex++, instanceId);  // 2
+            selectStmt.setObject(paramIndex++, hostId);      // 3
+            selectStmt.setObject(paramIndex++, instanceId);  // 4
+            selectStmt.setObject(paramIndex++, hostId);      // 5
+            selectStmt.setObject(paramIndex++, hostId);      // 6
+            selectStmt.setObject(paramIndex++, hostId);      // 7
+            selectStmt.setString(paramIndex++, scope.environment()); // 6
+            selectStmt.setString(paramIndex++, scope.productId());
+            selectStmt.setString(paramIndex++, scope.serviceId());
+            selectStmt.setObject(paramIndex++, hostId);
+            selectStmt.setObject(paramIndex++, instanceId);
+            selectStmt.setObject(paramIndex++, hostId);
+            selectStmt.setObject(paramIndex++, instanceId);
+            selectStmt.setObject(paramIndex++, hostId);
+            selectStmt.setObject(paramIndex++, instanceId);
+            selectStmt.setObject(paramIndex++, hostId);
+            selectStmt.setObject(paramIndex++, instanceId);
+            selectStmt.setObject(paramIndex++, hostId);
+            selectStmt.setObject(paramIndex++, instanceId);
+            selectStmt.setObject(paramIndex++, hostId);
+            selectStmt.setObject(paramIndex++, instanceId);
+            selectStmt.setObject(paramIndex++, hostId);
+            selectStmt.setObject(paramIndex++, instanceId);
+
 
             try (ResultSet rs = selectStmt.executeQuery()) {
                 int batchCount = 0;
@@ -10634,7 +10650,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     // Helper to map priority back to source level name
     private String mapPriorityToSourceLevel(int priority) {
         return switch (priority) {
-            case 10 -> "instance_app_api"; // Adjust priorities as used in your query
+            case 10 -> "instance_app_api";
             case 20 -> "instance_api";
             case 30 -> "instance_app";
             case 40 -> "instance";
@@ -18394,6 +18410,335 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     }
 
+    @Override
+    public Result<String> createProductVersionConfig(Map<String, Object> event) {
+        final String sql = "INSERT INTO product_version_config_t(host_id, product_version_id, " +
+                "config_id, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?)";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(2, UUID.fromString((String)map.get("productVersionId")));
+                statement.setObject(3, UUID.fromString((String)map.get("configId")));
+                statement.setString(4, (String)event.get(Constants.USER));
+                statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert the product version config with id " + map.get("productVersionId") + "|" + map.get("configId"));
+                }
+                conn.commit();
+                result = Success.of(map.get("productVersionId") + "|" + map.get("configId"));
+                insertNotification(event, true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> deleteProductVersionConfig(Map<String, Object> event) {
+        final String sql = "DELETE FROM product_version_config_t WHERE host_id = ? " +
+                "AND product_version_id = ? AND config_id = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(2, UUID.fromString((String)map.get("productVersionId")));
+                statement.setObject(3, UUID.fromString((String)map.get("configId")));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to delete the product version config with id " + map.get("productVersionId") + "|" + map.get("configId"));
+                }
+                conn.commit();
+                result = Success.of(map.get("productVersionId") + "|" + map.get("configId"));
+                insertNotification(event, true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            }
+            catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getProductVersionConfig(int offset, int limit, String hostId, String productVersionId,
+                                           String productId, String productVersion, String configId,
+                                           String configName) {
+        Result<String> result = null;
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                pvc.host_id, pvc.product_version_id, pv.product_id, pv.product_version,
+                pvc.config_id, c.config_name, pvc.update_user, pvc.update_ts
+                FROM product_version_config_t pvc
+                INNER JOIN product_version_t pv ON pv.host_id = pvc.host_id AND pv.product_version_id = pvc.product_version_id
+                INNER JOIN config_t c ON c.config_id = pvc.config_id
+                WHERE 1=1
+                """;
+
+        StringBuilder sqlBuilder = new StringBuilder(s);
+        List<Object> parameters = new ArrayList<>();
+        StringBuilder whereClause = new StringBuilder();
+        addCondition(whereClause, parameters, "pvc.host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "pvc.product_version_id", productVersionId != null ? UUID.fromString(productVersionId) : null);
+        addCondition(whereClause, parameters, "pv.product_id", productId);
+        addCondition(whereClause, parameters, "pv.product_version", productVersion);
+        addCondition(whereClause, parameters, "pvc.config_id", configId != null ? UUID.fromString(configId) : null);
+        addCondition(whereClause, parameters, "c.config_name", configName);
+
+        if (!whereClause.isEmpty()) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append(" ORDER BY pv.product_id, pv.product_version, c.config_name DESC\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> productConfigs = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("productVersionId", resultSet.getObject("product_version_id", UUID.class));
+                    map.put("productId", resultSet.getString("product_id"));
+                    map.put("productVersion", resultSet.getString("product_version"));
+                    map.put("configId", resultSet.getObject("config_id", UUID.class));
+                    map.put("configName", resultSet.getString("config_name"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    productConfigs.add(map);
+                }
+            }
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("productConfigs", productConfigs);
+            result = Success.of(JsonMapper.toJson(resultMap));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
+    public Result<String> createProductVersionConfigProperty(Map<String, Object> event) {
+        final String sql = "INSERT INTO product_version_config_property_t(host_id, product_version_id, " +
+                "property_id, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?)";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(2, UUID.fromString((String)map.get("productVersionId")));
+                statement.setObject(3, UUID.fromString((String)map.get("propertyId")));
+                statement.setString(4, (String)event.get(Constants.USER));
+                statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to insert the product version config property with id " + map.get("productVersionId") + "|" + map.get("propertyId"));
+                }
+                conn.commit();
+                result = Success.of(map.get("productVersionId") + "|" + map.get("propertyId"));
+                insertNotification(event, true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            } catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
+    public Result<String> deleteProductVersionConfigProperty(Map<String, Object> event) {
+        final String sql = "DELETE FROM product_version_config_property_t WHERE host_id = ? " +
+                "AND product_version_id = ? AND property_id = ?";
+        Result<String> result;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+                statement.setObject(2, UUID.fromString((String)map.get("productVersionId")));
+                statement.setObject(3, UUID.fromString((String)map.get("propertyId")));
+
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("failed to delete the product version config property with id " + map.get("productVersionId") + "|" + map.get("propertyId"));
+                }
+                conn.commit();
+                result = Success.of(map.get("productVersionId") + "|" + map.get("propertyId"));
+                insertNotification(event, true, null);
+            } catch (SQLException e) {
+                logger.error("SQLException:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            }
+            catch (Exception e) {
+                logger.error("Exception:", e);
+                conn.rollback();
+                insertNotification(event, false, e.getMessage());
+                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
+    public Result<String> getProductVersionConfigProperty(int offset, int limit, String hostId, String productVersionId,
+                                                   String productId, String productVersion, String configId,
+                                                   String configName, String propertyId, String propertyName) {
+        Result<String> result = null;
+        String s =
+                """
+                        SELECT COUNT(*) OVER () AS total,
+                        pvcp.host_id, pvcp.product_version_id, pv.product_id, pv.product_version,
+                        cp.config_id, c.config_name, pvcp.property_id, cp.property_name, pvcp.update_user, pvcp.update_ts
+                        FROM product_version_config_property_t pvcp
+                        INNER JOIN product_version_t pv ON pv.host_id = pvcp.host_id AND pv.product_version_id = pvcp.product_version_id
+                        INNER JOIN config_property_t cp ON cp.property_id = pvcp.property_id
+                        INNER JOIN config_t c ON c.config_id = cp.config_id
+                        WHERE 1=1
+                        """;
+
+        StringBuilder sqlBuilder = new StringBuilder(s);
+        List<Object> parameters = new ArrayList<>();
+        StringBuilder whereClause = new StringBuilder();
+        addCondition(whereClause, parameters, "pvcp.host_id", hostId != null ? UUID.fromString(hostId) : null);
+        addCondition(whereClause, parameters, "pvcp.product_version_id", productVersionId != null ? UUID.fromString(productVersionId) : null);
+        addCondition(whereClause, parameters, "pv.product_id", productId);
+        addCondition(whereClause, parameters, "pv.product_version", productVersion);
+        addCondition(whereClause, parameters, "cp.config_id", configId != null ? UUID.fromString(configId) : null);
+        addCondition(whereClause, parameters, "c.config_name", configName);
+        addCondition(whereClause, parameters, "pvcp.property_id", propertyId != null ? UUID.fromString(propertyId) : null);
+        addCondition(whereClause, parameters, "cp.property_name", propertyName);
+
+
+        if (!whereClause.isEmpty()) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append(" ORDER BY pv.product_id, pv.product_version, c.config_name, cp.property_name DESC\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> productProperties = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("productVersionId", resultSet.getObject("product_version_id", UUID.class));
+                    map.put("productId", resultSet.getString("product_id"));
+                    map.put("productVersion", resultSet.getString("product_version"));
+                    map.put("configId", resultSet.getObject("config_id", UUID.class));
+                    map.put("configName", resultSet.getString("config_name"));
+                    map.put("propertyId", resultSet.getObject("property_id", UUID.class));
+                    map.put("propertyName", resultSet.getString("property_name"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    productProperties.add(map);
+                }
+            }
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("productProperties", productProperties);
+            result = Success.of(JsonMapper.toJson(resultMap));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
 
 
     @Override

@@ -192,6 +192,14 @@ public class PortalConstants {
     public static final String PRODUCT_VERSION_PIPELINE_CREATED_EVENT = "ProductVersionPipelineCreatedEvent";
     public static final String PRODUCT_VERSION_PIPELINE_DELETED_EVENT = "ProductVersionPipelineDeletedEvent";
 
+    // --- Product Version Config Events ---
+    public static final String PRODUCT_VERSION_CONFIG_CREATED_EVENT = "ProductVersionConfigCreatedEvent";
+    public static final String PRODUCT_VERSION_CONFIG_DELETED_EVENT = "ProductVersionConfigDeletedEvent";
+
+    // --- Product Version Config Property Events ---
+    public static final String PRODUCT_VERSION_CONFIG_PROPERTY_CREATED_EVENT = "ProductVersionConfigPropertyCreatedEvent";
+    public static final String PRODUCT_VERSION_CONFIG_PROPERTY_DELETED_EVENT = "ProductVersionConfigPropertyDeletedEvent";
+
     // --- Pipeline Events ---
     public static final String PIPELINE_CREATED_EVENT = "PipelineCreatedEvent";
     public static final String PIPELINE_UPDATED_EVENT = "PipelineUpdatedEvent";

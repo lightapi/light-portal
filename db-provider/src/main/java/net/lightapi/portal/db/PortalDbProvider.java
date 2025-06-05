@@ -392,6 +392,18 @@ public interface PortalDbProvider extends DbProvider {
                                              String productId, String productVersion, String pipelineId,
                                              String pipelineName, String pipelineVersion);
 
+    Result<String> createProductVersionConfig(Map<String, Object> event);
+    Result<String> deleteProductVersionConfig(Map<String, Object> event);
+    Result<String> getProductVersionConfig(int offset, int limit, String hostId, String productVersionId,
+                                             String productId, String productVersion, String configId,
+                                             String configName);
+
+    Result<String> createProductVersionConfigProperty(Map<String, Object> event);
+    Result<String> deleteProductVersionConfigProperty(Map<String, Object> event);
+    Result<String> getProductVersionConfigProperty(int offset, int limit, String hostId, String productVersionId,
+                                           String productId, String productVersion, String configId,
+                                           String configName, String propertyId, String propertyName);
+
     Result<String> createInstance(Map<String, Object> event);
     Result<String> updateInstance(Map<String, Object> event);
     Result<String> deleteInstance(Map<String, Object> event);

@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -299,16 +300,12 @@ public class PortalDbProviderImplTest {
     @Test
     void testCommitConfigInstance() {
         Map<String, Object> map = Map.of("hostId", "01964b05-552a-7c4b-9184-6857e7f3dc5f",
-                "instanceId", "0196923e-ad58-7f40-8004-3d6fb657bad5",
-                "productVersion", "1.0.0",
-                "serviceId", "0100",
-                "serviceVersion", "1.0.0",
-                "apiId", "0100",
-                "apiVersion", "1.0.0",
-                "configPhase", "R",
-                "configType", "R");
+                "instanceId", "0196dbd4-3820-7be4-894a-078f311d0b49",
+                "snapshotType", "USER_SAVE",
+                "description", "Test with user save type",
+                "userId", "01964b05-5532-7c79-8cde-191dcbd421b8");
 
-        Result<String> result = dbProvider.getTag(0, 2, null, null, null, null, null);
+        Result<String> result = dbProvider.commitConfigInstance(map);
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
