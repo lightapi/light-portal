@@ -1431,7 +1431,7 @@ public class HybridQueryClient {
      *
      * @param exchange HttpServerExchange
      * @param configId config id
-     * @param propertyName property name
+     * @param propertyId property name
      * @return Result the config property object in JSON
      */
     public static Result<String> getConfigPropertyByPropertyId(HttpServerExchange exchange, String configId, String propertyId) {
