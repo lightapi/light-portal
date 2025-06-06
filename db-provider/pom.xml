@@ -13,6 +13,8 @@
 
     <artifactId>db-provider</artifactId>
     <packaging>jar</packaging>
+    <name>db-provider</name>
+    <description>A database provider for the light-portal project.</description>
 
     <dependencies>
         <dependency>

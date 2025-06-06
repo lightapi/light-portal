@@ -27,6 +27,7 @@
 
     <artifactId>command-common</artifactId>
     <packaging>jar</packaging>
+    <name>command-common</name>
     <description>A utility library that is shared across all command side services.</description>
 
     <dependencies>
