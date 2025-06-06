@@ -3,13 +3,14 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>net.lightapi</groupId>
     <artifactId>portal-event</artifactId>
     <packaging>jar</packaging>
+    <name>portal-event</name>
+    <description>Event definitions for the light-portal project.</description>
     <parent>
         <groupId>net.lightapi</groupId>
         <artifactId>light-portal</artifactId>
-        <version>2.2.2</version>
+        <version>2.2.3-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 

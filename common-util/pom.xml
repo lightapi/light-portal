@@ -7,12 +7,14 @@
     <parent>
         <groupId>net.lightapi</groupId>
         <artifactId>light-portal</artifactId>
-        <version>2.2.2</version>
+        <version>2.2.3-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>common-util</artifactId>
     <packaging>jar</packaging>
+    <name>common-util</name>
+    <description>A utility library that is shared across all services.</description>
 
     <dependencies>
         <dependency>
