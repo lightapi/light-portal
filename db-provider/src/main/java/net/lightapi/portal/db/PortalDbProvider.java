@@ -17,6 +17,9 @@ import java.util.Map;
  * @author Steve Hu
  */
 public interface PortalDbProvider extends DbProvider {
+    String SQL_EXCEPTION = "ERR10017";
+    String GENERIC_EXCEPTION = "ERR10014";
+    String OBJECT_NOT_FOUND = "ERR11637";
 
     // ref table
     Result<String> createRefTable(Map<String, Object> event);
