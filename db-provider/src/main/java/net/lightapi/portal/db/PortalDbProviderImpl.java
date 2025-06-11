@@ -10,6 +10,8 @@ import com.networknt.utility.UuidUtil;
 import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.PortalConstants;
 
+import net.lightapi.portal.validation.FilterCriterion;
+import net.lightapi.portal.validation.SortCriterion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18491,9 +18493,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     }
 
     @Override
-    public Result<String> getProductVersionConfig(int offset, int limit, String hostId, String productVersionId,
-                                           String productId, String productVersion, String configId,
-                                           String configName) {
+    public Result<String> getProductVersionConfig(int offset, int limit, List<SortCriterion> sorting, List<FilterCriterion> filtering, String globalFilter,
+                                                  String hostId, String productVersionId, String productId, String productVersion, String configId,
+                                                  String configName) {
         Result<String> result = null;
         String s =
                 """

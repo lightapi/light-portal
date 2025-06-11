@@ -1,15 +1,15 @@
 package net.lightapi.portal.command;
+
 import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
 import com.networknt.httpstring.AttachmentConstants;
 import com.networknt.monad.Failure;
 import com.networknt.monad.Result;
 import com.networknt.monad.Success;
+import com.networknt.rpc.HybridHandler;
 import com.networknt.status.Status;
 import com.networknt.utility.Constants;
 import com.networknt.utility.NioUtils;
-import com.networknt.rpc.HybridHandler;
-import com.networknt.utility.Util;
 import com.networknt.utility.UuidUtil;
 import io.cloudevents.CloudEvent;
 import io.cloudevents.core.builder.CloudEventBuilder;
@@ -22,9 +22,6 @@ import net.lightapi.portal.PortalUtil;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
 
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
@@ -169,7 +166,7 @@ public abstract class AbstractCommandHandler implements HybridHandler {
 
         // --- 3. Build CloudEvent ---
         CloudEvent event = buildCloudEvent(map, userId, host, nonce);
-
+        if(logger.isTraceEnabled()) logger.trace("CloudEvent created: {}", event);
         // --- 4. Send to Kafka ---
         ProducerRecord<String, byte[]> record = new ProducerRecord<>(config.getTopic(), (config.isMultitenancy() ? host : userId), jsonFormat.serialize(event));
         final CountDownLatch latch = new CountDownLatch(1);

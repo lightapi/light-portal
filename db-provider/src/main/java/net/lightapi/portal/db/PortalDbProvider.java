@@ -2,6 +2,9 @@ package net.lightapi.portal.db;
 
 import com.networknt.db.provider.DbProvider;
 import com.networknt.monad.Result;
+import net.lightapi.portal.validation.FilterCriterion;
+import net.lightapi.portal.validation.SortCriterion;
+
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
@@ -394,9 +397,9 @@ public interface PortalDbProvider extends DbProvider {
 
     Result<String> createProductVersionConfig(Map<String, Object> event);
     Result<String> deleteProductVersionConfig(Map<String, Object> event);
-    Result<String> getProductVersionConfig(int offset, int limit, String hostId, String productVersionId,
-                                             String productId, String productVersion, String configId,
-                                             String configName);
+    Result<String> getProductVersionConfig(int offset, int limit, List<SortCriterion> sorting, List<FilterCriterion> filtering, String globalFilter,
+                                           String hostId, String productVersionId, String productId, String productVersion, String configId,
+                                           String configName);
 
     Result<String> createProductVersionConfigProperty(Map<String, Object> event);
     Result<String> deleteProductVersionConfigProperty(Map<String, Object> event);
