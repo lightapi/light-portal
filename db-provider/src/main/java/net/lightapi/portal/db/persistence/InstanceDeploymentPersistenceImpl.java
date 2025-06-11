@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 import java.sql.*;
 import java.time.OffsetDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.networknt.db.provider.SqlDbStartupHook.ds;
 import static java.sql.Types.NULL;
@@ -2285,8 +2286,18 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     public Result<String> getProductVersionConfig(int offset, int limit, List<SortCriterion> sorting, List<FilterCriterion> filtering, String globalFilter,
                                                   String hostId, String productVersionId, String productId, String productVersion, String configId,
                                                   String configName) {
-        Result<String> result = null;
-        String s =
+        final Map<String, String> API_TO_DB_COLUMN_MAP = Map.of(
+                "hostId", "pvc.host_id",
+                "productVersionId", "pvc.product_version_id",
+                "productId", "pv.product_id",
+                "productVersion", "pv.product_version",
+                "configId", "pvc.config_id",
+                "configName", "c.config_name",
+                "updateUser", "pvc.update_user",
+                "updateTs", "pvc.update_ts"
+        );
+        // The base query with the window function for total count is efficient.
+        String baseSql =
                 """
                 SELECT COUNT(*) OVER () AS total,
                 pvc.host_id, pvc.product_version_id, pv.product_id, pv.product_version,
@@ -2294,73 +2305,129 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 FROM product_version_config_t pvc
                 INNER JOIN product_version_t pv ON pv.host_id = pvc.host_id AND pv.product_version_id = pvc.product_version_id
                 INNER JOIN config_t c ON c.config_id = pvc.config_id
-                WHERE 1=1
                 """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
+        StringBuilder sqlBuilder = new StringBuilder(baseSql);
         List<Object> parameters = new ArrayList<>();
-        StringBuilder whereClause = new StringBuilder();
-        addCondition(whereClause, parameters, "pvc.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "pvc.product_version_id", productVersionId != null ? UUID.fromString(productVersionId) : null);
-        addCondition(whereClause, parameters, "pv.product_id", productId);
-        addCondition(whereClause, parameters, "pv.product_version", productVersion);
-        addCondition(whereClause, parameters, "pvc.config_id", configId != null ? UUID.fromString(configId) : null);
-        addCondition(whereClause, parameters, "c.config_name", configName);
+        List<String> whereClauses = new ArrayList<>();
 
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
+        // --- 1. Build WHERE clause from filters ---
+
+        // Add mandatory hostId filter.
+        if (hostId != null) {
+            whereClauses.add("pvc.host_id = ?");
+            parameters.add(UUID.fromString(hostId));
         }
 
-        sqlBuilder.append(" ORDER BY pv.product_id, pv.product_version, c.config_name DESC\n" +
-                "LIMIT ? OFFSET ?");
+        // Handle dynamic column filters from MRT
+        if (filtering != null) {
+            for (FilterCriterion filter : filtering) {
+                String dbColumn = API_TO_DB_COLUMN_MAP.get(filter.getId());
+                if (dbColumn == null) {
+                    logger.warn("Invalid filter column requested: {}", filter.getId());
+                    continue; // Or return an error
+                }
+                whereClauses.add(dbColumn + " ILIKE ?"); // Use ILIKE for case-insensitive matching in PostgreSQL
+                parameters.add("%" + filter.getValue() + "%");
+            }
+        }
 
+        // Handle global filter from MRT
+        if (globalFilter != null && !globalFilter.isBlank()) {
+            List<String> globalSearchableColumns = List.of("pv.product_id", "pv.product_version", "c.config_name");
+            String globalWhere = globalSearchableColumns.stream()
+                    .map(col -> col + " ILIKE ?")
+                    .collect(Collectors.joining(" OR "));
+
+            whereClauses.add("(" + globalWhere + ")");
+            for (int i = 0; i < globalSearchableColumns.size(); i++) {
+                parameters.add("%" + globalFilter + "%");
+            }
+        }
+
+        if (!whereClauses.isEmpty()) {
+            sqlBuilder.append(" WHERE ").append(String.join(" AND ", whereClauses));
+        }
+
+        // --- 2. Build ORDER BY clause ---
+        if (sorting != null && !sorting.isEmpty()) {
+            String orderByClause = sorting.stream()
+                    .map(sortCriterion -> {
+                        String dbColumn = API_TO_DB_COLUMN_MAP.get(sortCriterion.getId());
+                        if (dbColumn == null) {
+                            logger.warn("Invalid sort column requested: {}", sortCriterion.getId());
+                            return null; // This will be filtered out
+                        }
+                        return dbColumn + (sortCriterion.isDesc() ? " DESC" : " ASC");
+                    })
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.joining(", "));
+
+            if (!orderByClause.isEmpty()) {
+                sqlBuilder.append(" ORDER BY ").append(orderByClause);
+            } else {
+                // Fallback to default sort if all provided columns were invalid
+                sqlBuilder.append(" ORDER BY pv.product_id, pv.product_version, c.config_name DESC");
+            }
+        } else {
+            // Default sort order when no sorting is provided by the client
+            sqlBuilder.append(" ORDER BY pv.product_id, pv.product_version, c.config_name DESC");
+        }
+
+
+        // --- 3. Add Pagination ---
+        sqlBuilder.append(" LIMIT ? OFFSET ?");
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
+
+        // --- 4. Execute Query ---
+        String finalSql = sqlBuilder.toString();
+        if(logger.isTraceEnabled()) logger.trace("Final SQL: {}, Parameters: {}", finalSql, parameters);
+
         int total = 0;
         List<Map<String, Object>> productConfigs = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+             PreparedStatement preparedStatement = connection.prepareStatement(finalSql)) {
 
             for (int i = 0; i < parameters.size(); i++) {
                 preparedStatement.setObject(i + 1, parameters.get(i));
             }
 
-            boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                boolean isFirstRow = true;
                 while (resultSet.next()) {
-                    Map<String, Object> map = new HashMap<>();
                     if (isFirstRow) {
+                        // The total is the same for every row, so we only need to read it once.
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
-                    map.put("productVersionId", resultSet.getObject("product_version_id", UUID.class));
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class).toString());
+                    map.put("productVersionId", resultSet.getObject("product_version_id", UUID.class).toString());
                     map.put("productId", resultSet.getString("product_id"));
                     map.put("productVersion", resultSet.getString("product_version"));
-                    map.put("configId", resultSet.getObject("config_id", UUID.class));
+                    map.put("configId", resultSet.getObject("config_id", UUID.class).toString());
                     map.put("configName", resultSet.getString("config_name"));
                     map.put("updateUser", resultSet.getString("update_user"));
-                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class).toString() : null);
                     productConfigs.add(map);
                 }
             }
             Map<String, Object> resultMap = new HashMap<>();
             resultMap.put("total", total);
             resultMap.put("productConfigs", productConfigs);
-            result = Success.of(JsonMapper.toJson(resultMap));
+            return Success.of(JsonMapper.toJson(resultMap));
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException executing query: " + finalSql, e);
+            return Failure.of(new Status("ERR10001", "SQL_EXCEPTION", e.getMessage())); // Use your own error codes
         } catch (Exception e) {
-            logger.error("Exception:", e);
-            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            logger.error("Generic exception executing query: " + finalSql, e);
+            return Failure.of(new Status("ERR10000", "GENERIC_EXCEPTION", e.getMessage()));
         }
-        return result;
-
     }
+
 
     @Override
     public Result<String> createProductVersionConfigProperty(Map<String, Object> event) {
