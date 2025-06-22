@@ -2,6 +2,7 @@ package net.lightapi.portal.db;
 
 import com.networknt.db.provider.DbProvider;
 import com.networknt.monad.Result;
+import io.cloudevents.CloudEvent;
 import net.lightapi.portal.validation.FilterCriterion;
 import net.lightapi.portal.validation.SortCriterion;
 
@@ -503,4 +504,5 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> getScheduleLabel(String hostId);
     Result<String> getScheduleById(String scheduleId);
 
+    Result<String> insertEventStore(CloudEvent[] events);
 }

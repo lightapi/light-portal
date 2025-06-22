@@ -2,11 +2,13 @@ package net.lightapi.portal.command;
 
 import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
+import com.networknt.db.provider.DbProvider;
 import com.networknt.httpstring.AttachmentConstants;
 import com.networknt.monad.Failure;
 import com.networknt.monad.Result;
 import com.networknt.monad.Success;
 import com.networknt.rpc.HybridHandler;
+import com.networknt.service.SingletonServiceFactory;
 import com.networknt.status.Status;
 import com.networknt.utility.Constants;
 import com.networknt.utility.NioUtils;
@@ -19,6 +21,7 @@ import net.lightapi.portal.HybridQueryClient;
 import net.lightapi.portal.PortalConfig;
 import net.lightapi.portal.PortalConstants;
 import net.lightapi.portal.PortalUtil;
+import net.lightapi.portal.db.PortalDbProvider;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
 
@@ -41,6 +44,7 @@ public abstract class AbstractCommandHandler implements HybridHandler {
 
     // Make config and constants protected or private static final
     protected static final PortalConfig config = (PortalConfig) Config.getInstance().getJsonObjectConfig(PortalConfig.CONFIG_NAME, PortalConfig.class);
+    public static PortalDbProvider dbProvider = (PortalDbProvider) SingletonServiceFactory.getBean(DbProvider.class);
     private static final JsonFormat jsonFormat = new JsonFormat();
     public static final String USER_ID = "userId";
     public static final String HOST_ID = "hostId";
@@ -165,26 +169,23 @@ public abstract class AbstractCommandHandler implements HybridHandler {
         if(logger.isTraceEnabled()) logger.trace("nonce = {}", nonce);
 
         // --- 3. Build CloudEvent ---
-        CloudEvent event = buildCloudEvent(map, userId, host, nonce);
-        if(logger.isTraceEnabled()) logger.trace("CloudEvent created: {}", event);
-        // --- 4. Send to Kafka ---
-        ProducerRecord<String, byte[]> record = new ProducerRecord<>(config.getTopic(), (config.isMultitenancy() ? host : userId), jsonFormat.serialize(event));
-        final CountDownLatch latch = new CountDownLatch(1);
-        try {
-            HybridCommandStartup.producer.send(record, (recordMetadata, e) -> {
-                if (Objects.nonNull(e)) {
-                    logger.error("Exception occurred while pushing the event", e);
-                } else {
-                    logger.info("Event record pushed successfully. Received Record Metadata is {}",
-                            recordMetadata);
-                }
-                latch.countDown();
-            });
-            latch.await();
-        } catch (InterruptedException e) {
-            logger.error("Exception:", e);
-            return NioUtils.toByteBuffer(getStatus(exchange, SEND_MESSAGE_EXCEPTION, e.getMessage(), config.isMultitenancy() ? host : userId));
+        CloudEvent[] events = buildCloudEvent(map, userId, host, nonce);
+        if(logger.isTraceEnabled()) {
+            // Log the created CloudEvents for debugging purposes
+            for (CloudEvent event : events) {
+                logger.trace("Created CloudEvent: id={}, type={}, source={}, data={}",
+                        event.getId(), event.getType(), event.getSource(), new String(event.getData().toBytes(), StandardCharsets.UTF_8));
+            }
         }
+
+        // --- 4. Write to Postgres Database ---
+        Result<String> eventStoreResult = dbProvider.insertEventStore(events);
+        if(eventStoreResult.isFailure()) {
+            logger.error("Failed to insert event store: {}", eventStoreResult.getError());
+            return NioUtils.toByteBuffer(getStatus(exchange, eventStoreResult.getError()));
+        }
+
+        // --- 5. Additional Action ---
         Result<Map<String, Object>> additionalActionResult = additionalAction(exchange, map, userId, host);
         if (additionalActionResult.isFailure()) {
             return NioUtils.toByteBuffer(getStatus(exchange, additionalActionResult.getError()));
@@ -194,11 +195,11 @@ public abstract class AbstractCommandHandler implements HybridHandler {
         return NioUtils.toByteBuffer(customizeOutput(map));
     }
 
-
     /**
-     * Builds the CloudEvent object.
+     * Builds the CloudEvent object array from the provided map, userId, host, and nonce. Overrides the default method if
+     * you want to customize the CloudEvent creation logic to emit more than one CloudEvent.
      */
-    protected CloudEvent buildCloudEvent(Map<String, Object> map, String userId, String host, Number nonce) {
+    protected CloudEvent[] buildCloudEvent(Map<String, Object> map, String userId, String host, Number nonce) {
 
         CloudEventBuilder eventTemplate = CloudEventBuilder.v1()
                 .withSource(PortalConstants.EVENT_SOURCE)
@@ -206,14 +207,14 @@ public abstract class AbstractCommandHandler implements HybridHandler {
 
         String data = JsonMapper.toJson(map);
         if(getLogger().isTraceEnabled()) getLogger().trace("event user = {} host = {} type = {} and data = {}", userId, host, getCloudEventType(), data);
-        return eventTemplate.newBuilder()
+        return new CloudEvent[]{eventTemplate.newBuilder()
                 .withId(UuidUtil.getUUID().toString())
                 .withTime(OffsetDateTime.now())
                 .withExtension(Constants.USER, userId)
                 .withExtension(PortalConstants.NONCE, nonce)
                 .withExtension(Constants.HOST, host)
                 .withData("application/json", data.getBytes(StandardCharsets.UTF_8))
-                .build();
+                .build()};
     }
 
     /**

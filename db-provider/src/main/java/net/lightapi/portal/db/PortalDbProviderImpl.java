@@ -1,6 +1,7 @@
 package net.lightapi.portal.db;
 
 import com.networknt.monad.Result;
+import io.cloudevents.CloudEvent;
 import net.lightapi.portal.db.persistence.*;
 import net.lightapi.portal.db.util.NotificationService;
 import net.lightapi.portal.db.util.NotificationServiceImpl;
@@ -35,6 +36,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     private final SchedulePersistence schedulePersistence;
     private final RulePersistence rulePersistence;
     private final NotificationDataPersistence notificationDataPersistence;
+    private final EventPersistence eventPersistence;
 
     public PortalDbProviderImpl() {
         NotificationService notificationService = new NotificationServiceImpl();
@@ -53,6 +55,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         this.schedulePersistence = new SchedulePersistenceImpl(notificationService);
         this.rulePersistence = new RulePersistenceImpl(notificationService);
         this.notificationDataPersistence = new NotificationDataPersistenceImpl();
+        this.eventPersistence = new EventPersistenceImpl();
     }
 
     // --- Reference ---
@@ -438,5 +441,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public Result<Map<String, Object>> queryRuleById(String ruleId) { return rulePersistence.queryRuleById(ruleId); }
     @Override public Result<String> queryRuleByHostType(String hostId, String ruleType) { return rulePersistence.queryRuleByHostType(hostId, ruleType); }
     @Override public Result<List<Map<String, Object>>> queryRuleByHostApiId(String hostId, String apiId, String apiVersion) { return rulePersistence.queryRuleByHostApiId(hostId, apiId, apiVersion); }
+
+    // --- Event ---
+    @Override public Result<String> insertEventStore(CloudEvent[] events) { return eventPersistence.insertEventStore(events); }
 
 }
