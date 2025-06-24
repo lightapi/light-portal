@@ -59,6 +59,19 @@ public abstract class AbstractCommandHandler implements HybridHandler {
     protected abstract String getCloudEventType();
 
     /**
+     * Subclasses must implement this to provide aggregate type
+     * @return The CloudEvent aggregate type (e.g., "AuthCode").
+     */
+    protected abstract String getCloudEventAggregateType();
+
+    /**
+     * Subclasses must implement this to provide aggregate io
+     * @param map The input map.
+     * @return The CloudEvent aggregate id (e.g., "01964b05-5532-7c79-8cde-191dcbd421b7").
+     */
+    protected abstract String getCloudEventAggregateId(Map<String, Object> map);
+
+    /**
      * Subclasses can implement this to do additional validation with input map.
      * @param exchange The HTTP server exchange.
      * @param map The input map.
@@ -210,9 +223,11 @@ public abstract class AbstractCommandHandler implements HybridHandler {
         return new CloudEvent[]{eventTemplate.newBuilder()
                 .withId(UuidUtil.getUUID().toString())
                 .withTime(OffsetDateTime.now())
+                .withSubject(getCloudEventAggregateId(map))
                 .withExtension(Constants.USER, userId)
                 .withExtension(PortalConstants.NONCE, nonce)
                 .withExtension(Constants.HOST, host)
+                .withExtension(PortalConstants.AGGREGATE_TYPE, getCloudEventAggregateType())
                 .withData("application/json", data.getBytes(StandardCharsets.UTF_8))
                 .build()};
     }

@@ -8,7 +8,9 @@ import com.networknt.monad.Success;
 import com.networknt.status.Status;
 import com.networknt.utility.Constants;
 import io.cloudevents.CloudEvent;
+import net.lightapi.portal.PortalConstants;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -57,7 +59,7 @@ public class EventPersistenceImpl implements EventPersistence {
                     // Extract common CloudEvents attributes
                     UUID eventId = UUID.fromString(event.getId());
                     OffsetDateTime eventTs = event.getTime(); // Already OffsetDateTime
-                    String aggregateId = event.getSubject(); // Assuming CloudEvent 'subject' maps to 'aggregate_id'
+                    String aggregateId = event.getSubject(); // CloudEvent 'subject' maps to 'aggregate_id'
                     String eventType = event.getType();
 
                     // Extract custom CloudEvents extensions or properties if needed (e.g., host_id, user_id, aggregate_type)
@@ -85,14 +87,9 @@ public class EventPersistenceImpl implements EventPersistence {
                     }
 
                     // Assuming aggregate_type is also an extension or derived from event.getType()
-                    String aggregateType = null;
-                    if (event.getExtension("aggregateType") instanceof String at) { // Custom extension
-                        aggregateType = at;
-                    } else { // Fallback, derive from eventType if possible (e.g., "CustomerNameChanged" -> "Customer")
-                        aggregateType = deriveAggregateTypeFromEventType(eventType);
-                    }
+                    String aggregateType =(String)event.getExtension(PortalConstants.AGGREGATE_TYPE);
                     if (aggregateType == null) {
-                        throw new IllegalArgumentException("Could not determine aggregate_type from CloudEvent.");
+                        throw new IllegalArgumentException("Could not determine aggregatetype from CloudEvent.");
                     }
 
 
@@ -100,13 +97,7 @@ public class EventPersistenceImpl implements EventPersistence {
                     // CloudEvent.getData() returns Data, need to convert to JSON string
                     String payloadJson = "{}"; // Default empty JSON
                     if (event.getData() != null) {
-                        ObjectNode dataNode = objectMapper.valueToTree(event.getData());
-                        // You might need to adjust this depending on how you structure CloudEvent data.
-                        // If CloudEvent.getData() already returns a Map<String,Object> representing your actual event
-                        // data, you can directly serialize that map.
-                        // If your actual event payload is nested under a "data" key in the CloudEvent.data(),
-                        // you'd need to extract it, e.g., ((Map)event.getData().getValue()).get("data")
-                        payloadJson = objectMapper.writeValueAsString(dataNode);
+                        payloadJson = new String(event.getData().toBytes(), StandardCharsets.UTF_8);
                     }
 
                     // Extract metadata (CloudEvent context attributes + custom extensions)
@@ -114,7 +105,7 @@ public class EventPersistenceImpl implements EventPersistence {
                     // or just custom extensions not explicitly mapped to columns.
                     // For simplicity, let's just include all extensions as metadata JSON.
                     Map<String, Object> extensions = event.getExtensionNames().stream()
-                            .filter(extName -> !extName.equals(Constants.HOST) && !extName.equals(Constants.USER) && !extName.equals("aggregateType")) // Exclude already mapped extensions
+                            .filter(extName -> !extName.equals(Constants.HOST) && !extName.equals(Constants.USER) && !extName.equals(PortalConstants.AGGREGATE_TYPE))
                             .collect(Collectors.toMap(
                                     extName -> extName,
                                     event::getExtension
@@ -145,7 +136,7 @@ public class EventPersistenceImpl implements EventPersistence {
                     eventStorePst.setString(5, aggregateType);
                     eventStorePst.setString(6, eventType);
                     eventStorePst.setLong(7, sequenceNumber); // Make sure this is correct for OCC
-                    eventStorePst.setObject(8, eventTs.toInstant()); // Use Instant for TIMESTAMP WITH TIME ZONE
+                    eventStorePst.setObject(8, eventTs); // Use OffsetDateTime for TIMESTAMP WITH TIME ZONE
                     eventStorePst.setString(9, payloadJson);
                     eventStorePst.setString(10, metadataJson);
                     eventStorePst.addBatch();
@@ -157,7 +148,7 @@ public class EventPersistenceImpl implements EventPersistence {
                     outboxPst.setString(4, aggregateId);
                     outboxPst.setString(5, aggregateType);
                     outboxPst.setString(6, eventType);
-                    outboxPst.setObject(7, eventTs.toInstant()); // Use Instant for TIMESTAMP WITH TIME ZONE
+                    outboxPst.setObject(7, eventTs); // Use OffsetDateTime for TIMESTAMP WITH TIME ZONE
                     outboxPst.setString(8, payloadJson);
                     outboxPst.setString(9, metadataJson);
                     outboxPst.addBatch();
@@ -193,15 +184,4 @@ public class EventPersistenceImpl implements EventPersistence {
         return result;
     }
 
-    // Helper to derive aggregateType if it's not a direct CloudEvent extension
-    private String deriveAggregateTypeFromEventType(String eventType) {
-        // Example: "CustomerNameChanged" -> "Customer"
-        // This is highly dependent on your naming conventions.
-        // Return null if it cannot be derived.
-        if (eventType == null) return null;
-        if (eventType.startsWith("Customer")) return "Customer";
-        if (eventType.startsWith("Order")) return "Order";
-        // Add more specific mappings or a regex-based approach
-        return null;
-    }
 }

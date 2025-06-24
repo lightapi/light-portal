@@ -22,6 +22,8 @@ public class PortalConstants {
     public static final String ANONYMOUS_ROLE = "anonymous";
     public static final String HOST_ADMIN_ROLE = "hostAdmin";
 
+    // event types
+
     // Cloud Event
     public static final String DATA = "data";
     public static final String NONCE = "nonce";
@@ -297,4 +299,88 @@ public class PortalConstants {
 
     // --- Platform Queried Events ---
     public static final String PLATFORM_QUERIED_EVENT = "PlatformQueriedEvent";
+
+    // aggregate
+
+    // aggregate id
+    public static final String AGGREGATE_ID = "aggregateid";
+    // aggregate type
+    public static final String AGGREGATE_TYPE = "aggregatetype";
+
+    // -- Auth --
+    public static final String AGGREGATE_AUTH_CODE = "authCode";
+    public static final String AGGREGATE_CLIENT = "client";
+    public static final String AGGREGATE_PROVIDER = "provider";
+    public static final String AGGREGATE_REFRESH_TOKEN = "refreshToken";
+    public static final String AGGREGATE_REF_TOKEN = "refToken";
+
+    // -- Attribute --
+    public static final String AGGREGATE_ATTRIBUTE = "attribute";
+
+    // -- Category --
+    public static final String AGGREGATE_CATEGORY = "category";
+
+    // -- App --
+    public static final String AGGREGATE_APP = "app";
+
+    // -- Config --
+    public static final String AGGREGATE_CONFIG = "config";
+    public static final String AGGREGATE_CONFIG_PROPERTY = "configProperty";
+    public static final String AGGREGATE_INSTANCE_FILE = "instanceFile";
+
+    // -- Deployment --
+    public static final String AGGREGATE_DEPLOYMENT = "deployment";
+    public static final String AGGREGATE_DEPLOYMENT_INSTANCE = "deploymentInstance";
+    public static final String AGGREGATE_PIPELINE = "pipeline";
+    public static final String AGGREGATE_PLATFORM = "platform";
+
+    // -- Group --
+    public static final String AGGREGATE_GROUP = "group";
+
+    // -- Host --
+    public static final String AGGREGATE_HOST = "host";
+    public static final String AGGREGATE_ORG = "org";
+
+    // -- Instance --
+    public static final String AGGREGATE_INSTANCE = "instance";
+    public static final String AGGREGATE_INSTANCE_API = "instanceApi";
+    public static final String AGGREGATE_INSTANCE_APP = "instanceApp";
+    public static final String AGGREGATE_INSTANCE_APP_API = "instanceAppApi";
+    public static final String AGGREGATE_INSTANCE_PIPELINE = "instancePipeline";
+
+    // -- Position --
+    public static final String AGGREGATE_POSITION = "position";
+
+    // -- Product --
+    public static final String AGGREGATE_PRODUCT_VERSION = "productVersion";
+
+    // -- Ref --
+    public static final String AGGREGATE_REF_TABLE = "refTable";
+    public static final String AGGREGATE_REF_VALUE = "refValue";
+    public static final String AGGREGATE_REF_LOCALE = "refLocale";
+    public static final String AGGREGATE_REF_RELATION_TYPE = "refRelationType";
+    public static final String AGGREGATE_REF_RELATION = "refRelation";
+
+    // -- Role --
+    public static final String AGGREGATE_ROLE = "role";
+
+    // -- Rule --
+    public static final String AGGREGATE_RULE = "rule";
+
+    // -- Schema --
+
+    public static final String AGGREGATE_SCHEMA = "schema";
+
+    // -- Api --
+    public static final String AGGREGATE_API = "api";
+
+    // -- Schedule --
+    public static final String AGGREGATE_SCHEDULE = "schedule";
+
+    // -- Tag --
+    public static final String AGGREGATE_TAG = "tag";
+
+    // -- User --
+    public static final String AGGREGATE_USER = "user";
+
 }
