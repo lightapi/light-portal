@@ -8,6 +8,7 @@ import com.networknt.monad.Success;
 import com.networknt.status.Status;
 import com.networknt.utility.Constants;
 import io.cloudevents.CloudEvent;
+import io.cloudevents.jackson.JsonFormat;
 import net.lightapi.portal.PortalConstants;
 
 import java.nio.charset.StandardCharsets;
@@ -25,6 +26,8 @@ import static net.lightapi.portal.db.PortalDbProviderImpl.GENERIC_EXCEPTION;
 import static net.lightapi.portal.db.PortalDbProviderImpl.SQL_EXCEPTION;
 
 public class EventPersistenceImpl implements EventPersistence {
+
+    private static final JsonFormat jsonFormat = new JsonFormat();
     /**
      * Inserts multiple CloudEvents into the event_store_t and outbox_message_t tables
      * within a single database transaction.
@@ -93,13 +96,9 @@ public class EventPersistenceImpl implements EventPersistence {
                     }
 
 
-                    // Extract payload (data)
-                    // CloudEvent.getData() returns Data, need to convert to JSON string
-                    String payloadJson = "{}"; // Default empty JSON
-                    if (event.getData() != null) {
-                        payloadJson = new String(event.getData().toBytes(), StandardCharsets.UTF_8);
-                    }
-
+                    // Extract payload which is the CloudEvent
+                    byte[] payloadByte = jsonFormat.serialize(event);
+                    String payloadJson = new String(payloadByte, StandardCharsets.UTF_8);
                     // Extract metadata (CloudEvent context attributes + custom extensions)
                     // You might want to include all CloudEvent attributes (id, source, time, etc.) in metadata
                     // or just custom extensions not explicitly mapped to columns.
