@@ -1,7 +1,6 @@
 package net.lightapi.portal.db.persistence;
 
 import com.networknt.config.JsonMapper;
-import com.networknt.db.provider.SqlDbStartupHook;
 import com.networknt.monad.Failure;
 import com.networknt.monad.Result;
 import com.networknt.monad.Success;
@@ -15,11 +14,16 @@ import net.lightapi.portal.db.util.SqlUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.*;
+import java.sql.Connection; // Added import
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException; // Added import
+import java.sql.Types;
 import java.time.OffsetDateTime;
 import java.util.*;
 
 import static com.networknt.db.provider.SqlDbStartupHook.ds;
+import static java.sql.Types.NULL;
 import static net.lightapi.portal.db.util.SqlUtil.addCondition;
 
 
@@ -38,254 +42,218 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
     }
 
     @Override
-    public Result<String> createSchema(Map<String, Object> event) {
+    public void createSchema(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "INSERT INTO schema_t(host_id, schema_id, schema_version, schema_type, spec_version, schema_source, schema_name, schema_desc, schema_body, schema_owner, schema_status, example, comment_status, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        final String insertSchemaCategorySql = "INSERT INTO entity_category_t (entity_id, entity_type, category_id) VALUES (?, ?, ?)"; // Added SQL for entity_category_t
-        final String insertSchemaTagSql = "INSERT INTO entity_tag_t (entity_id, entity_type, tag_id) VALUES (?, ?, ?)"; // Added SQL for entity_tag_t
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"; // Corrected parameter count from 16 to 15
 
-        Result<String> result;
+        final String insertSchemaCategorySql = "INSERT INTO entity_category_t (entity_id, entity_type, category_id) VALUES (?, ?, ?)";
+        final String insertSchemaTagSql = "INSERT INTO entity_tag_t (entity_id, entity_type, tag_id) VALUES (?, ?, ?)";
+
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String schemaId = (String) map.get("schemaId"); // Get schemaId for return/logging/error
         List<String> categoryIds = (List<String>) map.get("categoryId"); // Get categoryIds from event data if present
         List<String> tagIds = (List<String>) map.get("tagIds"); // Get tagIds from event data if present
 
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                String hostId = (String)map.get("hostId");
-                if (hostId != null && !hostId.isBlank()) {
-                    statement.setObject(1, UUID.fromString(hostId));
-                } else {
-                    statement.setNull(1, Types.OTHER);
-                }
-
-                statement.setString(2, schemaId); // Required
-                statement.setString(3, (String)map.get("schemaVersion")); // Required
-                statement.setString(4, (String)map.get("schemaType")); // Required
-                statement.setString(5, (String)map.get("specVersion")); // Required
-                statement.setString(6, (String)map.get("schemaSource")); // Required
-                statement.setString(7, (String)map.get("schemaName")); // Required
-
-                String schemaDesc = (String)map.get("schemaDesc");
-                if (schemaDesc != null && !schemaDesc.isBlank()) {
-                    statement.setString(8, schemaDesc);
-                } else {
-                    statement.setNull(8, Types.VARCHAR);
-                }
-                statement.setString(9, (String)map.get("schemaBody")); // Required
-                statement.setString(10, (String)map.get("schemaOwner")); // Required
-                statement.setString(11, (String)map.get("schemaStatus")); // Required
-
-                String example = (String)map.get("example");
-                if (example != null && !example.isBlank()) {
-                    statement.setString(12, example);
-                } else {
-                    statement.setNull(12, Types.VARCHAR);
-                }
-                statement.setString(13, (String)map.get("commentStatus")); // Required
-                statement.setString(14, (String)event.get(Constants.USER));
-                statement.setObject(15, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert the schema with id " + map.get("schemaId"));
-                }
-
-                // Insert into entity_categories_t if categoryId is present
-                if (categoryIds != null && !categoryIds.isEmpty()) {
-                    try (PreparedStatement insertCategoryStatement = conn.prepareStatement(insertSchemaCategorySql)) {
-                        for (String categoryId : categoryIds) {
-                            insertCategoryStatement.setString(1, schemaId);
-                            insertCategoryStatement.setString(2, "schema"); // entity_type = "schema"
-                            insertCategoryStatement.setObject(3, UUID.fromString(categoryId));
-                            insertCategoryStatement.addBatch(); // Batch inserts for efficiency
-                        }
-                        insertCategoryStatement.executeBatch(); // Execute batch insert
-                    }
-                }
-                // Insert into entity_tag_t if tagIds are present
-                if (tagIds != null && !tagIds.isEmpty()) {
-                    try (PreparedStatement insertTagStatement = conn.prepareStatement(insertSchemaTagSql)) {
-                        for (String tagId : tagIds) {
-                            insertTagStatement.setString(1, schemaId);
-                            insertTagStatement.setString(2, "schema"); // entity_type = "schema"
-                            insertTagStatement.setObject(3, UUID.fromString(tagId));
-                            insertTagStatement.addBatch(); // Batch inserts for efficiency
-                        }
-                        insertTagStatement.executeBatch(); // Execute batch insert
-                    }
-                }
-
-                conn.commit();
-                result =  Success.of((String)map.get("schemaId")); // Return schemaId
-                notificationService.insertNotification(event, true, null);
-
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) { // Catch other potential runtime exceptions
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            String hostId = (String)map.get("hostId");
+            if (hostId != null && !hostId.isBlank()) {
+                statement.setObject(1, UUID.fromString(hostId));
+            } else {
+                statement.setNull(1, Types.OTHER);
             }
+
+            statement.setString(2, schemaId); // Required
+            statement.setString(3, (String)map.get("schemaVersion")); // Required
+            statement.setString(4, (String)map.get("schemaType")); // Required
+            statement.setString(5, (String)map.get("specVersion")); // Required
+            statement.setString(6, (String)map.get("schemaSource")); // Required
+            statement.setString(7, (String)map.get("schemaName")); // Required
+
+            String schemaDesc = (String)map.get("schemaDesc");
+            if (schemaDesc != null && !schemaDesc.isBlank()) {
+                statement.setString(8, schemaDesc);
+            } else {
+                statement.setNull(8, Types.VARCHAR);
+            }
+            statement.setString(9, (String)map.get("schemaBody")); // Required
+            statement.setString(10, (String)map.get("schemaOwner")); // Required
+            statement.setString(11, (String)map.get("schemaStatus")); // Required
+
+            String example = (String)map.get("example");
+            if (example != null && !example.isBlank()) {
+                statement.setString(12, example);
+            } else {
+                statement.setNull(12, Types.VARCHAR);
+            }
+            statement.setString(13, (String)map.get("commentStatus")); // Required
+            statement.setString(14, (String)event.get(Constants.USER));
+            statement.setObject(15, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert the schema with id " + schemaId);
+            }
+
+            // Insert into entity_categories_t if categoryId is present
+            if (categoryIds != null && !categoryIds.isEmpty()) {
+                try (PreparedStatement insertCategoryStatement = conn.prepareStatement(insertSchemaCategorySql)) {
+                    for (String categoryId : categoryIds) {
+                        insertCategoryStatement.setString(1, schemaId);
+                        insertCategoryStatement.setString(2, "schema"); // entity_type = "schema"
+                        insertCategoryStatement.setObject(3, UUID.fromString(categoryId));
+                        insertCategoryStatement.addBatch(); // Batch inserts for efficiency
+                    }
+                    insertCategoryStatement.executeBatch(); // Execute batch insert
+                }
+            }
+            // Insert into entity_tag_t if tagIds are present
+            if (tagIds != null && !tagIds.isEmpty()) {
+                try (PreparedStatement insertTagStatement = conn.prepareStatement(insertSchemaTagSql)) {
+                    for (String tagId : tagIds) {
+                        insertTagStatement.setString(1, schemaId);
+                        insertTagStatement.setString(2, "schema"); // entity_type = "schema"
+                        insertTagStatement.setObject(3, UUID.fromString(tagId));
+                        insertTagStatement.addBatch(); // Batch inserts for efficiency
+                    }
+                    insertTagStatement.executeBatch(); // Execute batch insert
+                }
+            }
+            notificationService.insertNotification(event, true, null);
+
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createSchema for id {}: {}", schemaId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) { // Catch other potential runtime exceptions
+            logger.error("Exception during createSchema for id {}: {}", schemaId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
-    public Result<String> updateSchema(Map<String, Object> event) {
+    public void updateSchema(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "UPDATE schema_t SET schema_version = ?, schema_type = ?, spec_version = ?, schema_source = ?, schema_name = ?, schema_desc = ?, schema_body = ?, schema_owner = ?, schema_status = ?, example = ?, comment_status = ?, update_user = ?, update_ts = ? WHERE schema_id = ?";
         final String deleteSchemaCategorySql = "DELETE FROM entity_category_t WHERE entity_id = ? AND entity_type = ?";
         final String insertSchemaCategorySql = "INSERT INTO entity_category_t (entity_id, entity_type, category_id) VALUES (?, ?, ?)";
         final String deleteSchemaTagSql = "DELETE FROM entity_tag_t WHERE entity_id = ? AND entity_type = ?";
         final String insertSchemaTagSql = "INSERT INTO entity_tag_t (entity_id, entity_type, tag_id) VALUES (?, ?, ?)";
 
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String schemaId = (String) map.get("schemaId");
-        List<String> categoryIds = (List<String>) map.get("categoryIds");
+        String schemaId = (String) map.get("schemaId"); // For logging/exceptions
+        List<String> categoryIds = (List<String>) map.get("categoryId");
         List<String> tagIds = (List<String>) map.get("tagIds");
 
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)map.get("schemaVersion"));
-                statement.setString(2, (String)map.get("schemaType"));
-                statement.setString(3, (String)map.get("specVersion"));
-                statement.setString(4, (String)map.get("schemaSource"));
-                statement.setString(5, (String)map.get("schemaName"));
-                String schemaDesc = (String)map.get("schemaDesc");
-                if (schemaDesc != null && !schemaDesc.isBlank()) {
-                    statement.setString(6, schemaDesc);
-                } else {
-                    statement.setNull(6, Types.VARCHAR);
-                }
-                statement.setString(7, (String)map.get("schemaBody"));
-                statement.setString(8, (String)map.get("schemaOwner"));
-                statement.setString(9, (String)map.get("schemaStatus"));
-                String example = (String)map.get("example");
-                if (example != null && !example.isBlank()) {
-                    statement.setString(10, example);
-                } else {
-                    statement.setNull(10, Types.VARCHAR);
-                }
-                statement.setString(11, (String)map.get("commentStatus"));
-                statement.setString(12, (String)event.get(Constants.USER));
-                statement.setObject(13, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(14, schemaId);
-
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to update the schema with id " + schemaId);
-                }
-                // --- Replace Category Associations ---
-                // 1. Delete existing links for this schema
-                try (PreparedStatement deleteCategoryStatement = conn.prepareStatement(deleteSchemaCategorySql)) {
-                    deleteCategoryStatement.setString(1, schemaId);
-                    deleteCategoryStatement.setString(2, "schema"); // entity_type = "schema"
-                    deleteCategoryStatement.executeUpdate(); // Execute delete (no need to check count for DELETE)
-                }
-
-                // 2. Insert new links if categoryIds are provided in the event
-                if (categoryIds != null && !categoryIds.isEmpty()) {
-                    try (PreparedStatement insertCategoryStatement = conn.prepareStatement(insertSchemaCategorySql)) {
-                        for (String categoryId : categoryIds) {
-                            insertCategoryStatement.setString(1, schemaId);
-                            insertCategoryStatement.setString(2, "schema"); // entity_type = "schema"
-                            insertCategoryStatement.setObject(3, UUID.fromString(categoryId));
-                            insertCategoryStatement.addBatch(); // Batch inserts for efficiency
-                        }
-                        insertCategoryStatement.executeBatch(); // Execute batch insert
-                    }
-                }
-                // --- End Replace Category Associations ---
-
-                // --- Replace Tag Associations ---
-                // 1. Delete existing links for this schema
-                try (PreparedStatement deleteTagStatement = conn.prepareStatement(deleteSchemaTagSql)) {
-                    deleteTagStatement.setString(1, schemaId);
-                    deleteTagStatement.setString(2, "schema"); // entity_type = "schema"
-                    deleteTagStatement.executeUpdate();
-                }
-
-                // 2. Insert new links if tagIds are provided in the event
-                if (tagIds != null && !tagIds.isEmpty()) {
-                    try (PreparedStatement insertTagStatement = conn.prepareStatement(insertSchemaTagSql)) {
-                        for (String tagId : tagIds) {
-                            insertTagStatement.setString(1, schemaId);
-                            insertTagStatement.setString(2, "schema"); // entity_type = "schema"
-                            insertTagStatement.setObject(3, UUID.fromString(tagId));
-                            insertTagStatement.addBatch(); // Batch inserts for efficiency
-                        }
-                        insertTagStatement.executeBatch(); // Execute batch insert
-                    }
-                }
-                // --- End Replace Tag Associations ---
-
-                conn.commit();
-                result =  Success.of(schemaId); // Return schemaId
-                notificationService.insertNotification(event, true, null);
-
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) { // Catch other potential runtime exceptions
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setString(1, (String)map.get("schemaVersion"));
+            statement.setString(2, (String)map.get("schemaType"));
+            statement.setString(3, (String)map.get("specVersion"));
+            statement.setString(4, (String)map.get("schemaSource"));
+            statement.setString(5, (String)map.get("schemaName"));
+            String schemaDesc = (String)map.get("schemaDesc");
+            if (schemaDesc != null && !schemaDesc.isBlank()) {
+                statement.setString(6, schemaDesc);
+            } else {
+                statement.setNull(6, Types.VARCHAR);
             }
+            statement.setString(7, (String)map.get("schemaBody"));
+            statement.setString(8, (String)map.get("schemaOwner"));
+            statement.setString(9, (String)map.get("schemaStatus"));
+            String example = (String)map.get("example");
+            if (example != null && !example.isBlank()) {
+                statement.setString(10, example);
+            } else {
+                statement.setNull(10, Types.VARCHAR);
+            }
+            statement.setString(11, (String)map.get("commentStatus"));
+            statement.setString(12, (String)event.get(Constants.USER));
+            statement.setObject(13, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setString(14, schemaId);
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to update the schema with id " + schemaId);
+            }
+            // --- Replace Category Associations ---
+            // 1. Delete existing links for this schema
+            try (PreparedStatement deleteCategoryStatement = conn.prepareStatement(deleteSchemaCategorySql)) {
+                deleteCategoryStatement.setString(1, schemaId);
+                deleteCategoryStatement.setString(2, "schema"); // entity_type = "schema"
+                deleteCategoryStatement.executeUpdate(); // Execute delete (no need to check count for DELETE)
+            }
+
+            // 2. Insert new links if categoryIds are provided in the event
+            if (categoryIds != null && !categoryIds.isEmpty()) {
+                try (PreparedStatement insertCategoryStatement = conn.prepareStatement(insertSchemaCategorySql)) {
+                    for (String categoryId : categoryIds) {
+                        insertCategoryStatement.setString(1, schemaId);
+                        insertCategoryStatement.setString(2, "schema"); // entity_type = "schema"
+                        insertCategoryStatement.setObject(3, UUID.fromString(categoryId));
+                        insertCategoryStatement.addBatch(); // Batch inserts for efficiency
+                    }
+                    insertCategoryStatement.executeBatch(); // Execute batch insert
+                }
+            }
+            // --- End Replace Category Associations ---
+
+            // --- Replace Tag Associations ---
+            // 1. Delete existing links for this schema
+            try (PreparedStatement deleteTagStatement = conn.prepareStatement(deleteSchemaTagSql)) {
+                deleteTagStatement.setString(1, schemaId);
+                deleteTagStatement.setString(2, "schema"); // entity_type = "schema"
+                deleteTagStatement.executeUpdate();
+            }
+
+            // 2. Insert new links if tagIds are provided in the event
+            if (tagIds != null && !tagIds.isEmpty()) {
+                try (PreparedStatement insertTagStatement = conn.prepareStatement(insertSchemaTagSql)) {
+                    for (String tagId : tagIds) {
+                        insertTagStatement.setString(1, schemaId);
+                        insertTagStatement.setString(2, "schema"); // entity_type = "schema"
+                        insertTagStatement.setObject(3, UUID.fromString(tagId));
+                        insertTagStatement.addBatch(); // Batch inserts for efficiency
+                    }
+                    insertTagStatement.executeBatch(); // Execute batch insert
+                }
+            }
+            // --- End Replace Tag Associations ---
+            notificationService.insertNotification(event, true, null);
+
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during updateSchema for id {}: {}", schemaId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) { // Catch other potential runtime exceptions
+            logger.error("Exception during updateSchema for id {}: {}", schemaId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
-    public Result<String> deleteSchema(Map<String, Object> event) {
+    public void deleteSchema(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "DELETE FROM schema_t WHERE schema_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String schemaId = (String) map.get("schemaId");
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, schemaId);
+        String schemaId = (String) map.get("schemaId"); // For logging/exceptions
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to delete the schema with id " + schemaId);
-                }
-                conn.commit();
-                result =  Success.of(schemaId); // Return schemaId
-                notificationService.insertNotification(event, true, null);
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setString(1, schemaId);
 
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) { // Catch other potential runtime exceptions
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to delete the schema with id " + schemaId);
             }
+            notificationService.insertNotification(event, true, null);
+
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteSchema for id {}: {}", schemaId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) { // Catch other potential runtime exceptions
+            logger.error("Exception during deleteSchema for id {}: {}", schemaId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
@@ -424,7 +392,6 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
         return result;
     }
 
-
     @Override
     public Result<String> getSchemaById(String schemaId) {
         Result<String> result = null;
@@ -432,12 +399,12 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
                 "schema_owner, schema_status, example, comment_status, update_user, update_ts FROM schema_t WHERE schema_id = ?";
         Map<String, Object> map = null;
         try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
+            // No setAutoCommit(false) for read-only query
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, schemaId);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
-                        map = new HashMap<>();
+                        map = new HashMap<>(); // Create map only if found
                         map.put("schemaId", resultSet.getString("schema_id"));
                         map.put("hostId", resultSet.getObject("host_id", UUID.class));
                         map.put("schemaVersion", resultSet.getString("schema_version"));
@@ -455,17 +422,19 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
                         map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     }
                 }
+                // Check if map was populated (i.e., record found)
                 if (map != null && !map.isEmpty()) {
                     result = Success.of(JsonMapper.toJson(map));
                 } else {
-                    result = Success.of(null); // Or perhaps Failure.of(NOT_FOUND Status) if schema must exist
+                    // Record not found
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "schema", schemaId)); // Consistent with AccessControlPersistence
                 }
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
+            logger.error("SQLException getting schema by id {}:", schemaId, e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
         } catch (Exception e) {
-            logger.error("Exception:", e);
+            logger.error("Unexpected exception getting schema by id {}:", schemaId, e);
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
         return result;
@@ -515,10 +484,10 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
             result = Success.of(JsonMapper.toJson(resultMap));
 
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
+            logger.error("SQLException getting schemas by categoryId {}:", categoryId, e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
         } catch (Exception e) {
-            logger.error("Exception:", e);
+            logger.error("Exception getting schemas by categoryId {}:", categoryId, e);
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
         return result;
@@ -568,10 +537,10 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
             result = Success.of(JsonMapper.toJson(resultMap));
 
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
+            logger.error("SQLException getting schemas by tagId {}:", tagId, e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
         } catch (Exception e) {
-            logger.error("Exception:", e);
+            logger.error("Exception getting schemas by tagId {}:", tagId, e);
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
         return result;

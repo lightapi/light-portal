@@ -1,12 +1,14 @@
 package net.lightapi.portal.db.persistence;
 
 import com.networknt.monad.Result;
+import java.sql.Connection; // Added import
+import java.sql.SQLException; // Added import
 import java.util.Map;
 
 public interface TagPersistence {
-    Result<String> createTag(Map<String, Object> event);
-    Result<String> updateTag(Map<String, Object> event);
-    Result<String> deleteTag(Map<String, Object> event);
+    void createTag(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void updateTag(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void deleteTag(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getTag(int offset, int limit, String hostId, String tagId, String entityType, String tagName, String tagDesc);
     Result<String> getTagLabel(String hostId);
     Result<String> getTagById(String tagId);

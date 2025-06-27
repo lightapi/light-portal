@@ -39,7 +39,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> createInstance(Map<String, Object> event) {
+    public void createInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql =
                 """
                 INSERT INTO instance_t(host_id, instance_id, instance_name, product_version_id,
@@ -55,128 +55,120 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 AND instance_id != ?
                 """;
 
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
-                statement.setString(3, (String)map.get("instanceName"));
-                statement.setObject(4, UUID.fromString((String)map.get("productVersionId")));
-                statement.setString(5, (String)map.get("serviceId"));
-                Boolean current = (Boolean)map.get("current");
-                if (current != null) {
-                    statement.setBoolean(6, current);
-                } else {
-                    statement.setNull(6, Types.BOOLEAN);
-                }
-                Boolean readonly = (Boolean)map.get("readonly");
-                if (readonly != null) {
-                    statement.setBoolean(7, readonly);
-                } else {
-                    statement.setNull(7, Types.BOOLEAN);
-                }
-                String environment = (String)map.get("environment");
-                if (environment != null && !environment.isEmpty()) {
-                    statement.setString(8, environment);
-                } else {
-                    statement.setNull(8, Types.VARCHAR);
-                }
-                String serviceDesc = (String)map.get("serviceDesc");
-                if (serviceDesc != null && !serviceDesc.isEmpty()) {
-                    statement.setString(9, serviceDesc);
-                } else {
-                    statement.setNull(9, Types.VARCHAR);
-                }
-                String instanceDesc = (String)map.get("instanceDesc");
-                if(instanceDesc != null && !instanceDesc.isEmpty()) {
-                    statement.setString(10, instanceDesc);
-                } else {
-                    statement.setNull(10, Types.VARCHAR);
-                }
-                String zone = (String)map.get("zone");
-                if(zone != null && !zone.isEmpty()) {
-                    statement.setString(11, zone);
-                } else {
-                    statement.setNull(11, Types.VARCHAR);
-                }
-                String region = (String)map.get("region");
-                if(region != null && !region.isEmpty()) {
-                    statement.setString(12, region);
-                } else {
-                    statement.setNull(12, Types.VARCHAR);
-                }
-                String lob = (String)map.get("lob");
-                if(lob != null && !lob.isEmpty()) {
-                    statement.setString(13, lob);
-                } else {
-                    statement.setNull(13, Types.VARCHAR);
-                }
-                String resourceName = (String)map.get("resourceName");
-                if(resourceName != null && !resourceName.isEmpty()) {
-                    statement.setString(14, resourceName);
-                } else {
-                    statement.setNull(14, Types.VARCHAR);
-                }
-                String businessName = (String)map.get("businessName");
-                if(businessName != null && !businessName.isEmpty()) {
-                    statement.setString(15, businessName);
-                } else {
-                    statement.setNull(15, Types.VARCHAR);
-                }
-                String envTag = (String)map.get("envTag");
-                if(envTag != null && !envTag.isEmpty()) {
-                    statement.setString(16, envTag);
-                } else {
-                    statement.setNull(16, Types.VARCHAR);
-                }
-                String topicClassification = (String)map.get("topicClassification");
-                if(topicClassification != null && !topicClassification.isEmpty()) {
-                    statement.setString(17, topicClassification);
-                } else {
-                    statement.setNull(17, Types.VARCHAR);
-                }
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String instanceId = (String)map.get("instanceId"); // For logging/exceptions
+        String serviceId = (String)map.get("serviceId"); // For logging/exceptions
 
-                statement.setString(18, (String)event.get(Constants.USER));
-                statement.setObject(19, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert the instance with id " + map.get("instanceId"));
-                }
-                // try to update current to false for others if current is true.
-                if(current != null && current) {
-                    try (PreparedStatement statementUpdate = conn.prepareStatement(sqlUpdateCurrent)) {
-                        statementUpdate.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                        statementUpdate.setString(2, (String)map.get("serviceId"));
-                        statementUpdate.setObject(3, UUID.fromString((String)map.get("instanceId")));
-                        statementUpdate.executeUpdate();
-                    }
-                }
-                conn.commit();
-                result = Success.of((String)map.get("instanceId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(instanceId));
+            statement.setString(3, (String)map.get("instanceName"));
+            statement.setObject(4, UUID.fromString((String)map.get("productVersionId")));
+            statement.setString(5, serviceId);
+            Boolean current = (Boolean)map.get("current");
+            if (current != null) {
+                statement.setBoolean(6, current);
+            } else {
+                statement.setNull(6, Types.BOOLEAN);
             }
+            Boolean readonly = (Boolean)map.get("readonly");
+            if (readonly != null) {
+                statement.setBoolean(7, readonly);
+            } else {
+                statement.setNull(7, Types.BOOLEAN);
+            }
+            String environment = (String)map.get("environment");
+            if (environment != null && !environment.isEmpty()) {
+                statement.setString(8, environment);
+            } else {
+                statement.setNull(8, Types.VARCHAR);
+            }
+            String serviceDesc = (String)map.get("serviceDesc");
+            if (serviceDesc != null && !serviceDesc.isEmpty()) {
+                statement.setString(9, serviceDesc);
+            } else {
+                statement.setNull(9, Types.VARCHAR);
+            }
+            String instanceDesc = (String)map.get("instanceDesc");
+            if(instanceDesc != null && !instanceDesc.isEmpty()) {
+                statement.setString(10, instanceDesc);
+            } else {
+                statement.setNull(10, Types.VARCHAR);
+            }
+            String zone = (String)map.get("zone");
+            if(zone != null && !zone.isEmpty()) {
+                statement.setString(11, zone);
+            } else {
+                statement.setNull(11, Types.VARCHAR);
+            }
+            String region = (String)map.get("region");
+            if(region != null && !region.isEmpty()) {
+                statement.setString(12, region);
+            } else {
+                statement.setNull(12, Types.VARCHAR);
+            }
+            String lob = (String)map.get("lob");
+            if(lob != null && !lob.isEmpty()) {
+                statement.setString(13, lob);
+            } else {
+                statement.setNull(13, Types.VARCHAR);
+            }
+            String resourceName = (String)map.get("resourceName");
+            if(resourceName != null && !resourceName.isEmpty()) {
+                statement.setString(14, resourceName);
+            } else {
+                statement.setNull(14, Types.VARCHAR);
+            }
+            String businessName = (String)map.get("businessName");
+            if(businessName != null && !businessName.isEmpty()) {
+                statement.setString(15, businessName);
+            } else {
+                statement.setNull(15, Types.VARCHAR);
+            }
+            String envTag = (String)map.get("envTag");
+            if(envTag != null && !envTag.isEmpty()) {
+                statement.setString(16, envTag);
+            } else {
+                statement.setNull(16, Types.VARCHAR);
+            }
+            String topicClassification = (String)map.get("topicClassification");
+            if(topicClassification != null && !topicClassification.isEmpty()) {
+                statement.setString(17, topicClassification);
+            } else {
+                statement.setNull(17, Types.VARCHAR);
+            }
+
+            statement.setString(18, (String)event.get(Constants.USER));
+            statement.setObject(19, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert the instance with id " + instanceId);
+            }
+            // try to update current to false for others if current is true.
+            if(current != null && current) {
+                try (PreparedStatement statementUpdate = conn.prepareStatement(sqlUpdateCurrent)) {
+                    statementUpdate.setObject(1, UUID.fromString(hostId));
+                    statementUpdate.setString(2, serviceId);
+                    statementUpdate.setObject(3, UUID.fromString(instanceId));
+                    statementUpdate.executeUpdate();
+                }
+            }
+            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createInstance for id {}: {}", instanceId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during createInstance for id {}: {}", instanceId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
-    public Result<String> updateInstance(Map<String, Object> event) {
+    public void updateInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql =
                 """
                 UPDATE instance_t SET instance_name = ?, product_version_id = ?, service_id = ?,
@@ -193,164 +185,144 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 AND instance_id != ?
                 """;
 
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)map.get("instanceName"));
-                statement.setObject(2, UUID.fromString((String)map.get("productVersionId")));
-                statement.setString(3, (String)map.get("serviceId"));
-                Boolean current = (Boolean)map.get("current");
-                if (current != null) {
-                    statement.setBoolean(4, current);
-                } else {
-                    statement.setNull(4, Types.BOOLEAN);
-                }
-                Boolean readonly = (Boolean)map.get("readonly");
-                if (readonly != null) {
-                    statement.setBoolean(5, readonly);
-                } else {
-                    statement.setNull(5, Types.BOOLEAN);
-                }
-                String environment = (String)map.get("environment");
-                if (environment != null && !environment.isEmpty()) {
-                    statement.setString(6, environment);
-                } else {
-                    statement.setNull(6, Types.VARCHAR);
-                }
-                String serviceDesc = (String)map.get("serviceDesc");
-                if (serviceDesc != null && !serviceDesc.isEmpty()) {
-                    statement.setString(7, serviceDesc);
-                } else {
-                    statement.setNull(7, Types.VARCHAR);
-                }
-                String instanceDesc = (String)map.get("instanceDesc");
-                if (instanceDesc != null && !instanceDesc.isEmpty()) {
-                    statement.setString(8, instanceDesc);
-                } else {
-                    statement.setNull(8, Types.VARCHAR);
-                }
-                String zone = (String)map.get("zone");
-                if (zone != null && !zone.isEmpty()) {
-                    statement.setString(9, zone);
-                } else {
-                    statement.setNull(9, Types.VARCHAR);
-                }
-                String region = (String)map.get("region");
-                if (region != null && !region.isEmpty()) {
-                    statement.setString(10, region);
-                } else {
-                    statement.setNull(10, Types.VARCHAR);
-                }
-                String lob = (String)map.get("lob");
-                if (lob != null && !lob.isEmpty()) {
-                    statement.setString(11, lob);
-                } else {
-                    statement.setNull(11, Types.VARCHAR);
-                }
-                String resourceName = (String)map.get("resourceName");
-                if (resourceName != null && !resourceName.isEmpty()) {
-                    statement.setString(12, resourceName);
-                } else {
-                    statement.setNull(12, Types.VARCHAR);
-                }
-                String businessName = (String)map.get("businessName");
-                if (businessName != null && !businessName.isEmpty()) {
-                    statement.setString(13, businessName);
-                } else {
-                    statement.setNull(13, Types.VARCHAR);
-                }
-                String envTag = (String)map.get("envTag");
-                if (envTag != null && !envTag.isEmpty()) {
-                    statement.setString(14, envTag);
-                } else {
-                    statement.setNull(14, Types.VARCHAR);
-                }
-                String topicClassification = (String)map.get("topicClassification");
-                if (topicClassification != null && !topicClassification.isEmpty()) {
-                    statement.setString(15, topicClassification);
-                } else {
-                    statement.setNull(15, Types.VARCHAR);
-                }
-                statement.setString(16, (String)event.get(Constants.USER));
-                statement.setObject(17, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(18, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(19, UUID.fromString((String)map.get("instanceId")));
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String instanceId = (String)map.get("instanceId"); // For logging/exceptions
+        String serviceId = (String)map.get("serviceId"); // For logging/exceptions
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to update the instance with id " + map.get("instanceId"));
-                }
-                // try to update current to false for others if current is true.
-                if(current != null && current) {
-                    try (PreparedStatement statementUpdate = conn.prepareStatement(sqlUpdateCurrent)) {
-                        statementUpdate.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                        statementUpdate.setString(2, (String)map.get("serviceId"));
-                        statementUpdate.setObject(3, UUID.fromString((String)map.get("instanceId")));
-                        statementUpdate.executeUpdate();
-                    }
-                }
-
-                conn.commit();
-                result = Success.of((String)map.get("instanceId"));
-                notificationService.insertNotification(event, true, null);
-
-
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            }  catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setString(1, (String)map.get("instanceName"));
+            statement.setObject(2, UUID.fromString((String)map.get("productVersionId")));
+            statement.setString(3, serviceId);
+            Boolean current = (Boolean)map.get("current");
+            if (current != null) {
+                statement.setBoolean(4, current);
+            } else {
+                statement.setNull(4, Types.BOOLEAN);
             }
+            Boolean readonly = (Boolean)map.get("readonly");
+            if (readonly != null) {
+                statement.setBoolean(5, readonly);
+            } else {
+                statement.setNull(5, Types.BOOLEAN);
+            }
+            String environment = (String)map.get("environment");
+            if (environment != null && !environment.isEmpty()) {
+                statement.setString(6, environment);
+            } else {
+                statement.setNull(6, Types.VARCHAR);
+            }
+            String serviceDesc = (String)map.get("serviceDesc");
+            if (serviceDesc != null && !serviceDesc.isEmpty()) {
+                statement.setString(7, serviceDesc);
+            } else {
+                statement.setNull(7, Types.VARCHAR);
+            }
+            String instanceDesc = (String)map.get("instanceDesc");
+            if (instanceDesc != null && !instanceDesc.isEmpty()) {
+                statement.setString(8, instanceDesc);
+            } else {
+                statement.setNull(8, Types.VARCHAR);
+            }
+            String zone = (String)map.get("zone");
+            if (zone != null && !zone.isEmpty()) {
+                statement.setString(9, zone);
+            } else {
+                statement.setNull(9, Types.VARCHAR);
+            }
+            String region = (String)map.get("region");
+            if (region != null && !region.isEmpty()) {
+                statement.setString(10, region);
+            } else {
+                statement.setNull(10, Types.VARCHAR);
+            }
+            String lob = (String)map.get("lob");
+            if (lob != null && !lob.isEmpty()) {
+                statement.setString(11, lob);
+            } else {
+                statement.setNull(11, Types.VARCHAR);
+            }
+            String resourceName = (String)map.get("resourceName");
+            if (resourceName != null && !resourceName.isEmpty()) {
+                statement.setString(12, resourceName);
+            } else {
+                statement.setNull(12, Types.VARCHAR);
+            }
+            String businessName = (String)map.get("businessName");
+            if (businessName != null && !businessName.isEmpty()) {
+                statement.setString(13, businessName);
+            } else {
+                statement.setNull(13, Types.VARCHAR);
+            }
+            String envTag = (String)map.get("envTag");
+            if (envTag != null && !envTag.isEmpty()) {
+                statement.setString(14, envTag);
+            } else {
+                statement.setNull(14, Types.VARCHAR);
+            }
+            String topicClassification = (String)map.get("topicClassification");
+            if (topicClassification != null && !topicClassification.isEmpty()) {
+                statement.setString(15, topicClassification);
+            } else {
+                statement.setNull(15, Types.VARCHAR);
+            }
+            statement.setString(16, (String)event.get(Constants.USER));
+            statement.setObject(17, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(18, UUID.fromString(hostId));
+            statement.setObject(19, UUID.fromString(instanceId));
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to update the instance with id " + instanceId);
+            }
+            // try to update current to false for others if current is true.
+            if(current != null && current) {
+                try (PreparedStatement statementUpdate = conn.prepareStatement(sqlUpdateCurrent)) {
+                    statementUpdate.setObject(1, UUID.fromString(hostId));
+                    statementUpdate.setString(2, serviceId);
+                    statementUpdate.setObject(3, UUID.fromString(instanceId));
+                    statementUpdate.executeUpdate();
+                }
+            }
+            notificationService.insertNotification(event, true, null);
+
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during updateInstance for id {}: {}", instanceId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during updateInstance for id {}: {}", instanceId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
-    public Result<String> deleteInstance(Map<String, Object> event) {
+    public void deleteInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "DELETE FROM instance_t WHERE host_id = ? AND instance_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String instanceId = (String)map.get("instanceId"); // For logging/exceptions
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to delete the instance with id " + map.get("instanceId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("instanceId"));
-                notificationService.insertNotification(event, true, null);
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(instanceId));
 
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to delete the instance with id " + instanceId);
             }
-            catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
-            }
+            notificationService.insertNotification(event, true, null);
+
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteInstance for id {}: {}", instanceId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during deleteInstance for id {}: {}", instanceId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
@@ -500,138 +472,111 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> createInstanceApi(Map<String, Object> event) {
+    public void createInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "INSERT INTO instance_api_t(host_id, instance_api_id, instance_id, api_version_id, active, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?)";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(2, UUID.fromString((String)map.get("instanceApiId")));
-                statement.setObject(3, UUID.fromString((String)map.get("instanceId")));
-                statement.setObject(4, UUID.fromString((String)map.get("apiVersionId")));
-                Boolean active = (Boolean)map.get("active");
-                if (active != null) {
-                    statement.setBoolean(5, active);
-                } else {
-                    statement.setNull(5, Types.BOOLEAN);
-                }
-                statement.setString(6, (String)event.get(Constants.USER));
-                statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String instanceApiId = (String)map.get("instanceApiId"); // For logging/exceptions
+        String instanceId = (String)map.get("instanceId"); // For logging/exceptions
+        String apiVersionId = (String)map.get("apiVersionId"); // For logging/exceptions
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert the instance api");
-                }
-                conn.commit();
-                result = Success.of(String.format("Instance API created for hostId: %s, instanceApiId: %s, instanceId: %s, apiVersionId: %s",
-                        event.get(Constants.HOST), map.get("instanceApiId"), map.get("instanceId"), map.get("apiVersionId")));
-                notificationService.insertNotification(event, true, null);
-
-            }   catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(instanceApiId));
+            statement.setObject(3, UUID.fromString(instanceId));
+            statement.setObject(4, UUID.fromString(apiVersionId));
+            Boolean active = (Boolean)map.get("active");
+            if (active != null) {
+                statement.setBoolean(5, active);
+            } else {
+                statement.setNull(5, Types.BOOLEAN);
             }
+            statement.setString(6, (String)event.get(Constants.USER));
+            statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException(String.format("Failed to insert the instance API for hostId: %s, instanceApiId: %s, instanceId: %s, apiVersionId: %s",
+                        hostId, instanceApiId, instanceId, apiVersionId));
+            }
+            notificationService.insertNotification(event, true, null);
+
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createInstanceApi for instanceApiId {}: {}", instanceApiId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during createInstanceApi for instanceApiId {}: {}", instanceApiId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
-    public Result<String> updateInstanceApi(Map<String, Object> event) {
+    public void updateInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "UPDATE instance_api_t SET instance_id = ?, api_version_id = ?, active = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? and instance_api_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String)map.get("instanceId")));
-                statement.setObject(2, UUID.fromString((String)map.get("apiVersionId")));
-                Boolean active = (Boolean)map.get("active");
-                if (active != null) {
-                    statement.setBoolean(3, active);
-                } else {
-                    statement.setNull(3, Types.BOOLEAN);
-                }
-                statement.setString(4, (String)event.get(Constants.USER));
-                statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(7, UUID.fromString((String)map.get("instanceApiId")));
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String instanceApiId = (String)map.get("instanceApiId"); // For logging/exceptions
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to update instance api");
-                }
-                conn.commit();
-                result = Success.of(String.format("Instance API updated for hostId: %s, instanceApiId: %s",
-                        event.get(Constants.HOST), map.get("instanceApiId")));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            }  catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString((String)map.get("instanceId")));
+            statement.setObject(2, UUID.fromString((String)map.get("apiVersionId")));
+            Boolean active = (Boolean)map.get("active");
+            if (active != null) {
+                statement.setBoolean(3, active);
+            } else {
+                statement.setNull(3, Types.BOOLEAN);
             }
+            statement.setString(4, (String)event.get(Constants.USER));
+            statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(6, UUID.fromString(hostId));
+            statement.setObject(7, UUID.fromString(instanceApiId));
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to update instance api for hostId: " + hostId + ", instanceApiId: " + instanceApiId);
+            }
+            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during updateInstanceApi for instanceApiId {}: {}", instanceApiId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during updateInstanceApi for instanceApiId {}: {}", instanceApiId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
-    public Result<String> deleteInstanceApi(Map<String, Object> event) {
+    public void deleteInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "DELETE FROM instance_api_t WHERE host_id = ? AND instance_api_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(2, UUID.fromString((String)map.get("instanceApiId")));
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String instanceApiId = (String)map.get("instanceApiId"); // For logging/exceptions
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to delete the instance api with instanceApiId " + map.get("instanceApiId"));
-                }
-                conn.commit();
-                result = Success.of(String.format("Instance API deleted for hostId: %s, instanceApiId: %s",
-                        event.get(Constants.HOST), map.get("instanceApiId")));
-                notificationService.insertNotification(event, true, null);
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(instanceApiId));
 
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            }  catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to delete the instance api with instanceApiId " + instanceApiId);
             }
+            notificationService.insertNotification(event, true, null);
+
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteInstanceApi for instanceApiId {}: {}", instanceApiId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during deleteInstanceApi for instanceApiId {}: {}", instanceApiId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
@@ -768,127 +713,101 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> createInstanceApiPathPrefix(Map<String, Object> event) {
+    public void createInstanceApiPathPrefix(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "INSERT INTO instance_api_path_prefix_t(host_id, instance_api_id, path_prefix, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?)";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(2, UUID.fromString((String)map.get("instanceApiId")));
-                statement.setString(3, (String)map.get("pathPrefix"));
-                statement.setString(4, (String)event.get(Constants.USER));
-                statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String instanceApiId = (String)map.get("instanceApiId"); // For logging/exceptions
+        String pathPrefix = (String)map.get("pathPrefix"); // For logging/exceptions
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert the instance api path prefix");
-                }
-                conn.commit();
-                result = Success.of(String.format("Instance api path prefix created for hostId: %s, instanceApiId: %s, pathPrefix: %s",
-                        event.get(Constants.HOST), map.get("instanceApiId"), map.get("pathPrefix")));
-                notificationService.insertNotification(event, true, null);
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(instanceApiId));
+            statement.setString(3, pathPrefix);
+            statement.setString(4, (String)event.get(Constants.USER));
+            statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
-            }   catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException(String.format("Failed to insert the instance api path prefix for hostId: %s, instanceApiId: %s, pathPrefix: %s",
+                        hostId, instanceApiId, pathPrefix));
             }
+            notificationService.insertNotification(event, true, null);
+
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createInstanceApiPathPrefix for instanceApiId {} pathPrefix {}: {}", instanceApiId, pathPrefix, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during createInstanceApiPathPrefix for instanceApiId {} pathPrefix {}: {}", instanceApiId, pathPrefix, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
-    public Result<String> updateInstanceApiPathPrefix(Map<String, Object> event) {
+    public void updateInstanceApiPathPrefix(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "UPDATE instance_api_path_prefix_t SET path_prefix = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? and instance_api_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)map.get("pathPrefix"));
-                statement.setString(2, (String)event.get(Constants.USER));
-                statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(5, UUID.fromString((String)map.get("instanceApiId")));
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String instanceApiId = (String)map.get("instanceApiId"); // For logging/exceptions
+        String pathPrefix = (String)map.get("pathPrefix"); // For logging/exceptions
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to update instance api path prefix");
-                }
-                conn.commit();
-                result = Success.of(String.format("Instance API updated for hostId: %s, instanceApiId: %s, pathPrefix: %s",
-                        event.get(Constants.HOST), map.get("instanceApiId"), map.get("pathPrefix")));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            }  catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setString(1, pathPrefix);
+            statement.setString(2, (String)event.get(Constants.USER));
+            statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(4, UUID.fromString(hostId));
+            statement.setObject(5, UUID.fromString(instanceApiId));
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException(String.format("Failed to update instance api path prefix for hostId: %s, instanceApiId: %s",
+                        hostId, instanceApiId));
             }
+            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during updateInstanceApiPathPrefix for instanceApiId {} pathPrefix {}: {}", instanceApiId, pathPrefix, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during updateInstanceApiPathPrefix for instanceApiId {} pathPrefix {}: {}", instanceApiId, pathPrefix, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
-
     }
 
     @Override
-    public Result<String> deleteInstanceApiPathPrefix(Map<String, Object> event) {
+    public void deleteInstanceApiPathPrefix(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "DELETE FROM instance_api_path_prefix_t WHERE host_id = ? AND instance_api_id = ? AND path_prefix = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(2, UUID.fromString((String)map.get("instanceApiId")));
-                statement.setString(3, (String)map.get("pathPrefix"));
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String instanceApiId = (String)map.get("instanceApiId"); // For logging/exceptions
+        String pathPrefix = (String)map.get("pathPrefix"); // For logging/exceptions
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to delete the instance api with instanceApiId " + map.get("instanceApiId"));
-                }
-                conn.commit();
-                result = Success.of(String.format("Instance api path prefix deleted for hostId: %s, instanceApiId: %s, pathPrefix: %s",
-                        event.get(Constants.HOST), map.get("instanceApiId"), map.get("pathPrefix")));
-                notificationService.insertNotification(event, true, null);
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(instanceApiId));
+            statement.setString(3, pathPrefix);
 
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            }  catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException(String.format("Failed to delete the instance api path prefix for hostId: %s, instanceApiId: %s, pathPrefix: %s",
+                        hostId, instanceApiId, pathPrefix));
             }
-        } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-        }
-        return result;
+            notificationService.insertNotification(event, true, null);
 
+        } catch (SQLException e) {
+            logger.error("SQLException during deleteInstanceApiPathPrefix for instanceApiId {} pathPrefix {}: {}", instanceApiId, pathPrefix, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during deleteInstanceApiPathPrefix for instanceApiId {} pathPrefix {}: {}", instanceApiId, pathPrefix, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
+        }
     }
 
     @Override
@@ -991,144 +910,114 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
     }
 
-
     @Override
-    public Result<String> createInstanceAppApi(Map<String, Object> event) {
+    public void createInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "INSERT INTO instance_app_api_t(host_id, instance_app_id, instance_api_id, active, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?, ?)";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(2, UUID.fromString((String)map.get("instanceAppId")));
-                statement.setObject(3, UUID.fromString((String)map.get("instanceApiId")));
-                Boolean active = (Boolean)map.get("active");
-                if (active != null) {
-                    statement.setBoolean(4, active);
-                } else {
-                    statement.setNull(4, Types.BOOLEAN);
-                }
-                statement.setString(5, (String)event.get(Constants.USER));
-                statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String instanceAppId = (String)map.get("instanceAppId"); // For logging/exceptions
+        String instanceApiId = (String)map.get("instanceApiId"); // For logging/exceptions
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert the instance app api");
-                }
-                conn.commit();
-                result = Success.of(String.format("Instance app api created for hostId: %s, instanceAppId: %s, instanceApiId: %s",
-                        event.get(Constants.HOST), map.get("instanceAppId"), map.get("instanceApiId")));
-                notificationService.insertNotification(event, true, null);
-            }   catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(instanceAppId));
+            statement.setObject(3, UUID.fromString(instanceApiId));
+            Boolean active = (Boolean)map.get("active");
+            if (active != null) {
+                statement.setBoolean(4, active);
+            } else {
+                statement.setNull(4, Types.BOOLEAN);
             }
-        } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-        }
-        return result;
+            statement.setString(5, (String)event.get(Constants.USER));
+            statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException(String.format("Failed to insert the instance app api for hostId: %s, instanceAppId: %s, instanceApiId: %s",
+                        hostId, instanceAppId, instanceApiId));
+            }
+            notificationService.insertNotification(event, true, null);
+        } catch (SQLException e) {
+            logger.error("SQLException during createInstanceAppApi for instanceAppId {} instanceApiId {}: {}", instanceAppId, instanceApiId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during createInstanceAppApi for instanceAppId {} instanceApiId {}: {}", instanceAppId, instanceApiId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
+        }
     }
 
-
     @Override
-    public Result<String> updateInstanceAppApi(Map<String, Object> event) {
-        final String sql = "UPDATE instance_api_t SET active = ?, update_user = ?, update_ts = ? " +
+    public void updateInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        final String sql = "UPDATE instance_app_api_t SET active = ?, update_user = ?, update_ts = ? " + // Corrected table name based on interface
                 "WHERE host_id = ? AND instance_app_id = ? AND instance_api_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                Boolean active = (Boolean)map.get("active");
-                if (active != null) {
-                    statement.setBoolean(1, active);
-                } else {
-                    statement.setNull(1, Types.BOOLEAN);
-                }
-                statement.setString(2, (String)event.get(Constants.USER));
-                statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(5, UUID.fromString((String)map.get("instanceAppId")));
-                statement.setObject(6, UUID.fromString((String)map.get("instanceApiId")));
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String instanceAppId = (String)map.get("instanceAppId"); // For logging/exceptions
+        String instanceApiId = (String)map.get("instanceApiId"); // For logging/exceptions
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to update instance app api");
-                }
-                conn.commit();
-                result = Success.of(String.format("Instance API updated for hostId: %s, instanceAppId: %s, instanceApiId: %s",
-                        event.get(Constants.HOST), map.get("instanceAppId"), map.get("instanceApiId")));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            }  catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            Boolean active = (Boolean)map.get("active");
+            if (active != null) {
+                statement.setBoolean(1, active);
+            } else {
+                statement.setNull(1, Types.BOOLEAN);
             }
-        } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-        }
-        return result;
+            statement.setString(2, (String)event.get(Constants.USER));
+            statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(4, UUID.fromString(hostId));
+            statement.setObject(5, UUID.fromString(instanceAppId));
+            statement.setObject(6, UUID.fromString(instanceApiId));
 
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException(String.format("Failed to update instance app api for hostId: %s, instanceAppId: %s, instanceApiId: %s",
+                        hostId, instanceAppId, instanceApiId));
+            }
+            notificationService.insertNotification(event, true, null);
+        } catch (SQLException e) {
+            logger.error("SQLException during updateInstanceAppApi for instanceAppId {} instanceApiId {}: {}", instanceAppId, instanceApiId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during updateInstanceAppApi for instanceAppId {} instanceApiId {}: {}", instanceAppId, instanceApiId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
+        }
     }
 
     @Override
-    public Result<String> deleteInstanceAppApi(Map<String, Object> event) {
+    public void deleteInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "DELETE FROM instance_app_api_t WHERE host_id = ? AND instance_app_id = ? AND instance_api_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(2, UUID.fromString((String)map.get("instanceAppId")));
-                statement.setObject(3, UUID.fromString((String)map.get("instanceApiId")));
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String instanceAppId = (String)map.get("instanceAppId"); // For logging/exceptions
+        String instanceApiId = (String)map.get("instanceApiId"); // For logging/exceptions
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to delete the instance app api");
-                }
-                conn.commit();
-                result = Success.of(String.format("Instance app api deleted for hostId: %s, instanceAppId: %s, instanceApiId: %s",
-                        event.get(Constants.HOST), map.get("instanceAppId"), map.get("instanceApiId")));
-                notificationService.insertNotification(event, true, null);
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(instanceAppId));
+            statement.setObject(3, UUID.fromString(instanceApiId));
 
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            }  catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException(String.format("Failed to delete the instance app api for hostId: %s, instanceAppId: %s, instanceApiId: %s",
+                        hostId, instanceAppId, instanceApiId));
             }
+            notificationService.insertNotification(event, true, null);
+
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteInstanceAppApi for instanceAppId {} instanceApiId {}: {}", instanceAppId, instanceApiId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during deleteInstanceAppApi for instanceAppId {} instanceApiId {}: {}", instanceAppId, instanceApiId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
-
     }
-
 
     @Override
     public Result<String> getInstanceAppApi(int offset, int limit, String hostId, String instanceAppId, String instanceApiId,
@@ -1239,141 +1128,109 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
     }
 
-
-
     @Override
-    public Result<String> createInstanceApp(Map<String, Object> event) {
+    public void createInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "INSERT INTO instance_app_t(host_id, instance_app_id, instance_id, app_id, app_version, active, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(2, UUID.fromString((String)map.get("instanceAppId")));
-                statement.setObject(3, UUID.fromString((String)map.get("instanceId")));
-                statement.setString(4, (String)map.get("appId"));
-                statement.setString(5, (String)map.get("appVersion"));
-                if (map.containsKey("active")) {
-                    statement.setBoolean(6, (Boolean) map.get("active"));
-                } else {
-                    statement.setNull(6, Types.BOOLEAN);
-                }
-                statement.setString(7, (String)event.get(Constants.USER));
-                statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert the instance app with event " + event);
-                }
-                conn.commit();
-                result = Success.of(String.format("Instance App created for hostId: %s, instanceAppId: %s",
-                        event.get(Constants.HOST), map.get("instanceAppId")));
-                notificationService.insertNotification(event, true, null);
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String instanceAppId = (String)map.get("instanceAppId"); // For logging/exceptions
 
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(instanceAppId));
+            statement.setObject(3, UUID.fromString((String)map.get("instanceId")));
+            statement.setString(4, (String)map.get("appId"));
+            statement.setString(5, (String)map.get("appVersion"));
+            if (map.containsKey("active")) {
+                statement.setBoolean(6, (Boolean) map.get("active"));
+            } else {
+                statement.setNull(6, Types.BOOLEAN);
             }
+            statement.setString(7, (String)event.get(Constants.USER));
+            statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert the instance app for hostId: " + hostId + ", instanceAppId: " + instanceAppId);
+            }
+            notificationService.insertNotification(event, true, null);
+
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createInstanceApp for instanceAppId {}: {}", instanceAppId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during createInstanceApp for instanceAppId {}: {}", instanceAppId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
-    public Result<String> updateInstanceApp(Map<String, Object> event) {
+    public void updateInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "UPDATE instance_app_t SET instance_id = ?, app_id = ?, app_version = ?, active = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? and instance_app_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String)map.get("instanceId")));
-                statement.setString(2, (String)map.get("appId"));
-                statement.setString(3, (String)map.get("appVersion"));
-                Boolean active = (Boolean)map.get("active");
-                if (active != null) {
-                    statement.setBoolean(4, active);
-                } else {
-                    statement.setNull(4, Types.BOOLEAN);
-                }
-                statement.setString(5, (String)event.get(Constants.USER));
-                statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(7, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(8, UUID.fromString((String)map.get("instanceAppId")));
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String instanceAppId = (String)map.get("instanceAppId"); // For logging/exceptions
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to update the instance app with instanceAppId " + map.get("instanceAppId"));
-                }
-                conn.commit();
-                result = Success.of(String.format("Instance App updated for hostId: %s, instanceAppId: %s",
-                        event.get(Constants.HOST), map.get("instanceAppId")));
-                notificationService.insertNotification(event, true, null);
-
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString((String)map.get("instanceId")));
+            statement.setString(2, (String)map.get("appId"));
+            statement.setString(3, (String)map.get("appVersion"));
+            Boolean active = (Boolean)map.get("active");
+            if (active != null) {
+                statement.setBoolean(4, active);
+            } else {
+                statement.setNull(4, Types.BOOLEAN);
             }
+            statement.setString(5, (String)event.get(Constants.USER));
+            statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(7, UUID.fromString(hostId));
+            statement.setObject(8, UUID.fromString(instanceAppId));
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to update the instance app with instanceAppId " + instanceAppId);
+            }
+            notificationService.insertNotification(event, true, null);
+
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during updateInstanceApp for instanceAppId {}: {}", instanceAppId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during updateInstanceApp for instanceAppId {}: {}", instanceAppId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
-    public Result<String> deleteInstanceApp(Map<String, Object> event) {
+    public void deleteInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "DELETE FROM instance_app_t WHERE host_id = ? AND instance_app_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(2, UUID.fromString((String)map.get("instanceAppId")));
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String instanceAppId = (String)map.get("instanceAppId"); // For logging/exceptions
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to delete the instance app with instanceAppId " + map.get("instanceAppId"));
-                }
-                conn.commit();
-                result = Success.of(String.format("Instance app deleted for hostId: %s, instanceAppId: %s",
-                        event.get(Constants.HOST), map.get("instanceAppId")));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(instanceAppId));
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to delete the instance app with instanceAppId " + instanceAppId);
             }
+            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteInstanceApp for instanceAppId {}: {}", instanceAppId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during deleteInstanceApp for instanceAppId {}: {}", instanceAppId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
@@ -1504,8 +1361,9 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         }
         return result;
     }
+
     @Override
-    public Result<String> createProduct(Map<String, Object> event) {
+    public void createProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "INSERT INTO product_version_t(host_id, product_version_id, product_id, product_version, " +
                 "light4j_version, break_code, break_config, release_note, version_desc, release_type, current, " +
                 "version_status, update_user, update_ts) " +
@@ -1514,78 +1372,71 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 "WHERE host_id = ?\n" +
                 "AND product_id = ?\n" +
                 "AND product_version != ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(2, UUID.fromString((String)map.get("productVersionId")));
-                statement.setString(3, (String)map.get("productId"));
-                statement.setString(4, (String)map.get("productVersion"));
-                statement.setString(5, (String)map.get("light4jVersion"));
-                if (map.containsKey("breakCode")) {
-                    statement.setBoolean(6, (Boolean) map.get("breakCode"));
-                } else {
-                    statement.setNull(6, Types.BOOLEAN);
-                }
-                if (map.containsKey("breakConfig")) {
-                    statement.setBoolean(7, (Boolean) map.get("breakConfig"));
-                } else {
-                    statement.setNull(7, Types.BOOLEAN);
-                }
-                if (map.containsKey("releaseNote")) {
-                    statement.setString(8, (String) map.get("releaseNote"));
-                } else {
-                    statement.setNull(8, Types.VARCHAR);
-                }
-                if (map.containsKey("versionDesc")) {
-                    statement.setString(9, (String) map.get("versionDesc"));
-                } else {
-                    statement.setNull(9, Types.VARCHAR);
-                }
-                statement.setString(10, (String)map.get("releaseType"));
-                statement.setBoolean(11, (Boolean)map.get("current"));
-                statement.setString(12, (String)map.get("versionStatus"));
-                statement.setString(13, (String)event.get(Constants.USER));
-                statement.setObject(14, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String productId = (String)map.get("productId"); // For logging/exceptions
+        String productVersion = (String)map.get("productVersion"); // For logging/exceptions
+        Boolean current = (Boolean)map.get("current"); // For conditional update
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert the product with id " + map.get("productId"));
-                }
-                // try to update current to false for others if current is true.
-                if((Boolean)map.get("current")) {
-                    try (PreparedStatement statementUpdate = conn.prepareStatement(sqlUpdate)) {
-                        statementUpdate.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                        statementUpdate.setString(2, (String)map.get("productId"));
-                        statementUpdate.setString(3, (String)map.get("productVersion"));
-                        statementUpdate.executeUpdate();
-                    }
-                }
-                conn.commit();
-                result = Success.of((String)map.get("productId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString((String)map.get("productVersionId")));
+            statement.setString(3, productId);
+            statement.setString(4, productVersion);
+            statement.setString(5, (String)map.get("light4jVersion"));
+            if (map.containsKey("breakCode")) {
+                statement.setBoolean(6, (Boolean) map.get("breakCode"));
+            } else {
+                statement.setNull(6, Types.BOOLEAN);
             }
+            if (map.containsKey("breakConfig")) {
+                statement.setBoolean(7, (Boolean) map.get("breakConfig"));
+            } else {
+                statement.setNull(7, Types.BOOLEAN);
+            }
+            if (map.containsKey("releaseNote")) {
+                statement.setString(8, (String) map.get("releaseNote"));
+            } else {
+                statement.setNull(8, Types.VARCHAR);
+            }
+            if (map.containsKey("versionDesc")) {
+                statement.setString(9, (String) map.get("versionDesc"));
+            } else {
+                statement.setNull(9, Types.VARCHAR);
+            }
+            statement.setString(10, (String)map.get("releaseType"));
+            statement.setBoolean(11, current);
+            statement.setString(12, (String)map.get("versionStatus"));
+            statement.setString(13, (String)event.get(Constants.USER));
+            statement.setObject(14, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert the product with id " + productId + " and version " + productVersion);
+            }
+            // try to update current to false for others if current is true.
+            if(current != null && current) {
+                try (PreparedStatement statementUpdate = conn.prepareStatement(sqlUpdate)) {
+                    statementUpdate.setObject(1, UUID.fromString(hostId));
+                    statementUpdate.setString(2, productId);
+                    statementUpdate.setString(3, productVersion);
+                    statementUpdate.executeUpdate();
+                }
+            }
+            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createProduct (version) for productId {} version {}: {}", productId, productVersion, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during createProduct (version) for productId {} version {}: {}", productId, productVersion, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
-    public Result<String> updateProduct(Map<String, Object> event) {
+    public void updateProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "UPDATE product_version_t SET light4j_version = ?, break_code = ?, break_config = ?, " +
                 "release_note = ?, version_desc = ?, release_type = ?, current = ?, version_status = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? AND product_version_id = ?";
@@ -1594,113 +1445,97 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 "AND product_id = ?\n" +
                 "AND product_version != ?";
 
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)map.get("light4jVersion"));
-                if (map.containsKey("breakCode")) {
-                    statement.setBoolean(2, (Boolean) map.get("breakCode"));
-                } else {
-                    statement.setNull(2, Types.BOOLEAN);
-                }
-                if (map.containsKey("breakConfig")) {
-                    statement.setBoolean(3, (Boolean) map.get("breakConfig"));
-                } else {
-                    statement.setNull(3, Types.BOOLEAN);
-                }
-                if (map.containsKey("releaseNote")) {
-                    statement.setString(4, (String) map.get("releaseNote"));
-                } else {
-                    statement.setNull(4, Types.VARCHAR);
-                }
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String productId = (String)map.get("productId"); // For logging/exceptions
+        String productVersion = (String)map.get("productVersion"); // For logging/exceptions
+        String productVersionId = (String)map.get("productVersionId"); // For logging/exceptions
+        Boolean current = (Boolean)map.get("current"); // For conditional update
 
-                if (map.containsKey("versionDesc")) {
-                    statement.setString(5, (String) map.get("versionDesc"));
-                } else {
-                    statement.setNull(5, Types.VARCHAR);
-                }
-                statement.setString(6, (String)map.get("releaseType"));
-                statement.setBoolean(7, (Boolean)map.get("current"));
-                statement.setString(8, (String)map.get("versionStatus"));
-                statement.setString(9, (String)event.get(Constants.USER));
-                statement.setObject(10, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(11, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(12, UUID.fromString((String)map.get("productVersionId")));
-
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to update the product with id " + map.get("productId"));
-                }
-                // try to update current to false for others if current is true.
-                if((Boolean)map.get("current")) {
-                    try (PreparedStatement statementUpdate = conn.prepareStatement(sqlUpdate)) {
-                        statementUpdate.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                        statementUpdate.setString(2, (String)map.get("productId"));
-                        statementUpdate.setString(3, (String)map.get("productVersion"));
-                        statementUpdate.executeUpdate();
-                    }
-                }
-                conn.commit();
-                result = Success.of((String)map.get("productId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setString(1, (String)map.get("light4jVersion"));
+            if (map.containsKey("breakCode")) {
+                statement.setBoolean(2, (Boolean) map.get("breakCode"));
+            } else {
+                statement.setNull(2, Types.BOOLEAN);
             }
+            if (map.containsKey("breakConfig")) {
+                statement.setBoolean(3, (Boolean) map.get("breakConfig"));
+            } else {
+                statement.setNull(3, Types.BOOLEAN);
+            }
+            if (map.containsKey("releaseNote")) {
+                statement.setString(4, (String) map.get("releaseNote"));
+            } else {
+                statement.setNull(4, Types.VARCHAR);
+            }
+
+            if (map.containsKey("versionDesc")) {
+                statement.setString(5, (String) map.get("versionDesc"));
+            } else {
+                statement.setNull(5, Types.VARCHAR);
+            }
+            statement.setString(6, (String)map.get("releaseType"));
+            statement.setBoolean(7, current);
+            statement.setString(8, (String)map.get("versionStatus"));
+            statement.setString(9, (String)event.get(Constants.USER));
+            statement.setObject(10, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(11, UUID.fromString(hostId));
+            statement.setObject(12, UUID.fromString(productVersionId));
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to update the product (version) with id " + productId + " and version " + productVersion);
+            }
+            // try to update current to false for others if current is true.
+            if(current != null && current) {
+                try (PreparedStatement statementUpdate = conn.prepareStatement(sqlUpdate)) {
+                    statementUpdate.setObject(1, UUID.fromString(hostId));
+                    statementUpdate.setString(2, productId);
+                    statementUpdate.setString(3, productVersion);
+                    statementUpdate.executeUpdate();
+                }
+            }
+            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during updateProduct (version) for productId {} version {}: {}", productId, productVersion, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during updateProduct (version) for productId {} version {}: {}", productId, productVersion, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
-    public Result<String> deleteProduct(Map<String, Object> event) {
+    public void deleteProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "DELETE FROM product_version_t WHERE host_id = ? " +
                 "AND product_version_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(2, UUID.fromString((String)map.get("productVersionId")));
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String productVersionId = (String)map.get("productVersionId"); // For logging/exceptions
+        String productId = (String)map.get("productId"); // For logging/exceptions (for message only)
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to delete the product with id " + map.get("productId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("productId"));
-                notificationService.insertNotification(event, true, null);
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(productVersionId));
 
-
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to delete the product (version) with id " + productId + " and productVersionId " + productVersionId);
             }
-            catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
-            }
+            notificationService.insertNotification(event, true, null);
+
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteProduct (version) for productId {} productVersionId {}: {}", productId, productVersionId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during deleteProduct (version) for productId {} productVersionId {}: {}", productId, productVersionId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
@@ -1877,87 +1712,68 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         }
         return result;
     }
+
     @Override
-    public Result<String> createProductVersionEnvironment(Map<String, Object> event) {
+    public void createProductVersionEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "INSERT INTO product_version_environment_t(host_id, product_version_id, " +
                 "system_env, runtime_env, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?, ?)";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(2, UUID.fromString((String)map.get("productVersionId")));
-                statement.setString(3, (String)map.get("systemEnv"));
-                statement.setString(4, (String)map.get("runtimeEnv"));
-                statement.setString(5, (String)event.get(Constants.USER));
-                statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String productVersionId = (String)map.get("productVersionId"); // For logging/exceptions
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert the product version environment with id " + map.get("productVersionId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("productVersionId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(productVersionId));
+            statement.setString(3, (String)map.get("systemEnv"));
+            statement.setString(4, (String)map.get("runtimeEnv"));
+            statement.setString(5, (String)event.get(Constants.USER));
+            statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert the product version environment with id " + productVersionId);
             }
+            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createProductVersionEnvironment for productVersionId {}: {}", productVersionId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during createProductVersionEnvironment for productVersionId {}: {}", productVersionId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
-    public Result<String> deleteProductVersionEnvironment(Map<String, Object> event) {
+    public void deleteProductVersionEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "DELETE FROM product_version_environment_t WHERE host_id = ? " +
                 "AND product_version_id = ? AND system_env = ? AND runtime_env = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(2, UUID.fromString((String)map.get("productVersionId")));
-                statement.setString(3, (String)map.get("systemEnv"));
-                statement.setString(4, (String)map.get("runtimeEnv"));
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String productVersionId = (String)map.get("productVersionId"); // For logging/exceptions
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to delete the product version environment with id " + map.get("productVersionId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("productVersionId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(productVersionId));
+            statement.setString(3, (String)map.get("systemEnv"));
+            statement.setString(4, (String)map.get("runtimeEnv"));
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to delete the product version environment with id " + productVersionId);
             }
-            catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
-            }
+            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteProductVersionEnvironment for productVersionId {}: {}", productVersionId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during deleteProductVersionEnvironment for productVersionId {}: {}", productVersionId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
-
     }
 
     @Override
@@ -2040,83 +1856,66 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> createProductVersionPipeline(Map<String, Object> event) {
+    public void createProductVersionPipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "INSERT INTO product_version_pipeline_t(host_id, product_version_id, " +
                 "pipeline_id, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?)";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(2, UUID.fromString((String)map.get("productVersionId")));
-                statement.setObject(3, UUID.fromString((String)map.get("pipelineId")));
-                statement.setString(4, (String)event.get(Constants.USER));
-                statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String productVersionId = (String)map.get("productVersionId"); // For logging/exceptions
+        String pipelineId = (String)map.get("pipelineId"); // For logging/exceptions
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert the product version pipeline with id " + map.get("productVersionId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("productVersionId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(productVersionId));
+            statement.setObject(3, UUID.fromString(pipelineId));
+            statement.setString(4, (String)event.get(Constants.USER));
+            statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert the product version pipeline with productVersionId " + productVersionId + " and pipelineId " + pipelineId);
             }
+            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createProductVersionPipeline for productVersionId {} pipelineId {}: {}", productVersionId, pipelineId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during createProductVersionPipeline for productVersionId {} pipelineId {}: {}", productVersionId, pipelineId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
-    public Result<String> deleteProductVersionPipeline(Map<String, Object> event) {
+    public void deleteProductVersionPipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "DELETE FROM product_version_pipeline_t WHERE host_id = ? " +
                 "AND product_version_id = ? AND pipeline_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(2, UUID.fromString((String)map.get("productVersionId")));
-                statement.setObject(3, UUID.fromString((String)map.get("pipelineId")));
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String productVersionId = (String)map.get("productVersionId"); // For logging/exceptions
+        String pipelineId = (String)map.get("pipelineId"); // For logging/exceptions
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to delete the product version pipeline with id " + map.get("productVersionId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("productVersionId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(productVersionId));
+            statement.setObject(3, UUID.fromString(pipelineId));
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to delete the product version pipeline with productVersionId " + productVersionId + " and pipelineId " + pipelineId);
             }
-            catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
-            }
+            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteProductVersionPipeline for productVersionId {} pipelineId {}: {}", productVersionId, pipelineId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during deleteProductVersionPipeline for productVersionId {} pipelineId {}: {}", productVersionId, pipelineId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
@@ -2203,83 +2002,66 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> createProductVersionConfig(Map<String, Object> event) {
+    public void createProductVersionConfig(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "INSERT INTO product_version_config_t(host_id, product_version_id, " +
                 "config_id, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?)";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(2, UUID.fromString((String)map.get("productVersionId")));
-                statement.setObject(3, UUID.fromString((String)map.get("configId")));
-                statement.setString(4, (String)event.get(Constants.USER));
-                statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String productVersionId = (String)map.get("productVersionId"); // For logging/exceptions
+        String configId = (String)map.get("configId"); // For logging/exceptions
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert the product version config with id " + map.get("productVersionId") + "|" + map.get("configId"));
-                }
-                conn.commit();
-                result = Success.of(map.get("productVersionId") + "|" + map.get("configId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(productVersionId));
+            statement.setObject(3, UUID.fromString(configId));
+            statement.setString(4, (String)event.get(Constants.USER));
+            statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert the product version config with productVersionId " + productVersionId + " and configId " + configId);
             }
+            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createProductVersionConfig for productVersionId {} configId {}: {}", productVersionId, configId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during createProductVersionConfig for productVersionId {} configId {}: {}", productVersionId, configId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
-    public Result<String> deleteProductVersionConfig(Map<String, Object> event) {
+    public void deleteProductVersionConfig(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "DELETE FROM product_version_config_t WHERE host_id = ? " +
                 "AND product_version_id = ? AND config_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(2, UUID.fromString((String)map.get("productVersionId")));
-                statement.setObject(3, UUID.fromString((String)map.get("configId")));
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String productVersionId = (String)map.get("productVersionId"); // For logging/exceptions
+        String configId = (String)map.get("configId"); // For logging/exceptions
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to delete the product version config with id " + map.get("productVersionId") + "|" + map.get("configId"));
-                }
-                conn.commit();
-                result = Success.of(map.get("productVersionId") + "|" + map.get("configId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(productVersionId));
+            statement.setObject(3, UUID.fromString(configId));
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to delete the product version config with productVersionId " + productVersionId + " and configId " + configId);
             }
-            catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
-            }
+            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteProductVersionConfig for productVersionId {} configId {}: {}", productVersionId, configId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during deleteProductVersionConfig for productVersionId {} configId {}: {}", productVersionId, configId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
@@ -2428,87 +2210,67 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         }
     }
 
-
     @Override
-    public Result<String> createProductVersionConfigProperty(Map<String, Object> event) {
+    public void createProductVersionConfigProperty(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "INSERT INTO product_version_config_property_t(host_id, product_version_id, " +
                 "property_id, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?)";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(2, UUID.fromString((String)map.get("productVersionId")));
-                statement.setObject(3, UUID.fromString((String)map.get("propertyId")));
-                statement.setString(4, (String)event.get(Constants.USER));
-                statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String productVersionId = (String)map.get("productVersionId"); // For logging/exceptions
+        String propertyId = (String)map.get("propertyId"); // For logging/exceptions
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert the product version config property with id " + map.get("productVersionId") + "|" + map.get("propertyId"));
-                }
-                conn.commit();
-                result = Success.of(map.get("productVersionId") + "|" + map.get("propertyId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(productVersionId));
+            statement.setObject(3, UUID.fromString(propertyId));
+            statement.setString(4, (String)event.get(Constants.USER));
+            statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert the product version config property with productVersionId " + productVersionId + " and propertyId " + propertyId);
             }
+            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createProductVersionConfigProperty for productVersionId {} propertyId {}: {}", productVersionId, propertyId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during createProductVersionConfigProperty for productVersionId {} propertyId {}: {}", productVersionId, propertyId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
-
     }
 
     @Override
-    public Result<String> deleteProductVersionConfigProperty(Map<String, Object> event) {
+    public void deleteProductVersionConfigProperty(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "DELETE FROM product_version_config_property_t WHERE host_id = ? " +
                 "AND product_version_id = ? AND property_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(2, UUID.fromString((String)map.get("productVersionId")));
-                statement.setObject(3, UUID.fromString((String)map.get("propertyId")));
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String productVersionId = (String)map.get("productVersionId"); // For logging/exceptions
+        String propertyId = (String)map.get("propertyId"); // For logging/exceptions
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to delete the product version config property with id " + map.get("productVersionId") + "|" + map.get("propertyId"));
-                }
-                conn.commit();
-                result = Success.of(map.get("productVersionId") + "|" + map.get("propertyId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(productVersionId));
+            statement.setObject(3, UUID.fromString(propertyId));
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to delete the product version config property with productVersionId " + productVersionId + " and propertyId " + propertyId);
             }
-            catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
-            }
+            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteProductVersionConfigProperty for productVersionId {} propertyId {}: {}", productVersionId, propertyId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during deleteProductVersionConfigProperty for productVersionId {} propertyId {}: {}", productVersionId, propertyId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
-
     }
 
     @Override
@@ -2598,10 +2360,8 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
     }
 
-
-
     @Override
-    public Result<String> createPipeline(Map<String, Object> event) {
+    public void createPipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "INSERT INTO pipeline_t(host_id, pipeline_id, platform_id, pipeline_version, pipeline_name, " +
                 "current, endpoint, version_status, system_env, runtime_env, request_schema, response_schema, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?, ?)";
@@ -2613,80 +2373,72 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 AND pipeline_name = ?
                 AND pipeline_id != ?
                 """;
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(2, UUID.fromString((String)map.get("pipelineId")));
-                statement.setObject(3, UUID.fromString((String)map.get("platformId")));
-                statement.setString(4, (String)map.get("pipelineVersion"));
-                statement.setString(5, (String)map.get("pipelineName"));
-                Boolean current = (Boolean)map.get("current");
-                if (current != null) {
-                    statement.setBoolean(6, current);
-                } else {
-                    statement.setNull(6, Types.BOOLEAN);
-                }
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String pipelineId = (String)map.get("pipelineId"); // For logging/exceptions
+        String pipelineName = (String)map.get("pipelineName"); // For conditional update
+        Boolean current = (Boolean)map.get("current"); // For conditional update
 
-                statement.setString(7, (String)map.get("endpoint"));
-
-                String versionStatus = (String)map.get("versionStatus");
-                if (versionStatus != null && !versionStatus.isEmpty()) {
-                    statement.setString(8, versionStatus);
-                } else {
-                    statement.setNull(8, Types.VARCHAR);
-                }
-                statement.setString(9, (String)map.get("systemEnv"));
-
-                String runtimeEnv = (String)map.get("runtimeEnv");
-                if (runtimeEnv != null && !runtimeEnv.isEmpty()) {
-                    statement.setString(10, runtimeEnv);
-                } else {
-                    statement.setNull(10, Types.VARCHAR);
-                }
-                statement.setString(11, (String)map.get("requestSchema"));
-                statement.setString(12, (String)map.get("responseSchema"));
-                statement.setString(13, (String)event.get(Constants.USER));
-                statement.setObject(14, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert the pipeline with id " + map.get("pipelineId"));
-                }
-                // try to update current to false for others if current is true.
-                if(current != null && current) {
-                    try (PreparedStatement statementUpdate = conn.prepareStatement(sqlUpdateCurrent)) {
-                        statementUpdate.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                        statementUpdate.setString(2, (String)map.get("pipelineName"));
-                        statementUpdate.setObject(3, UUID.fromString((String)map.get("pipelineId")));
-                        statementUpdate.executeUpdate();
-                    }
-                }
-                conn.commit();
-                result = Success.of((String)map.get("pipelineId"));
-                notificationService.insertNotification(event, true, null);
-            }   catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(pipelineId));
+            statement.setObject(3, UUID.fromString((String)map.get("platformId")));
+            statement.setString(4, (String)map.get("pipelineVersion"));
+            statement.setString(5, pipelineName);
+            if (current != null) {
+                statement.setBoolean(6, current);
+            } else {
+                statement.setNull(6, Types.BOOLEAN);
             }
+
+            statement.setString(7, (String)map.get("endpoint"));
+
+            String versionStatus = (String)map.get("versionStatus");
+            if (versionStatus != null && !versionStatus.isEmpty()) {
+                statement.setString(8, versionStatus);
+            } else {
+                statement.setNull(8, Types.VARCHAR);
+            }
+            statement.setString(9, (String)map.get("systemEnv"));
+
+            String runtimeEnv = (String)map.get("runtimeEnv");
+            if (runtimeEnv != null && !runtimeEnv.isEmpty()) {
+                statement.setString(10, runtimeEnv);
+            } else {
+                statement.setNull(10, Types.VARCHAR);
+            }
+            statement.setString(11, (String)map.get("requestSchema"));
+            statement.setString(12, (String)map.get("responseSchema"));
+            statement.setString(13, (String)event.get(Constants.USER));
+            statement.setObject(14, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert the pipeline with id " + pipelineId);
+            }
+            // try to update current to false for others if current is true.
+            if(current != null && current) {
+                try (PreparedStatement statementUpdate = conn.prepareStatement(sqlUpdateCurrent)) {
+                    statementUpdate.setObject(1, UUID.fromString(hostId));
+                    statementUpdate.setString(2, pipelineName);
+                    statementUpdate.setObject(3, UUID.fromString(pipelineId));
+                    statementUpdate.executeUpdate();
+                }
+            }
+            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createPipeline for pipelineId {}: {}", pipelineId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during createPipeline for pipelineId {}: {}", pipelineId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
-    public Result<String> updatePipeline(Map<String, Object> event) {
+    public void updatePipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "UPDATE pipeline_t SET platform_id = ?, pipeline_version = ?, pipeline_name = ?, current = ?, " +
                 "endpoint = ?, version_status = ?, system_env = ?, runtime_env = ?, request_schema = ?, response_schema = ?, " +
                 "update_user = ?, update_ts = ? " +
@@ -2700,114 +2452,95 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 AND pipeline_id != ?
                 """;
 
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String)map.get("platformId")));
-                statement.setString(2, (String)map.get("pipelineVersion"));
-                statement.setString(3, (String)map.get("pipelineName"));
-                Boolean current = (Boolean)map.get("current");
-                if (current != null) {
-                    statement.setBoolean(4, current);
-                } else {
-                    statement.setNull(4, Types.BOOLEAN);
-                }
-                statement.setString(5, (String)map.get("endpoint"));
-                String versionStatus = (String)map.get("versionStatus");
-                if (versionStatus != null && !versionStatus.isEmpty()) {
-                    statement.setString(6, versionStatus);
-                } else {
-                    statement.setNull(6, Types.VARCHAR);
-                }
-                statement.setString(7, (String)map.get("systemEnv"));
-                String runtimeEnv = (String)map.get("runtimeEnv");
-                if (runtimeEnv != null && !runtimeEnv.isEmpty()) {
-                    statement.setString(8, runtimeEnv);
-                } else {
-                    statement.setNull(8, Types.VARCHAR);
-                }
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String pipelineId = (String)map.get("pipelineId"); // For logging/exceptions
+        String pipelineName = (String)map.get("pipelineName"); // For conditional update
+        Boolean current = (Boolean)map.get("current"); // For conditional update
 
-                statement.setString(9, (String)map.get("requestSchema"));
-                statement.setString(10, (String)map.get("responseSchema"));
-                statement.setString(11,(String) event.get(Constants.USER));
-                statement.setObject(12, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(13, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(14, (String)map.get("pipelineId"));
-
-
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to update the pipeline with id " + map.get("pipelineId"));
-                }
-                // try to update current to false for others if current is true.
-                if(current != null && current) {
-                    try (PreparedStatement statementUpdate = conn.prepareStatement(sqlUpdateCurrent)) {
-                        statementUpdate.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                        statementUpdate.setString(2, (String)map.get("pipelineName"));
-                        statementUpdate.setObject(3, UUID.fromString((String)map.get("pipelineId")));
-                        statementUpdate.executeUpdate();
-                    }
-                }
-                conn.commit();
-                result = Success.of((String)map.get("pipelineId"));
-                notificationService.insertNotification(event, true, null);
-
-            }  catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString((String)map.get("platformId")));
+            statement.setString(2, (String)map.get("pipelineVersion"));
+            statement.setString(3, pipelineName);
+            if (current != null) {
+                statement.setBoolean(4, current);
+            } else {
+                statement.setNull(4, Types.BOOLEAN);
             }
+            statement.setString(5, (String)map.get("endpoint"));
+            String versionStatus = (String)map.get("versionStatus");
+            if (versionStatus != null && !versionStatus.isEmpty()) {
+                statement.setString(6, versionStatus);
+            } else {
+                statement.setNull(6, Types.VARCHAR);
+            }
+            statement.setString(7, (String)map.get("systemEnv"));
+            String runtimeEnv = (String)map.get("runtimeEnv");
+            if (runtimeEnv != null && !runtimeEnv.isEmpty()) {
+                statement.setString(8, runtimeEnv);
+            } else {
+                statement.setNull(8, Types.VARCHAR);
+            }
+
+            statement.setString(9, (String)map.get("requestSchema"));
+            statement.setString(10, (String)map.get("responseSchema"));
+            statement.setString(11,(String) event.get(Constants.USER));
+            statement.setObject(12, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(13, UUID.fromString(hostId));
+            statement.setString(14, pipelineId);
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to update the pipeline with id " + pipelineId);
+            }
+            // try to update current to false for others if current is true.
+            if(current != null && current) {
+                try (PreparedStatement statementUpdate = conn.prepareStatement(sqlUpdateCurrent)) {
+                    statementUpdate.setObject(1, UUID.fromString(hostId));
+                    statementUpdate.setString(2, pipelineName);
+                    statementUpdate.setObject(3, UUID.fromString(pipelineId));
+                    statementUpdate.executeUpdate();
+                }
+            }
+            notificationService.insertNotification(event, true, null);
+
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during updatePipeline for pipelineId {}: {}", pipelineId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during updatePipeline for pipelineId {}: {}", pipelineId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
-    public Result<String> deletePipeline(Map<String, Object> event) {
+    public void deletePipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "DELETE FROM pipeline_t WHERE host_id = ? AND pipeline_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(2, UUID.fromString((String)map.get("pipelineId")));
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String pipelineId = (String)map.get("pipelineId"); // For logging/exceptions
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to delete the pipeline with id " + map.get("pipelineId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("pipelineId"));
-                notificationService.insertNotification(event, true, null);
-            }   catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            }  catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(pipelineId));
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to delete the pipeline with id " + pipelineId);
             }
+            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deletePipeline for pipelineId {}: {}", pipelineId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during deletePipeline for pipelineId {}: {}", pipelineId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
-
 
     @Override
     public Result<String> getPipeline(int offset, int limit, String hostId, String pipelineId, String platformId,
@@ -2943,130 +2676,101 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> createInstancePipeline(Map<String, Object> event) {
+    public void createInstancePipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "INSERT INTO instance_pipeline_t(host_id, instance_id, pipeline_id, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?)";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
-                statement.setObject(3, UUID.fromString((String)map.get("pipelineId")));
-                statement.setString(4, (String)event.get(Constants.USER));
-                statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String instanceId = (String)map.get("instanceId"); // For logging/exceptions
+        String pipelineId = (String)map.get("pipelineId"); // For logging/exceptions
+        String key = String.format("hostId: %s, instanceId: %s pipelineId: %s", hostId, instanceId, pipelineId);
 
-                int count = statement.executeUpdate();
-                String key = String.format("hostId: %s, instanceId: %s pipelineId: %s",
-                        event.get(Constants.HOST), map.get("instanceId"), map.get("pipelineId"));
-                if (count == 0) {
-                    throw new SQLException("failed to insert the instance_pipeline_t with id " + key);
-                }
-                conn.commit();
-                result = Success.of(key);
-                notificationService.insertNotification(event, true, null);
-            }   catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(instanceId));
+            statement.setObject(3, UUID.fromString(pipelineId));
+            statement.setString(4, (String)event.get(Constants.USER));
+            statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert the instance_pipeline_t with id " + key);
             }
+            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createInstancePipeline for key {}: {}", key, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during createInstancePipeline for key {}: {}", key, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
-
     }
+
     @Override
-    public Result<String> updateInstancePipeline(Map<String, Object> event) {
+    public void updateInstancePipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "UPDATE instance_pipeline_t SET update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? and instance_id = ? and pipeline_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1,(String) event.get(Constants.USER));
-                statement.setObject(2, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(3, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(4, UUID.fromString((String)map.get("instanceId")));
-                statement.setObject(5, UUID.fromString((String)map.get("pipelineId")));
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String instanceId = (String)map.get("instanceId"); // For logging/exceptions
+        String pipelineId = (String)map.get("pipelineId"); // For logging/exceptions
+        String key = String.format("hostId: %s, instanceId: %s pipelineId: %s", hostId, instanceId, pipelineId);
 
-                int count = statement.executeUpdate();
-                String key = String.format("hostId: %s, instanceId: %s pipelineId: %s",
-                        event.get(Constants.HOST), map.get("instanceId"), map.get("pipelineId"));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setString(1,(String) event.get(Constants.USER));
+            statement.setObject(2, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(3, UUID.fromString(hostId));
+            statement.setObject(4, UUID.fromString(instanceId));
+            statement.setObject(5, UUID.fromString(pipelineId));
 
-                if (count == 0) {
-                    throw new SQLException("failed to update the pipeline with id " + key);
-                }
-                conn.commit();
-                result = Success.of(key);
-                notificationService.insertNotification(event, true, null);
-            }  catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to update the pipeline with id " + key);
             }
+            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during updateInstancePipeline for key {}: {}", key, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during updateInstancePipeline for key {}: {}", key, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
-
     }
+
     @Override
-    public Result<String> deleteInstancePipeline(Map<String, Object> event) {
+    public void deleteInstancePipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "DELETE FROM instance_pipeline_t WHERE host_id = ? AND instance_id = ? AND pipeline_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(2, UUID.fromString((String)map.get("instanceId")));
-                statement.setObject(3, UUID.fromString((String)map.get("pipelineId")));
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String instanceId = (String)map.get("instanceId"); // For logging/exceptions
+        String pipelineId = (String)map.get("pipelineId"); // For logging/exceptions
+        String key = String.format("hostId: %s, instanceId: %s pipelineId: %s", hostId, instanceId, pipelineId);
 
-                int count = statement.executeUpdate();
-                String key = String.format("hostId: %s, instanceId: %s pipelineId: %s",
-                        event.get(Constants.HOST), map.get("instanceId"), map.get("pipelineId"));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(instanceId));
+            statement.setObject(3, UUID.fromString(pipelineId));
 
-                if (count == 0) {
-                    throw new SQLException("failed to delete the pipeline with id " + key);
-                }
-                conn.commit();
-                result = Success.of(key);
-                notificationService.insertNotification(event, true, null);
-            }   catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            }  catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to delete the pipeline with id " + key);
             }
+            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteInstancePipeline for key {}: {}", key, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during deleteInstancePipeline for key {}: {}", key, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
-
     }
+
     @Override
     public Result<String> getInstancePipeline(int offset, int limit, String hostId, String instanceId, String instanceName,
                                               String productId, String productVersion, String pipelineId, String platformName,
@@ -3160,213 +2864,182 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> createPlatform(Map<String, Object> event) {
+    public void createPlatform(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "INSERT INTO platform_t(host_id, platform_id, platform_name, platform_version, " +
                 "client_type, handler_class, client_url, credentials, proxy_url, proxy_port, console_url, " +
                 "environment, zone, region, lob, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?)";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(2, UUID.fromString((String)map.get("platformId")));
-                statement.setString(3, (String)map.get("platformName"));
-                statement.setString(4, (String)map.get("platformVersion"));
-                statement.setString(5, (String)map.get("clientType"));
-                statement.setString(6, (String)map.get("handlerClass"));
-                statement.setString(7, (String)map.get("clientUrl"));
-                statement.setString(8, (String)map.get("credentials"));
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String platformId = (String)map.get("platformId"); // For logging/exceptions
 
-                if (map.containsKey("proxyUrl")) {
-                    statement.setString(9, (String) map.get("proxyUrl"));
-                } else {
-                    statement.setNull(9, Types.VARCHAR);
-                }
-                if (map.containsKey("proxyPort")) {
-                    statement.setInt(10, (Integer)map.get("proxyPort"));
-                } else {
-                    statement.setNull(10, Types.INTEGER);
-                }
-                if (map.containsKey("consoleUrl")) {
-                    statement.setString(11, (String) map.get("consoleUrl"));
-                } else {
-                    statement.setNull(11, Types.VARCHAR);
-                }
-                if (map.containsKey("environment")) {
-                    statement.setString(12, (String) map.get("environment"));
-                } else {
-                    statement.setNull(12, Types.VARCHAR);
-                }
-                if(map.containsKey("zone")) {
-                    statement.setString(13, (String) map.get("zone"));
-                } else {
-                    statement.setNull(13, Types.VARCHAR);
-                }
-                if(map.containsKey("region")) {
-                    statement.setString(14, (String) map.get("region"));
-                } else {
-                    statement.setNull(14, Types.VARCHAR);
-                }
-                if(map.containsKey("lob")) {
-                    statement.setString(15, (String) map.get("lob"));
-                } else {
-                    statement.setNull(15, Types.VARCHAR);
-                }
-                statement.setString(16, (String)event.get(Constants.USER));
-                statement.setObject(17, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(platformId));
+            statement.setString(3, (String)map.get("platformName"));
+            statement.setString(4, (String)map.get("platformVersion"));
+            statement.setString(5, (String)map.get("clientType"));
+            statement.setString(6, (String)map.get("handlerClass"));
+            statement.setString(7, (String)map.get("clientUrl"));
+            statement.setString(8, (String)map.get("credentials"));
 
-
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert the platform with id " + map.get("platformId"));
-                }
-                conn.commit();
-                result =  Success.of((String)map.get("platformId"));
-                notificationService.insertNotification(event, true, null);
-
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            }  catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            if (map.containsKey("proxyUrl")) {
+                statement.setString(9, (String) map.get("proxyUrl"));
+            } else {
+                statement.setNull(9, Types.VARCHAR);
             }
+            if (map.containsKey("proxyPort")) {
+                statement.setInt(10, (Integer)map.get("proxyPort"));
+            } else {
+                statement.setNull(10, Types.INTEGER);
+            }
+            if (map.containsKey("consoleUrl")) {
+                statement.setString(11, (String) map.get("consoleUrl"));
+            } else {
+                statement.setNull(11, Types.VARCHAR);
+            }
+            if (map.containsKey("environment")) {
+                statement.setString(12, (String) map.get("environment"));
+            } else {
+                statement.setNull(12, Types.VARCHAR);
+            }
+            if(map.containsKey("zone")) {
+                statement.setString(13, (String) map.get("zone"));
+            } else {
+                statement.setNull(13, Types.VARCHAR);
+            }
+            if(map.containsKey("region")) {
+                statement.setString(14, (String) map.get("region"));
+            } else {
+                statement.setNull(14, Types.VARCHAR);
+            }
+            if(map.containsKey("lob")) {
+                statement.setString(15, (String) map.get("lob"));
+            } else {
+                statement.setNull(15, Types.VARCHAR);
+            }
+            statement.setString(16, (String)event.get(Constants.USER));
+            statement.setObject(17, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert the platform with id " + platformId);
+            }
+            notificationService.insertNotification(event, true, null);
+
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createPlatform for platformId {}: {}", platformId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during createPlatform for platformId {}: {}", platformId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
-    public Result<String> updatePlatform(Map<String, Object> event) {
+    public void updatePlatform(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "UPDATE platform_t SET platform_name = ?, platform_version = ?, " +
                 "client_type = ?, handler_class = ?, client_url = ?, credentials = ?, proxy_url = ?, proxy_port = ?, " +
                 "console_url = ?, environment = ?, zone = ?, region = ?, lob = ?, " +
                 "update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? and platform_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)map.get("platformName"));
-                statement.setString(2, (String)map.get("platformVersion"));
-                statement.setString(3, (String)map.get("clientType"));
-                statement.setString(4, (String)map.get("handlerClass"));
-                statement.setString(5, (String)map.get("clientUrl"));
-                statement.setString(6, (String)map.get("credentials"));
-                if (map.containsKey("proxyUrl")) {
-                    statement.setString(7, (String) map.get("proxyUrl"));
-                } else {
-                    statement.setNull(7, Types.VARCHAR);
-                }
-                if (map.containsKey("proxyPort")) {
-                    statement.setInt(8, (Integer) map.get("proxyPort"));
-                } else {
-                    statement.setNull(8, Types.INTEGER);
-                }
-                if (map.containsKey("consoleUrl")) {
-                    statement.setString(9, (String) map.get("consoleUrl"));
-                } else {
-                    statement.setNull(9, Types.VARCHAR);
-                }
-                if (map.containsKey("environment")) {
-                    statement.setString(10, (String) map.get("environment"));
-                } else {
-                    statement.setNull(10, Types.VARCHAR);
-                }
-                if(map.containsKey("zone")) {
-                    statement.setString(11, (String) map.get("zone"));
-                } else {
-                    statement.setNull(11, Types.VARCHAR);
-                }
-                if(map.containsKey("region")) {
-                    statement.setString(12, (String) map.get("region"));
-                } else {
-                    statement.setNull(12, Types.VARCHAR);
-                }
-                if(map.containsKey("lob")) {
-                    statement.setString(13, (String) map.get("lob"));
-                } else {
-                    statement.setNull(13, Types.VARCHAR);
-                }
-                statement.setString(14, (String)event.get(Constants.USER));
-                statement.setObject(15, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(16, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(17, UUID.fromString((String)map.get("platformId")));
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String platformId = (String)map.get("platformId"); // For logging/exceptions
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to update the platform with id " + map.get("platformId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("platformId"));
-                notificationService.insertNotification(event, true, null);
-
-            }  catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            }   catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setString(1, (String)map.get("platformName"));
+            statement.setString(2, (String)map.get("platformVersion"));
+            statement.setString(3, (String)map.get("clientType"));
+            statement.setString(4, (String)map.get("handlerClass"));
+            statement.setString(5, (String)map.get("clientUrl"));
+            statement.setString(6, (String)map.get("credentials"));
+            if (map.containsKey("proxyUrl")) {
+                statement.setString(7, (String) map.get("proxyUrl"));
+            } else {
+                statement.setNull(7, Types.VARCHAR);
             }
+            if (map.containsKey("proxyPort")) {
+                statement.setInt(8, (Integer) map.get("proxyPort"));
+            } else {
+                statement.setNull(8, Types.INTEGER);
+            }
+            if (map.containsKey("consoleUrl")) {
+                statement.setString(9, (String) map.get("consoleUrl"));
+            } else {
+                statement.setNull(9, Types.VARCHAR);
+            }
+            if (map.containsKey("environment")) {
+                statement.setString(10, (String) map.get("environment"));
+            } else {
+                statement.setNull(10, Types.VARCHAR);
+            }
+            if(map.containsKey("zone")) {
+                statement.setString(11, (String) map.get("zone"));
+            } else {
+                statement.setNull(11, Types.VARCHAR);
+            }
+            if(map.containsKey("region")) {
+                statement.setString(12, (String) map.get("region"));
+            } else {
+                statement.setNull(12, Types.VARCHAR);
+            }
+            if(map.containsKey("lob")) {
+                statement.setString(13, (String) map.get("lob"));
+            } else {
+                statement.setNull(13, Types.VARCHAR);
+            }
+            statement.setString(14, (String)event.get(Constants.USER));
+            statement.setObject(15, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(16, UUID.fromString(hostId));
+            statement.setObject(17, UUID.fromString(platformId));
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to update the platform with id " + platformId);
+            }
+            notificationService.insertNotification(event, true, null);
+
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during updatePlatform for platformId {}: {}", platformId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during updatePlatform for platformId {}: {}", platformId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
-    public Result<String> deletePlatform(Map<String, Object> event) {
+    public void deletePlatform(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "DELETE FROM platform_t WHERE host_id = ? AND platform_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String platformId = (String)map.get("platformId"); // For logging/exceptions
 
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(2, UUID.fromString((String)map.get("platformId")));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(platformId));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to delete the platform with id " + map.get("platformId"));
-                }
-                conn.commit();
-                result =  Success.of((String)map.get("platformId"));
-                notificationService.insertNotification(event, true, null);
-
-
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to delete the platform with id " + platformId);
             }
-        } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-        }
-        return result;
-    }
+            notificationService.insertNotification(event, true, null);
 
+        } catch (SQLException e) {
+            logger.error("SQLException during deletePlatform for platformId {}: {}", platformId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during deletePlatform for platformId {}: {}", platformId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
+        }
+    }
 
     @Override
     public Result<String> getPlatform(int offset, int limit, String hostId, String platformId, String platformName, String platformVersion,
@@ -3496,78 +3169,68 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         return result;
     }
 
-
     @Override
-    public Result<String> createDeploymentInstance(Map<String, Object> event) {
+    public void createDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         // deployStatus is not set here but use the default value.
         final String sql = "INSERT INTO deployment_instance_t(host_id, instance_id, deployment_instance_id, " +
                 "service_id, ip_address, port_number, system_env, runtime_env, pipeline_id, " +
                 "update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String) event.get(Constants.HOST)));
-                statement.setObject(2, UUID.fromString((String) map.get("instanceId")));
-                statement.setObject(3, UUID.fromString((String) map.get("deploymentInstanceId")));
-                statement.setString(4, (String) map.get("serviceId"));
-                String ipAddress = (String) map.get("ipAddress");
-                if(ipAddress != null && !ipAddress.isEmpty()) {
-                    statement.setString(5, ipAddress);
-                } else {
-                    statement.setNull(5, Types.VARCHAR); // Set to SQL NULL if null or empty
-                }
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String deploymentInstanceId = (String)map.get("deploymentInstanceId"); // For logging/exceptions
+        String instanceId = (String)map.get("instanceId"); // For logging/exceptions
 
-                // Handle nullable integer for port_number
-                Object portNumberObj = map.get("portNumber");
-                if (portNumberObj != null) {
-                    if (portNumberObj instanceof String && !((String) portNumberObj).isEmpty()) {
-                        statement.setInt(6, Integer.parseInt((String) portNumberObj));
-                    } else if (portNumberObj instanceof Number) {
-                        statement.setInt(6, ((Number) portNumberObj).intValue());
-                    } else {
-                        statement.setNull(6, java.sql.Types.INTEGER); // Set to SQL NULL if not a valid number or empty string
-                    }
-                } else {
-                    statement.setNull(6, java.sql.Types.INTEGER); // Set to SQL NULL if null
-                }
-
-                statement.setString(7, (String) map.get("systemEnv"));
-                statement.setString(8, (String) map.get("runtimeEnv"));
-                statement.setObject(9, UUID.fromString((String) map.get("pipelineId")));
-                statement.setString(10, (String) event.get(Constants.USER));
-                statement.setObject(11, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert the deployment instance with id " + map.get("deploymentInstanceId"));
-                }
-                conn.commit();
-                result = Success.of((String) map.get("deploymentInstanceId"));
-                // Assuming you have a similar notification mechanism for deployment instances
-                // insertDeploymentInstanceNotification(event, true, null); // You'd need to create this method
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                // insertDeploymentInstanceNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                // insertDeploymentInstanceNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(instanceId));
+            statement.setObject(3, UUID.fromString(deploymentInstanceId));
+            statement.setString(4, (String) map.get("serviceId"));
+            String ipAddress = (String) map.get("ipAddress");
+            if(ipAddress != null && !ipAddress.isEmpty()) {
+                statement.setString(5, ipAddress);
+            } else {
+                statement.setNull(5, Types.VARCHAR); // Set to SQL NULL if null or empty
             }
+
+            // Handle nullable integer for port_number
+            Object portNumberObj = map.get("portNumber");
+            if (portNumberObj != null) {
+                if (portNumberObj instanceof String && !((String) portNumberObj).isEmpty()) {
+                    statement.setInt(6, Integer.parseInt((String) portNumberObj));
+                } else if (portNumberObj instanceof Number) {
+                    statement.setInt(6, ((Number) portNumberObj).intValue());
+                } else {
+                    statement.setNull(6, java.sql.Types.INTEGER); // Set to SQL NULL if not a valid number or empty string
+                }
+            } else {
+                statement.setNull(6, java.sql.Types.INTEGER); // Set to SQL NULL if null
+            }
+
+            statement.setString(7, (String) map.get("systemEnv"));
+            statement.setString(8, (String) map.get("runtimeEnv"));
+            statement.setObject(9, UUID.fromString((String) map.get("pipelineId")));
+            statement.setString(10, (String) event.get(Constants.USER));
+            statement.setObject(11, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert the deployment instance with id " + deploymentInstanceId);
+            }
+            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException on getting connection:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createDeploymentInstance for deploymentInstanceId {}: {}", deploymentInstanceId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during createDeploymentInstance for deploymentInstanceId {}: {}", deploymentInstanceId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
-    public Result<String> updateDeploymentInstance(Map<String, Object> event) {
+    public void updateDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         // instanceId is FK and deployStatus is not updated here.
         final String sql = "UPDATE deployment_instance_t SET " +
                 "service_id = ?, " +
@@ -3580,126 +3243,94 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 "update_ts = ? " +
                 "WHERE host_id = ? AND deployment_instance_id = ?";
 
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
         String deploymentInstanceId = (String) map.get("deploymentInstanceId"); // For messages
 
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                // Set parameters in the order they appear in the SQL SET clause, then WHERE clause
-                int paramIdx = 1;
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            // Set parameters in the order they appear in the SQL SET clause, then WHERE clause
+            int paramIdx = 1;
 
-                // service_id
-                statement.setString(paramIdx++, (String) map.get("serviceId"));
+            // service_id
+            statement.setString(paramIdx++, (String) map.get("serviceId"));
 
-                // ip_address (handles null if map.get("ipAddress") returns null)
-                statement.setString(paramIdx++, (String) map.get("ipAddress"));
+            // ip_address (handles null if map.get("ipAddress") returns null)
+            statement.setString(paramIdx++, (String) map.get("ipAddress"));
 
-                // port_number
-                Object portNumberObj = map.get("portNumber");
-                if (portNumberObj != null) {
-                    // Attempt to parse if it's a string, otherwise assume it's a number or handle appropriately
-                    if (portNumberObj instanceof String && !((String) portNumberObj).isEmpty()) {
-                        statement.setInt(paramIdx++, Integer.parseInt((String) portNumberObj));
-                    } else if (portNumberObj instanceof Number) {
-                        statement.setInt(paramIdx++, ((Number) portNumberObj).intValue());
-                    } else { // If it's an empty string or unexpected type intended to be null for port_number
-                        statement.setNull(paramIdx++, java.sql.Types.INTEGER);
-                    }
-                } else {
+            // port_number
+            Object portNumberObj = map.get("portNumber");
+            if (portNumberObj != null) {
+                // Attempt to parse if it's a string, otherwise assume it's a number or handle appropriately
+                if (portNumberObj instanceof String && !((String) portNumberObj).isEmpty()) {
+                    statement.setInt(paramIdx++, Integer.parseInt((String) portNumberObj));
+                } else if (portNumberObj instanceof Number) {
+                    statement.setInt(paramIdx++, ((Number) portNumberObj).intValue());
+                } else { // If it's an empty string or unexpected type intended to be null for port_number
                     statement.setNull(paramIdx++, java.sql.Types.INTEGER);
                 }
-
-                // system_env
-                statement.setString(paramIdx++, (String) map.get("systemEnv"));
-                // runtime_env
-                statement.setString(paramIdx++, (String) map.get("runtimeEnv"));
-                // pipeline_id
-                statement.setObject(paramIdx++, UUID.fromString((String) map.get("pipelineId")));
-
-                // update_user
-                statement.setString(paramIdx++, (String) event.get(Constants.USER));
-                // update_ts
-                statement.setObject(paramIdx++, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-
-                // WHERE clause parameters
-                statement.setObject(paramIdx++, UUID.fromString((String) event.get(Constants.HOST)));
-                statement.setObject(paramIdx++, UUID.fromString(deploymentInstanceId));
-
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    // Rollback before creating Failure, consistent with template's SQLException handling
-                    conn.rollback();
-                    String errorMessage = "failed to update the deployment instance with id " + deploymentInstanceId + " (not found or no changes)";
-                    logger.warn(errorMessage);
-                    // insertDeploymentInstanceNotification(event, false, "Deployment instance not found or no effective change.");
-                    // The template throws SQLException, which then gets caught. Let's align more closely.
-                    // However, "not found" is distinct. For closer alignment to template throwing SQLException for 0 count:
-                    throw new SQLException("failed to update the deployment instance with id " + deploymentInstanceId + " (record not found or no changes made)");
-                }
-                conn.commit();
-                result = Success.of(deploymentInstanceId);
-                // insertDeploymentInstanceNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException during updateDeploymentInstance:", e);
-                conn.rollback();
-                // insertDeploymentInstanceNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) { // Generic catch for other runtime errors like NullPointerException if map keys are missing
-                logger.error("Exception during updateDeploymentInstance:", e);
-                conn.rollback();
-                // insertDeploymentInstanceNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            } else {
+                statement.setNull(paramIdx++, java.sql.Types.INTEGER);
             }
-        } catch (SQLException e) { // For conn = ds.getConnection() failure
-            logger.error("SQLException obtaining connection for updateDeploymentInstance:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+
+            // system_env
+            statement.setString(paramIdx++, (String) map.get("systemEnv"));
+            // runtime_env
+            statement.setString(paramIdx++, (String) map.get("runtimeEnv"));
+            // pipeline_id
+            statement.setObject(paramIdx++, UUID.fromString((String) map.get("pipelineId")));
+
+            // update_user
+            statement.setString(paramIdx++, (String) event.get(Constants.USER));
+            // update_ts
+            statement.setObject(paramIdx++, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+
+            // WHERE clause parameters
+            statement.setObject(paramIdx++, UUID.fromString(hostId));
+            statement.setObject(paramIdx++, UUID.fromString(deploymentInstanceId));
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // The template throws SQLException for 0 count.
+                throw new SQLException("Failed to update the deployment instance with id " + deploymentInstanceId + " (record not found or no changes made)");
+            }
+            notificationService.insertNotification(event, true, null);
+        } catch (SQLException e) {
+            logger.error("SQLException during updateDeploymentInstance for deploymentInstanceId {}: {}", deploymentInstanceId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e;
+        } catch (Exception e) { // Generic catch for other runtime errors like NullPointerException if map keys are missing
+            logger.error("Exception during updateDeploymentInstance for deploymentInstanceId {}: {}", deploymentInstanceId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> deleteDeploymentInstance(Map<String, Object> event) {
+    public void deleteDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "DELETE FROM deployment_instance_t WHERE host_id = ? AND deployment_instance_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
-        // String deploymentInstanceId = (String) map.get("deploymentInstanceId"); // Not strictly needed if we follow template's success return
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String deploymentInstanceId = (String) map.get("deploymentInstanceId"); // For messages
 
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String) event.get(Constants.HOST)));
-                statement.setObject(2, UUID.fromString((String) map.get("deploymentInstanceId")));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(deploymentInstanceId));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    // Following template: throw SQLException if no rows affected
-                    throw new SQLException("failed to delete the deployment instance with id " + map.get("deploymentInstanceId") + " and host " + event.get(Constants.HOST));
-                }
-                conn.commit();
-                // Template returns the ID used in the WHERE clause for update, let's return deploymentInstanceId for delete
-                result = Success.of((String) map.get("deploymentInstanceId"));
-                // Assuming a similar notification mechanism for deployment instances.
-                // You would need to create/adapt this method: insertDeploymentInstanceNotification(event, true, null);
-                // For now, using the template's notification method name as a placeholder for structure:
-                // notificationService.insertNotification(event, true, null); // If you have a generic one or adapt this.
-            } catch (SQLException e) {
-                logger.error("SQLException during deleteDeploymentInstance:", e);
-                conn.rollback();
-                // insertDeploymentInstanceNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) { // Catch other potential runtime errors like NullPointerException or IllegalArgumentException
-                logger.error("Exception during deleteDeploymentInstance:", e);
-                conn.rollback();
-                // insertDeploymentInstanceNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // Following template: throw SQLException if no rows affected
+                throw new SQLException("Failed to delete the deployment instance with id " + deploymentInstanceId + " and host " + hostId);
             }
-        } catch (SQLException e) { // For conn = ds.getConnection() failure
-            logger.error("SQLException obtaining connection for deleteDeploymentInstance:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            notificationService.insertNotification(event, true, null);
+        } catch (SQLException e) {
+            logger.error("SQLException during deleteDeploymentInstance for deploymentInstanceId {}: {}", deploymentInstanceId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e;
+        } catch (Exception e) { // Catch other potential runtime errors like NullPointerException or IllegalArgumentException
+            logger.error("Exception during deleteDeploymentInstance for deploymentInstanceId {}: {}", deploymentInstanceId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e;
         }
-        return result;
     }
 
     @Override
@@ -3759,26 +3390,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
 
             for (int i = 0; i < parameters.size(); i++) {
-                // Handle null Integer specifically for port_number if addCondition doesn't
-                if (parameters.get(i) == null && (i < parameters.size() - 2) /* not limit or offset */ ) {
-                    // This check assumes portNumber is the only nullable Integer filter.
-                    // A more robust way would be to pass the SQL type to addCondition or have type-specific addCondition.
-                    // For now, assuming addCondition correctly handles nulls or setObject works.
-                    // If 'port_number' was the parameter and it's null:
-                    // String columnNameForNullCheck = ... ; // Need a way to know which column this null is for.
-                    // if ("port_number".equals(columnNameForNullCheck)) {
-                    //    preparedStatement.setNull(i + 1, java.sql.Types.INTEGER);
-                    // } else {
-                    //    preparedStatement.setObject(i + 1, null); // Or specific type if known
-                    // }
-                    // The template's addCondition likely handles setObject(..., null) which works for most types.
-                    // For Integers specifically, setObject(i + 1, null) might not map to SQL NULL correctly for all drivers,
-                    // setNull(i+1, Types.INTEGER) is safer.
-                    // Given the template uses setObject for all, we'll follow that.
-                    preparedStatement.setObject(i + 1, null);
-                } else {
-                    preparedStatement.setObject(i + 1, parameters.get(i));
-                }
+                // The template's addCondition likely handles setObject(..., null) which works for most types.
+                // For Integers specifically, setObject(i + 1, null) might not map to SQL NULL correctly for all drivers,
+                // setNull(i+1, Types.INTEGER) is safer.
+                // Given the template uses setObject for all, we'll follow that.
+                preparedStatement.setObject(i + 1, parameters.get(i));
             }
 
             boolean isFirstRow = true;
@@ -3933,210 +3549,160 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> createDeployment(Map<String, Object> event) {
+    public void createDeployment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "INSERT INTO deployment_t(host_id, deployment_id, deployment_instance_id, " +
                 "deployment_status, deployment_type, schedule_ts, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?,  ?, ?, ?)";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(2, UUID.fromString((String)map.get("deploymentId")));
-                statement.setObject(3, UUID.fromString((String)map.get("deploymentInstanceId")));
-                statement.setString(4, (String)map.get("deploymentStatus"));
-                statement.setString(5, (String)map.get("deploymentType"));
-                statement.setObject(6, map.get("scheduleTs") != null ? OffsetDateTime.parse((String)map.get("scheduleTs")) : OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(7, (String)event.get(Constants.USER));
-                statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String deploymentId = (String)map.get("deploymentId"); // For logging/exceptions
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert the deployment with id " + map.get("deploymentId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("deploymentId"));
-                notificationService.insertNotification(event, true, null);
-            }  catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(deploymentId));
+            statement.setObject(3, UUID.fromString((String)map.get("deploymentInstanceId")));
+            statement.setString(4, (String)map.get("deploymentStatus"));
+            statement.setString(5, (String)map.get("deploymentType"));
+            statement.setObject(6, map.get("scheduleTs") != null ? OffsetDateTime.parse((String)map.get("scheduleTs")) : OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setString(7, (String)event.get(Constants.USER));
+            statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert the deployment with id " + deploymentId);
             }
-        }  catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            notificationService.insertNotification(event, true, null);
+        } catch (SQLException e) {
+            logger.error("SQLException during createDeployment for deploymentId {}: {}", deploymentId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during createDeployment for deploymentId {}: {}", deploymentId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
-    public Result<String> updateDeployment(Map<String, Object> event) {
+    public void updateDeployment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "UPDATE deployment_t SET deployment_status = ?, deployment_type = ?, " +
                 "schedule_ts = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? and deployment_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        OffsetDateTime offsetDateTime = OffsetDateTime.parse((String)event.get(CloudEventV1.TIME));
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String deploymentId = (String)map.get("deploymentId"); // For logging/exceptions
 
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)map.get("deploymentStatus"));
-                statement.setString(2, (String)map.get("deploymentType"));
-                // use the event time if schedule time is not provided. We cannot use now as this event might be replayed.
-                statement.setObject(3, map.get("scheduleTs") != null ? OffsetDateTime.parse((String)map.get("scheduleTs")) : OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(4, (String)event.get(Constants.USER));
-                statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(7, UUID.fromString((String)map.get("deploymentId")));
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to update the deployment with id " + map.get("deploymentId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("deploymentId"));
-                notificationService.insertNotification(event, true, null);
-            }  catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            }  catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setString(1, (String)map.get("deploymentStatus"));
+            statement.setString(2, (String)map.get("deploymentType"));
+            // use the event time if schedule time is not provided. We cannot use now as this event might be replayed.
+            statement.setObject(3, map.get("scheduleTs") != null ? OffsetDateTime.parse((String)map.get("scheduleTs")) : OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setString(4, (String)event.get(Constants.USER));
+            statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(6, UUID.fromString(hostId));
+            statement.setObject(7, UUID.fromString(deploymentId));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to update the deployment with id " + deploymentId);
             }
-        }   catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            notificationService.insertNotification(event, true, null);
+        } catch (SQLException e) {
+            logger.error("SQLException during updateDeployment for deploymentId {}: {}", deploymentId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during updateDeployment for deploymentId {}: {}", deploymentId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
-    public Result<String> updateDeploymentJobId(Map<String, Object> event) {
+    public void updateDeploymentJobId(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "UPDATE deployment_t SET platform_job_id = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? and deployment_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)map.get("platformJobId"));
-                statement.setString(2, (String)event.get(Constants.USER));
-                statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(5, UUID.fromString((String)map.get("deploymentId")));
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to update the platform job id with deploymentId " + map.get("deploymentId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("deploymentId"));
-                notificationService.insertNotification(event, true, null);
-            }  catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            }  catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
-            }
-        }   catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-        }
-        return result;
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String deploymentId = (String)map.get("deploymentId"); // For logging/exceptions
 
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setString(1, (String)map.get("platformJobId"));
+            statement.setString(2, (String)event.get(Constants.USER));
+            statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(4, UUID.fromString(hostId));
+            statement.setObject(5, UUID.fromString(deploymentId));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to update the platform job id with deploymentId " + deploymentId);
+            }
+            notificationService.insertNotification(event, true, null);
+        } catch (SQLException e) {
+            logger.error("SQLException during updateDeploymentJobId for deploymentId {}: {}", deploymentId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during updateDeploymentJobId for deploymentId {}: {}", deploymentId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
+        }
     }
 
     @Override
-    public Result<String> updateDeploymentStatus(Map<String, Object> event) {
+    public void updateDeploymentStatus(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "UPDATE deployment_t SET deployment_status = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? and deployment_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String deploymentId = (String)map.get("deploymentId"); // For logging/exceptions
 
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)map.get("deploymentStatus"));
-                statement.setString(2, (String)event.get(Constants.USER));
-                statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(5, UUID.fromString((String)map.get("deploymentId")));
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to update the deployment status with deploymentId " + map.get("deploymentId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("deploymentId"));
-                notificationService.insertNotification(event, true, null);
-            }  catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            }  catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setString(1, (String)map.get("deploymentStatus"));
+            statement.setString(2, (String)event.get(Constants.USER));
+            statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(4, UUID.fromString(hostId));
+            statement.setObject(5, UUID.fromString(deploymentId));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to update the deployment status with deploymentId " + deploymentId);
             }
-        }   catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            notificationService.insertNotification(event, true, null);
+        } catch (SQLException e) {
+            logger.error("SQLException during updateDeploymentStatus for deploymentId {}: {}", deploymentId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during updateDeploymentStatus for deploymentId {}: {}", deploymentId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
-
     }
 
     @Override
-    public Result<String> deleteDeployment(Map<String, Object> event) {
+    public void deleteDeployment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "DELETE FROM deployment_t WHERE host_id = ? AND deployment_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(2, UUID.fromString((String)map.get("deploymentId")));
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String deploymentId = (String)map.get("deploymentId"); // For logging/exceptions
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to delete the deployment with id " + map.get("deploymentId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("deploymentId"));
-                notificationService.insertNotification(event, true, null);
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(deploymentId));
 
-            }   catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to delete the deployment with id " + deploymentId);
             }
-        }  catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            notificationService.insertNotification(event, true, null);
+
+        } catch (SQLException e) {
+            logger.error("SQLException during deleteDeployment for deploymentId {}: {}", deploymentId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during deleteDeployment for deploymentId {}: {}", deploymentId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
@@ -4225,5 +3791,4 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         }
         return result;
     }
-
 }

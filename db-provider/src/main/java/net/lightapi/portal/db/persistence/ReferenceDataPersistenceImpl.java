@@ -36,76 +36,62 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
     }
 
     @Override
-    public Result<String> createRefTable(Map<String, Object> event) {
-        final String sql = """
+    public void createRefTable(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        final String sql =
+                """
                 INSERT INTO ref_table_t
                   (table_id, host_id, table_name, table_desc, active, editable, update_user, update_ts)
                 VALUES
                   (?, ?, ?, ?, ?, ?, ?, ?)
                 """;
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String tableId = (String) map.get("tableId");
 
-        try (Connection conn = SqlDbStartupHook.ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString(tableId));
-                String hostId = (String) map.get("hostId");
-                if (hostId != null && !hostId.isEmpty()) {
-                    statement.setObject(2, UUID.fromString(hostId));
-                } else {
-                    statement.setNull(2, Types.OTHER); // Assuming UUID type, OTHER is a safe bet for setNull with UUIDs
-                }
-                statement.setString(3, (String)map.get("tableName"));
-                String tableDesc = (String) map.get("tableDesc");
-                if (tableDesc != null && !tableDesc.isEmpty()) {
-                    statement.setString(4, tableDesc);
-                } else {
-                    statement.setNull(4, Types.VARCHAR);
-                }
-                Boolean active = (Boolean) map.get("active");
-                if (active != null) {
-                    statement.setBoolean(5, active);
-                } else {
-                    statement.setNull(5, Types.BOOLEAN);
-                }
-                Boolean editable = (Boolean)map.get("editable");
-                if (editable != null) {
-                    statement.setBoolean(6, editable);
-                } else {
-                    statement.setNull(6, Types.BOOLEAN);
-                }
-                statement.setString(7, (String)event.get(Constants.USER));
-                statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(tableId));
+            String hostId = (String) map.get("hostId");
+            if (hostId != null && !hostId.isEmpty()) {
+                statement.setObject(2, UUID.fromString(hostId));
+            } else {
+                statement.setNull(2, Types.OTHER); // Assuming UUID type, OTHER is a safe bet for setNull with UUIDs
+            }
+            statement.setString(3, (String)map.get("tableName"));
+            String tableDesc = (String) map.get("tableDesc");
+            if (tableDesc != null && !tableDesc.isEmpty()) {
+                statement.setString(4, tableDesc);
+            } else {
+                statement.setNull(4, Types.VARCHAR);
+            }
+            Boolean active = (Boolean) map.get("active");
+            if (active != null) {
+                statement.setBoolean(5, active);
+            } else {
+                statement.setNull(5, Types.BOOLEAN);
+            }
+            Boolean editable = (Boolean)map.get("editable");
+            if (editable != null) {
+                statement.setBoolean(6, editable);
+            } else {
+                statement.setNull(6, Types.BOOLEAN);
+            }
+            statement.setString(7, (String)event.get(Constants.USER));
+            statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert the reference table with id " + tableId);
-                }
-                conn.commit();
-                result =  Success.of(tableId);
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert the reference table with id " + tableId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException on getting connection:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createRefTable for tableId {}: {}", tableId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createRefTable for tableId {}: {}", tableId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> updateRefTable(Map<String, Object> event) {
+    public void updateRefTable(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         // Note: host_id and table_name uniqueness/changes are usually handled
         // at the service layer, potentially requiring delete/create or careful checks.
         // This update focuses on mutable fields like desc, active, editable.
@@ -113,106 +99,75 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
                 "update_user = ?, update_ts = ? WHERE table_id = ?";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String tableId = (String) map.get("tableId"); // Get tableId for WHERE clause and return
+        String tableId = (String) map.get("tableId");
 
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
 
-                // 1. table_name (Required in update payload)
-                statement.setString(1, (String)map.get("tableName"));
+            // 1. table_name (Required in update payload)
+            String tableName = (String)map.get("tableName");
+            statement.setString(1, tableName);
 
-                // 2. table_desc (Optional)
-                String tableDesc = (String) map.get("tableDesc");
-                if (tableDesc != null && !tableDesc.isEmpty()) {
-                    statement.setString(2, tableDesc);
-                } else {
-                    statement.setNull(2, Types.VARCHAR);
-                }
-                Boolean active = (Boolean)map.get("active");
-                if (active != null) {
-                    statement.setBoolean(3, active);
-                } else {
-                    statement.setNull(3, Types.BOOLEAN);
-                }
-                Boolean editable = (Boolean)map.get("editable");
-                if (editable != null) {
-                    statement.setBoolean(4, editable);
-                } else {
-                    statement.setNull(4, Types.BOOLEAN);
-                }
+            // 2. table_desc (Optional)
+            String tableDesc = (String) map.get("tableDesc");
+            if (tableDesc != null && !tableDesc.isEmpty()) {
+                statement.setString(2, tableDesc);
+            } else {
+                statement.setNull(2, Types.VARCHAR);
+            }
+            Boolean active = (Boolean)map.get("active");
+            if (active != null) {
+                statement.setBoolean(3, active);
+            } else {
+                statement.setNull(3, Types.BOOLEAN);
+            }
+            Boolean editable = (Boolean)map.get("editable");
+            if (editable != null) {
+                statement.setBoolean(4, editable);
+            } else {
+                statement.setNull(4, Types.BOOLEAN);
+            }
 
-                statement.setString(5, (String)event.get(Constants.USER));
+            statement.setString(5, (String)event.get(Constants.USER));
 
-                statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
-                statement.setObject(7, UUID.fromString(tableId));
+            statement.setObject(7, UUID.fromString(tableId));
 
-                // Execute update
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to update the reference table with id " + tableId + " - record not found.");
-                }
-
-                // Success path
-                conn.commit();
-                result =  Success.of(tableId); // Return tableId
-                notificationService.insertNotification(event, true, null);
-
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) { // Catch other potential runtime exceptions
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            // Execute update
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("failed to update the reference table with id " + tableId + " - record not found or no changes made.");
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during updateRefTable for tableId {}: {}", tableId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) { // Catch other potential runtime exceptions
+            logger.error("Exception during updateRefTable for tableId {}: {}", tableId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> deleteRefTable(Map<String, Object> event) {
+    public void deleteRefTable(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "DELETE FROM ref_table_t WHERE table_id = ?";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String tableId = (String) map.get("tableId"); // Get tableId for WHERE clause and return
+        String tableId = (String) map.get("tableId");
 
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString(tableId));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(tableId));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to delete the reference table with id " + tableId + " - record not found.");
-                }
-                conn.commit();
-                result =  Success.of(tableId); // Return tableId
-                notificationService.insertNotification(event, true, null);
-
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) { // Catch other potential runtime exceptions
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to delete the reference table with id " + tableId + " - record not found.");
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteRefTable for tableId {}: {}", tableId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deleteRefTable for tableId {}: {}", tableId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
@@ -407,249 +362,198 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
     }
 
     @Override
-    public Result<String> createRefValue(Map<String, Object> event) {
+    public void createRefValue(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "INSERT INTO ref_value_t(value_id, table_id, value_code, value_desc, " +
                 "start_ts, end_ts, display_order, active, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?)";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String valueId = (String) map.get("valueId");
 
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
 
-                // 1. value_id (Required)
-                statement.setObject(1, UUID.fromString(valueId));
-                // 2. table_id (Required)
-                statement.setObject(2, UUID.fromString((String)map.get("tableId")));
-                // 3. value_code (Required)
-                statement.setString(3, (String)map.get("valueCode"));
+            // 1. value_id (Required)
+            statement.setObject(1, UUID.fromString(valueId));
+            // 2. table_id (Required)
+            statement.setObject(2, UUID.fromString((String)map.get("tableId")));
+            // 3. value_code (Required)
+            statement.setString(3, (String)map.get("valueCode"));
 
-                // 4. value_desc (Optional)
-                String valueDesc = (String) map.get("valueDesc");
-                if (valueDesc != null && !valueDesc.isEmpty()) {
-                    statement.setString(4, valueDesc);
-                } else {
-                    statement.setNull(4, Types.VARCHAR); // NULL for no description
-                }
+            // 4. value_desc (Optional)
+            String valueDesc = (String) map.get("valueDesc");
+            if (valueDesc != null && !valueDesc.isEmpty()) {
+                statement.setString(4, valueDesc);
+            } else {
+                statement.setNull(4, Types.VARCHAR); // NULL for no description
+            }
 
-                // 5. start_time (Optional OffsetDateTime)
-                if (map.get("startTs") != null && map.get("startTs") instanceof String) {
-                    try {
-                        statement.setObject(5, OffsetDateTime.parse((String)map.get("startTs")));
-                    } catch (java.time.format.DateTimeParseException e) {
-                        logger.warn("Invalid format for startTs '{}', setting NULL.", map.get("startTs"), e);
-                        statement.setNull(5, Types.TIMESTAMP_WITH_TIMEZONE);
-                    }
-                } else {
+            // 5. start_time (Optional OffsetDateTime)
+            if (map.get("startTs") != null && map.get("startTs") instanceof String) {
+                try {
+                    statement.setObject(5, OffsetDateTime.parse((String)map.get("startTs")));
+                } catch (java.time.format.DateTimeParseException e) {
+                    logger.warn("Invalid format for startTs '{}', setting NULL.", map.get("startTs"), e);
                     statement.setNull(5, Types.TIMESTAMP_WITH_TIMEZONE);
                 }
+            } else {
+                statement.setNull(5, Types.TIMESTAMP_WITH_TIMEZONE);
+            }
 
-                // 6. end_time (Optional OffsetDateTime)
-                if (map.get("endTs") != null && map.get("endTs") instanceof String) {
-                    try {
-                        statement.setObject(6, OffsetDateTime.parse((String)map.get("endTs")));
-                    } catch (java.time.format.DateTimeParseException e) {
-                        logger.warn("Invalid format for endTs '{}', setting NULL.", map.get("endTs"), e);
-                        statement.setNull(6, Types.TIMESTAMP_WITH_TIMEZONE);
-                    }
-                } else {
+            // 6. end_time (Optional OffsetDateTime)
+            if (map.get("endTs") != null && map.get("endTs") instanceof String) {
+                try {
+                    statement.setObject(6, OffsetDateTime.parse((String)map.get("endTs")));
+                } catch (java.time.format.DateTimeParseException e) {
+                    logger.warn("Invalid format for endTs '{}', setting NULL.", map.get("endTs"), e);
                     statement.setNull(6, Types.TIMESTAMP_WITH_TIMEZONE);
                 }
+            } else {
+                statement.setNull(6, Types.TIMESTAMP_WITH_TIMEZONE);
+            }
 
-                // 7. display_order (Optional Integer)
-                if (map.get("displayOrder") instanceof Number) {
-                    statement.setInt(7, ((Number) map.get("displayOrder")).intValue());
-                } else {
-                    statement.setNull(7, Types.INTEGER);
-                }
+            // 7. display_order (Optional Integer)
+            if (map.get("displayOrder") instanceof Number) {
+                statement.setInt(7, ((Number) map.get("displayOrder")).intValue());
+            } else {
+                statement.setNull(7, Types.INTEGER);
+            }
 
-                Boolean active = (Boolean)map.get("active");
-                if (active != null) {
-                    statement.setBoolean(8, active);
-                } else {
-                    statement.setNull(8, Types.BOOLEAN);
-                }
+            Boolean active = (Boolean)map.get("active");
+            if (active != null) {
+                statement.setBoolean(8, active);
+            } else {
+                statement.setNull(8, Types.BOOLEAN);
+            }
 
-                // 9. update_user (From event metadata)
-                statement.setString(9, (String)event.get(Constants.USER));
+            // 9. update_user (From event metadata)
+            statement.setString(9, (String)event.get(Constants.USER));
 
-                // 10. update_ts (From event metadata)
-                statement.setObject(10, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 10. update_ts (From event metadata)
+            statement.setObject(10, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
 
-                // Execute insert
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert the reference value with id " + valueId);
-                }
-
-                // Success path
-                conn.commit();
-                result =  Success.of(valueId);
-                notificationService.insertNotification(event, true, null);
-
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) { // Catch other potential runtime exceptions like parsing errors if not caught earlier
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            // Execute insert
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert the reference value with valueId " + valueId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createRefValue for valueId:", valueId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createRefValue for valueId {}: {}", valueId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> updateRefValue(Map<String, Object> event) {
+    public void updateRefValue(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "UPDATE ref_value_t SET table_id = ?, value_code = ?, value_desc = ?, start_ts = ?, " +
                 "end_ts = ?, display_order = ?, active = ?, update_user = ?, update_ts = ? " +
                 "WHERE value_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String valueId = (String) map.get("valueId"); // Get valueId for WHERE clause and return
 
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
 
-                // 1. table_id (Required in update payload?) - Assuming it might change
-                statement.setObject(1, UUID.fromString((String)map.get("tableId")));
-                // 2. value_code (Required in update payload)
-                statement.setString(2, (String)map.get("valueCode"));
+            // 1. table_id (Required in update payload?) - Assuming it might change
+            statement.setObject(1, UUID.fromString((String)map.get("tableId")));
+            // 2. value_code (Required in update payload)
+            statement.setString(2, (String)map.get("valueCode"));
 
-                // 3. value_desc (Optional)
-                String valueDesc = (String) map.get("valueDesc");
-                if (valueDesc != null && !valueDesc.isEmpty()) {
-                    statement.setString(3, valueDesc);
-                } else {
-                    statement.setNull(3, Types.VARCHAR);
-                }
+            // 3. value_desc (Optional)
+            String valueDesc = (String) map.get("valueDesc");
+            if (valueDesc != null && !valueDesc.isEmpty()) {
+                statement.setString(3, valueDesc);
+            } else {
+                statement.setNull(3, Types.VARCHAR);
+            }
 
-                // 4. start_time (Optional OffsetDateTime)
-                if (map.get("startTs") != null && map.get("startTs") instanceof String) {
-                    try {
-                        statement.setObject(4, OffsetDateTime.parse((String)map.get("startTs")));
-                    } catch (java.time.format.DateTimeParseException e) {
-                        logger.warn("Invalid format for startTs '{}', setting NULL.", map.get("startTs"), e);
-                        statement.setNull(4, Types.TIMESTAMP_WITH_TIMEZONE);
-                    }
-                } else {
+            // 4. start_time (Optional OffsetDateTime)
+            if (map.get("startTs") != null && map.get("startTs") instanceof String) {
+                try {
+                    statement.setObject(4, OffsetDateTime.parse((String)map.get("startTs")));
+                } catch (java.time.format.DateTimeParseException e) {
+                    logger.warn("Invalid format for startTs '{}', setting NULL.", map.get("startTs"), e);
                     statement.setNull(4, Types.TIMESTAMP_WITH_TIMEZONE);
                 }
+            } else {
+                statement.setNull(4, Types.TIMESTAMP_WITH_TIMEZONE);
+            }
 
-                // 5. end_time (Optional OffsetDateTime)
-                if (map.get("endTs") != null && map.get("endTs") instanceof String) {
-                    try {
-                        statement.setObject(5, OffsetDateTime.parse((String)map.get("endTs")));
-                    } catch (java.time.format.DateTimeParseException e) {
-                        logger.warn("Invalid format for endTs '{}', setting NULL.", map.get("endTs"), e);
-                        statement.setNull(5, Types.TIMESTAMP_WITH_TIMEZONE);
-                    }
-                } else {
+            // 5. end_time (Optional OffsetDateTime)
+            if (map.get("endTs") != null && map.get("endTs") instanceof String) {
+                try {
+                    statement.setObject(5, OffsetDateTime.parse((String)map.get("endTs")));
+                } catch (java.time.format.DateTimeParseException e) {
+                    logger.warn("Invalid format for endTs '{}', setting NULL.", map.get("endTs"), e);
                     statement.setNull(5, Types.TIMESTAMP_WITH_TIMEZONE);
                 }
+            } else {
+                statement.setNull(5, Types.TIMESTAMP_WITH_TIMEZONE);
+            }
 
-                // 6. display_order (Optional Integer)
-                if (map.get("displayOrder") instanceof Number) {
-                    statement.setInt(6, ((Number) map.get("displayOrder")).intValue());
-                } else {
-                    statement.setNull(6, Types.INTEGER);
-                }
+            // 6. display_order (Optional Integer)
+            if (map.get("displayOrder") instanceof Number) {
+                statement.setInt(6, ((Number) map.get("displayOrder")).intValue());
+            } else {
+                statement.setNull(6, Types.INTEGER);
+            }
 
-                Boolean active = (Boolean)map.get("active");
-                if (active != null) {
-                    statement.setBoolean(7, active);
-                } else {
-                    // Decide update behavior: set default? Or assume not changing if missing?
-                    // Setting default like template here:
-                    statement.setNull(7, Types.BOOLEAN);
-                }
+            Boolean active = (Boolean)map.get("active");
+            if (active != null) {
+                statement.setBoolean(7, active);
+            } else {
+                // Decide update behavior: set default? Or assume not changing if missing?
+                // Setting default like template here:
+                statement.setNull(7, Types.BOOLEAN);
+            }
 
-                // 8. update_user (From event metadata)
-                statement.setString(8, (String)event.get(Constants.USER));
+            // 8. update_user (From event metadata)
+            statement.setString(8, (String)event.get(Constants.USER));
 
-                // 9. update_ts (From event metadata)
-                statement.setObject(9, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 9. update_ts (From event metadata)
+            statement.setObject(9, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
-                // 10. value_id (For WHERE clause - Required)
-                statement.setObject(10, UUID.fromString(valueId));
+            // 10. value_id (For WHERE clause - Required)
+            statement.setObject(10, UUID.fromString(valueId));
 
-                // Execute update
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to update the reference value with id " + valueId + " - record not found.");
-                }
-
-                // Success path
-                conn.commit();
-                result =  Success.of(valueId);
-                notificationService.insertNotification(event, true, null);
-
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) { // Catch other potential runtime exceptions
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            // Execute update
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to update the reference value with id " + valueId + " - record not found.");
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during updateRefValue for valueId {}: {}", valueId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) { // Catch other potential runtime exceptions
+            logger.error("Exception during updateRefValue for valueId {}: {}", valueId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> deleteRefValue(Map<String, Object> event) {
+    public void deleteRefValue(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "DELETE FROM ref_value_t WHERE value_id = ?";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String valueId = (String) map.get("valueId"); // Get valueId for WHERE clause and return
 
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString(valueId));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(valueId));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    // Record not found to delete. Following template by throwing,
-                    // but you might consider this a success case in DELETE.
-                    throw new SQLException("failed to delete the reference value with id " + valueId + " - record not found.");
-                }
-                conn.commit();
-                result =  Success.of(valueId);
-                notificationService.insertNotification(event, true, null);
-
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) { // Catch other potential runtime exceptions
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // Record not found to delete. Following template by throwing,
+                // but you might consider this a success case in DELETE.
+                throw new SQLException("Failed to delete the reference value with id " + valueId + " - record not found.");
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteRefValue for valueId {}: {}", valueId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) { // Catch other potential runtime exceptions
+            logger.error("Exception during deleteRefValue for valueId {}: {}", valueId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
@@ -831,7 +735,7 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
     }
 
     @Override
-    public Result<String> createRefLocale(Map<String, Object> event) {
+    public void createRefLocale(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         // SQL statement for inserting into value_locale_t
         final String sql =
                 """
@@ -847,56 +751,38 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
         // Construct a unique identifier string for the success result
         String createdId = valueId + ":" + language;
 
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
 
-                // 1. value_id (Required, part of PK)
-                statement.setObject(1, UUID.fromString(valueId));
+            // 1. value_id (Required, part of PK)
+            statement.setObject(1, UUID.fromString(valueId));
 
-                // 2. language (Required, part of PK)
-                statement.setString(2, language);
+            // 2. language (Required, part of PK)
+            statement.setString(2, language);
 
-                // 3. value_label (Optional)
-                String valueLabel = (String) map.get("valueLabel");
-                if (valueLabel != null && !valueLabel.isEmpty()) {
-                    statement.setString(3, valueLabel);
-                } else {
-                    statement.setNull(3, Types.VARCHAR);
-                }
-
-                // Execute insert
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert the value locale with id " + createdId);
-                }
-
-                // Success path
-                conn.commit();
-                result =  Success.of(createdId); // Return composite identifier
-                notificationService.insertNotification(event, true, null);
-
-            } catch (SQLException e) {
-                logger.error("SQLException during value locale creation transaction for {}:", createdId, e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) { // Catch other potential runtime exceptions
-                logger.error("Unexpected exception during value locale creation transaction for {}:", createdId, e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            // 3. value_label (Optional)
+            String valueLabel = (String) map.get("valueLabel");
+            if (valueLabel != null && !valueLabel.isEmpty()) {
+                statement.setString(3, valueLabel);
+            } else {
+                statement.setNull(3, Types.VARCHAR);
             }
-        } catch (SQLException e) { // Errors getting connection or setting auto-commit
-            logger.error("SQLException setting up connection/transaction for value locale creation:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+
+            // Execute insert
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert the value locale with id " + createdId);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during createRefLocale for id {}: {}", createdId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) { // Catch other potential runtime exceptions
+            logger.error("Exception during createRefLocale for id {}: {}", createdId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> updateRefLocale(Map<String, Object> event) {
-        // SQL statement for updating value_locale_t
+    public void updateRefLocale(Connection conn, Map<String, Object> event) throws SQLException, Exception{
         final String sql =
                 """
                 UPDATE value_locale_t SET value_label = ?
@@ -909,53 +795,35 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
 
         String updatedId = valueId + ":" + language;
 
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
 
-                String valueLabel = (String) map.get("valueLabel");
-                if (valueLabel != null && !valueLabel.isEmpty()) {
-                    statement.setString(1, valueLabel);
-                } else {
-                    statement.setNull(1, Types.VARCHAR);
-                }
-
-                statement.setObject(2, UUID.fromString(valueId));
-                statement.setString(3, language);
-
-
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    // Record not found to update
-                    throw new SQLException("failed to update the value locale with id " + updatedId + " - record not found.");
-                }
-
-                // Success path
-                conn.commit();
-                result =  Success.of(updatedId); // Return composite identifier
-                notificationService.insertNotification(event, true, null);
-
-            } catch (SQLException e) {
-                logger.error("SQLException during value locale update transaction for {}:", updatedId, e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) { // Catch other potential runtime exceptions
-                logger.error("Unexpected exception during value locale update transaction for {}:", updatedId, e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            String valueLabel = (String) map.get("valueLabel");
+            if (valueLabel != null && !valueLabel.isEmpty()) {
+                statement.setString(1, valueLabel);
+            } else {
+                statement.setNull(1, Types.VARCHAR);
             }
-        } catch (SQLException e) { // Errors getting connection or setting auto-commit
-            logger.error("SQLException setting up connection/transaction for value locale update:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+
+            statement.setObject(2, UUID.fromString(valueId));
+            statement.setString(3, language);
+
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // Record not found to update
+                throw new SQLException("Failed to update the value locale with id " + updatedId + " - record not found.");
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during updateRefLocale for id {}: {}", updatedId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) { // Catch other potential runtime exceptions
+            logger.error("Exception during updateRefLocale for id {}: {}", updatedId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> deleteRefLocale(Map<String, Object> event) {
-        // SQL statement for deleting from value_locale_t using the composite key
+    public void deleteRefLocale(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "DELETE FROM value_locale_t WHERE value_id = ? AND language = ?";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -964,42 +832,25 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
 
         String deletedId = valueId + ":" + language;
 
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
 
-                // Set parameters for the WHERE clause
-                statement.setObject(1, UUID.fromString(valueId));
-                statement.setString(2, language);
+            // Set parameters for the WHERE clause
+            statement.setObject(1, UUID.fromString(valueId));
+            statement.setString(2, language);
 
-                // Execute delete
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    // Record not found to delete. Following template by throwing.
-                    throw new SQLException("failed to delete the value locale with id " + deletedId + " - record not found.");
-                }
-
-                // Success path
-                conn.commit();
-                result =  Success.of(deletedId); // Return composite identifier
-                notificationService.insertNotification(event, true, null);
-
-            } catch (SQLException e) {
-                logger.error("SQLException during value locale delete transaction for {}:", deletedId, e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) { // Catch other potential runtime exceptions
-                logger.error("Unexpected exception during value locale delete transaction for {}:", deletedId, e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            // Execute delete
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // Record not found to delete. Following template by throwing.
+                throw new SQLException("Failed to delete the value locale with id " + deletedId + " - record not found.");
             }
-        } catch (SQLException e) { // Errors getting connection or setting auto-commit
-            logger.error("SQLException setting up connection/transaction for value locale delete:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (SQLException e) {
+            logger.error("SQLException during deleteRefLocale for id {}: {}", deletedId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) { // Catch other potential runtime exceptions
+            logger.error("Exception during deleteRefLocale for id {}: {}", deletedId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
@@ -1086,7 +937,7 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
     }
 
     @Override
-    public Result<String> createRefRelationType(Map<String, Object> event) {
+    public void createRefRelationType(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         // SQL statement for inserting into relation_type_t
         final String sql = "INSERT INTO relation_type_t(relation_id, relation_name, relation_desc, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?)";
@@ -1094,47 +945,30 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String relationId = (String) map.get("relationId"); // Get relationId for PK, return, logging
 
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
 
-                statement.setObject(1, UUID.fromString(relationId));
-                statement.setString(2, (String)map.get("relationName"));
-                statement.setString(3, (String)map.get("relationDesc"));
-                statement.setString(4, (String)event.get(Constants.USER));
-                statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(1, UUID.fromString(relationId));
+            statement.setString(2, (String)map.get("relationName"));
+            statement.setString(3, (String)map.get("relationDesc"));
+            statement.setString(4, (String)event.get(Constants.USER));
+            statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
-                // Execute insert
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert the relation type with id " + relationId);
-                }
-
-                // Success path
-                conn.commit();
-                result =  Success.of(relationId); // Return relationId
-                notificationService.insertNotification(event, true, null);
-
-            } catch (SQLException e) {
-                logger.error("SQLException during relation type creation transaction for {}:", relationId, e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) { // Catch other potential runtime exceptions
-                logger.error("Unexpected exception during relation type creation transaction for {}:", relationId, e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            // Execute insert
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert the relation type with id " + relationId);
             }
-        } catch (SQLException e) { // Errors getting connection or setting auto-commit
-            logger.error("SQLException setting up connection/transaction for relation type creation:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (SQLException e) {
+            logger.error("SQLException during createRefRelationType for id {}: {}", relationId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) { // Catch other potential runtime exceptions
+            logger.error("Exception during createRefRelationType for id {}: {}", relationId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> updateRefRelationType(Map<String, Object> event) {
+    public void updateRefRelationType(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         // SQL statement for updating relation_type_t
         final String sql = "UPDATE relation_type_t SET relation_name = ?, relation_desc = ?, " +
                 "update_user = ?, update_ts = ? WHERE relation_id = ?";
@@ -1142,87 +976,54 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String relationId = (String) map.get("relationId");
 
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
 
-                statement.setString(1, (String)map.get("relationName"));
-                statement.setString(2, (String)map.get("relationDesc"));
-                statement.setString(3, (String)event.get(Constants.USER));
-                statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(5, UUID.fromString(relationId));
+            statement.setString(1, (String)map.get("relationName"));
+            statement.setString(2, (String)map.get("relationDesc"));
+            statement.setString(3, (String)event.get(Constants.USER));
+            statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(5, UUID.fromString(relationId));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    // Record not found to update
-                    throw new SQLException("failed to update the relation type with id " + relationId + " - record not found.");
-                }
-
-                conn.commit();
-                result =  Success.of(relationId); // Return relationId
-                notificationService.insertNotification(event, true, null);
-
-            } catch (SQLException e) {
-                logger.error("SQLException during relation type update transaction for {}:", relationId, e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) { // Catch other potential runtime exceptions
-                logger.error("Unexpected exception during relation type update transaction for {}:", relationId, e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // Record not found to update
+                throw new SQLException("Failed to update the relation type with id " + relationId + " - record not found.");
             }
-        } catch (SQLException e) { // Errors getting connection or setting auto-commit
-            logger.error("SQLException setting up connection/transaction for relation type update:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (SQLException e) {
+            logger.error("SQLException during updateRefRelationType for id {}: {}", relationId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) { // Catch other potential runtime exceptions
+            logger.error("Exception during updateRefRelationType for id {}: {}", relationId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> deleteRefRelationType(Map<String, Object> event) {
+    public void deleteRefRelationType(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         // SQL statement for deleting from relation_type_t
         final String sql = "DELETE FROM relation_type_t WHERE relation_id = ?";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String relationId = (String) map.get("relationId"); // Get relationId for WHERE clause and return
 
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
 
-                // Set parameter for the WHERE clause
-                statement.setObject(1, UUID.fromString(relationId));
+            // Set parameter for the WHERE clause
+            statement.setObject(1, UUID.fromString(relationId));
 
-                // Execute delete
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    // Record not found to delete. Following template by throwing.
-                    throw new SQLException("failed to delete the relation type with id " + relationId + " - record not found.");
-                }
-
-                // Success path
-                conn.commit();
-                result =  Success.of(relationId); // Return relationId
-                notificationService.insertNotification(event, true, null);
-
-            } catch (SQLException e) {
-                logger.error("SQLException during relation type delete transaction for {}:", relationId, e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) { // Catch other potential runtime exceptions
-                logger.error("Unexpected exception during relation type delete transaction for {}:", relationId, e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            // Execute delete
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // Record not found to delete. Following template by throwing.
+                throw new SQLException("Failed to delete the relation type with id " + relationId + " - record not found.");
             }
-        } catch (SQLException e) { // Errors getting connection or setting auto-commit
-            logger.error("SQLException setting up connection/transaction for relation type delete:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (SQLException e) {
+            logger.error("SQLException during deleteRefRelationType for id {}: {}", relationId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) { // Catch other potential runtime exceptions
+            logger.error("Exception during deleteRefRelationType for id {}: {}", relationId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
@@ -1309,7 +1110,7 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
 
 
     @Override
-    public Result<String> createRefRelation(Map<String, Object> event) {
+    public void createRefRelation(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         // SQL statement for inserting into relation_t
         final String sql = "INSERT INTO relation_t(relation_id, value_id_from, value_id_to, active, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?, ?)";
@@ -1322,62 +1123,55 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
         // Construct a unique identifier string for the success result/logging
         String createdId = relationId + ":" + valueIdFrom + ":" + valueIdTo;
 
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
 
-                // 1. relation_id (Required, part of PK)
-                statement.setObject(1, UUID.fromString(relationId));
-                // 2. value_id_from (Required, part of PK)
-                statement.setObject(2, UUID.fromString(valueIdFrom));
-                // 3. value_id_to (Required, part of PK)
-                statement.setObject(3, UUID.fromString(valueIdTo));
+            // 1. relation_id (Required, part of PK)
+            statement.setObject(1, UUID.fromString(relationId));
+            // 2. value_id_from (Required, part of PK)
+            statement.setObject(2, UUID.fromString(valueIdFrom));
+            // 3. value_id_to (Required, part of PK)
+            statement.setObject(3, UUID.fromString(valueIdTo));
 
-                Boolean active = (Boolean) map.get("active");
-                if (active != null) {
-                    statement.setBoolean(4, active);
-                } else {
-                    statement.setBoolean(4, true);
-                }
-
-                // 5. update_user (From event metadata)
-                statement.setString(5, (String)event.get(Constants.USER));
-
-                // 6. update_ts (From event metadata)
-                statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-
-
-                // Execute insert
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert the relation with id " + createdId);
-                }
-
-                // Success path
-                conn.commit();
-                result =  Success.of(createdId); // Return composite identifier
-                notificationService.insertNotification(event, true, null);
-
-            } catch (SQLException e) {
-                logger.error("SQLException during relation creation transaction for {}:", createdId, e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) { // Catch other potential runtime exceptions
-                logger.error("Unexpected exception during relation creation transaction for {}:", createdId, e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            Boolean active = (Boolean) map.get("active");
+            if (active != null) {
+                statement.setBoolean(4, active);
+            } else {
+                statement.setBoolean(4, true);
             }
-        } catch (SQLException e) { // Errors getting connection or setting auto-commit
-            logger.error("SQLException setting up connection/transaction for relation creation:", e);
+
+            // 5. update_user (From event metadata)
+            statement.setString(5, (String)event.get(Constants.USER));
+
+            // 6. update_ts (From event metadata)
+            statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+
+            // Execute insert
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("failed to insert the relation with id " + createdId);
+            }
+
+            // Success path
+            conn.commit();
+            result =  Success.of(createdId); // Return composite identifier
+            notificationService.insertNotification(event, true, null);
+
+        } catch (SQLException e) {
+            logger.error("SQLException during relation creation transaction for {}:", createdId, e);
+            conn.rollback();
+            notificationService.insertNotification(event, false, e.getMessage());
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) { // Catch other potential runtime exceptions
+            logger.error("Unexpected exception during relation creation transaction for {}:", createdId, e);
+            conn.rollback();
+            notificationService.insertNotification(event, false, e.getMessage());
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
-        return result;
     }
 
     @Override
-    public Result<String> updateRefRelation(Map<String, Object> event) {
+    public void updateRefRelation(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         // SQL statement for updating relation_t
         // Only active, update_user, update_ts are typically mutable for a relation
         final String sql = "UPDATE relation_t SET active = ?, update_user = ?, update_ts = ? " +
@@ -1391,64 +1185,47 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
         // Construct a unique identifier string for the success result/logging
         String updatedId = relationId + ":" + valueIdFrom + ":" + valueIdTo;
 
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
 
-                Boolean active = (Boolean)map.get("active");
-                if (active != null) {
-                    statement.setBoolean(1, active);
-                } else {
-                    statement.setBoolean(1, true);
-                }
-
-                // 2. update_user (From event metadata)
-                statement.setString(2, (String)event.get(Constants.USER));
-
-                // 3. update_ts (From event metadata)
-                statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-
-                // Set parameters for the WHERE clause (PK parts)
-                // 4. relation_id
-                statement.setObject(4, UUID.fromString(relationId));
-                // 5. value_id_from
-                statement.setObject(5, UUID.fromString(valueIdFrom));
-                // 6. value_id_to
-                statement.setObject(6, UUID.fromString(valueIdTo));
-
-
-                // Execute update
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    // Record not found to update
-                    throw new SQLException("failed to update the relation with id " + updatedId + " - record not found.");
-                }
-
-                // Success path
-                conn.commit();
-                result =  Success.of(updatedId); // Return composite identifier
-                notificationService.insertNotification(event, true, null);
-
-            } catch (SQLException e) {
-                logger.error("SQLException during relation update transaction for {}:", updatedId, e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) { // Catch other potential runtime exceptions
-                logger.error("Unexpected exception during relation update transaction for {}:", updatedId, e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            Boolean active = (Boolean)map.get("active");
+            if (active != null) {
+                statement.setBoolean(1, active);
+            } else {
+                statement.setBoolean(1, true);
             }
-        } catch (SQLException e) { // Errors getting connection or setting auto-commit
-            logger.error("SQLException setting up connection/transaction for relation update:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+
+            // 2. update_user (From event metadata)
+            statement.setString(2, (String)event.get(Constants.USER));
+
+            // 3. update_ts (From event metadata)
+            statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+            // Set parameters for the WHERE clause (PK parts)
+            // 4. relation_id
+            statement.setObject(4, UUID.fromString(relationId));
+            // 5. value_id_from
+            statement.setObject(5, UUID.fromString(valueIdFrom));
+            // 6. value_id_to
+            statement.setObject(6, UUID.fromString(valueIdTo));
+
+
+            // Execute update
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // Record not found to update
+                throw new SQLException("Failed to update the relation with id " + updatedId + " - record not found.");
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during updateRefRelation for id {}: {}", updatedId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updateRefRelation for id {}: {}", updatedId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> deleteRefRelation(Map<String, Object> event) {
+    public void deleteRefRelation(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         // SQL statement for deleting from relation_t using the composite key
         final String sql = "DELETE FROM relation_t WHERE relation_id = ? AND value_id_from = ? AND value_id_to = ?";
         Result<String> result;
@@ -1460,43 +1237,26 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
         // Construct a unique identifier string for the success result/logging
         String deletedId = relationId + ":" + valueIdFrom + ":" + valueIdTo;
 
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
 
-                // Set parameters for the WHERE clause (PK parts)
-                statement.setObject(1, UUID.fromString(relationId));
-                statement.setObject(2, UUID.fromString(valueIdFrom));
-                statement.setObject(3, UUID.fromString(valueIdTo));
+            // Set parameters for the WHERE clause (PK parts)
+            statement.setObject(1, UUID.fromString(relationId));
+            statement.setObject(2, UUID.fromString(valueIdFrom));
+            statement.setObject(3, UUID.fromString(valueIdTo));
 
-                // Execute delete
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    // Record not found to delete. Following template by throwing.
-                    throw new SQLException("failed to delete the relation with id " + deletedId + " - record not found.");
-                }
-
-                // Success path
-                conn.commit();
-                result =  Success.of(deletedId); // Return composite identifier
-                notificationService.insertNotification(event, true, null);
-
-            } catch (SQLException e) {
-                logger.error("SQLException during relation delete transaction for {}:", deletedId, e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) { // Catch other potential runtime exceptions
-                logger.error("Unexpected exception during relation delete transaction for {}:", deletedId, e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            // Execute delete
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // Record not found to delete. Following template by throwing.
+                throw new SQLException("Failed to delete the relation with id " + deletedId + " - record not found.");
             }
-        } catch (SQLException e) { // Errors getting connection or setting auto-commit
-            logger.error("SQLException setting up connection/transaction for relation delete:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (SQLException e) {
+            logger.error("SQLException during deleteRefRelation for id {}: {}", deletedId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) { // Catch other potential runtime exceptions
+            logger.error("Exception during deleteRefRelation for id {}: {}", deletedId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override

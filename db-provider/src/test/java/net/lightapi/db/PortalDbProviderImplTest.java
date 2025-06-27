@@ -10,6 +10,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -298,18 +300,14 @@ public class PortalDbProviderImplTest {
     }
 
     @Test
-    void testCommitConfigInstance() {
+    void testCommitConfigInstance() throws Exception {
         Map<String, Object> map = Map.of("hostId", "01964b05-552a-7c4b-9184-6857e7f3dc5f",
                 "instanceId", "0196dbd4-3820-7be4-894a-078f311d0b49",
                 "snapshotType", "USER_SAVE",
                 "description", "Test with user save type",
                 "userId", "01964b05-5532-7c79-8cde-191dcbd421b8");
 
-        Result<String> result = dbProvider.commitConfigInstance(map);
-        if(result.isFailure()) {
-            System.out.println(result.getError());
-        } else {
-            System.out.println(result.getResult());
-        }
+        Connection conn = SqlDbStartupHook.ds.getConnection();
+        dbProvider.commitConfigInstance(conn, map);
     }
 }

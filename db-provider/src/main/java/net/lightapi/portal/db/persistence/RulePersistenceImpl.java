@@ -1,7 +1,6 @@
 package net.lightapi.portal.db.persistence;
 
 import com.networknt.config.JsonMapper;
-import com.networknt.db.provider.SqlDbStartupHook;
 import com.networknt.monad.Failure;
 import com.networknt.monad.Result;
 import com.networknt.monad.Success;
@@ -9,13 +8,17 @@ import com.networknt.status.Status;
 import com.networknt.utility.Constants;
 import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.PortalConstants;
-import net.lightapi.portal.db.PortalDbProvider; // For shared constants initially
+import net.lightapi.portal.db.PortalDbProvider;
 import net.lightapi.portal.db.util.NotificationService;
 import net.lightapi.portal.db.util.SqlUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.*;
+import java.sql.Connection; // Added import
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException; // Added import
+import java.sql.Types;
 import java.time.OffsetDateTime;
 import java.util.*;
 
@@ -36,211 +39,180 @@ public class RulePersistenceImpl implements RulePersistence {
     public RulePersistenceImpl(NotificationService notificationService) {
         this.notificationService = notificationService;
     }
+
     @Override
-    public Result<String> createRule(Map<String, Object> event) {
+    public void createRule(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String insertRule = "INSERT INTO rule_t (rule_id, rule_name, rule_version, rule_type, rule_group, " +
                 "rule_desc, rule_body, rule_owner, common, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,  ?)";
         final String insertHostRule = "INSERT INTO rule_host_t (host_id, rule_id, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?)";
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            // no duplicate record, insert the user into database and write a success notification.
-            try {
-                try (PreparedStatement statement = conn.prepareStatement(insertRule)) {
-                    statement.setString(1, (String)map.get("ruleId"));
-                    statement.setString(2, (String)map.get("ruleName"));
-                    statement.setString(3, (String)map.get("ruleVersion"));
-                    statement.setString(4, (String)map.get("ruleType"));
-                    String ruleGroup = (String)map.get("ruleGroup");
-                    if (ruleGroup != null && !ruleGroup.isEmpty())
-                        statement.setString(5, ruleGroup);
-                    else
-                        statement.setNull(5, NULL);
-                    String ruleDesc = (String)map.get("ruleDesc");
-                    if (ruleDesc != null && !ruleDesc.isEmpty())
-                        statement.setString(6, ruleDesc);
-                    else
-                        statement.setNull(6, NULL);
-                    statement.setString(7, (String)map.get("ruleBody"));
-                    statement.setString(8, (String)map.get("ruleOwner"));
-                    statement.setString(9, (String)map.get("common"));
-                    statement.setString(10, (String)event.get(Constants.USER));
-                    statement.setObject(11, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                    int count = statement.executeUpdate();
-                    if (count == 0) {
-                        throw new SQLException("failed to insert the rule " + map.get("ruleId"));
-                    }
+        String ruleId = (String)map.get("ruleId"); // For logging/exceptions
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+
+        try {
+            try (PreparedStatement statement = conn.prepareStatement(insertRule)) {
+                statement.setString(1, ruleId);
+                statement.setString(2, (String)map.get("ruleName"));
+                statement.setString(3, (String)map.get("ruleVersion"));
+                statement.setString(4, (String)map.get("ruleType"));
+                String ruleGroup = (String)map.get("ruleGroup");
+                if (ruleGroup != null && !ruleGroup.isEmpty())
+                    statement.setString(5, ruleGroup);
+                else
+                    statement.setNull(5, NULL);
+                String ruleDesc = (String)map.get("ruleDesc");
+                if (ruleDesc != null && !ruleDesc.isEmpty())
+                    statement.setString(6, ruleDesc);
+                else
+                    statement.setNull(6, NULL);
+                statement.setString(7, (String)map.get("ruleBody"));
+                statement.setString(8, (String)map.get("ruleOwner"));
+                statement.setString(9, (String)map.get("common"));
+                statement.setString(10, (String)event.get(Constants.USER));
+                statement.setObject(11, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("Failed to insert the rule " + ruleId);
                 }
-                try (PreparedStatement statement = conn.prepareStatement(insertHostRule)) {
-                    statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                    statement.setString(2, (String)map.get("ruleId"));
-                    statement.setString(3, (String)event.get(Constants.USER));
-                    statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                    int count = statement.executeUpdate();
-                    if (count == 0) {
-                        throw new SQLException("failed to insert the host_rule for host " + event.get(Constants.HOST) + " rule " + map.get("ruleId"));
-                    }
-                }
-                conn.commit();
-                result = Success.of((String)map.get("ruleId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
+            try (PreparedStatement statement = conn.prepareStatement(insertHostRule)) {
+                statement.setObject(1, UUID.fromString(hostId));
+                statement.setString(2, ruleId);
+                statement.setString(3, (String)event.get(Constants.USER));
+                statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("Failed to insert the host_rule for host " + hostId + " rule " + ruleId);
+                }
+            }
+            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createRule for ruleId {}: {}", ruleId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during createRule for ruleId {}: {}", ruleId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
-    public Result<String> updateRule(Map<String, Object> event) {
+    public void updateRule(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String updateRule = "UPDATE rule_t SET rule_name = ?, rule_version = ?, rule_type = ?, rule_group = ?, rule_desc = ?, " +
                 "rule_body = ?, rule_owner = ?, common = ?, update_user = ?, update_ts = ? " +
                 "WHERE rule_id = ?";
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
+        String ruleId = (String)map.get("ruleId"); // For logging/exceptions
 
-            try (PreparedStatement statement = conn.prepareStatement(updateRule)) {
-                String ruleName = (String)map.get("ruleName");
-                if(ruleName != null && !ruleName.isEmpty()) {
-                    statement.setString(1, ruleName);
-                } else {
-                    statement.setNull(1, NULL);
-                }
-                String ruleVersion = (String)map.get("ruleVersion");
-                if (ruleVersion != null && !ruleVersion.isEmpty()) {
-                    statement.setString(2, ruleVersion);
-                } else {
-                    statement.setNull(2, NULL);
-                }
-                String ruleType = (String)map.get("ruleType");
-                if (ruleType != null && !ruleType.isEmpty()) {
-                    statement.setString(3, ruleType);
-                } else {
-                    statement.setNull(3, NULL);
-                }
-                String ruleGroup = (String)map.get("ruleGroup");
-                if (ruleGroup != null && !ruleGroup.isEmpty()) {
-                    statement.setString(4, ruleGroup);
-                } else {
-                    statement.setNull(4, NULL);
-                }
-                String ruleDesc = (String)map.get("ruleDesc");
-                if (ruleDesc != null && !ruleDesc.isEmpty()) {
-                    statement.setString(5, ruleDesc);
-                } else {
-                    statement.setNull(5, NULL);
-                }
-                String ruleBody = (String)map.get("ruleBody");
-                if(ruleBody != null && !ruleBody.isEmpty()) {
-                    statement.setString(6, ruleBody);
-                } else {
-                    statement.setNull(6, NULL);
-                }
-                String ruleOwner = (String)map.get("ruleOwner");
-                if(ruleOwner != null && !ruleOwner.isEmpty()) {
-                    statement.setString(7, ruleOwner);
-                } else {
-                    statement.setNull(7, NULL);
-                }
-                String common = (String)map.get("common");
-                if(common != null && !common.isEmpty()) {
-                    statement.setString(8, common);
-                } else {
-                    statement.setNull(8, NULL);
-                }
-                statement.setString(9, (String)event.get(Constants.USER));
-                statement.setObject(10, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setString(11, (String)map.get("ruleId"));
-
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is updated for rule " + map.get("ruleId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("ruleId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(updateRule)) {
+            String ruleName = (String)map.get("ruleName");
+            if(ruleName != null && !ruleName.isEmpty()) {
+                statement.setString(1, ruleName);
+            } else {
+                statement.setNull(1, NULL);
             }
-        } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-        }
-        return result;
+            String ruleVersion = (String)map.get("ruleVersion");
+            if (ruleVersion != null && !ruleVersion.isEmpty()) {
+                statement.setString(2, ruleVersion);
+            } else {
+                statement.setNull(2, NULL);
+            }
+            String ruleType = (String)map.get("ruleType");
+            if (ruleType != null && !ruleType.isEmpty()) {
+                statement.setString(3, ruleType);
+            } else {
+                statement.setNull(3, NULL);
+            }
+            String ruleGroup = (String)map.get("ruleGroup");
+            if (ruleGroup != null && !ruleGroup.isEmpty()) {
+                statement.setString(4, ruleGroup);
+            } else {
+                statement.setNull(4, NULL);
+            }
+            String ruleDesc = (String)map.get("ruleDesc");
+            if (ruleDesc != null && !ruleDesc.isEmpty()) {
+                statement.setString(5, ruleDesc);
+            } else {
+                statement.setNull(5, NULL);
+            }
+            String ruleBody = (String)map.get("ruleBody");
+            if(ruleBody != null && !ruleBody.isEmpty()) {
+                statement.setString(6, ruleBody);
+            } else {
+                statement.setNull(6, NULL);
+            }
+            String ruleOwner = (String)map.get("ruleOwner");
+            if(ruleOwner != null && !ruleOwner.isEmpty()) {
+                statement.setString(7, ruleOwner);
+            } else {
+                statement.setNull(7, NULL);
+            }
+            String common = (String)map.get("common");
+            if(common != null && !common.isEmpty()) {
+                statement.setString(8, common);
+            } else {
+                statement.setNull(8, NULL);
+            }
+            statement.setString(9, (String)event.get(Constants.USER));
+            statement.setObject(10, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setString(11, ruleId);
 
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("No record is updated for rule " + ruleId);
+            }
+            notificationService.insertNotification(event, true, null);
+        } catch (SQLException e) {
+            logger.error("SQLException during updateRule for ruleId {}: {}", ruleId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during updateRule for ruleId {}: {}", ruleId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
+        }
     }
 
     @Override
-    public Result<String> deleteRule(Map<String, Object> event) {
+    public void deleteRule(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String deleteRule = "DELETE from rule_t WHERE rule_id = ?";
         final String deleteHostRule = "DELETE from rule_host_t WHERE host_id = ? AND rule_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try {
-                try (PreparedStatement statement = conn.prepareStatement(deleteRule)) {
-                    statement.setString(1, (String)map.get("ruleId"));
-                    int count = statement.executeUpdate();
-                    if (count == 0) {
-                        throw new SQLException("no record is deleted for rule " + map.get("ruleId"));
-                    }
-                }
-                try (PreparedStatement statement = conn.prepareStatement(deleteHostRule)) {
-                    statement.setObject(1, (String)event.get(Constants.HOST));
-                    statement.setString(2, (String)map.get("ruleId"));
-                    int count = statement.executeUpdate();
-                    if (count == 0) {
-                        throw new SQLException("no record is deleted for host " + event.get(Constants.HOST) + " rule " + map.get("ruleId"));
-                    }
-                }
-                conn.commit();
-                result = Success.of((String)event.get(Constants.USER));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
-            }
-        } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-        }
-        return result;
-    }
+        String ruleId = (String)map.get("ruleId"); // For logging/exceptions
+        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
 
+        try {
+            try (PreparedStatement statement = conn.prepareStatement(deleteRule)) {
+                statement.setString(1, ruleId);
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("No record is deleted for rule " + ruleId);
+                }
+            }
+            try (PreparedStatement statement = conn.prepareStatement(deleteHostRule)) {
+                statement.setObject(1, UUID.fromString(hostId));
+                statement.setString(2, ruleId);
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException("No record is deleted for host " + hostId + " rule " + ruleId);
+                }
+            }
+            notificationService.insertNotification(event, true, null);
+        } catch (SQLException e) {
+            logger.error("SQLException during deleteRule for ruleId {}: {}", ruleId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during deleteRule for ruleId {}: {}", ruleId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
+        }
+    }
 
     @Override
     public Result<List<Map<String, Object>>> queryRuleByHostGroup(String hostId, String groupId) {
@@ -398,7 +370,6 @@ public class RulePersistenceImpl implements RulePersistence {
             parameters.add(UUID.fromString(hostId));
             parameters.add(UUID.fromString(hostId));
 
-
             StringBuilder whereClauseCommon = new StringBuilder();
             addCondition(whereClauseCommon, parameters, "r.rule_id", ruleId);
             addCondition(whereClauseCommon, parameters, "r.rule_name", ruleName);
@@ -412,7 +383,6 @@ public class RulePersistenceImpl implements RulePersistence {
             if (!whereClauseCommon.isEmpty()) {
                 sqlBuilder.append("AND ").append(whereClauseCommon);
             }
-
 
             sqlBuilder.append("                 ) AS combined_rules\n");
 
@@ -519,18 +489,21 @@ public class RulePersistenceImpl implements RulePersistence {
                 "AND h.host_id = ?\n" +
                 "AND r.rule_type = ?\n" +
                 "UNION\n" +
-                "SELECT r.rule_id r\n" +
-                "FROM rule_t r, rule_host_t h\n" +
-                "WHERE h.host_id != ?\n" +
-                "AND r.rule_type = ?\n" +
-                "AND r.common = 'Y'";
+                "SELECT r.rule_id\n" + // Changed from r.rule_id r
+                "FROM rule_t r\n" + // Removed rule_host_t h, as not directly joined in this part
+                "WHERE r.common = 'Y'\n" +
+                "AND r.rule_type = ?\n" + // Parameter for common rule type
+                "AND NOT EXISTS (\n" +
+                "    SELECT 1 FROM rule_host_t eh WHERE eh.rule_id = r.rule_id AND eh.host_id = ?\n" + // Exist check for host
+                ")";
         try (final Connection conn = ds.getConnection()) {
             List<Map<String, Object>> list = new ArrayList<>();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setObject(1, UUID.fromString(hostId));
                 statement.setString(2, ruleType);
-                statement.setObject(3, UUID.fromString(hostId));
-                statement.setString(4, ruleType);
+                statement.setString(3, ruleType); // Reusing ruleType for the common rules part
+                statement.setObject(4, UUID.fromString(hostId)); // Reusing hostId for the NOT EXISTS check
+
 
                 try (ResultSet resultSet = statement.executeQuery()) {
                     while (resultSet.next()) {
@@ -558,13 +531,22 @@ public class RulePersistenceImpl implements RulePersistence {
     @Override
     public Result<List<Map<String, Object>>> queryRuleByHostApiId(String hostId, String apiId, String apiVersion) {
         Result<List<Map<String, Object>>> result;
-        String sql = "SELECT h.host_id, r.rule_id, r.rule_type, a.endpoint, r.rule_body\n" +
-                "FROM rule_t r, rule_host_t h, api_endpoint_rule_t a \n" +
-                "WHERE r.rule_id = h.rule_id\n" +
-                "AND h.host_id = a.host_id\n" +
-                "AND h.host_id = ?\n" +
-                "AND a.api_id = ?\n" +
-                "AND a.api_version = ?";
+        // The original query joins rule_t and rule_host_t but then references `a.endpoint`, `a.api_id`, `a.api_version`
+        // which are from `api_endpoint_rule_t`. The joins between `rule_host_t` and `api_endpoint_rule_t` are missing.
+        // Assuming the intention is to find rules applied to specific API endpoints.
+        // I will add the missing joins to correctly link `rule_host_t` or `rule_t` to `api_endpoint_rule_t`.
+        // Corrected SQL:
+        String sql = """
+            SELECT hr.host_id, r.rule_id, r.rule_type, ae.endpoint, r.rule_body
+            FROM rule_t r
+            INNER JOIN rule_host_t hr ON r.rule_id = hr.rule_id -- Join rule to rule_host
+            INNER JOIN api_endpoint_rule_t aer ON aer.rule_id = r.rule_id AND aer.host_id = hr.host_id -- Join rule_host to api_endpoint_rule
+            INNER JOIN api_endpoint_t ae ON ae.endpoint_id = aer.endpoint_id AND ae.host_id = aer.host_id -- Join api_endpoint_rule to api_endpoint
+            INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id -- Join api_endpoint to api_version
+            WHERE hr.host_id = ?
+              AND av.api_id = ?
+              AND av.api_version = ?
+            """;
         try (final Connection conn = ds.getConnection()) {
             List<Map<String, Object>> list = new ArrayList<>();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
@@ -596,6 +578,4 @@ public class RulePersistenceImpl implements RulePersistence {
         }
         return result;
     }
-
-
 }

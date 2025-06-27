@@ -1,7 +1,6 @@
 package net.lightapi.portal.db.persistence;
 
 import com.networknt.config.JsonMapper;
-import com.networknt.db.provider.SqlDbStartupHook;
 import com.networknt.monad.Failure;
 import com.networknt.monad.Result;
 import com.networknt.monad.Success;
@@ -15,11 +14,16 @@ import net.lightapi.portal.db.util.SqlUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.*;
+import java.sql.Connection; // Added import
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException; // Added import
+import java.sql.Types;
 import java.time.OffsetDateTime;
 import java.util.*;
 
 import static com.networknt.db.provider.SqlDbStartupHook.ds;
+import static java.sql.Types.NULL; // Assuming NULL from Types.NULL is used
 import static net.lightapi.portal.db.util.SqlUtil.addCondition;
 
 public class TagPersistenceImpl implements TagPersistence {
@@ -34,147 +38,113 @@ public class TagPersistenceImpl implements TagPersistence {
     public TagPersistenceImpl(NotificationService notificationService) {
         this.notificationService = notificationService;
     }
+
     @Override
-    public Result<String> createTag(Map<String, Object> event) {
+    public void createTag(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "INSERT INTO tag_t(host_id, tag_id, entity_type, tag_name, " +
                 "tag_desc, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?)";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String tagId = (String) map.get("tagId"); // Get tagId for return/logging/error
 
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                String hostId = (String)map.get("hostId");
-                if (hostId != null && !hostId.isEmpty()) {
-                    statement.setObject(1, UUID.fromString(hostId));
-                } else {
-                    statement.setNull(1, Types.OTHER);
-                }
-
-                statement.setObject(2, UUID.fromString(tagId)); // Required
-                statement.setString(3, (String)map.get("entityType")); // Required
-                statement.setString(4, (String)map.get("tagName")); // Required
-
-                String tagDesc = (String)map.get("tagDesc");
-                if (tagDesc != null && !tagDesc.isBlank()) {
-                    statement.setString(5, tagDesc);
-                } else {
-                    statement.setNull(5, Types.VARCHAR);
-                }
-
-                statement.setString(6, (String)event.get(Constants.USER));
-                statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert the tag with id " + tagId);
-                }
-                conn.commit();
-                result =  Success.of(tagId); // Return tagId
-                notificationService.insertNotification(event, true, null);
-
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) { // Catch other potential runtime exceptions
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            String hostId = (String)map.get("hostId");
+            if (hostId != null && !hostId.isEmpty()) {
+                statement.setObject(1, UUID.fromString(hostId));
+            } else {
+                statement.setNull(1, Types.OTHER);
             }
+
+            statement.setObject(2, UUID.fromString(tagId)); // Required
+            statement.setString(3, (String)map.get("entityType")); // Required
+            statement.setString(4, (String)map.get("tagName")); // Required
+
+            String tagDesc = (String)map.get("tagDesc");
+            if (tagDesc != null && !tagDesc.isBlank()) {
+                statement.setString(5, tagDesc);
+            } else {
+                statement.setNull(5, Types.VARCHAR);
+            }
+
+            statement.setString(6, (String)event.get(Constants.USER));
+            statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert the tag with id " + tagId);
+            }
+            notificationService.insertNotification(event, true, null);
+
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createTag for id {}: {}", tagId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) { // Catch other potential runtime exceptions
+            logger.error("Exception during createTag for id {}: {}", tagId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
-    public Result<String> updateTag(Map<String, Object> event) {
+    public void updateTag(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "UPDATE tag_t SET tag_name = ?, tag_desc = ?, update_user = ?, update_ts = ? WHERE tag_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String tagId = (String) map.get("tagId");
+        String tagId = (String) map.get("tagId"); // For logging/exceptions
 
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)map.get("tagName"));
-                String tagDesc = (String)map.get("tagDesc");
-                if (tagDesc != null && !tagDesc.isBlank()) {
-                    statement.setString(2, tagDesc);
-                } else {
-                    statement.setNull(2, Types.VARCHAR);
-                }
-                statement.setString(3, (String)event.get(Constants.USER));
-                statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(5, UUID.fromString(tagId));
-
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to update the tag with id " + map.get("tagId"));
-                }
-                conn.commit();
-                result =  Success.of((String)map.get("tagId")); // Return tagId
-                notificationService.insertNotification(event, true, null);
-
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) { // Catch other potential runtime exceptions
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setString(1, (String)map.get("tagName"));
+            String tagDesc = (String)map.get("tagDesc");
+            if (tagDesc != null && !tagDesc.isBlank()) {
+                statement.setString(2, tagDesc);
+            } else {
+                statement.setNull(2, Types.VARCHAR);
             }
+            statement.setString(3, (String)event.get(Constants.USER));
+            statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(5, UUID.fromString(tagId));
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to update the tag with id " + tagId);
+            }
+            notificationService.insertNotification(event, true, null);
+
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during updateTag for id {}: {}", tagId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) { // Catch other potential runtime exceptions
+            logger.error("Exception during updateTag for id {}: {}", tagId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
-    public Result<String> deleteTag(Map<String, Object> event) {
+    public void deleteTag(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "DELETE FROM tag_t WHERE tag_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String tagId = (String) map.get("tagId");
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString(tagId));
+        String tagId = (String) map.get("tagId"); // For logging/exceptions
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to delete the tag with id " + map.get("tagId"));
-                }
-                conn.commit();
-                result =  Success.of(tagId); // Return tagId
-                notificationService.insertNotification(event, true, null);
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(tagId));
 
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) { // Catch other potential runtime exceptions
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to delete the tag with id " + tagId);
             }
+            notificationService.insertNotification(event, true, null);
+
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteTag for id {}: {}", tagId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) { // Catch other potential runtime exceptions
+            logger.error("Exception during deleteTag for id {}: {}", tagId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
@@ -298,7 +268,7 @@ public class TagPersistenceImpl implements TagPersistence {
         String sql = "SELECT tag_id, host_id, entity_type, tag_name, tag_desc, update_user, update_ts FROM tag_t WHERE tag_id = ?";
         Map<String, Object> map = null;
         try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false); // Although not strictly needed for SELECT, keeping template consistent
+            // No setAutoCommit(false) needed for SELECT
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
                 statement.setString(1, tagId);
                 try (ResultSet resultSet = statement.executeQuery()) {
@@ -316,19 +286,19 @@ public class TagPersistenceImpl implements TagPersistence {
                 if (map != null && !map.isEmpty()) {
                     result = Success.of(JsonMapper.toJson(map));
                 } else {
-                    result = Success.of(null); // Or perhaps Failure.of(NOT_FOUND Status) if tag must exist
+                    // Record not found
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "tag", tagId)); // Consistent with AccessControlPersistence
                 }
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
+            logger.error("SQLException getting tag by id {}:", tagId, e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
         } catch (Exception e) {
-            logger.error("Exception:", e);
+            logger.error("Unexpected exception getting tag by id {}:", tagId, e);
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
         return result;
     }
-
 
     @Override
     public Result<String> getTagByName(String hostId, String tagName) {
@@ -347,7 +317,7 @@ public class TagPersistenceImpl implements TagPersistence {
         String sql = sqlBuilder.toString();
         Map<String, Object> map = null;
         try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false); // Although not strictly needed for SELECT, keeping template consistent
+            // No setAutoCommit(false) for read-only query
             try (PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
 
                 int parameterIndex = 1;
@@ -372,19 +342,18 @@ public class TagPersistenceImpl implements TagPersistence {
                 if (map != null && !map.isEmpty()) {
                     result = Success.of(JsonMapper.toJson(map));
                 } else {
-                    result = Failure.of(new Status(OBJECT_NOT_FOUND, tagName));
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "tag", tagName)); // Consistent with AccessControlPersistence
                 }
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
+            logger.error("SQLException getting tag by name {}:", tagName, e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
         } catch (Exception e) {
-            logger.error("Exception:", e);
+            logger.error("Unexpected exception getting tag by name {}:", tagName, e);
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
         return result;
     }
-
 
     @Override
     public Result<String> getTagByType(String hostId, String entityType) {
@@ -428,10 +397,10 @@ public class TagPersistenceImpl implements TagPersistence {
             resultMap.put("tags", tags);
             result = Success.of(JsonMapper.toJson(resultMap));
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
+            logger.error("SQLException getting tags by type {}:", entityType, e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
         } catch (Exception e) {
-            logger.error("Exception:", e);
+            logger.error("Unexpected exception getting tags by type {}:", entityType, e);
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
         return result;

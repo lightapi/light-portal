@@ -1,6 +1,5 @@
 package net.lightapi.portal.db.persistence;
 import com.networknt.config.JsonMapper;
-import com.networknt.db.provider.SqlDbStartupHook;
 import com.networknt.monad.Failure;
 import com.networknt.monad.Result;
 import com.networknt.monad.Success;
@@ -34,133 +33,89 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> createRole(Map<String, Object> event) {
+    public void createRole(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String insertRole = "INSERT INTO role_t (host_id, role_id, role_desc, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?)";
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            // no duplicate record, insert the user into database and write a success notification.
-            try (PreparedStatement statement = conn.prepareStatement(insertRole)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("roleId"));
-                String roleDesc = (String)map.get("roleDesc");
-                if (roleDesc != null && !roleDesc.isEmpty())
-                    statement.setString(3, roleDesc);
-                else
-                    statement.setNull(3, NULL);
+        String roleId = (String)map.get("roleId");
+        try (PreparedStatement statement = conn.prepareStatement(insertRole)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, roleId);
+            String roleDesc = (String)map.get("roleDesc");
+            if (roleDesc != null && !roleDesc.isEmpty())
+                statement.setString(3, roleDesc);
+            else
+                statement.setNull(3, NULL);
 
-                statement.setString(4, (String)event.get(Constants.USER));
-                statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setString(4, (String)event.get(Constants.USER));
+            statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert role " + map.get("roleId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("roleId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert role " + roleId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createRole for id {}: {}", roleId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createRole for id {}: {}", roleId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> updateRole(Map<String, Object> event) {
+    public void updateRole(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String updateRole = "UPDATE role_t SET role_desc = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? AND role_id = ?";
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
+        String roleId = (String)map.get("roleId");
+        try (PreparedStatement statement = conn.prepareStatement(updateRole)) {
+            String roleDesc = (String)map.get("roleDesc");
+            if(roleDesc != null && !roleDesc.isEmpty()) {
+                statement.setString(1, roleDesc);
+            } else {
+                statement.setNull(1, NULL);
+            }
+            statement.setString(2, (String)event.get(Constants.USER));
+            statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(5, roleId);
 
-            try (PreparedStatement statement = conn.prepareStatement(updateRole)) {
-                String roleDesc = (String)map.get("roleDesc");
-                if(roleDesc != null && !roleDesc.isEmpty()) {
-                    statement.setString(1, roleDesc);
-                } else {
-                    statement.setNull(1, NULL);
-                }
-                statement.setString(2, (String)event.get(Constants.USER));
-                statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(5, (String)map.get("roleId"));
-
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is updated for role " + map.get("roleId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("roleId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is updated for role " + roleId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during updateRole for id {}: {}", roleId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updateRole for id {}: {}", roleId, e.getMessage(), e);
+            throw e;
         }
-        return result;
-
     }
 
     @Override
-    public Result<String> deleteRole(Map<String, Object> event) {
+    public void deleteRole(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String deleteRole = "DELETE from role_t WHERE host_id = ? AND role_id = ?";
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(deleteRole)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("roleId"));
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is deleted for role " + map.get("roleId"));
-                }
-                conn.commit();
-                result = Success.of((String)event.get(Constants.USER));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        String roleId = (String)map.get("roleId");
+        try (PreparedStatement statement = conn.prepareStatement(deleteRole)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, roleId);
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is deleted for role " + roleId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteRole for id {}: {}", roleId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deleteRole for id {}: {}", roleId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
@@ -441,7 +396,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> createRolePermission(Map<String, Object> event) {
+    public void createRolePermission(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String insertRole =
                 """
                     INSERT INTO role_permission_t (host_id, role_id, endpoint_id, update_user, update_ts)
@@ -462,49 +417,33 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     )
                 """;
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            // no duplicate record, insert the user into database and write a success notification.
-            try (PreparedStatement statement = conn.prepareStatement(insertRole)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("roleId"));
-                statement.setObject(3, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(4, (String)map.get("apiId"));
-                statement.setString(5, (String)map.get("apiVersion"));
-                statement.setString(6, (String)map.get("endpoint"));
-                statement.setString(7, (String)event.get(Constants.USER));
-                statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+        String roleId = (String)map.get("roleId");
+        try (PreparedStatement statement = conn.prepareStatement(insertRole)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, roleId);
+            statement.setObject(3, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(4, (String)map.get("apiId"));
+            statement.setString(5, (String)map.get("apiVersion"));
+            statement.setString(6, (String)map.get("endpoint"));
+            statement.setString(7, (String)event.get(Constants.USER));
+            statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert role permission " + map.get("roleId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("roleId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert role permission " + roleId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createRolePermission for id {}: {}", roleId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createRolePermission for id {}: {}", roleId, e.getMessage(), e);
+            throw e;
         }
-        return result;
-
     }
 
     @Override
-    public Result<String> deleteRolePermission(Map<String, Object> event) {
+    public void deleteRolePermission(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String deleteRole =
                 """
                     DELETE FROM role_permission_t rp
@@ -523,186 +462,126 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 """;
         Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(deleteRole)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("roleId"));
-                statement.setObject(3, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(4, (String)map.get("apiId"));
-                statement.setString(5, (String)map.get("apiVersion"));
-                statement.setString(6, (String)map.get("endpoint"));
+        String roleId = (String)map.get("roleId");
+        try (PreparedStatement statement = conn.prepareStatement(deleteRole)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, roleId);
+            statement.setObject(3, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(4, (String)map.get("apiId"));
+            statement.setString(5, (String)map.get("apiVersion"));
+            statement.setString(6, (String)map.get("endpoint"));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is deleted for role " + map.get("roleId"));
-                }
-                conn.commit();
-                result = Success.of((String)event.get(Constants.USER));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is deleted for role " + roleId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteRolePermission for id {}: {}", roleId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deleteRolePermission for id {}: {}", roleId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> createRoleUser(Map<String, Object> event) {
+    public void createRoleUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String insertRole = "INSERT INTO role_user_t (host_id, role_id, user_id, start_ts, end_ts, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?,  ?, ?)";
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            // no duplicate record, insert the user into database and write a success notification.
-            try (PreparedStatement statement = conn.prepareStatement(insertRole)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("roleId"));
-                statement.setObject(3, UUID.fromString((String)event.get(Constants.USER)));
+        String roleId = (String)map.get("roleId");
+        try (PreparedStatement statement = conn.prepareStatement(insertRole)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, roleId);
+            statement.setObject(3, UUID.fromString((String)event.get(Constants.USER)));
 
-                String startTs = (String)map.get("startTs");
-                if(startTs != null && !startTs.isEmpty())
-                    statement.setObject(4, OffsetDateTime.parse(startTs));
-                else
-                    statement.setNull(4, NULL);
-                String endTs = (String)map.get("endTs");
-                if (endTs != null && !endTs.isEmpty()) {
-                    statement.setObject(5, OffsetDateTime.parse(endTs));
-                } else {
-                    statement.setNull(5, NULL);
-                }
-                statement.setString(6, (String)event.get(Constants.USER));
-                statement.setObject(7,  OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            String startTs = (String)map.get("startTs");
+            if(startTs != null && !startTs.isEmpty())
+                statement.setObject(4, OffsetDateTime.parse(startTs));
+            else
+                statement.setNull(4, NULL);
+            String endTs = (String)map.get("endTs");
+            if (endTs != null && !endTs.isEmpty()) {
+                statement.setObject(5, OffsetDateTime.parse(endTs));
+            } else {
+                statement.setNull(5, NULL);
+            }
+            statement.setString(6, (String)event.get(Constants.USER));
+            statement.setObject(7,  OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert role user " + map.get("roleId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("roleId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("failed to insert role user " + roleId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createRoleUser for id {}: {}", roleId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createRoleUser for id {}: {}", roleId, e.getMessage(), e);
+            throw e;
         }
-        return result;
-
     }
 
     @Override
-    public Result<String> updateRoleUser(Map<String, Object> event) {
+    public void updateRoleUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String updateRole = "UPDATE role_user_t SET start_ts = ?, end_ts = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? AND role_id = ? AND user_id = ?";
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
+        String roleId = (String)map.get("roleId");
+        try (PreparedStatement statement = conn.prepareStatement(updateRole)) {
+            String startTs = (String)map.get("startTs");
+            if(startTs != null && !startTs.isEmpty())
+                statement.setObject(1, OffsetDateTime.parse(startTs));
+            else
+                statement.setNull(1, NULL);
+            String endTs = (String)map.get("endTs");
+            if (endTs != null && !endTs.isEmpty()) {
+                statement.setObject(2, OffsetDateTime.parse(endTs));
+            } else {
+                statement.setNull(2, NULL);
+            }
+            statement.setString(3, (String)event.get(Constants.USER));
+            statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(5, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(6, roleId);
+            statement.setObject(7, UUID.fromString((String)event.get(Constants.USER)));
 
-            try (PreparedStatement statement = conn.prepareStatement(updateRole)) {
-                String startTs = (String)map.get("startTs");
-                if(startTs != null && !startTs.isEmpty())
-                    statement.setObject(1, OffsetDateTime.parse(startTs));
-                else
-                    statement.setNull(1, NULL);
-                String endTs = (String)map.get("endTs");
-                if (endTs != null && !endTs.isEmpty()) {
-                    statement.setObject(2, OffsetDateTime.parse(endTs));
-                } else {
-                    statement.setNull(2, NULL);
-                }
-                statement.setString(3, (String)event.get(Constants.USER));
-                statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(5, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(6, (String)map.get("roleId"));
-                statement.setObject(7, UUID.fromString((String)event.get(Constants.USER)));
-
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is updated for role user " + map.get("roleId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("roleId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is updated for role user " + roleId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during updateRoleUser for id {}: {}", roleId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updateRoleUser for id {}: {}", roleId, e.getMessage(), e);
+            throw e;
         }
-        return result;
-
     }
 
     @Override
-    public Result<String> deleteRoleUser(Map<String, Object> event) {
+    public void deleteRoleUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String deleteRole = "DELETE from role_user_t WHERE host_id = ? AND role_id = ? AND user_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(deleteRole)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("roleId"));
-                statement.setObject(3, UUID.fromString((String)event.get(Constants.USER)));
+        String roleId = (String)map.get("roleId");
+        try (PreparedStatement statement = conn.prepareStatement(deleteRole)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, roleId);
+            statement.setObject(3, UUID.fromString((String)event.get(Constants.USER)));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is deleted for role user " + map.get("roleId"));
-                }
-                conn.commit();
-                result = Success.of((String)event.get(Constants.USER));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is deleted for role user " + roleId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteRoleUser for id {}: {}", roleId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deleteRoleUser for id {}: {}", roleId, e.getMessage(), e);
+            throw e;
         }
-        return result;
-
     }
 
     @Override
@@ -781,47 +660,33 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> deleteRoleRowFilter(Map<String, Object> event) {
+    public void deleteRoleRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String deleteRole = "DELETE from role_row_filter_t WHERE host_id = ? AND role_id = ? AND api_id = ? AND api_version = ? AND endpoint = ? AND col_name = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(deleteRole)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("roleId"));
-                statement.setString(3, (String)map.get("apiId"));
-                statement.setString(4, (String)map.get("apiVersion"));
-                statement.setString(5, (String)map.get("endpoint"));
-                statement.setString(6, (String)map.get("colName"));
+        String roleId = (String)map.get("roleId");
+        try (PreparedStatement statement = conn.prepareStatement(deleteRole)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, roleId);
+            statement.setString(3, (String)map.get("apiId"));
+            statement.setString(4, (String)map.get("apiVersion"));
+            statement.setString(5, (String)map.get("endpoint"));
+            statement.setString(6, (String)map.get("colName"));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is deleted for role row filter " + map.get("roleId"));
-                }
-                conn.commit();
-                result = Success.of((String)event.get(Constants.USER));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is deleted for role row filter " + roleId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteRoleRowFilter for id {}: {}", roleId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deleteRoleRowFilter for id {}: {}", roleId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> createRoleRowFilter(Map<String, Object> event) {
+    public void createRoleRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String insertRole = """
                 INSERT INTO role_row_filter_t (
                     host_id,
@@ -854,51 +719,36 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     AND e.endpoint = ?;            -- endpoint parameter
                 """;
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            // no duplicate record, insert the user into database and write a success notification.
-            try (PreparedStatement statement = conn.prepareStatement(insertRole)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("roleId"));
-                statement.setString(3, (String)map.get("colName"));
-                statement.setString(4, (String)map.get("operator"));
-                statement.setString(5, (String)map.get("colValue"));
-                statement.setString(6, (String)event.get(Constants.USER));
-                statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(8, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(9, (String)map.get("apiId"));
-                statement.setString(10, (String)map.get("apiVersion"));
-                statement.setString(11, (String)map.get("endpoint"));
+        String roleId = (String)map.get("roleId");
+        try (PreparedStatement statement = conn.prepareStatement(insertRole)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, roleId);
+            statement.setString(3, (String)map.get("colName"));
+            statement.setString(4, (String)map.get("operator"));
+            statement.setString(5, (String)map.get("colValue"));
+            statement.setString(6, (String)event.get(Constants.USER));
+            statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(8, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(9, (String)map.get("apiId"));
+            statement.setString(10, (String)map.get("apiVersion"));
+            statement.setString(11, (String)map.get("endpoint"));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert role row filter " + map.get("roleId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("roleId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("failed to insert role row filter " + roleId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createRoleRowFilter for id {}: {}", roleId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createRoleRowFilter for id {}: {}", roleId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> updateRoleRowFilter(Map<String, Object> event) {
+    public void updateRoleRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String updateRole =
                 """
                         UPDATE role_row_filter_t
@@ -923,47 +773,32 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                             )
                 """;
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
+        String roleId = (String)map.get("roleId");
+        try (PreparedStatement statement = conn.prepareStatement(updateRole)) {
+            statement.setString(1, (String)map.get("operator"));
+            statement.setString(2, (String)map.get("colValue"));
+            statement.setString(3, (String)event.get(Constants.USER));
+            statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(5, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(6, roleId);
+            statement.setString(7, (String)map.get("colName"));
+            statement.setObject(8, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(9, (String)map.get("apiId"));
+            statement.setString(10, (String)map.get("apiVersion"));
+            statement.setString(11, (String)map.get("endpoint"));
 
-            try (PreparedStatement statement = conn.prepareStatement(updateRole)) {
-                statement.setString(1, (String)map.get("operator"));
-                statement.setString(2, (String)map.get("colValue"));
-                statement.setString(3, (String)event.get(Constants.USER));
-                statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(5, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(6, (String)map.get("roleId"));
-                statement.setString(7, (String)map.get("colName"));
-                statement.setObject(8, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(9, (String)map.get("apiId"));
-                statement.setString(10, (String)map.get("apiVersion"));
-                statement.setString(11, (String)map.get("endpoint"));
-
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is updated for role row filter " + map.get("roleId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("roleId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is updated for role row filter " + roleId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during updateRoleRowFilter for id {}: {}", roleId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updateRoleRowFilter for id {}: {}", roleId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
@@ -1040,7 +875,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> createRoleColFilter(Map<String, Object> event) {
+    public void createRoleColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String insertRole =
                 """
                     INSERT INTO role_col_filter_t (
@@ -1070,49 +905,34 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                         AND e.endpoint = ?;            -- endpoint parameter
                 """;
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            // no duplicate record, insert the user into database and write a success notification.
-            try (PreparedStatement statement = conn.prepareStatement(insertRole)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("roleId"));
-                statement.setString(3, (String)map.get("columns"));
-                statement.setString(4, (String)event.get(Constants.USER));
-                statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(7, (String)map.get("apiId"));
-                statement.setString(8, (String)map.get("apiVersion"));
-                statement.setString(9, (String)map.get("endpoint"));
+        String roleId = (String)map.get("roleId");
+        try (PreparedStatement statement = conn.prepareStatement(insertRole)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, roleId);
+            statement.setString(3, (String)map.get("columns"));
+            statement.setString(4, (String)event.get(Constants.USER));
+            statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(7, (String)map.get("apiId"));
+            statement.setString(8, (String)map.get("apiVersion"));
+            statement.setString(9, (String)map.get("endpoint"));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert role col filter " + map.get("roleId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("roleId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert role col filter " + roleId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createRoleColFilter for id {}: {}", roleId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createRoleColFilter for id {}: {}", roleId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> deleteRoleColFilter(Map<String, Object> event) {
+    public void deleteRoleColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String deleteRole =
                 """
                     DELETE FROM role_col_filter_t rcf
@@ -1132,45 +952,31 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 DELETE from role_col_filter_t WHERE host_id = ? AND role_id = ? AND api_id = ? AND api_version = ? AND endpoint = ?
                 """;
 
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(deleteRole)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("roleId"));
-                statement.setObject(3, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(4, (String)map.get("apiId"));
-                statement.setString(5, (String)map.get("apiVersion"));
-                statement.setString(6, (String)map.get("endpoint"));
+        String roleId = (String)map.get("roleId");
+        try (PreparedStatement statement = conn.prepareStatement(deleteRole)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, roleId);
+            statement.setObject(3, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(4, (String)map.get("apiId"));
+            statement.setString(5, (String)map.get("apiVersion"));
+            statement.setString(6, (String)map.get("endpoint"));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is deleted for role col filter " + map.get("roleId"));
-                }
-                conn.commit();
-                result = Success.of((String)event.get(Constants.USER));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is deleted for role col filter " + roleId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteRoleColFilter for id {}: {}", roleId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deleteRoleColFilter for id {}: {}", roleId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> updateRoleColFilter(Map<String, Object> event) {
+    public void updateRoleColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String updateRole =
                 """
                         UPDATE role_col_filter_t
@@ -1193,173 +999,115 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                             )
                 """;
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
+        String roleId = (String)map.get("roleId");
+        try (PreparedStatement statement = conn.prepareStatement(updateRole)) {
+            statement.setString(1, (String)map.get("columns"));
+            statement.setString(2, (String)event.get(Constants.USER));
+            statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(5, roleId);
+            statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(7, (String)map.get("apiId"));
+            statement.setString(8, (String)map.get("apiVersion"));
+            statement.setString(9, (String)map.get("endpoint"));
 
-            try (PreparedStatement statement = conn.prepareStatement(updateRole)) {
-                statement.setString(1, (String)map.get("columns"));
-                statement.setString(2, (String)event.get(Constants.USER));
-                statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(5, (String)map.get("roleId"));
-                statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(7, (String)map.get("apiId"));
-                statement.setString(8, (String)map.get("apiVersion"));
-                statement.setString(9, (String)map.get("endpoint"));
-
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is updated for role col filter " + map.get("roleId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("roleId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is updated for role col filter " + roleId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during updateRoleColFilter for id {}: {}", roleId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updateRoleColFilter for id {}: {}", roleId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> createGroup(Map<String, Object> event) {
+    public void createGroup(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String insertGroup = "INSERT INTO group_t (host_id, group_id, group_desc, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?)";
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("groupId"));
-                String groupDesc = (String)map.get("groupDesc");
-                if (groupDesc != null && !groupDesc.isEmpty())
-                    statement.setString(3, groupDesc);
-                else
-                    statement.setNull(3, NULL);
+        String groupId = (String)map.get("groupId");
+        try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, groupId);
+            String groupDesc = (String)map.get("groupDesc");
+            if (groupDesc != null && !groupDesc.isEmpty())
+                statement.setString(3, groupDesc);
+            else
+                statement.setNull(3, NULL);
 
-                statement.setString(4, (String)event.get(Constants.USER));
-                statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setString(4, (String)event.get(Constants.USER));
+            statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert group " + map.get("groupId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("groupId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert group " + groupId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createGroup for id {}: {}", groupId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createGroup for id {}: {}", groupId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> updateGroup(Map<String, Object> event) {
+    public void updateGroup(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String updateGroup = "UPDATE group_t SET group_desc = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? AND group_id = ?";
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
-                String groupDesc = (String)map.get("groupDesc");
-                if(groupDesc != null && !groupDesc.isEmpty()) {
-                    statement.setString(1, groupDesc);
-                } else {
-                    statement.setNull(1, NULL);
-                }
-                statement.setString(2, (String)event.get(Constants.USER));
-                statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(5, (String)map.get("groupId"));
+        String groupId = (String)map.get("groupId");
+        try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
+            String groupDesc = (String)map.get("groupDesc");
+            if(groupDesc != null && !groupDesc.isEmpty()) {
+                statement.setString(1, groupDesc);
+            } else {
+                statement.setNull(1, NULL);
+            }
+            statement.setString(2, (String)event.get(Constants.USER));
+            statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(5, groupId);
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is updated for group " + map.get("groupId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("groupId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is updated for group " + groupId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during updateGroup for id {}: {}", groupId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updateGroup for id {}: {}", groupId, e.getMessage(), e);
+            throw e;
         }
-        return result;
-
     }
 
     @Override
-    public Result<String> deleteGroup(Map<String, Object> event) {
+    public void deleteGroup(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String deleteGroup = "DELETE from group_t WHERE host_id = ? AND group_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("groupId"));
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is deleted for group " + map.get("groupId"));
-                }
-                conn.commit();
-                result = Success.of((String)event.get(Constants.USER));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        String groupId = (String)map.get("groupId");
+        try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, groupId);
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is deleted for group " + groupId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteGroup for id {}: {}", groupId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deleteGroup for id {}: {}", groupId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
@@ -1629,7 +1377,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> createGroupPermission(Map<String, Object> event) {
+    public void createGroupPermission(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String insertGroup =
                 """
                     INSERT INTO group_permission_t (host_id, group_id, endpoint_id, update_user, update_ts)
@@ -1651,47 +1399,32 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 """;
 
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            // no duplicate record, insert the user into database and write a success notification.
-            try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("groupId"));
-                statement.setObject(3, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(4, (String)map.get("apiId"));
-                statement.setString(5, (String)map.get("apiVersion"));
-                statement.setString(6, (String)map.get("endpoint"));
-                statement.setString(7, (String)event.get(Constants.USER));
-                statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+        String groupId = (String)map.get("groupId");
+        try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, groupId);
+            statement.setObject(3, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(4, (String)map.get("apiId"));
+            statement.setString(5, (String)map.get("apiVersion"));
+            statement.setString(6, (String)map.get("endpoint"));
+            statement.setString(7, (String)event.get(Constants.USER));
+            statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert group permission " + map.get("groupId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("groupId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert group permission " + groupId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createGroupPermission for id {}: {}", groupId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createGroupPermission for id {}: {}", groupId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
     @Override
-    public Result<String> deleteGroupPermission(Map<String, Object> event) {
+    public void deleteGroupPermission(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String deleteGroup =
                 """
                     DELETE FROM group_permission_t gp
@@ -1709,185 +1442,123 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                       )
                 """;
 
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("groupId"));
-                statement.setObject(3, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(4, (String)map.get("apiId"));
-                statement.setString(5, (String)map.get("apiVersion"));
-                statement.setString(6, (String)map.get("endpoint"));
+        String groupId = (String)map.get("groupId");
+        try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, groupId);
+            statement.setObject(3, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(4, (String)map.get("apiId"));
+            statement.setString(5, (String)map.get("apiVersion"));
+            statement.setString(6, (String)map.get("endpoint"));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is deleted for group permission " + map.get("groupId"));
-                }
-                conn.commit();
-                result = Success.of((String)event.get(Constants.USER));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is deleted for group permission " + groupId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteGroupPermission for id {}: {}", groupId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deleteGroupPermission for id {}: {}", groupId, e.getMessage(), e);
+            throw e;
         }
-        return result;
-
     }
     @Override
-    public Result<String> createGroupUser(Map<String, Object> event) {
+    public void createGroupUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String insertGroup = "INSERT INTO group_user_t (host_id, group_id, user_id, start_ts, end_ts, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?,  ?, ?)";
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            // no duplicate record, insert the user into database and write a success notification.
-            try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("groupId"));
-                statement.setObject(3, UUID.fromString((String)event.get(Constants.USER)));
-                String startTs = (String)map.get("startTs");
-                if(startTs != null && !startTs.isEmpty())
-                    statement.setObject(4, OffsetDateTime.parse(startTs));
-                else
-                    statement.setNull(4, NULL);
-                String endTs = (String)map.get("endTs");
-                if (endTs != null && !endTs.isEmpty()) {
-                    statement.setObject(5, OffsetDateTime.parse(endTs));
-                } else {
-                    statement.setNull(5, NULL);
-                }
-                statement.setString(6, (String)event.get(Constants.USER));
-                statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+        String groupId = (String)map.get("groupId");
+        try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, groupId);
+            statement.setObject(3, UUID.fromString((String)event.get(Constants.USER)));
+            String startTs = (String)map.get("startTs");
+            if(startTs != null && !startTs.isEmpty())
+                statement.setObject(4, OffsetDateTime.parse(startTs));
+            else
+                statement.setNull(4, NULL);
+            String endTs = (String)map.get("endTs");
+            if (endTs != null && !endTs.isEmpty()) {
+                statement.setObject(5, OffsetDateTime.parse(endTs));
+            } else {
+                statement.setNull(5, NULL);
+            }
+            statement.setString(6, (String)event.get(Constants.USER));
+            statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert group user " + map.get("groupId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("groupId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert group user " + groupId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createGroupUser for id {}: {}", groupId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createGroupUser for id {}: {}", groupId, e.getMessage(), e);
+            throw e;
         }
-        return result;
-
     }
     @Override
-    public Result<String> updateGroupUser(Map<String, Object> event) {
+    public void updateGroupUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String updateGroup = "UPDATE group_user_t SET start_ts = ?, end_ts = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? AND group_id = ? AND user_id = ?";
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
+        String groupId = (String)map.get("groupId");
+        try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
+            String startTs = (String)map.get("startTs");
+            if(startTs != null && !startTs.isEmpty())
+                statement.setObject(1, OffsetDateTime.parse(startTs));
+            else
+                statement.setNull(1, NULL);
+            String endTs = (String)map.get("endTs");
+            if (endTs != null && !endTs.isEmpty()) {
+                statement.setObject(2, OffsetDateTime.parse(endTs));
+            } else {
+                statement.setNull(2, NULL);
+            }
+            statement.setString(3, (String)event.get(Constants.USER));
+            statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(5, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(6, groupId);
+            statement.setObject(7, UUID.fromString((String)event.get(Constants.USER)));
 
-            try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
-                String startTs = (String)map.get("startTs");
-                if(startTs != null && !startTs.isEmpty())
-                    statement.setObject(1, OffsetDateTime.parse(startTs));
-                else
-                    statement.setNull(1, NULL);
-                String endTs = (String)map.get("endTs");
-                if (endTs != null && !endTs.isEmpty()) {
-                    statement.setObject(2, OffsetDateTime.parse(endTs));
-                } else {
-                    statement.setNull(2, NULL);
-                }
-                statement.setString(3, (String)event.get(Constants.USER));
-                statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(5, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(6, (String)map.get("groupId"));
-                statement.setObject(7, UUID.fromString((String)event.get(Constants.USER)));
-
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is updated for group user " + map.get("groupId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("groupId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is updated for group user " + groupId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during updateGroupUser for id {}: {}", groupId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updateGroupUser for id {}: {}", groupId, e.getMessage(), e);
+            throw e;
         }
-        return result;
-
     }
     @Override
-    public Result<String> deleteGroupUser(Map<String, Object> event) {
+    public void deleteGroupUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String deleteGroup = "DELETE from group_user_t WHERE host_id = ? AND group_id = ? AND user_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("groupId"));
-                statement.setObject(3, UUID.fromString((String)event.get(Constants.USER)));
+        String groupId = (String)map.get("groupId");
+        try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, groupId);
+            statement.setObject(3, UUID.fromString((String)event.get(Constants.USER)));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is deleted for group user " + map.get("groupId"));
-                }
-                conn.commit();
-                result = Success.of((String)event.get(Constants.USER));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is deleted for group user " + groupId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteGroupUser for id {}: {}", groupId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deleteGroupUser for id {}: {}", groupId, e.getMessage(), e);
+            throw e;
         }
-        return result;
-
     }
 
     @Override
@@ -1966,7 +1637,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> createGroupRowFilter(Map<String, Object> event) {
+    public void createGroupRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String insertGroup =
                 """
                     INSERT INTO group_row_filter_t (
@@ -2001,51 +1672,36 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
                 """;
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            // no duplicate record, insert the user into database and write a success notification.
-            try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("groupId"));
-                statement.setString(3, (String)map.get("colName"));
-                statement.setString(4, (String)map.get("operator"));
-                statement.setString(5, (String)map.get("colValue"));
-                statement.setString(6, (String)event.get(Constants.USER));
-                statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(8, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(9, (String)map.get("apiId"));
-                statement.setString(10, (String)map.get("apiVersion"));
-                statement.setString(11, (String)map.get("endpoint"));
+        String groupId = (String)map.get("groupId");
+        try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, groupId);
+            statement.setString(3, (String)map.get("colName"));
+            statement.setString(4, (String)map.get("operator"));
+            statement.setString(5, (String)map.get("colValue"));
+            statement.setString(6, (String)event.get(Constants.USER));
+            statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(8, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(9, (String)map.get("apiId"));
+            statement.setString(10, (String)map.get("apiVersion"));
+            statement.setString(11, (String)map.get("endpoint"));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert group row filter " + map.get("groupId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("groupId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert group row filter " + groupId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createGroupRowFilter for id {}: {}", groupId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createGroupRowFilter for id {}: {}", groupId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> updateGroupRowFilter(Map<String, Object> event) {
+    public void updateGroupRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String updateGroup =
                 """
                     UPDATE group_row_filter_t
@@ -2070,51 +1726,36 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                         )
                 """;
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
+        String groupId = (String)map.get("groupId");
+        try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
+            statement.setString(1, (String)map.get("operator"));
+            statement.setString(2, (String)map.get("colValue"));
+            statement.setString(3, (String)event.get(Constants.USER));
+            statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(5, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(6, groupId);
+            statement.setString(7, (String)map.get("colName"));
+            statement.setObject(8, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(9, (String)map.get("apiId"));
+            statement.setString(10, (String)map.get("apiVersion"));
+            statement.setString(11, (String)map.get("endpoint"));
 
-            try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
-                statement.setString(1, (String)map.get("operator"));
-                statement.setString(2, (String)map.get("colValue"));
-                statement.setString(3, (String)event.get(Constants.USER));
-                statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(5, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(6, (String)map.get("groupId"));
-                statement.setString(7, (String)map.get("colName"));
-                statement.setObject(8, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(9, (String)map.get("apiId"));
-                statement.setString(10, (String)map.get("apiVersion"));
-                statement.setString(11, (String)map.get("endpoint"));
-
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is updated for group row filter " + map.get("groupId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("groupId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is updated for group row filter " + groupId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during updateGroupRowFilter for id {}: {}", groupId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updateGroupRowFilter for id {}: {}", groupId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> deleteGroupRowFilter(Map<String, Object> event) {
+    public void deleteGroupRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String deleteGroup =
                 """
                     DELETE FROM group_row_filter_t
@@ -2132,42 +1773,28 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                             AND e.endpoint = ?
                       )
                 """;
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("groupId"));
-                statement.setString(3, (String)map.get("colName"));
-                statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(5, (String)map.get("apiId"));
-                statement.setString(6, (String)map.get("apiVersion"));
-                statement.setString(7, (String)map.get("endpoint"));
+        String groupId = (String)map.get("groupId");
+        try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, groupId);
+            statement.setString(3, (String)map.get("colName"));
+            statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(5, (String)map.get("apiId"));
+            statement.setString(6, (String)map.get("apiVersion"));
+            statement.setString(7, (String)map.get("endpoint"));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is deleted for group row filter " + map.get("groupId"));
-                }
-                conn.commit();
-                result = Success.of((String)event.get(Constants.USER));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is deleted for group row filter " + groupId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteGroupRowFilter for id {}: {}", groupId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deleteGroupRowFilter for id {}: {}", groupId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
@@ -2244,7 +1871,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> createGroupColFilter(Map<String, Object> event) {
+    public void createGroupColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String insertGroup =
                 """
                     INSERT INTO group_col_filter_t (
@@ -2274,49 +1901,34 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                         AND e.endpoint = ?            -- endpoint parameter
                 """;
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            // no duplicate record, insert the user into database and write a success notification.
-            try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("groupId"));
-                statement.setString(3, (String)map.get("columns"));
-                statement.setString(4, (String)event.get(Constants.USER));
-                statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(7, (String)map.get("apiId"));
-                statement.setString(8, (String)map.get("apiVersion"));
-                statement.setString(9, (String)map.get("endpoint"));
+        String groupId = (String)map.get("groupId");
+        try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, groupId);
+            statement.setString(3, (String)map.get("columns"));
+            statement.setString(4, (String)event.get(Constants.USER));
+            statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(7, (String)map.get("apiId"));
+            statement.setString(8, (String)map.get("apiVersion"));
+            statement.setString(9, (String)map.get("endpoint"));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert group col filter " + map.get("groupId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("groupId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert group col filter " + groupId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createGroupColFilter for id {}: {}", groupId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createGroupColFilter for id {}: {}", groupId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> updateGroupColFilter(Map<String, Object> event) {
+    public void updateGroupColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String updateGroup =
                 """
                     UPDATE group_col_filter_t
@@ -2339,49 +1951,34 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                         )
                 """;
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
+        String groupId = (String)map.get("groupId");
+        try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
+            statement.setString(1, (String)map.get("columns"));
+            statement.setString(2, (String)event.get(Constants.USER));
+            statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(5, groupId);
+            statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(7, (String)map.get("apiId"));
+            statement.setString(8, (String)map.get("apiVersion"));
+            statement.setString(9, (String)map.get("endpoint"));
 
-            try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
-                statement.setString(1, (String)map.get("columns"));
-                statement.setString(2, (String)event.get(Constants.USER));
-                statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(5, (String)map.get("groupId"));
-                statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(7, (String)map.get("apiId"));
-                statement.setString(8, (String)map.get("apiVersion"));
-                statement.setString(9, (String)map.get("endpoint"));
-
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is updated for group col filter " + map.get("groupId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("groupId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is updated for group col filter " + groupId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during updateGroupColFilter for id {}: {}", groupId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updateGroupColFilter for id {}: {}", groupId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> deleteGroupColFilter(Map<String, Object> event) {
+    public void deleteGroupColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String deleteGroup =
                 """
                     DELETE FROM group_col_filter_t
@@ -2398,195 +1995,138 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                             AND e.endpoint = ?
                       )
                 """;
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("groupId"));
-                statement.setObject(3, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(4, (String)map.get("apiId"));
-                statement.setString(5, (String)map.get("apiVersion"));
-                statement.setString(6, (String)map.get("endpoint"));
+        String groupId = (String)map.get("groupId");
+        try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, groupId);
+            statement.setObject(3, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(4, (String)map.get("apiId"));
+            statement.setString(5, (String)map.get("apiVersion"));
+            statement.setString(6, (String)map.get("endpoint"));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is deleted for group col filter " + map.get("groupId"));
-                }
-                conn.commit();
-                result = Success.of((String)event.get(Constants.USER));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is deleted for group col filter " + groupId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteGroupColFilter for id {}: {}", groupId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deleteGroupColFilter for id {}: {}", groupId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
 
     @Override
-    public Result<String> createPosition(Map<String, Object> event) {
+    public void createPosition(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String insertPosition = "INSERT INTO position_t (host_id, position_id, position_desc, " +
                 "inherit_to_ancestor, inherit_to_sibling, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(insertPosition)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("positionId"));
-                String positionDesc = (String)map.get("positionDesc");
-                if (positionDesc != null && !positionDesc.isEmpty())
-                    statement.setString(3, positionDesc);
-                else
-                    statement.setNull(3, NULL);
-                String inheritToAncestor = (String)map.get("inheritToAncestor");
-                if(inheritToAncestor != null && !inheritToAncestor.isEmpty())
-                    statement.setString(4, inheritToAncestor);
-                else
-                    statement.setNull(4, NULL);
-                String inheritToSibling = (String)map.get("inheritToSibling");
-                if(inheritToSibling != null && !inheritToSibling.isEmpty())
-                    statement.setString(5, inheritToSibling);
-                else
-                    statement.setNull(5, NULL);
+        String positionId = (String)map.get("positionId");
+        try (PreparedStatement statement = conn.prepareStatement(insertPosition)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, positionId);
+            String positionDesc = (String)map.get("positionDesc");
+            if (positionDesc != null && !positionDesc.isEmpty())
+                statement.setString(3, positionDesc);
+            else
+                statement.setNull(3, NULL);
+            String inheritToAncestor = (String)map.get("inheritToAncestor");
+            if(inheritToAncestor != null && !inheritToAncestor.isEmpty())
+                statement.setString(4, inheritToAncestor);
+            else
+                statement.setNull(4, NULL);
+            String inheritToSibling = (String)map.get("inheritToSibling");
+            if(inheritToSibling != null && !inheritToSibling.isEmpty())
+                statement.setString(5, inheritToSibling);
+            else
+                statement.setNull(5, NULL);
 
-                statement.setString(6, (String)event.get(Constants.USER));
-                statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setString(6, (String)event.get(Constants.USER));
+            statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert position " + map.get("positionId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("positionId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert position " + positionId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createPosition for id {}: {}", positionId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createPosition for id {}: {}", positionId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> updatePosition(Map<String, Object> event) {
+    public void updatePosition(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String updatePosition = "UPDATE position_t SET position_desc = ?, inherit_to_ancestor = ?, inherit_to_sibling = ?, " +
                 "update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? AND position_id = ?";
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(updatePosition)) {
-                String positionDesc = (String)map.get("positionDesc");
-                if(positionDesc != null && !positionDesc.isEmpty()) {
-                    statement.setString(1, positionDesc);
-                } else {
-                    statement.setNull(1, NULL);
-                }
-                String inheritToAncestor = (String)map.get("inheritToAncestor");
-                if(inheritToAncestor != null && !inheritToAncestor.isEmpty()) {
-                    statement.setString(2, inheritToAncestor);
-                } else {
-                    statement.setNull(2, NULL);
-                }
-                String inheritToSibling = (String)map.get("inheritToSibling");
-                if(inheritToSibling != null && !inheritToSibling.isEmpty()) {
-                    statement.setString(3, inheritToSibling);
-                } else {
-                    statement.setNull(3, NULL);
-                }
-                statement.setString(4, (String)event.get(Constants.USER));
-                statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+        String positionId = (String)map.get("positionId");
+        try (PreparedStatement statement = conn.prepareStatement(updatePosition)) {
+            String positionDesc = (String)map.get("positionDesc");
+            if(positionDesc != null && !positionDesc.isEmpty()) {
+                statement.setString(1, positionDesc);
+            } else {
+                statement.setNull(1, NULL);
+            }
+            String inheritToAncestor = (String)map.get("inheritToAncestor");
+            if(inheritToAncestor != null && !inheritToAncestor.isEmpty()) {
+                statement.setString(2, inheritToAncestor);
+            } else {
+                statement.setNull(2, NULL);
+            }
+            String inheritToSibling = (String)map.get("inheritToSibling");
+            if(inheritToSibling != null && !inheritToSibling.isEmpty()) {
+                statement.setString(3, inheritToSibling);
+            } else {
+                statement.setNull(3, NULL);
+            }
+            statement.setString(4, (String)event.get(Constants.USER));
+            statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
-                statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(7, (String)map.get("positionId"));
+            statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(7, positionId);
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is updated for position " + map.get("positionId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("positionId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is updated for position " + positionId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during updatePosition for id {}: {}", positionId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updatePosition for id {}: {}", positionId, e.getMessage(), e);
+            throw e;
         }
-        return result;
-
     }
 
     @Override
-    public Result<String> deletePosition(Map<String, Object> event) {
+    public void deletePosition(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String deleteGroup = "DELETE from position_t WHERE host_id = ? AND position_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("positionId"));
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is deleted for position " + map.get("positionId"));
-                }
-                conn.commit();
-                result = Success.of((String)event.get(Constants.USER));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        String positionId = (String)map.get("positionId");
+        try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, positionId);
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is deleted for position " + positionId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deletePosition for id {}: {}", positionId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deletePosition for id {}: {}", positionId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
 
@@ -2862,7 +2402,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
     }
     @Override
-    public Result<String> createPositionPermission(Map<String, Object> event) {
+    public void createPositionPermission(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String insertGroup =
                 """
                     INSERT INTO position_permission_t (host_id, position_id, endpoint_id, update_user, update_ts)
@@ -2883,49 +2423,33 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     )
                 """;
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            // no duplicate record, insert the user into database and write a success notification.
-            try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("positionId"));
-                statement.setObject(3, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(4, (String)map.get("apiId"));
-                statement.setString(5, (String)map.get("apiVersion"));
-                statement.setString(6, (String)map.get("endpoint"));
-                statement.setString(7, (String)event.get(Constants.USER));
-                statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+        String positionId = (String)map.get("positionId");
+        try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, positionId);
+            statement.setObject(3, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(4, (String)map.get("apiId"));
+            statement.setString(5, (String)map.get("apiVersion"));
+            statement.setString(6, (String)map.get("endpoint"));
+            statement.setString(7, (String)event.get(Constants.USER));
+            statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert position permission " + map.get("positionId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("positionId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert position permission " + positionId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createPositionPermission for id {}: {}", positionId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createPositionPermission for id {}: {}", positionId, e.getMessage(), e);
+            throw e;
         }
-        return result;
-
     }
 
     @Override
-    public Result<String> deletePositionPermission(Map<String, Object> event) {
+    public void deletePositionPermission(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String deleteGroup =
                 """
                     DELETE FROM position_permission_t gp
@@ -2942,187 +2466,126 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                           AND e.endpoint = ?
                       )
                 """;
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("positionId"));
-                statement.setObject(3, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(4, (String)map.get("apiId"));
-                statement.setString(5, (String)map.get("apiVersion"));
-                statement.setString(6, (String)map.get("endpoint"));
+        String positionId = (String)map.get("positionId");
+        try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, positionId);
+            statement.setObject(3, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(4, (String)map.get("apiId"));
+            statement.setString(5, (String)map.get("apiVersion"));
+            statement.setString(6, (String)map.get("endpoint"));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is deleted for position permission " + map.get("positionId"));
-                }
-                conn.commit();
-                result = Success.of((String)event.get(Constants.USER));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is deleted for position permission " + positionId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deletePositionPermission for id {}: {}", positionId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deletePositionPermission for id {}: {}", positionId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> createPositionUser(Map<String, Object> event) {
+    public void createPositionUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String insertGroup = "INSERT INTO position_user_t (host_id, position_id, user_id, start_ts, end_ts, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?,  ?, ?)";
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            // no duplicate record, insert the user into database and write a success notification.
-            try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("positionId"));
-                statement.setObject(3, UUID.fromString((String)event.get(Constants.USER)));
-                String startTs = (String)map.get("startTs");
-                if(startTs != null && !startTs.isEmpty())
-                    statement.setObject(4, OffsetDateTime.parse(startTs));
-                else
-                    statement.setNull(4, NULL);
-                String endTs = (String)map.get("endTs");
-                if (endTs != null && !endTs.isEmpty()) {
-                    statement.setObject(5, OffsetDateTime.parse(endTs));
-                } else {
-                    statement.setNull(5, NULL);
-                }
-                statement.setString(6, (String)event.get(Constants.USER));
-                statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+        String positionId = (String)map.get("positionId");
+        try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, positionId);
+            statement.setObject(3, UUID.fromString((String)event.get(Constants.USER)));
+            String startTs = (String)map.get("startTs");
+            if(startTs != null && !startTs.isEmpty())
+                statement.setObject(4, OffsetDateTime.parse(startTs));
+            else
+                statement.setNull(4, NULL);
+            String endTs = (String)map.get("endTs");
+            if (endTs != null && !endTs.isEmpty()) {
+                statement.setObject(5, OffsetDateTime.parse(endTs));
+            } else {
+                statement.setNull(5, NULL);
+            }
+            statement.setString(6, (String)event.get(Constants.USER));
+            statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert position user " + map.get("positionId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("positionId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert position user " + positionId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createPositionUser for id {}: {}", positionId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createPositionUser for id {}: {}", positionId, e.getMessage(), e);
+            throw e;
         }
-        return result;
-
     }
 
     @Override
-    public Result<String> updatePositionUser(Map<String, Object> event) {
+    public void updatePositionUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String updateGroup = "UPDATE position_user_t SET start_ts = ?, end_ts = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? AND position_id = ? AND user_id = ?";
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
+        String positionId = (String)map.get("positionId");
+        try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
+            String startTs = (String)map.get("startTs");
+            if(startTs != null && !startTs.isEmpty())
+                statement.setObject(1, OffsetDateTime.parse(startTs));
+            else
+                statement.setNull(1, NULL);
+            String endTs = (String)map.get("endTs");
+            if (endTs != null && !endTs.isEmpty()) {
+                statement.setObject(2, OffsetDateTime.parse(endTs));
+            } else {
+                statement.setNull(2, NULL);
+            }
+            statement.setString(3, (String)event.get(Constants.USER));
+            statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(5, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(6, positionId);
+            statement.setObject(7, UUID.fromString((String)event.get(Constants.USER)));
 
-            try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
-                String startTs = (String)map.get("startTs");
-                if(startTs != null && !startTs.isEmpty())
-                    statement.setObject(1, OffsetDateTime.parse(startTs));
-                else
-                    statement.setNull(1, NULL);
-                String endTs = (String)map.get("endTs");
-                if (endTs != null && !endTs.isEmpty()) {
-                    statement.setObject(2, OffsetDateTime.parse(endTs));
-                } else {
-                    statement.setNull(2, NULL);
-                }
-                statement.setString(3, (String)event.get(Constants.USER));
-                statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(5, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(6, (String)map.get("positionId"));
-                statement.setObject(7, UUID.fromString((String)event.get(Constants.USER)));
-
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is updated for position user " + map.get("positionId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("positionId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is updated for position user " + positionId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during updatePositionUser for id {}: {}", positionId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updatePositionUser for id {}: {}", positionId, e.getMessage(), e);
+            throw e;
         }
-        return result;
-
     }
 
     @Override
-    public Result<String> deletePositionUser(Map<String, Object> event) {
+    public void deletePositionUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String deleteGroup = "DELETE from position_user_t WHERE host_id = ? AND position_id = ? AND user_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("positionId"));
-                statement.setObject(3, UUID.fromString((String)event.get(Constants.USER)));
+        String positionId = (String)map.get("positionId");
+        try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, positionId);
+            statement.setObject(3, UUID.fromString((String)event.get(Constants.USER)));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is deleted for position user " + map.get("positionId"));
-                }
-                conn.commit();
-                result = Success.of((String)event.get(Constants.USER));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is deleted for position user " + positionId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deletePositionUser for id {}: {}", positionId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deletePositionUser for id {}: {}", positionId, e.getMessage(), e);
+            throw e;
         }
-        return result;
-
     }
 
     @Override
@@ -3200,7 +2663,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> createPositionRowFilter(Map<String, Object> event) {
+    public void createPositionRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String insertGroup =
                 """
                     INSERT INTO position_row_filter_t (
@@ -3234,51 +2697,36 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                         AND e.endpoint = ?            -- endpoint parameter
                 """;
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            // no duplicate record, insert the user into database and write a success notification.
-            try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("positionId"));
-                statement.setString(3, (String)map.get("colName"));
-                statement.setString(4, (String)map.get("operator"));
-                statement.setString(5, (String)map.get("colValue"));
-                statement.setString(6, (String)event.get(Constants.USER));
-                statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(8, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(9, (String)map.get("apiId"));
-                statement.setString(10, (String)map.get("apiVersion"));
-                statement.setString(11, (String)map.get("endpoint"));
+        String positionId = (String)map.get("positionId");
+        try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, positionId);
+            statement.setString(3, (String)map.get("colName"));
+            statement.setString(4, (String)map.get("operator"));
+            statement.setString(5, (String)map.get("colValue"));
+            statement.setString(6, (String)event.get(Constants.USER));
+            statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(8, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(9, (String)map.get("apiId"));
+            statement.setString(10, (String)map.get("apiVersion"));
+            statement.setString(11, (String)map.get("endpoint"));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert position row filter " + map.get("positionId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("positionId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert position row filter " + positionId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createPositionRowFilter for id {}: {}", positionId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createPositionRowFilter for id {}: {}", positionId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> updatePositionRowFilter(Map<String, Object> event) {
+    public void updatePositionRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String updateGroup =
                 """
                     UPDATE position_row_filter_t
@@ -3303,52 +2751,37 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                         )
                 """;
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
+        String positionId = (String)map.get("positionId");
+        try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
+            statement.setString(1, (String)map.get("operator"));
+            statement.setString(2, (String)map.get("colValue"));
+            statement.setString(3, (String)event.get(Constants.USER));
+            statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(5, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(6, positionId);
+            statement.setString(7, (String)map.get("colName"));
+            statement.setObject(8, UUID.fromString((String)event.get(Constants.HOST)));
 
-            try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
-                statement.setString(1, (String)map.get("operator"));
-                statement.setString(2, (String)map.get("colValue"));
-                statement.setString(3, (String)event.get(Constants.USER));
-                statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(5, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(6, (String)map.get("positionId"));
-                statement.setString(7, (String)map.get("colName"));
-                statement.setObject(8, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(9, (String)map.get("apiId"));
+            statement.setString(10, (String)map.get("apiVersion"));
+            statement.setString(11, (String)map.get("endpoint"));
 
-                statement.setString(9, (String)map.get("apiId"));
-                statement.setString(10, (String)map.get("apiVersion"));
-                statement.setString(11, (String)map.get("endpoint"));
-
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is updated for position row filter " + map.get("positionId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("positionId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is updated for position row filter " + positionId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during updatePositionRowFilter for id {}: {}", positionId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updatePositionRowFilter for id {}: {}", positionId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> deletePositionRowFilter(Map<String, Object> event) {
+    public void deletePositionRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String deleteGroup =
                 """
                     DELETE FROM position_row_filter_t
@@ -3366,42 +2799,28 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                             AND e.endpoint = ?
                       )
                 """;
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("positionId"));
-                statement.setString(3, (String)map.get("colName"));
-                statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(5, (String)map.get("apiId"));
-                statement.setString(6, (String)map.get("apiVersion"));
-                statement.setString(7, (String)map.get("endpoint"));
+        String positionId = (String)map.get("positionId");
+        try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, positionId);
+            statement.setString(3, (String)map.get("colName"));
+            statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(5, (String)map.get("apiId"));
+            statement.setString(6, (String)map.get("apiVersion"));
+            statement.setString(7, (String)map.get("endpoint"));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is deleted for position row filter " + map.get("positionId"));
-                }
-                conn.commit();
-                result = Success.of((String)event.get(Constants.USER));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is deleted for position row filter " + positionId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deletePositionRowFilter for id {}: {}", positionId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deletePositionRowFilter for id {}: {}", positionId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
@@ -3477,7 +2896,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> createPositionColFilter(Map<String, Object> event) {
+    public void createPositionColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String insertGroup =
                 """
                     INSERT INTO position_col_filter_t (
@@ -3507,49 +2926,34 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                         AND e.endpoint = ?             -- endpoint parameter
                 """;
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            // no duplicate record, insert the user into database and write a success notification.
-            try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("positionId"));
-                statement.setString(3, (String)map.get("columns"));
-                statement.setString(4, (String)event.get(Constants.USER));
-                statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(7, (String)map.get("apiId"));
-                statement.setString(8, (String)map.get("apiVersion"));
-                statement.setString(9, (String)map.get("endpoint"));
+        String positionId = (String)map.get("positionId");
+        try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, positionId);
+            statement.setString(3, (String)map.get("columns"));
+            statement.setString(4, (String)event.get(Constants.USER));
+            statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(7, (String)map.get("apiId"));
+            statement.setString(8, (String)map.get("apiVersion"));
+            statement.setString(9, (String)map.get("endpoint"));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert position col filter " + map.get("positionId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("positionId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert position col filter " + positionId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createPositionColFilter for id {}: {}", positionId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createPositionColFilter for id {}: {}", positionId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> updatePositionColFilter(Map<String, Object> event) {
+    public void updatePositionColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String updateGroup =
                 """
                     UPDATE position_col_filter_t
@@ -3572,49 +2976,34 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                         )
                 """;
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
+        String positionId = (String)map.get("positionId");
+        try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
+            statement.setString(1, (String)map.get("columns"));
+            statement.setString(2, (String)event.get(Constants.USER));
+            statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(5, positionId);
+            statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(7, (String)map.get("apiId"));
+            statement.setString(8, (String)map.get("apiVersion"));
+            statement.setString(9, (String)map.get("endpoint"));
 
-            try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
-                statement.setString(1, (String)map.get("columns"));
-                statement.setString(2, (String)event.get(Constants.USER));
-                statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(5, (String)map.get("positionId"));
-                statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(7, (String)map.get("apiId"));
-                statement.setString(8, (String)map.get("apiVersion"));
-                statement.setString(9, (String)map.get("endpoint"));
-
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is updated for position col filter " + map.get("positionId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("positionId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is updated for position col filter " + positionId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during updatePositionColFilter for id {}: {}", positionId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updatePositionColFilter for id {}: {}", positionId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> deletePositionColFilter(Map<String, Object> event) {
+    public void deletePositionColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String deleteGroup =
                 """
                     DELETE FROM position_col_filter_t
@@ -3631,184 +3020,126 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                             AND e.endpoint = ?
                       )
                 """;
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("positionId"));
-                statement.setObject(3, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(4, (String)map.get("apiId"));
-                statement.setString(5, (String)map.get("apiVersion"));
-                statement.setString(6, (String)map.get("endpoint"));
+        String positionId = (String)map.get("positionId");
+        try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, positionId);
+            statement.setObject(3, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(4, (String)map.get("apiId"));
+            statement.setString(5, (String)map.get("apiVersion"));
+            statement.setString(6, (String)map.get("endpoint"));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is deleted for position col filter " + map.get("positionId"));
-                }
-                conn.commit();
-                result = Success.of((String)event.get(Constants.USER));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is deleted for position col filter " + positionId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deletePositionColFilter for id {}: {}", positionId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deletePositionColFilter for id {}: {}", positionId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> createAttribute(Map<String, Object> event) {
+    public void createAttribute(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String insertAttribute = "INSERT INTO attribute_t (host_id, attribute_id, attribute_type, " +
                 "attribute_desc, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?, ?)";
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(insertAttribute)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("attributeId"));
-                String attributeType = (String)map.get("attributeType");
-                if(attributeType != null && !attributeType.isEmpty())
-                    statement.setString(3, attributeType);
-                else
-                    statement.setNull(3, NULL);
-                String attributeDesc = (String)map.get("attributeDesc");
-                if (attributeDesc != null && !attributeDesc.isEmpty())
-                    statement.setString(4, attributeDesc);
-                else
-                    statement.setNull(4, NULL);
+        String attributeId = (String)map.get("attributeId");
+        try (PreparedStatement statement = conn.prepareStatement(insertAttribute)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, attributeId);
+            String attributeType = (String)map.get("attributeType");
+            if(attributeType != null && !attributeType.isEmpty())
+                statement.setString(3, attributeType);
+            else
+                statement.setNull(3, NULL);
+            String attributeDesc = (String)map.get("attributeDesc");
+            if (attributeDesc != null && !attributeDesc.isEmpty())
+                statement.setString(4, attributeDesc);
+            else
+                statement.setNull(4, NULL);
 
-                statement.setString(5, (String)event.get(Constants.USER));
-                statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setString(5, (String)event.get(Constants.USER));
+            statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert attribute " + map.get("attributeId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("attributeId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert attribute " + attributeId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createAttribute for id {}: {}", attributeId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createAttribute for id {}: {}", attributeId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> updateAttribute(Map<String, Object> event) {
+    public void updateAttribute(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String updateAttribute = "UPDATE attribute_t SET attribute_desc = ?, attribute_type = ?," +
                 "update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? AND attribute_id = ?";
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(updateAttribute)) {
-                String attributeDesc = (String)map.get("attributeDesc");
-                if(attributeDesc != null && !attributeDesc.isEmpty()) {
-                    statement.setString(1, attributeDesc);
-                } else {
-                    statement.setNull(1, NULL);
-                }
-                String attributeType = (String)map.get("attributeType");
-                if(attributeType != null && !attributeType.isEmpty()) {
-                    statement.setString(2, attributeType);
-                } else {
-                    statement.setNull(2, NULL);
-                }
-                statement.setString(3, (String)event.get(Constants.USER));
-                statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+        String attributeId = (String)map.get("attributeId");
+        try (PreparedStatement statement = conn.prepareStatement(updateAttribute)) {
+            String attributeDesc = (String)map.get("attributeDesc");
+            if(attributeDesc != null && !attributeDesc.isEmpty()) {
+                statement.setString(1, attributeDesc);
+            } else {
+                statement.setNull(1, NULL);
+            }
+            String attributeType = (String)map.get("attributeType");
+            if(attributeType != null && !attributeType.isEmpty()) {
+                statement.setString(2, attributeType);
+            } else {
+                statement.setNull(2, NULL);
+            }
+            statement.setString(3, (String)event.get(Constants.USER));
+            statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
-                statement.setObject(5, UUID.fromString((String)event.get(Constants.HOST)));
-                String attributeId = (String)map.get("attributeId");
-                statement.setString(6, attributeId);
+            statement.setObject(5, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(6, attributeId);
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is updated for attribute " + attributeId);
-                }
-                conn.commit();
-                result = Success.of(attributeId);
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is updated for attribute " + attributeId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during updateAttribute for id {}: {}", attributeId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updateAttribute for id {}: {}", attributeId, e.getMessage(), e);
+            throw e;
         }
-        return result;
-
     }
 
     @Override
-    public Result<String> deleteAttribute(Map<String, Object> event) {
+    public void deleteAttribute(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String deleteGroup = "DELETE from attribute_t WHERE host_id = ? AND attribute_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("attributeId"));
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is deleted for attribute " + map.get("attributeId"));
-                }
-                conn.commit();
-                result = Success.of((String)event.get(Constants.USER));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        String attributeId = (String)map.get("attributeId");
+        try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, attributeId);
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is deleted for attribute " + attributeId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteAttribute for id {}: {}", attributeId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deleteAttribute for id {}: {}", attributeId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
@@ -4093,7 +3424,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> createAttributePermission(Map<String, Object> event) {
+    public void createAttributePermission(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String insertGroup =
                 """
                     INSERT INTO attribute_permission_t (host_id, attribute_id, attribute_value, endpoint_id, update_user, update_ts)
@@ -4115,49 +3446,34 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     )
                 """;
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            // no duplicate record, insert the user into database and write a success notification.
-            try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("attributeId"));
-                statement.setString(3, (String)map.get("attributeValue"));
-                statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(5, (String)map.get("apiId"));
-                statement.setString(6, (String)map.get("apiVersion"));
-                statement.setString(7, (String)map.get("endpoint"));
-                statement.setString(8, (String)event.get(Constants.USER));
-                statement.setObject(9, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+        String attributeId = (String)map.get("attributeId");
+        try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, attributeId);
+            statement.setString(3, (String)map.get("attributeValue"));
+            statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(5, (String)map.get("apiId"));
+            statement.setString(6, (String)map.get("apiVersion"));
+            statement.setString(7, (String)map.get("endpoint"));
+            statement.setString(8, (String)event.get(Constants.USER));
+            statement.setObject(9, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert attribute permission " + map.get("attributeId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("attributeId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert attribute permission " + attributeId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createAttributePermission for id {}: {}", attributeId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createAttributePermission for id {}: {}", attributeId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> updateAttributePermission(Map<String, Object> event) {
+    public void updateAttributePermission(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String updateGroup = """
                 UPDATE attribute_permission_t
                 SET
@@ -4185,51 +3501,36 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 WHERE host_id = ? AND attribute_id = ? AND api_id = ? AND api_version = ? AND endpoint = ?
                 """;
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
-                statement.setString(1, (String)map.get("attributeValue"));
-                statement.setString(2, (String)event.get(Constants.USER));
-                statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+        String attributeId = (String)map.get("attributeId");
+        try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
+            statement.setString(1, (String)map.get("attributeValue"));
+            statement.setString(2, (String)event.get(Constants.USER));
+            statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
-                statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(5, (String)map.get("attributeId"));
-                statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(5, attributeId);
+            statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
 
-                statement.setString(7, (String)map.get("apiId"));
-                statement.setString(8, (String)map.get("apiVersion"));
-                statement.setString(9, (String)map.get("endpoint"));
+            statement.setString(7, (String)map.get("apiId"));
+            statement.setString(8, (String)map.get("apiVersion"));
+            statement.setString(9, (String)map.get("endpoint"));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is updated for attribute permission " + map.get("attributeId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("attributeId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is updated for attribute permission " + attributeId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during updateAttributePermission for id {}: {}", attributeId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updateAttributePermission for id {}: {}", attributeId, e.getMessage(), e);
+            throw e;
         }
-        return result;
-
     }
 
     @Override
-    public Result<String> deleteAttributePermission(Map<String, Object> event) {
+    public void deleteAttributePermission(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String deleteGroup =
                 """
                     DELETE FROM attribute_permission_t gp
@@ -4246,191 +3547,127 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                           AND e.endpoint = ?
                       )
                 """;
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("attributeId"));
-                statement.setObject(3, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(4, (String)map.get("apiId"));
-                statement.setString(5, (String)map.get("apiVersion"));
-                statement.setString(6, (String)map.get("endpoint"));
+        String attributeId = (String)map.get("attributeId");
+        try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, attributeId);
+            statement.setObject(3, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(4, (String)map.get("apiId"));
+            statement.setString(5, (String)map.get("apiVersion"));
+            statement.setString(6, (String)map.get("endpoint"));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is deleted for attribute permission " + map.get("attributeId"));
-                }
-                conn.commit();
-                result = Success.of((String)event.get(Constants.USER));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is deleted for attribute permission " + attributeId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteAttributePermission for id {}: {}", attributeId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deleteAttributePermission for id {}: {}", attributeId, e.getMessage(), e);
+            throw e;
         }
-        return result;
-
     }
 
     @Override
-    public Result<String> createAttributeUser(Map<String, Object> event) {
+    public void createAttributeUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String insertGroup = "INSERT INTO attribute_user_t (host_id, attribute_id, attribute_value, user_id, start_ts, end_ts, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?,  ?, ?, ?)";
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            // no duplicate record, insert the user into database and write a success notification.
-            try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                String attributeId = (String)map.get("attributeId");
-                statement.setString(2, attributeId);
-                statement.setString(3, (String)map.get("attributeValue"));
-                String startTs = (String)map.get("startTs");
-                if(startTs != null && !startTs.isEmpty())
-                    statement.setObject(4, OffsetDateTime.parse(startTs));
-                else
-                    statement.setNull(4, NULL);
-                String endTs = (String)map.get("endTs");
-                if (endTs != null && !endTs.isEmpty()) {
-                    statement.setObject(5, OffsetDateTime.parse(endTs));
-                } else {
-                    statement.setNull(5, NULL);
-                }
-                statement.setString(6, (String)event.get(Constants.USER));
-                statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+        String attributeId = (String)map.get("attributeId");
+        try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, attributeId);
+            statement.setString(3, (String)map.get("attributeValue"));
+            String startTs = (String)map.get("startTs");
+            if(startTs != null && !startTs.isEmpty())
+                statement.setObject(4, OffsetDateTime.parse(startTs));
+            else
+                statement.setNull(4, NULL);
+            String endTs = (String)map.get("endTs");
+            if (endTs != null && !endTs.isEmpty()) {
+                statement.setObject(5, OffsetDateTime.parse(endTs));
+            } else {
+                statement.setNull(5, NULL);
+            }
+            statement.setString(6, (String)event.get(Constants.USER));
+            statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert attribute user " + attributeId);
-                }
-                conn.commit();
-                result = Success.of(attributeId);
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("failed to insert attribute user " + attributeId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createAttributeUser for id {}: {}", attributeId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createAttributeUser for id {}: {}", attributeId, e.getMessage(), e);
+            throw e;
         }
-        return result;
-
     }
 
     @Override
-    public Result<String> updateAttributeUser(Map<String, Object> event) {
+    public void updateAttributeUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String updateGroup = "UPDATE attribute_user_t SET attribute_value = ?, start_ts = ?, end_ts = ?, update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? AND attribute_id = ? AND user_id = ?";
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
+        String attributeId = (String)map.get("attributeId");
+        try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
+            statement.setString(1, (String)map.get("attributeValue"));
+            String startTs = (String)map.get("startTs");
+            if(startTs != null && !startTs.isEmpty())
+                statement.setObject(2, OffsetDateTime.parse(startTs));
+            else
+                statement.setNull(2, NULL);
+            String endTs = (String)map.get("endTs");
+            if (endTs != null && !endTs.isEmpty()) {
+                statement.setObject(3, OffsetDateTime.parse(endTs));
+            } else {
+                statement.setNull(3, NULL);
+            }
+            statement.setString(4, (String)event.get(Constants.USER));
+            statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(7, attributeId);
+            statement.setObject(8, UUID.fromString((String)event.get(Constants.USER)));
 
-            try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
-                statement.setString(1, (String)map.get("attributeValue"));
-                String startTs = (String)map.get("startTs");
-                if(startTs != null && !startTs.isEmpty())
-                    statement.setObject(2, OffsetDateTime.parse(startTs));
-                else
-                    statement.setNull(2, NULL);
-                String endTs = (String)map.get("endTs");
-                if (endTs != null && !endTs.isEmpty()) {
-                    statement.setObject(3, OffsetDateTime.parse(endTs));
-                } else {
-                    statement.setNull(3, NULL);
-                }
-                statement.setString(4, (String)event.get(Constants.USER));
-                statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
-                String attributeId = (String)map.get("attributeId");
-                statement.setString(7, attributeId);
-                statement.setObject(8, UUID.fromString((String)event.get(Constants.USER)));
-
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is updated for attribute user " + attributeId);
-                }
-                conn.commit();
-                result = Success.of(attributeId);
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is updated for attribute user " + attributeId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during updateAttributeUser for id {}: {}", attributeId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updateAttributeUser for id {}: {}", attributeId, e.getMessage(), e);
+            throw e;
         }
-        return result;
-
     }
 
     @Override
-    public Result<String> deleteAttributeUser(Map<String, Object> event) {
+    public void deleteAttributeUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String deleteGroup = "DELETE from attribute_user_t WHERE host_id = ? AND attribute_id = ? AND user_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("attributeId"));
-                statement.setObject(3, UUID.fromString((String)event.get(Constants.USER)));
+        String attributeId = (String)map.get("attributeId");
+        try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, attributeId);
+            statement.setObject(3, UUID.fromString((String)event.get(Constants.USER)));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is deleted for attribute user " + map.get("attributeId"));
-                }
-                conn.commit();
-                result = Success.of((String)event.get(Constants.USER));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is deleted for attribute user " + attributeId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteAttributeUser for id {}: {}", attributeId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deleteAttributeUser for id {}: {}", attributeId, e.getMessage(), e);
+            throw e;
         }
-        return result;
-
     }
 
     @Override
@@ -4513,7 +3750,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> createAttributeRowFilter(Map<String, Object> event) {
+    public void createAttributeRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String insertGroup =
                 """
                     INSERT INTO attribute_row_filter_t (
@@ -4549,52 +3786,37 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                         AND e.endpoint = ?             -- endpoint parameter
                 """;
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            // no duplicate record, insert the user into database and write a success notification.
-            try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("attributeId"));
-                statement.setString(3, (String)map.get("attributeValue"));
-                statement.setString(4, (String)map.get("colName"));
-                statement.setString(5, (String)map.get("operator"));
-                statement.setString(6, (String)map.get("colValue"));
-                statement.setString(7, (String)event.get(Constants.USER));
-                statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(9, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(10, (String)map.get("apiId"));
-                statement.setString(11, (String)map.get("apiVersion"));
-                statement.setString(12, (String)map.get("endpoint"));
+        String attributeId = (String)map.get("attributeId");
+        try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, attributeId);
+            statement.setString(3, (String)map.get("attributeValue"));
+            statement.setString(4, (String)map.get("colName"));
+            statement.setString(5, (String)map.get("operator"));
+            statement.setString(6, (String)map.get("colValue"));
+            statement.setString(7, (String)event.get(Constants.USER));
+            statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(9, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(10, (String)map.get("apiId"));
+            statement.setString(11, (String)map.get("apiVersion"));
+            statement.setString(12, (String)map.get("endpoint"));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert attribute row filter " + map.get("attributeId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("attributeId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert attribute row filter " + attributeId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createAttributeRowFilter for id {}: {}", attributeId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createAttributeRowFilter for id {}: {}", attributeId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> updateAttributeRowFilter(Map<String, Object> event) {
+    public void updateAttributeRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String updateGroup =
                 """
                         UPDATE attribute_row_filter_t arf
@@ -4620,50 +3842,36 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                             AND arf.attribute_id = ?
                 """;
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
-                statement.setString(1, (String)map.get("attributeValue"));
-                statement.setString(2, (String)map.get("apiId"));
-                statement.setString(3, (String)map.get("apiVersion"));
-                statement.setString(4, (String)map.get("endpoint"));
-                statement.setString(5, (String)map.get("colName"));
-                statement.setString(6, (String)map.get("operator"));
-                statement.setString(7, (String)map.get("colValue"));
-                statement.setString(8, (String)event.get(Constants.USER));
-                statement.setObject(9, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(10, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(11, (String)map.get("attributeId"));
+        String attributeId = (String)map.get("attributeId");
+        try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
+            statement.setString(1, (String)map.get("attributeValue"));
+            statement.setString(2, (String)map.get("apiId"));
+            statement.setString(3, (String)map.get("apiVersion"));
+            statement.setString(4, (String)map.get("endpoint"));
+            statement.setString(5, (String)map.get("colName"));
+            statement.setString(6, (String)map.get("operator"));
+            statement.setString(7, (String)map.get("colValue"));
+            statement.setString(8, (String)event.get(Constants.USER));
+            statement.setObject(9, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(10, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(11, attributeId);
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is updated for attribute row filter " + map.get("attributeId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("attributeId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is updated for attribute row filter " + attributeId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during updateAttributeRowFilter for id {}: {}", attributeId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updateAttributeRowFilter for id {}: {}", attributeId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> deleteAttributeRowFilter(Map<String, Object> event) {
+    public void deleteAttributeRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String deleteGroup =
                 """
                     DELETE FROM attribute_row_filter_t
@@ -4680,41 +3888,27 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                             AND e.endpoint = ?
                       )
                 """;
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("attributeId"));
-                statement.setObject(3, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(4, (String)map.get("apiId"));
-                statement.setString(5, (String)map.get("apiVersion"));
-                statement.setString(6, (String)map.get("endpoint"));
+        String attributeId = (String)map.get("attributeId");
+        try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, attributeId);
+            statement.setObject(3, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(4, (String)map.get("apiId"));
+            statement.setString(5, (String)map.get("apiVersion"));
+            statement.setString(6, (String)map.get("endpoint"));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is deleted for attribute row filter " + map.get("attributeId"));
-                }
-                conn.commit();
-                result = Success.of((String)event.get(Constants.USER));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is deleted for attribute row filter " + attributeId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteAttributeRowFilter for id {}: {}", attributeId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deleteAttributeRowFilter for id {}: {}", attributeId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
@@ -4795,7 +3989,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> createAttributeColFilter(Map<String, Object> event) {
+    public void createAttributeColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String insertGroup =
                 """
                     INSERT INTO attribute_col_filter_t (
@@ -4827,50 +4021,35 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                         AND e.endpoint = ?             -- endpoint parameter
                 """;
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            // no duplicate record, insert the user into database and write a success notification.
-            try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("attributeId"));
-                statement.setString(3, (String)map.get("attributeValue"));
-                statement.setString(4, (String)map.get("columns"));
-                statement.setString(5, (String)event.get(Constants.USER));
-                statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(7, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(8, (String)map.get("apiId"));
-                statement.setString(9, (String)map.get("apiVersion"));
-                statement.setString(10, (String)map.get("endpoint"));
+        String attributeId = (String)map.get("attributeId");
+        try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
+            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(2, attributeId);
+            statement.setString(3, (String)map.get("attributeValue"));
+            statement.setString(4, (String)map.get("columns"));
+            statement.setString(5, (String)event.get(Constants.USER));
+            statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(7, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(8, (String)map.get("apiId"));
+            statement.setString(9, (String)map.get("apiVersion"));
+            statement.setString(10, (String)map.get("endpoint"));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert attribute col filter " + map.get("attributeId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("attributeId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert attribute col filter " + attributeId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createAttributeColFilter for id {}: {}", attributeId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createAttributeColFilter for id {}: {}", attributeId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> updateAttributeColFilter(Map<String, Object> event) {
+    public void updateAttributeColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String updateGroup =
                 """
                     UPDATE attribute_col_filter_t acf
@@ -4894,48 +4073,34 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                         AND acf.attribute_id = ?
                 """;
 
-        Result<String> result = null;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
-                statement.setString(1, (String)map.get("attributeValue"));
-                statement.setString(2, (String)map.get("apiId"));
-                statement.setString(3, (String)map.get("apiVersion"));
-                statement.setString(4, (String)map.get("endpoint"));
-                statement.setString(5, (String)map.get("columns"));
-                statement.setString(6, (String)event.get(Constants.USER));
-                statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(8, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(9, (String)map.get("attributeId"));
+        String attributeId = (String)map.get("attributeId");
+        try (PreparedStatement statement = conn.prepareStatement(updateGroup)) {
+            statement.setString(1, (String)map.get("attributeValue"));
+            statement.setString(2, (String)map.get("apiId"));
+            statement.setString(3, (String)map.get("apiVersion"));
+            statement.setString(4, (String)map.get("endpoint"));
+            statement.setString(5, (String)map.get("columns"));
+            statement.setString(6, (String)event.get(Constants.USER));
+            statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(8, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(9, attributeId);
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is updated for attribute col filter " + map.get("attributeId"));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("attributeId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is updated for attribute col filter " + attributeId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during updateAttributeColFilter for id {}: {}", attributeId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updateAttributeColFilter for id {}: {}", attributeId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> deleteAttributeColFilter(Map<String, Object> event) {
+    public void deleteAttributeColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String deleteGroup =
                 """
                     DELETE FROM attribute_col_filter_t acf
@@ -4953,44 +4118,25 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                               AND e.endpoint = ?
                         )
                 """;
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
-                statement.setObject(1, UUID.fromString((String)map.get("hostId")));
-                statement.setString(2, (String)map.get("attributeId"));
-                statement.setString(3, (String)map.get("apiId"));
-                statement.setString(4, (String)map.get("apiVersion"));
-                statement.setString(5, (String)map.get("endpoint"));
+        String attributeId = (String)map.get("attributeId");
+        try (PreparedStatement statement = conn.prepareStatement(deleteGroup)) {
+            statement.setObject(1, UUID.fromString((String)map.get("hostId")));
+            statement.setString(2, attributeId);
+            statement.setString(3, (String)map.get("apiId"));
+            statement.setString(4, (String)map.get("apiVersion"));
+            statement.setString(5, (String)map.get("endpoint"));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("no record is deleted for attribute col filter " + map.get("attributeId"));
-                }
-                conn.commit();
-                result = Success.of((String)event.get(Constants.USER));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("no record is deleted for attribute col filter " + attributeId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteAttributeColFilter for id {}: {}", attributeId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deleteAttributeColFilter for id {}: {}", attributeId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
-
-
-
-
-
 }

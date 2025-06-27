@@ -1,21 +1,23 @@
 package net.lightapi.portal.db.persistence;
 
 import com.networknt.monad.Result;
+import java.sql.Connection; // Added import
+import java.sql.SQLException; // Added import
 import java.util.Map;
 
 public interface HostOrgPersistence {
-    Result<String> createOrg(Map<String, Object> event);
-    Result<String> updateOrg(Map<String, Object> event);
-    Result<String> deleteOrg(Map<String, Object> event);
+    void createOrg(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void updateOrg(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void deleteOrg(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getOrg(int offset, int limit, String domain, String orgName, String orgDesc, String orgOwner);
 
-    Result<String> createHost(Map<String, Object> event);
-    Result<String> updateHost(Map<String, Object> event);
-    Result<String> deleteHost(Map<String, Object> event);
-    Result<String> switchHost(Map<String, Object> event);
+    void createHost(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void updateHost(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void deleteHost(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void switchHost(Connection conn, Map<String, Object> event) throws SQLException, Exception; // Treated as an update-like operation
     Result<String> queryHostDomainById(String hostId);
     Result<String> queryHostById(String id);
-    Result<Map<String, Object>> queryHostByOwner(String owner); // Note: original returns Map
+    Result<Map<String, Object>> queryHostByOwner(String owner);
     Result<String> getHost(int offset, int limit, String hostId, String domain, String subDomain, String hostDesc, String hostOwner);
     Result<String> getHostByDomain(String domain, String subDomain, String hostDesc);
     Result<String> getHostLabel();

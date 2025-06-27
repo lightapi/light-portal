@@ -1,12 +1,15 @@
 package net.lightapi.portal.db.persistence;
 
 import com.networknt.monad.Result;
+
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.Map;
 
 public interface CategoryPersistence {
-    Result<String> createCategory(Map<String, Object> event);
-    Result<String> updateCategory(Map<String, Object> event);
-    Result<String> deleteCategory(Map<String, Object> event);
+    void createCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void updateCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void deleteCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getCategory(int offset, int limit, String hostId, String categoryId, String entityType, String categoryName, String categoryDesc, String parentCategoryId, String parentCategoryName, Integer sortOrder);
     Result<String> getCategoryLabel(String hostId);
     Result<String> getCategoryById(String categoryId);

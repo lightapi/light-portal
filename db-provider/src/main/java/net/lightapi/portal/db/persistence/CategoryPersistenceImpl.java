@@ -13,11 +13,16 @@ import net.lightapi.portal.db.util.NotificationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.*;
+import java.sql.Connection; // Added import
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException; // Added import
+import java.sql.Types;
 import java.time.OffsetDateTime;
 import java.util.*;
 
 import static com.networknt.db.provider.SqlDbStartupHook.ds;
+import static java.sql.Types.NULL; // Assuming NULL from Types.NULL is used
 
 public class CategoryPersistenceImpl implements CategoryPersistence {
     private static final Logger logger = LoggerFactory.getLogger(CategoryPersistenceImpl.class);
@@ -32,165 +37,134 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
     }
 
     @Override
-    public Result<String> createCategory(Map<String, Object> event) {
+    public void createCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "INSERT INTO category_t(host_id, category_id, entity_type, category_name, " +
                 "category_desc, parent_category_id, sort_order, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                String hostId = (String)map.get("hostId");
-                if (hostId != null && !hostId.isBlank()) {
-                    statement.setObject(1, UUID.fromString(hostId));
-                } else {
-                    statement.setNull(1, Types.OTHER);
-                }
+        String categoryId = (String)map.get("categoryId"); // For logging/exceptions
 
-                statement.setObject(2, UUID.fromString((String)map.get("categoryId")));
-                statement.setString(3, (String)map.get("entityType"));
-                statement.setString(4, (String)map.get("categoryName"));
-
-                String categoryDesc = (String)map.get("categoryDesc");
-                if (categoryDesc != null && !categoryDesc.isBlank()) {
-                    statement.setString(5, (String) map.get("categoryDesc"));
-                } else {
-                    statement.setNull(5, Types.VARCHAR);
-                }
-                String parentCategoryId = (String)map.get("parentCategoryId");
-                if (parentCategoryId != null && !parentCategoryId.isBlank()) {
-                    statement.setObject(6, UUID.fromString((String) map.get("parentCategoryId")));
-                } else {
-                    statement.setNull(6, Types.OTHER);
-                }
-                Number sortOrder = (Number)map.get("sortOrder");
-                if (sortOrder != null) {
-                    statement.setInt(7, sortOrder.intValue());
-                } else {
-                    statement.setNull(7, Types.INTEGER);
-                }
-                statement.setString(8, (String)event.get(Constants.USER));
-                statement.setObject(9, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to insert the category with id " + map.get("categoryId"));
-                }
-                conn.commit();
-                result =  Success.of((String)map.get("categoryId"));
-                notificationService.insertNotification(event, true, null);
-
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) { // Catch other potential runtime exceptions
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            String hostId = (String)map.get("hostId");
+            if (hostId != null && !hostId.isBlank()) {
+                statement.setObject(1, UUID.fromString(hostId));
+            } else {
+                statement.setNull(1, Types.OTHER);
             }
+
+            statement.setObject(2, UUID.fromString(categoryId));
+            statement.setString(3, (String)map.get("entityType"));
+            statement.setString(4, (String)map.get("categoryName"));
+
+            String categoryDesc = (String)map.get("categoryDesc");
+            if (categoryDesc != null && !categoryDesc.isBlank()) {
+                statement.setString(5, categoryDesc);
+            } else {
+                statement.setNull(5, Types.VARCHAR);
+            }
+            String parentCategoryId = (String)map.get("parentCategoryId");
+            if (parentCategoryId != null && !parentCategoryId.isBlank()) {
+                statement.setObject(6, UUID.fromString(parentCategoryId));
+            } else {
+                statement.setNull(6, Types.OTHER);
+            }
+            Number sortOrder = (Number)map.get("sortOrder");
+            if (sortOrder != null) {
+                statement.setInt(7, sortOrder.intValue());
+            } else {
+                statement.setNull(7, Types.INTEGER);
+            }
+            statement.setString(8, (String)event.get(Constants.USER));
+            statement.setObject(9, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert the category with id " + categoryId);
+            }
+            notificationService.insertNotification(event, true, null);
+
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createCategory for id {}: {}", categoryId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) { // Catch other potential runtime exceptions
+            logger.error("Exception during createCategory for id {}: {}", categoryId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
-    public Result<String> updateCategory(Map<String, Object> event) {
+    public void updateCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "UPDATE category_t SET category_name = ?, category_desc = ?, parent_category_id = ?, " +
                 "sort_order = ?, update_user = ?, update_ts = ? WHERE category_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setString(1, (String)map.get("categoryName"));
+        String categoryId = (String)map.get("categoryId"); // For logging/exceptions
 
-                String categoryDesc = (String)map.get("categoryDesc");
-                if (categoryDesc != null && !categoryDesc.isBlank()) {
-                    statement.setString(2, categoryDesc);
-                } else {
-                    statement.setNull(2, Types.VARCHAR);
-                }
-                String parentCategoryId = (String)map.get("parentCategoryId");
-                if (parentCategoryId != null && !parentCategoryId.isBlank()) {
-                    statement.setObject(3, UUID.fromString((String) map.get("parentCategoryId")));
-                } else {
-                    statement.setNull(3, Types.OTHER);
-                }
-                Number sortOrder = (Number)map.get("sortOrder");
-                if (sortOrder != null) {
-                    statement.setInt(4, sortOrder.intValue());
-                } else {
-                    statement.setNull(4, Types.INTEGER);
-                }
-                statement.setString(5, (String)event.get(Constants.USER));
-                statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(7, UUID.fromString((String)map.get("categoryId")));
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setString(1, (String)map.get("categoryName"));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to update the category with id " + map.get("categoryId"));
-                }
-                conn.commit();
-                result =  Success.of((String)map.get("categoryId"));
-                notificationService.insertNotification(event, true, null);
-
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) { // Catch other potential runtime exceptions
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            String categoryDesc = (String)map.get("categoryDesc");
+            if (categoryDesc != null && !categoryDesc.isBlank()) {
+                statement.setString(2, categoryDesc);
+            } else {
+                statement.setNull(2, Types.VARCHAR);
             }
+            String parentCategoryId = (String)map.get("parentCategoryId");
+            if (parentCategoryId != null && !parentCategoryId.isBlank()) {
+                statement.setObject(3, UUID.fromString(parentCategoryId));
+            } else {
+                statement.setNull(3, Types.OTHER);
+            }
+            Number sortOrder = (Number)map.get("sortOrder");
+            if (sortOrder != null) {
+                statement.setInt(4, sortOrder.intValue());
+            } else {
+                statement.setNull(4, Types.INTEGER);
+            }
+            statement.setString(5, (String)event.get(Constants.USER));
+            statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setObject(7, UUID.fromString(categoryId));
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to update the category with id " + categoryId);
+            }
+            notificationService.insertNotification(event, true, null);
+
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during updateCategory for id {}: {}", categoryId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) { // Catch other potential runtime exceptions
+            logger.error("Exception during updateCategory for id {}: {}", categoryId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
-    public Result<String> deleteCategory(Map<String, Object> event) {
+    public void deleteCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "DELETE FROM category_t WHERE category_id = ?";
-        Result<String> result;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String categoryId = (String) map.get("categoryId");
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(sql)) {
-                statement.setObject(1, UUID.fromString(categoryId));
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException("failed to delete the category with id " + categoryId);
-                }
-                conn.commit();
-                result =  Success.of(categoryId);
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) { // Catch other potential runtime exceptions
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(categoryId));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to delete the category with id " + categoryId);
             }
+            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteCategory for id {}: {}", categoryId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw SQLException
+        } catch (Exception e) { // Catch other potential runtime exceptions
+            logger.error("Exception during deleteCategory for id {}: {}", categoryId, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage());
+            throw e; // Re-throw generic Exception
         }
-        return result;
     }
 
     @Override
@@ -360,6 +334,8 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
             }
             if (map != null && !map.isEmpty()) {
                 result = Success.of(JsonMapper.toJson(map));
+            } else {
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "category", categoryId));
             }
         } catch (SQLException e) {
             logger.error("SQLException:", e);
@@ -415,6 +391,8 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
             }
             if (map != null && !map.isEmpty()) {
                 result = Success.of(JsonMapper.toJson(map));
+            } else {
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "category by name", categoryName + " and hostId " + hostId));
             }
         } catch (SQLException e) {
             logger.error("SQLException:", e);
@@ -559,7 +537,10 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
 
         // 1. Populate the lookup map for efficient access by categoryId
         for (Map<String, Object> category : categoryList) {
-            categoryLookup.put((String) category.get("categoryId"), category);
+            String categoryId = (String) category.get("categoryId");
+            if (categoryId != null) { // Ensure categoryId is not null for lookup
+                categoryLookup.put(categoryId, category);
+            }
         }
 
         // 2. Iterate again to build the tree structure
@@ -568,12 +549,12 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
             if (parentCategoryId != null && !parentCategoryId.isEmpty()) {
                 // If it has a parent, add it as a child to the parent category
                 Map<String, Object> parentCategory = categoryLookup.get(parentCategoryId);
-                if (parentCategory != null && !parentCategory.isEmpty()) {
+                if (parentCategory != null) { // Check if parentCategory exists in the lookup
                     ((List<Map<String, Object>>) parentCategory.get("children")).add(category);
                 } else {
-                    logger.warn("Parent category not found for categoryId: {}, parentCategoryId: {}", category.get("categoryId"), parentCategoryId);
-                    // Handle missing parent category (e.g., log warning, add to root, skip, etc.)
-                    rootCategories.add(category); // Add to root as fallback if parent is missing?
+                    logger.warn("Parent category with ID '{}' not found for categoryId: '{}'. Adding to root.", parentCategoryId, category.get("categoryId"));
+                    // Handle missing parent category by adding the current category to the root
+                    rootCategories.add(category);
                 }
             } else {
                 // If no parent, it's a root category

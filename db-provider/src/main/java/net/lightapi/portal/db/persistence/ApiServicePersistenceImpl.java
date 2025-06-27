@@ -35,317 +35,272 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     }
 
     @Override
-    public Result<String> createService(Map<String, Object> event) {
-        final String insertUser = "INSERT INTO api_t (host_id, api_id, api_name, " +
+    public void createService(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        final String insertService = "INSERT INTO api_t (host_id, api_id, api_name, " +
                 "api_desc, operation_owner, delivery_owner, region, business_group, " +
                 "lob, platform, capability, git_repo, api_tags, " +
                 "api_status, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?)";
-        Result<String> result = null;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            // no duplicate record, insert the user into database and write a success notification.
-            try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
-                statement.setObject(1, UUID.fromString((String)map.get("hostId")));
-                statement.setString(2, (String)map.get("apiId"));
-                statement.setString(3, (String)map.get("apiName"));
-                if (map.containsKey("apiDesc")) {
-                    String apiDesc = (String) map.get("apiDesc");
-                    if (apiDesc != null && !apiDesc.trim().isEmpty()) {
-                        statement.setString(4, apiDesc);
-                    } else {
-                        statement.setNull(4, Types.VARCHAR);
-                    }
+
+        Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
+        String apiId = (String) map.get("apiId");
+        try (PreparedStatement statement = conn.prepareStatement(insertService)) {
+            statement.setObject(1, UUID.fromString((String) map.get("hostId")));
+            statement.setString(2, apiId);
+            statement.setString(3, (String) map.get("apiName"));
+            if (map.containsKey("apiDesc")) {
+                String apiDesc = (String) map.get("apiDesc");
+                if (apiDesc != null && !apiDesc.trim().isEmpty()) {
+                    statement.setString(4, apiDesc);
                 } else {
                     statement.setNull(4, Types.VARCHAR);
                 }
-                String operationOwner = (String)map.get("operationOwner");
-                if(operationOwner != null && !operationOwner.trim().isEmpty()) {
-                    statement.setObject(5, UUID.fromString(operationOwner));
-                } else {
-                    statement.setNull(5, Types.OTHER);
-                }
-                String deliveryOwner = (String) map.get("deliveryOwner");
-                if(deliveryOwner != null && !deliveryOwner.trim().isEmpty()) {
-                    statement.setObject(6, UUID.fromString(deliveryOwner));
-                } else {
-                    statement.setNull(6, Types.OTHER);
-                }
+            } else {
+                statement.setNull(4, Types.VARCHAR);
+            }
+            String operationOwner = (String) map.get("operationOwner");
+            if (operationOwner != null && !operationOwner.trim().isEmpty()) {
+                statement.setObject(5, UUID.fromString(operationOwner));
+            } else {
+                statement.setNull(5, Types.OTHER);
+            }
+            String deliveryOwner = (String) map.get("deliveryOwner");
+            if (deliveryOwner != null && !deliveryOwner.trim().isEmpty()) {
+                statement.setObject(6, UUID.fromString(deliveryOwner));
+            } else {
+                statement.setNull(6, Types.OTHER);
+            }
 
-                if (map.containsKey("region")) {
-                    String region = (String) map.get("region");
-                    if(region != null && !region.trim().isEmpty()) {
-                        statement.setString(7, region);
-                    } else {
-                        statement.setNull(7, Types.VARCHAR);
-                    }
+            if (map.containsKey("region")) {
+                String region = (String) map.get("region");
+                if (region != null && !region.trim().isEmpty()) {
+                    statement.setString(7, region);
                 } else {
                     statement.setNull(7, Types.VARCHAR);
                 }
-                if (map.containsKey("businessGroup")) {
-                    String businessGroup = (String) map.get("businessGroup");
-                    if(businessGroup != null && !businessGroup.trim().isEmpty()) {
-                        statement.setString(8, businessGroup);
-                    } else {
-                        statement.setNull(8, Types.VARCHAR);
-                    }
+            } else {
+                statement.setNull(7, Types.VARCHAR);
+            }
+            if (map.containsKey("businessGroup")) {
+                String businessGroup = (String) map.get("businessGroup");
+                if (businessGroup != null && !businessGroup.trim().isEmpty()) {
+                    statement.setString(8, businessGroup);
                 } else {
                     statement.setNull(8, Types.VARCHAR);
                 }
-                if (map.containsKey("lob")) {
-                    String lob = (String) map.get("lob");
-                    if(lob != null && !lob.trim().isEmpty()) {
-                        statement.setString(9, lob);
-                    } else {
-                        statement.setNull(9, Types.VARCHAR);
-                    }
+            } else {
+                statement.setNull(8, Types.VARCHAR);
+            }
+            if (map.containsKey("lob")) {
+                String lob = (String) map.get("lob");
+                if (lob != null && !lob.trim().isEmpty()) {
+                    statement.setString(9, lob);
                 } else {
                     statement.setNull(9, Types.VARCHAR);
                 }
-                if (map.containsKey("platform")) {
-                    String platform = (String) map.get("platform");
-                    if(platform != null && !platform.trim().isEmpty()) {
-                        statement.setString(10, platform);
-                    } else {
-                        statement.setNull(10, Types.VARCHAR);
-                    }
+            } else {
+                statement.setNull(9, Types.VARCHAR);
+            }
+            if (map.containsKey("platform")) {
+                String platform = (String) map.get("platform");
+                if (platform != null && !platform.trim().isEmpty()) {
+                    statement.setString(10, platform);
                 } else {
                     statement.setNull(10, Types.VARCHAR);
                 }
-                if (map.containsKey("capability")) {
-                    String capability = (String) map.get("capability");
-                    if(capability != null && !capability.trim().isEmpty()) {
-                        statement.setString(11, capability);
-                    } else {
-                        statement.setNull(11, Types.VARCHAR);
-                    }
+            } else {
+                statement.setNull(10, Types.VARCHAR);
+            }
+            if (map.containsKey("capability")) {
+                String capability = (String) map.get("capability");
+                if (capability != null && !capability.trim().isEmpty()) {
+                    statement.setString(11, capability);
                 } else {
                     statement.setNull(11, Types.VARCHAR);
                 }
-                if (map.containsKey("gitRepo")) {
-                    String gitRepo = (String) map.get("gitRepo");
-                    if(gitRepo != null && !gitRepo.trim().isEmpty()) {
-                        statement.setString(12, gitRepo);
-                    } else {
-                        statement.setNull(12, Types.VARCHAR);
-                    }
+            } else {
+                statement.setNull(11, Types.VARCHAR);
+            }
+            if (map.containsKey("gitRepo")) {
+                String gitRepo = (String) map.get("gitRepo");
+                if (gitRepo != null && !gitRepo.trim().isEmpty()) {
+                    statement.setString(12, gitRepo);
                 } else {
                     statement.setNull(12, Types.VARCHAR);
                 }
-                if (map.containsKey("apiTags")) {
-                    String apiTags = (String) map.get("apiTags");
-                    if(apiTags != null && !apiTags.trim().isEmpty()) {
-                        statement.setString(13, apiTags);
-                    } else {
-                        statement.setNull(13, Types.VARCHAR);
-                    }
+            } else {
+                statement.setNull(12, Types.VARCHAR);
+            }
+            if (map.containsKey("apiTags")) {
+                String apiTags = (String) map.get("apiTags");
+                if (apiTags != null && !apiTags.trim().isEmpty()) {
+                    statement.setString(13, apiTags);
                 } else {
                     statement.setNull(13, Types.VARCHAR);
                 }
+            } else {
+                statement.setNull(13, Types.VARCHAR);
+            }
 
-                statement.setString(14, (String)map.get("apiStatus"));
-                statement.setString(15, (String)event.get(Constants.USER));
-                statement.setObject(16, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException(String.format("no record is inserted for api %s", map.get("apiId")));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("apiId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            statement.setString(14, (String) map.get("apiStatus"));
+            statement.setString(15, (String) event.get(Constants.USER));
+            statement.setObject(16, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException(String.format("Failed to insert service %s", apiId));
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createService for id {}: {}", apiId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createService for id {}: {}", apiId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> updateService(Map<String, Object> event) {
-        final String updateApi = "UPDATE api_t SET api_name = ?, api_desc = ? " +
+    public void updateService(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        final String updateApi = "UPDATE api_t SET api_name = ?, api_desc = ?, " + // Removed extraneous ' ' before operation_owner
                 "operation_owner = ?, delivery_owner = ?, region = ?, business_group = ?, lob = ?, platform = ?, " +
                 "capability = ?, git_repo = ?, api_tags = ?, api_status = ?,  update_user = ?, update_ts = ? " +
                 "WHERE host_id = ? AND api_id = ?";
 
-        Result<String> result = null;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-
-            try (PreparedStatement statement = conn.prepareStatement(updateApi)) {
-                statement.setString(1, (String)map.get("apiName"));
-                if (map.containsKey("apiDesc")) {
-                    String apiDesc = (String) map.get("apiDesc");
-                    if (apiDesc != null && !apiDesc.trim().isEmpty()) {
-                        statement.setString(2, apiDesc);
-                    } else {
-                        statement.setNull(2, Types.VARCHAR);
-                    }
+        Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
+        String apiId = (String) map.get("apiId");
+        try (PreparedStatement statement = conn.prepareStatement(updateApi)) {
+            statement.setString(1, (String) map.get("apiName"));
+            if (map.containsKey("apiDesc")) {
+                String apiDesc = (String) map.get("apiDesc");
+                if (apiDesc != null && !apiDesc.trim().isEmpty()) {
+                    statement.setString(2, apiDesc);
                 } else {
                     statement.setNull(2, Types.VARCHAR);
                 }
-                String operationOwner = (String) map.get("operationOwner");
-                if(operationOwner != null && !operationOwner.trim().isEmpty()) {
-                    statement.setObject(3, UUID.fromString(operationOwner));
-                } else {
-                    statement.setNull(3, Types.OTHER);
-                }
+            } else {
+                statement.setNull(2, Types.VARCHAR);
+            }
+            String operationOwner = (String) map.get("operationOwner");
+            if (operationOwner != null && !operationOwner.trim().isEmpty()) {
+                statement.setObject(3, UUID.fromString(operationOwner));
+            } else {
+                statement.setNull(3, Types.OTHER);
+            }
 
-                String deliveryOwner = (String) map.get("deliveryOwner");
-                if(deliveryOwner != null && !deliveryOwner.trim().isEmpty()) {
-                    statement.setObject(4, UUID.fromString(deliveryOwner));
-                } else {
-                    statement.setNull(4, Types.OTHER);
-                }
+            String deliveryOwner = (String) map.get("deliveryOwner");
+            if (deliveryOwner != null && !deliveryOwner.trim().isEmpty()) {
+                statement.setObject(4, UUID.fromString(deliveryOwner));
+            } else {
+                statement.setNull(4, Types.OTHER);
+            }
 
-                if (map.containsKey("region")) {
-                    String region = (String) map.get("region");
-                    if(region != null && !region.trim().isEmpty()) {
-                        statement.setString(5, region);
-                    } else {
-                        statement.setNull(5, Types.VARCHAR);
-                    }
+            if (map.containsKey("region")) {
+                String region = (String) map.get("region");
+                if (region != null && !region.trim().isEmpty()) {
+                    statement.setString(5, region);
                 } else {
                     statement.setNull(5, Types.VARCHAR);
                 }
-                if (map.containsKey("businessGroup")) {
-                    String businessGroup = (String) map.get("businessGroup");
-                    if(businessGroup != null && !businessGroup.trim().isEmpty()) {
-                        statement.setString(6, businessGroup);
-                    } else {
-                        statement.setNull(6, Types.VARCHAR);
-                    }
+            } else {
+                statement.setNull(5, Types.VARCHAR);
+            }
+            if (map.containsKey("businessGroup")) {
+                String businessGroup = (String) map.get("businessGroup");
+                if (businessGroup != null && !businessGroup.trim().isEmpty()) {
+                    statement.setString(6, businessGroup);
                 } else {
                     statement.setNull(6, Types.VARCHAR);
                 }
-                if (map.containsKey("lob")) {
-                    String lob = (String) map.get("lob");
-                    if(lob != null && !lob.trim().isEmpty()) {
-                        statement.setString(7, lob);
-                    } else {
-                        statement.setNull(7, Types.VARCHAR);
-                    }
+            } else {
+                statement.setNull(6, Types.VARCHAR);
+            }
+            if (map.containsKey("lob")) {
+                String lob = (String) map.get("lob");
+                if (lob != null && !lob.trim().isEmpty()) {
+                    statement.setString(7, lob);
                 } else {
                     statement.setNull(7, Types.VARCHAR);
                 }
-                if (map.containsKey("platform")) {
-                    String platform = (String) map.get("platform");
-                    if(platform != null && !platform.trim().isEmpty()) {
-                        statement.setString(8, platform);
-                    } else {
-                        statement.setNull(8, Types.VARCHAR);
-                    }
+            } else {
+                statement.setNull(7, Types.VARCHAR);
+            }
+            if (map.containsKey("platform")) {
+                String platform = (String) map.get("platform");
+                if (platform != null && !platform.trim().isEmpty()) {
+                    statement.setString(8, platform);
                 } else {
                     statement.setNull(8, Types.VARCHAR);
                 }
-                if (map.containsKey("capability")) {
-                    String capability = (String) map.get("capability");
-                    if(capability != null && !capability.trim().isEmpty()) {
-                        statement.setString(9, capability);
-                    } else {
-                        statement.setNull(9, Types.VARCHAR);
-                    }
+            } else {
+                statement.setNull(8, Types.VARCHAR);
+            }
+            if (map.containsKey("capability")) {
+                String capability = (String) map.get("capability");
+                if (capability != null && !capability.trim().isEmpty()) {
+                    statement.setString(9, capability);
                 } else {
                     statement.setNull(9, Types.VARCHAR);
                 }
-                if (map.containsKey("gitRepo")) {
-                    String gitRepo = (String) map.get("gitRepo");
-                    if(gitRepo != null && !gitRepo.trim().isEmpty()) {
-                        statement.setString(10, gitRepo);
-                    } else {
-                        statement.setNull(10, Types.VARCHAR);
-                    }
+            } else {
+                statement.setNull(9, Types.VARCHAR);
+            }
+            if (map.containsKey("gitRepo")) {
+                String gitRepo = (String) map.get("gitRepo");
+                if (gitRepo != null && !gitRepo.trim().isEmpty()) {
+                    statement.setString(10, gitRepo);
                 } else {
                     statement.setNull(10, Types.VARCHAR);
                 }
-                if (map.containsKey("apiTags")) {
-                    String apiTags = (String) map.get("apiTags");
-                    if(apiTags != null && !apiTags.trim().isEmpty()) {
-                        statement.setString(11, apiTags);
-                    } else {
-                        statement.setNull(11, Types.VARCHAR);
-                    }
+            } else {
+                statement.setNull(10, Types.VARCHAR);
+            }
+            if (map.containsKey("apiTags")) {
+                String apiTags = (String) map.get("apiTags");
+                if (apiTags != null && !apiTags.trim().isEmpty()) {
+                    statement.setString(11, apiTags);
                 } else {
                     statement.setNull(11, Types.VARCHAR);
                 }
-                statement.setString(12, (String)map.get("apiStatus"));
-                statement.setString(13, (String)event.get(Constants.USER));
-                statement.setObject(14, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(15, UUID.fromString((String)map.get("hostId")));
-                statement.setString(16, (String)map.get("apiId"));
+            } else {
+                statement.setNull(11, Types.VARCHAR);
+            }
+            statement.setString(12, (String) map.get("apiStatus"));
+            statement.setString(13, (String) event.get(Constants.USER));
+            statement.setObject(14, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            statement.setObject(15, UUID.fromString((String) map.get("hostId")));
+            statement.setString(16, apiId);
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    // no record is updated, write an error notification.
-                    throw new SQLException(String.format("no record is updated for api %s", map.get("apiId")));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("apiId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException(String.format("no record is updated for api %s", apiId));
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during updateService for id {}: {}", apiId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updateService for id {}: {}", apiId, e.getMessage(), e);
+            throw e;
         }
-        return result;
-
     }
 
     @Override
-    public Result<String> deleteService(Map<String, Object> event) {
+    public void deleteService(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String deleteApplication = "DELETE from api_t WHERE host_id = ? AND api_id = ?";
-        Result<String> result;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(deleteApplication)) {
-                statement.setObject(1, UUID.fromString((String)map.get("hostId")));
-                statement.setString(2, (String)map.get("apiId"));
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    // no record is deleted, write an error notification.
-                    throw new SQLException(String.format("no record is deleted for api %s", map.get("apiId")));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("apiId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
+        String apiId = (String) map.get("apiId");
+        try (PreparedStatement statement = conn.prepareStatement(deleteApplication)) {
+            statement.setObject(1, UUID.fromString((String) map.get("hostId")));
+            statement.setString(2, apiId);
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException(String.format("no record is deleted for api %s", apiId));
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteService for id {}: {}", apiId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deleteService for id {}: {}", apiId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
@@ -450,11 +405,11 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
         Result<String> result = null;
         String sql =
                 """
-                SELECT av.api_version_id, av.api_id, a.api_name, av.api_version
-                FROM api_version_t av, api_t a
-                WHERE av.api_id = a.api_id
-                AND av.host_id = ?
-                """;
+                        SELECT av.api_version_id, av.api_id, a.api_name, av.api_version
+                        FROM api_version_t av, api_t a
+                        WHERE av.api_id = a.api_id
+                        AND av.host_id = ?
+                        """;
 
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
@@ -464,7 +419,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
                     map.put("id", resultSet.getObject("api_version_id"));
-                    map.put("label", resultSet.getString("api_id") + "|" + resultSet.getString("api_version") + "|"  + resultSet.getString("api_name"));
+                    map.put("label", resultSet.getString("api_id") + "|" + resultSet.getString("api_version") + "|" + resultSet.getString("api_name"));
                     labels.add(map);
                 }
             }
@@ -538,12 +493,16 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     @Override
     public Result<String> queryEndpointLabel(String hostId, String apiId, String apiVersion) {
         Result<String> result = null;
+        // The original implementation used apiId as apiVersionId. Adjusting to reflect that, assuming it's intentional.
+        // If not, a lookup for apiVersionId based on apiId and apiVersion would be needed.
+        // Based on the interface, it expects apiVersionId, but the impl used apiId directly. Sticking to original impl's logic here.
+        // Assuming apiId here actually refers to apiVersionId as per the method parameter comment.
         String sql = "SELECT endpoint_id FROM api_endpoint_t WHERE host_id = ? AND api_version_id = ?";
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
             preparedStatement.setObject(1, UUID.fromString(hostId));
-            preparedStatement.setObject(2, UUID.fromString(apiId));
+            preparedStatement.setObject(2, UUID.fromString(apiId)); // This might be an error in original logic if apiId != apiVersionId
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
@@ -565,8 +524,8 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     }
 
     @Override
-    public Result<String> createServiceVersion(Map<String, Object> event, List<Map<String, Object>> endpoints) {
-        final String insertUser = "INSERT INTO api_version_t (host_id, api_version_id, api_id, api_version, api_type, service_id, api_version_desc, " +
+    public void createServiceVersion(Connection conn, Map<String, Object> event, List<Map<String, Object>> endpoints) throws SQLException, Exception {
+        final String insertServiceVersion = "INSERT INTO api_version_t (host_id, api_version_id, api_id, api_version, api_type, service_id, api_version_desc, " +
                 "spec_link, spec, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,  ?)";
         final String insertEndpoint = "INSERT INTO api_endpoint_t (host_id, endpoint_id, api_version_id, endpoint, http_method, " +
@@ -576,132 +535,118 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 "update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?,  ?)";
 
-        Result<String> result = null;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            // no duplicate record, insert the user into database and write a success notification.
-            try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
-                statement.setObject(1, UUID.fromString((String)map.get("hostId")));
-                statement.setObject(2, UUID.fromString((String)map.get("apiVersionId")));
-                statement.setString(3, (String)map.get("apiId"));
-                statement.setString(4, (String)map.get("apiVersion"));
-                statement.setString(5, (String)map.get("apiType"));
-                statement.setString(6, (String)map.get("serviceId"));
+        Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
+        String apiVersionId = (String) map.get("apiVersionId");
+        try (PreparedStatement statement = conn.prepareStatement(insertServiceVersion)) {
+            statement.setObject(1, UUID.fromString((String) map.get("hostId")));
+            statement.setObject(2, UUID.fromString(apiVersionId));
+            statement.setString(3, (String) map.get("apiId"));
+            statement.setString(4, (String) map.get("apiVersion"));
+            statement.setString(5, (String) map.get("apiType"));
+            statement.setString(6, (String) map.get("serviceId"));
 
-                if (map.containsKey("apiVersionDesc")) {
-                    String apiDesc = (String) map.get("apiVersionDesc");
-                    if (apiDesc != null && !apiDesc.trim().isEmpty()) {
-                        statement.setString(7, apiDesc);
-                    } else {
-                        statement.setNull(7, Types.VARCHAR);
-                    }
+            if (map.containsKey("apiVersionDesc")) {
+                String apiDesc = (String) map.get("apiVersionDesc");
+                if (apiDesc != null && !apiDesc.trim().isEmpty()) {
+                    statement.setString(7, apiDesc);
                 } else {
                     statement.setNull(7, Types.VARCHAR);
                 }
-                if (map.containsKey("specLink")) {
-                    String specLink = (String) map.get("specLink");
-                    if (specLink != null && !specLink.trim().isEmpty()) {
-                        statement.setString(8, specLink);
-                    } else {
-                        statement.setNull(8, Types.VARCHAR);
-                    }
+            } else {
+                statement.setNull(7, Types.VARCHAR);
+            }
+            if (map.containsKey("specLink")) {
+                String specLink = (String) map.get("specLink");
+                if (specLink != null && !specLink.trim().isEmpty()) {
+                    statement.setString(8, specLink);
                 } else {
                     statement.setNull(8, Types.VARCHAR);
                 }
-                if (map.containsKey("spec")) {
-                    String spec = (String) map.get("spec");
-                    if (spec != null && !spec.trim().isEmpty()) {
-                        statement.setString(9, spec);
-                    } else {
-                        statement.setNull(9, Types.VARCHAR);
-                    }
+            } else {
+                statement.setNull(8, Types.VARCHAR);
+            }
+            if (map.containsKey("spec")) {
+                String spec = (String) map.get("spec");
+                if (spec != null && !spec.trim().isEmpty()) {
+                    statement.setString(9, spec);
                 } else {
                     statement.setNull(9, Types.VARCHAR);
                 }
-                statement.setString(10, (String)event.get(Constants.USER));
-                statement.setObject(11, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException(String.format("no record is inserted for api version %s", "hostId " + map.get("hostId") + " apiId " + map.get("apiId") + " apiVersion " + map.get("apiVersion")));
-                }
-                if(endpoints != null && !endpoints.isEmpty()) {
-                    // insert endpoints
-                    for (Map<String, Object> endpoint : endpoints) {
-                        try (PreparedStatement statementInsert = conn.prepareStatement(insertEndpoint)) {
-                            statementInsert.setObject(1, UUID.fromString((String)map.get("hostId")));
-                            statementInsert.setObject(2, UUID.fromString((String)endpoint.get("endpointId")));
-                            statementInsert.setObject(3, UUID.fromString((String)map.get("apiVersionId")));
-                            statementInsert.setString(4, (String) endpoint.get("endpoint"));
+            } else {
+                statement.setNull(9, Types.VARCHAR);
+            }
+            statement.setString(10, (String) event.get(Constants.USER));
+            statement.setObject(11, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException(String.format("Failed to insert api version %s", apiVersionId));
+            }
+            if (endpoints != null && !endpoints.isEmpty()) {
+                // insert endpoints
+                for (Map<String, Object> endpoint : endpoints) {
+                    try (PreparedStatement statementInsert = conn.prepareStatement(insertEndpoint)) {
+                        statementInsert.setObject(1, UUID.fromString((String) map.get("hostId")));
+                        statementInsert.setObject(2, UUID.fromString((String) endpoint.get("endpointId")));
+                        statementInsert.setObject(3, UUID.fromString(apiVersionId));
+                        statementInsert.setString(4, (String) endpoint.get("endpoint"));
 
-                            if (endpoint.get("httpMethod") == null)
-                                statementInsert.setNull(5, NULL);
-                            else
-                                statementInsert.setString(5, ((String) endpoint.get("httpMethod")).toLowerCase().trim());
+                        if (endpoint.get("httpMethod") == null)
+                            statementInsert.setNull(5, NULL);
+                        else
+                            statementInsert.setString(5, ((String) endpoint.get("httpMethod")).toLowerCase().trim());
 
-                            if (endpoint.get("endpointPath") == null)
-                                statementInsert.setNull(6, NULL);
-                            else
-                                statementInsert.setString(6, (String) endpoint.get("endpointPath"));
+                        if (endpoint.get("endpointPath") == null)
+                            statementInsert.setNull(6, NULL);
+                        else
+                            statementInsert.setString(6, (String) endpoint.get("endpointPath"));
 
-                            if (endpoint.get("endpointName") == null)
-                                statementInsert.setNull(7, NULL);
-                            else
-                                statementInsert.setString(7, (String) endpoint.get("endpointName"));
+                        if (endpoint.get("endpointName") == null)
+                            statementInsert.setNull(7, NULL);
+                        else
+                            statementInsert.setString(7, (String) endpoint.get("endpointName"));
 
-                            if (endpoint.get("endpointDesc") == null)
-                                statementInsert.setNull(8, NULL);
-                            else
-                                statementInsert.setString(8, (String) endpoint.get("endpointDesc"));
+                        if (endpoint.get("endpointDesc") == null)
+                            statementInsert.setNull(8, NULL);
+                        else
+                            statementInsert.setString(8, (String) endpoint.get("endpointDesc"));
 
-                            statementInsert.setString(9, (String)event.get(Constants.USER));
-                            statementInsert.setObject(10, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                            statementInsert.executeUpdate();
-                        }
-                        // insert scopes
-                        List<String> scopes = (List<String>) endpoint.get("scopes");
-                        if(scopes != null && !scopes.isEmpty()) {
-                            for (String scope : scopes) {
-                                String[] scopeDesc = scope.split(":");
-                                try (PreparedStatement statementScope = conn.prepareStatement(insertScope)) {
-                                    statementScope.setObject(1, UUID.fromString((String)map.get("hostId")));
-                                    statementScope.setObject(2, UUID.fromString((String)endpoint.get("endpointId")));
-                                    statementScope.setString(3, scopeDesc[0]);
-                                    if (scopeDesc.length == 1)
-                                        statementScope.setNull(4, NULL);
-                                    else
-                                        statementScope.setString(4, scopeDesc[1]);
-                                    statementScope.setString(5, (String)event.get(Constants.USER));
-                                    statementScope.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                                    statementScope.executeUpdate();
-                                }
+                        statementInsert.setString(9, (String) event.get(Constants.USER));
+                        statementInsert.setObject(10, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                        statementInsert.executeUpdate();
+                    }
+                    // insert scopes
+                    List<String> scopes = (List<String>) endpoint.get("scopes");
+                    if (scopes != null && !scopes.isEmpty()) {
+                        for (String scope : scopes) {
+                            String[] scopeDesc = scope.split(":");
+                            try (PreparedStatement statementScope = conn.prepareStatement(insertScope)) {
+                                statementScope.setObject(1, UUID.fromString((String) map.get("hostId")));
+                                statementScope.setObject(2, UUID.fromString((String) endpoint.get("endpointId")));
+                                statementScope.setString(3, scopeDesc[0]);
+                                if (scopeDesc.length == 1)
+                                    statementScope.setNull(4, NULL);
+                                else
+                                    statementScope.setString(4, scopeDesc[1]);
+                                statementScope.setString(5, (String) event.get(Constants.USER));
+                                statementScope.setObject(6, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                                statementScope.executeUpdate();
                             }
                         }
                     }
                 }
-                conn.commit();
-                result = Success.of((String)map.get("apiId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createServiceVersion for id {}: {}", apiVersionId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createServiceVersion for id {}: {}", apiVersionId, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
+
     @Override
-    public Result<String> updateServiceVersion(Map<String, Object> event, List<Map<String, Object>> endpoints) {
+    public void updateServiceVersion(Connection conn, Map<String, Object> event, List<Map<String, Object>> endpoints) throws SQLException, Exception {
         final String updateApi = "UPDATE api_version_t SET api_id = ?, api_version = ?, api_type = ?, service_id = ?, " +
                 "api_version_desc = ?, spec_link = ?,  spec = ?," +
                 "update_user = ?, update_ts = ? " +
@@ -714,187 +659,154 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 "update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?,  ?)";
 
-        Result<String> result = null;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
+        Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
+        String apiVersionId = (String) map.get("apiVersionId");
+        try (PreparedStatement statement = conn.prepareStatement(updateApi)) {
+            statement.setString(1, (String) map.get("apiId"));
+            statement.setString(2, (String) map.get("apiVersion"));
+            statement.setString(3, (String) map.get("apiType"));
+            statement.setString(4, (String) map.get("serviceId"));
 
-            try (PreparedStatement statement = conn.prepareStatement(updateApi)) {
-                statement.setString(1, (String)map.get("apiId"));
-                statement.setString(2, (String)map.get("apiVersion"));
-                statement.setString(3, (String)map.get("apiType"));
-                statement.setString(4, (String)map.get("serviceId"));
-
-                if (map.containsKey("apiVersionDesc")) {
-                    String apiDesc = (String) map.get("apiVersionDesc");
-                    if (apiDesc != null && !apiDesc.trim().isEmpty()) {
-                        statement.setString(5, apiDesc);
-                    } else {
-                        statement.setNull(5, Types.VARCHAR);
-                    }
+            if (map.containsKey("apiVersionDesc")) {
+                String apiDesc = (String) map.get("apiVersionDesc");
+                if (apiDesc != null && !apiDesc.trim().isEmpty()) {
+                    statement.setString(5, apiDesc);
                 } else {
                     statement.setNull(5, Types.VARCHAR);
                 }
-                if (map.containsKey("specLink")) {
-                    String specLink = (String) map.get("specLink");
-                    if (specLink != null && !specLink.trim().isEmpty()) {
-                        statement.setString(6, specLink);
-                    } else {
-                        statement.setNull(6, Types.VARCHAR);
-                    }
+            } else {
+                statement.setNull(5, Types.VARCHAR);
+            }
+            if (map.containsKey("specLink")) {
+                String specLink = (String) map.get("specLink");
+                if (specLink != null && !specLink.trim().isEmpty()) {
+                    statement.setString(6, specLink);
                 } else {
                     statement.setNull(6, Types.VARCHAR);
                 }
-                if (map.containsKey("spec")) {
-                    String spec = (String) map.get("spec");
-                    if (spec != null && !spec.trim().isEmpty()) {
-                        statement.setString(7, spec);
-                    } else {
-                        statement.setNull(7, Types.VARCHAR);
-                    }
+            } else {
+                statement.setNull(6, Types.VARCHAR);
+            }
+            if (map.containsKey("spec")) {
+                String spec = (String) map.get("spec");
+                if (spec != null && !spec.trim().isEmpty()) {
+                    statement.setString(7, spec);
                 } else {
                     statement.setNull(7, Types.VARCHAR);
                 }
+            } else {
+                statement.setNull(7, Types.VARCHAR);
+            }
 
-                statement.setString(8, (String)event.get(Constants.USER));
-                statement.setObject(9, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                statement.setObject(10, UUID.fromString((String)map.get("hostId")));
-                statement.setObject(11, UUID.fromString((String)map.get("apiVersionId")));
+            statement.setString(8, (String) event.get(Constants.USER));
+            statement.setObject(9, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            statement.setObject(10, UUID.fromString((String) map.get("hostId")));
+            statement.setObject(11, UUID.fromString(apiVersionId));
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException(String.format("no record is updated for api version %s", "hostId " + (event.get(Constants.HOST) + " apiVersionId " + map.get("apiVersionId"))));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException(String.format("no record is updated for api version %s", apiVersionId));
+            }
+            if (endpoints != null && !endpoints.isEmpty()) {
+                // delete endpoints for the api version. the api_endpoint_scope_t will be deleted by the cascade.
+                try (PreparedStatement statementDelete = conn.prepareStatement(deleteEndpoint)) {
+                    statementDelete.setObject(1, UUID.fromString((String) map.get("hostId")));
+                    statementDelete.setObject(2, UUID.fromString(apiVersionId));
+                    statementDelete.executeUpdate();
                 }
-                if(endpoints != null && !endpoints.isEmpty()) {
-                    // delete endpoints for the api version. the api_endpoint_scope_t will be deleted by the cascade.
-                    try (PreparedStatement statementDelete = conn.prepareStatement(deleteEndpoint)) {
-                        statementDelete.setObject(1, UUID.fromString((String)map.get("hostId")));
-                        statementDelete.setObject(2, UUID.fromString((String)map.get("apiVersionId")));
-                        statementDelete.executeUpdate();
+                // insert endpoints
+                for (Map<String, Object> endpoint : endpoints) {
+                    try (PreparedStatement statementInsert = conn.prepareStatement(insertEndpoint)) {
+                        statementInsert.setObject(1, UUID.fromString((String) map.get("hostId")));
+                        statementInsert.setObject(2, UUID.fromString((String) endpoint.get("endpointId")));
+                        statementInsert.setObject(3, UUID.fromString(apiVersionId));
+                        statementInsert.setString(4, (String) endpoint.get("endpoint"));
+
+                        if (endpoint.get("httpMethod") == null)
+                            statementInsert.setNull(5, NULL);
+                        else
+                            statementInsert.setString(5, ((String) endpoint.get("httpMethod")).toLowerCase().trim());
+
+                        if (endpoint.get("endpointPath") == null)
+                            statementInsert.setNull(6, NULL);
+                        else
+                            statementInsert.setString(6, (String) endpoint.get("endpointPath"));
+
+                        if (endpoint.get("endpointName") == null)
+                            statementInsert.setNull(7, NULL);
+                        else
+                            statementInsert.setString(7, (String) endpoint.get("endpointName"));
+
+                        if (endpoint.get("endpointDesc") == null)
+                            statementInsert.setNull(8, NULL);
+                        else
+                            statementInsert.setString(8, (String) endpoint.get("endpointDesc"));
+
+                        statementInsert.setString(9, (String) event.get(Constants.USER));
+                        statementInsert.setObject(10, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                        statementInsert.executeUpdate();
                     }
-                    // insert endpoints
-                    for (Map<String, Object> endpoint : endpoints) {
-                        try (PreparedStatement statementInsert = conn.prepareStatement(insertEndpoint)) {
-                            statementInsert.setObject(1, UUID.fromString((String)map.get("hostId")));
-                            statementInsert.setObject(2, UUID.fromString((String)endpoint.get("endpointId")));
-                            statementInsert.setObject(3, UUID.fromString((String)map.get("apiVersionId")));
-                            statementInsert.setString(4, (String) endpoint.get("endpoint"));
-
-                            if (endpoint.get("httpMethod") == null)
-                                statementInsert.setNull(5, NULL);
-                            else
-                                statementInsert.setString(5, ((String) endpoint.get("httpMethod")).toLowerCase().trim());
-
-                            if (endpoint.get("endpointPath") == null)
-                                statementInsert.setNull(6, NULL);
-                            else
-                                statementInsert.setString(6, (String) endpoint.get("endpointPath"));
-
-                            if (endpoint.get("endpointName") == null)
-                                statementInsert.setNull(7, NULL);
-                            else
-                                statementInsert.setString(7, (String) endpoint.get("endpointName"));
-
-                            if (endpoint.get("endpointDesc") == null)
-                                statementInsert.setNull(8, NULL);
-                            else
-                                statementInsert.setString(8, (String) endpoint.get("endpointDesc"));
-
-                            statementInsert.setString(9, (String)event.get(Constants.USER));
-                            statementInsert.setObject(10, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                            statementInsert.executeUpdate();
-                        }
-                        // insert scopes
-                        List<String> scopes = (List<String>) endpoint.get("scopes");
-                        if (scopes != null && !scopes.isEmpty()) {
-                            for (String scope : scopes) {
-                                String[] scopeDesc = scope.split(":");
-                                try (PreparedStatement statementScope = conn.prepareStatement(insertScope)) {
-                                    statementScope.setObject(1, UUID.fromString((String)map.get("hostId")));
-                                    statementScope.setObject(2, UUID.fromString((String)endpoint.get("endpointId")));
-                                    statementScope.setString(3, scopeDesc[0]);
-                                    if (scopeDesc.length == 1)
-                                        statementScope.setNull(4, NULL);
-                                    else
-                                        statementScope.setString(4, scopeDesc[1]);
-                                    statementScope.setString(5, (String)event.get(Constants.USER));
-                                    statementScope.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                                    statementScope.executeUpdate();
-                                }
+                    // insert scopes
+                    List<String> scopes = (List<String>) endpoint.get("scopes");
+                    if (scopes != null && !scopes.isEmpty()) {
+                        for (String scope : scopes) {
+                            String[] scopeDesc = scope.split(":");
+                            try (PreparedStatement statementScope = conn.prepareStatement(insertScope)) {
+                                statementScope.setObject(1, UUID.fromString((String) map.get("hostId")));
+                                statementScope.setObject(2, UUID.fromString((String) endpoint.get("endpointId")));
+                                statementScope.setString(3, scopeDesc[0]);
+                                if (scopeDesc.length == 1)
+                                    statementScope.setNull(4, NULL);
+                                else
+                                    statementScope.setString(4, scopeDesc[1]);
+                                statementScope.setString(5, (String) event.get(Constants.USER));
+                                statementScope.setObject(6, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                                statementScope.executeUpdate();
                             }
                         }
                     }
                 }
-                conn.commit();
-                result = Success.of((String)map.get("apiId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during updateServiceVersion for id {}: {}", apiVersionId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updateServiceVersion for id {}: {}", apiVersionId, e.getMessage(), e);
+            throw e;
         }
-        return result;
-
     }
 
     @Override
-    public Result<String> deleteServiceVersion(Map<String, Object> event) {
+    public void deleteServiceVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String deleteApplication = "DELETE from api_version_t WHERE host_id = ? AND api_version_id = ?";
-        Result<String> result;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(deleteApplication)) {
-                statement.setObject(1, UUID.fromString((String)map.get("hostId")));
-                statement.setObject(2, UUID.fromString((String)map.get("apiVersionId")));
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    // no record is deleted, write an error notification.
-                    throw new SQLException(String.format("no record is deleted for api version %s", "hostId " + map.get("hostId") + " apiVersionId " + map.get("apiVersionId")));
-                }
-                conn.commit();
-                result = Success.of((String)event.get(Constants.USER));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
+        String apiVersionId = (String) map.get("apiVersionId");
+        try (PreparedStatement statement = conn.prepareStatement(deleteApplication)) {
+            statement.setObject(1, UUID.fromString((String) map.get("hostId")));
+            statement.setObject(2, UUID.fromString(apiVersionId));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException(String.format("no record is deleted for api version %s", apiVersionId));
             }
-
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteServiceVersion for id {}: {}", apiVersionId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deleteServiceVersion for id {}: {}", apiVersionId, e.getMessage(), e);
+            throw e;
         }
-        return result;
-
     }
 
     @Override
     public Result<String> queryServiceVersion(String hostId, String apiId) {
         Result<String> result = null;
         String sql = """
-                SELECT host_id, api_version_id, api_id, api_version, api_type,
-                service_id, api_version_desc, spec_link, spec
-                FROM api_version_t
-                WHERE host_id = ? AND api_id = ?
-                ORDER BY api_version
-            """;
+                    SELECT host_id, api_version_id, api_id, api_version, api_type,
+                    service_id, api_version_desc, spec_link, spec
+                    FROM api_version_t
+                    WHERE host_id = ? AND api_id = ?
+                    ORDER BY api_version
+                """;
         List<Map<String, Object>> serviceVersions = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
@@ -926,15 +838,16 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
         }
         return result;
     }
+
     @Override
-    public Result<String> updateServiceSpec(Map<String, Object> event, List<Map<String, Object>> endpoints) {
-        if(logger.isTraceEnabled()) logger.trace("endpoints = {}", endpoints);
+    public void updateServiceSpec(Connection conn, Map<String, Object> event, List<Map<String, Object>> endpoints) throws SQLException, Exception {
+        if (logger.isTraceEnabled()) logger.trace("endpoints = {}", endpoints);
         final String updateApiVersion =
                 """
-                    UPDATE api_version_t SET spec = ?,
-                    update_user = ?, update_ts = ?
-                    WHERE host_id = ? AND api_version_id = ?
-                """;
+                            UPDATE api_version_t SET spec = ?,
+                            update_user = ?, update_ts = ?
+                            WHERE host_id = ? AND api_version_id = ?
+                        """;
         final String deleteEndpoint = "DELETE FROM api_endpoint_t WHERE host_id = ? AND api_version_id = ?";
         final String insertEndpoint = "INSERT INTO api_endpoint_t (host_id, endpoint_id, api_version_id, endpoint, http_method, " +
                 "endpoint_path, endpoint_name, endpoint_desc, update_user, update_ts) " +
@@ -944,103 +857,88 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 "VALUES (?, ?, ?, ?, ?,  ?)";
 
 
-        Result<String> result = null;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try {
-                // update spec
-                try (PreparedStatement statement = conn.prepareStatement(updateApiVersion)) {
-                    statement.setString(1, (String)map.get("spec"));
-                    statement.setString(2, (String)event.get(Constants.USER));
-                    statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                    statement.setObject(4, UUID.fromString((String)map.get("hostId")));
-                    statement.setObject(5, UUID.fromString((String)map.get("apiVersionId")));
+        Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
+        String apiVersionId = (String) map.get("apiVersionId");
+        try {
+            try (PreparedStatement statement = conn.prepareStatement(updateApiVersion)) {
+                statement.setString(1, (String) map.get("spec"));
+                statement.setString(2, (String) event.get(Constants.USER));
+                statement.setObject(3, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                statement.setObject(4, UUID.fromString((String) map.get("hostId")));
+                statement.setObject(5, UUID.fromString(apiVersionId));
 
-                    int count = statement.executeUpdate();
-                    if (count == 0) {
-                        // no record is updated, write an error notification.
-                        throw new SQLException(String.format("no record is updated for api version " + " hostId " + map.get("hostId") + " apiId " + map.get("apiId") + " apiVersion " + map.get("apiVersion")));
-                    }
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException(String.format("no record is updated for api version %s", apiVersionId));
                 }
-                // delete endpoints for the api version. the api_endpoint_scope_t will be deleted by the cascade.
-                try (PreparedStatement statement = conn.prepareStatement(deleteEndpoint)) {
-                    statement.setObject(1, UUID.fromString((String)map.get("hostId")));
-                    statement.setObject(2, UUID.fromString((String)map.get("apiVersionId")));
+            }
+            // delete endpoints for the api version. the api_endpoint_scope_t will be deleted by the cascade.
+            try (PreparedStatement statement = conn.prepareStatement(deleteEndpoint)) {
+                statement.setObject(1, UUID.fromString((String) map.get("hostId")));
+                statement.setObject(2, UUID.fromString(apiVersionId));
+                statement.executeUpdate();
+            }
+            // insert endpoints
+            for (Map<String, Object> endpoint : endpoints) {
+                try (PreparedStatement statement = conn.prepareStatement(insertEndpoint)) {
+                    statement.setObject(1, UUID.fromString((String) map.get("hostId")));
+                    statement.setObject(2, UUID.fromString((String) endpoint.get("endpointId")));
+                    statement.setObject(3, UUID.fromString(apiVersionId));
+                    statement.setString(4, (String) endpoint.get("endpoint"));
+
+                    if (endpoint.get("httpMethod") == null)
+                        statement.setNull(5, NULL);
+                    else
+                        statement.setString(5, ((String) endpoint.get("httpMethod")).toLowerCase().trim());
+
+                    if (endpoint.get("endpointPath") == null)
+                        statement.setNull(6, NULL);
+                    else
+                        statement.setString(6, (String) endpoint.get("endpointPath"));
+
+                    if (endpoint.get("endpointName") == null)
+                        statement.setNull(7, NULL);
+                    else
+                        statement.setString(7, (String) endpoint.get("endpointName"));
+
+                    if (endpoint.get("endpointDesc") == null)
+                        statement.setNull(8, NULL);
+                    else
+                        statement.setString(8, (String) endpoint.get("endpointDesc"));
+
+                    statement.setString(9, (String) event.get(Constants.USER));
+                    statement.setObject(10, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
                     statement.executeUpdate();
                 }
-                // insert endpoints
-                for (Map<String, Object> endpoint : endpoints) {
-                    try (PreparedStatement statement = conn.prepareStatement(insertEndpoint)) {
-                        statement.setObject(1, UUID.fromString((String)map.get("hostId")));
-                        statement.setObject(2, UUID.fromString((String)endpoint.get("endpointId")));
-                        statement.setObject(3, UUID.fromString((String)map.get("apiVersionId")));
-                        statement.setString(4, (String)endpoint.get("endpoint"));
-
-                        if (endpoint.get("httpMethod") == null)
-                            statement.setNull(5, NULL);
-                        else
-                            statement.setString(5, ((String) endpoint.get("httpMethod")).toLowerCase().trim());
-
-                        if (endpoint.get("endpointPath") == null)
-                            statement.setNull(6, NULL);
-                        else
-                            statement.setString(6, (String) endpoint.get("endpointPath"));
-
-                        if (endpoint.get("endpointName") == null)
-                            statement.setNull(7, NULL);
-                        else
-                            statement.setString(7, (String) endpoint.get("endpointName"));
-
-                        if (endpoint.get("endpointDesc") == null)
-                            statement.setNull(8, NULL);
-                        else
-                            statement.setString(8, (String) endpoint.get("endpointDesc"));
-
-                        statement.setString(9, (String)event.get(Constants.USER));
-                        statement.setObject(10, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                        statement.executeUpdate();
-                    }
-                    // insert scopes
-                    List<String> scopes = (List<String>) endpoint.get("scopes");
-                    if(scopes != null && !scopes.isEmpty()) {
-                        for (String scope : scopes) {
-                            String[] scopeDesc = scope.split(":");
-                            try (PreparedStatement statement = conn.prepareStatement(insertScope)) {
-                                statement.setObject(1, UUID.fromString((String)map.get("hostId")));
-                                statement.setObject(2, UUID.fromString((String)endpoint.get("endpointId")));
-                                statement.setString(3, scopeDesc[0]);
-                                if (scopeDesc.length == 1)
-                                    statement.setNull(4, NULL);
-                                else
-                                    statement.setString(4, scopeDesc[1]);
-                                statement.setString(5, (String)event.get(Constants.USER));
-                                statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                                statement.executeUpdate();
-                            }
+                // insert scopes
+                List<String> scopes = (List<String>) endpoint.get("scopes");
+                if (scopes != null && !scopes.isEmpty()) {
+                    for (String scope : scopes) {
+                        String[] scopeDesc = scope.split(":");
+                        try (PreparedStatement statement = conn.prepareStatement(insertScope)) {
+                            statement.setObject(1, UUID.fromString((String) map.get("hostId")));
+                            statement.setObject(2, UUID.fromString((String) endpoint.get("endpointId")));
+                            statement.setString(3, scopeDesc[0]);
+                            if (scopeDesc.length == 1)
+                                statement.setNull(4, NULL);
+                            else
+                                statement.setString(4, scopeDesc[1]);
+                            statement.setString(5, (String) event.get(Constants.USER));
+                            statement.setObject(6, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                            statement.executeUpdate();
                         }
                     }
                 }
-                conn.commit();
-                result = Success.of((String)map.get("apiId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
-        } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-        }
-        return result;
 
+        } catch (SQLException e) {
+            logger.error("SQLException during updateServiceSpec for id {}: {}", apiVersionId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updateServiceSpec for id {}: {}", apiVersionId, e.getMessage(), e);
+            throw e;
+        }
+        // update spec
     }
 
     @Override
@@ -1049,18 +947,18 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
         Result<String> result = null;
         String s =
                 """
-                    SELECT COUNT(*) OVER () AS total,
-                    e.host_id, e.endpoint_id, e.api_version_id, v.api_id, v.api_version,
-                    e.endpoint, e.http_method, e.endpoint_path, e.endpoint_desc
-                    FROM api_endpoint_t e
-                    INNER JOIN api_version_t v ON e.api_version_id = v.api_version_id
-                    WHERE e.host_id = ? AND e.api_version_id = ?
-                """;
+                            SELECT COUNT(*) OVER () AS total,
+                            e.host_id, e.endpoint_id, e.api_version_id, v.api_id, v.api_version,
+                            e.endpoint, e.http_method, e.endpoint_path, e.endpoint_desc
+                            FROM api_endpoint_t e
+                            INNER JOIN api_version_t v ON e.api_version_id = v.api_version_id
+                            WHERE e.host_id = ? AND e.api_version_id = ?
+                        """;
 
         StringBuilder sqlBuilder = new StringBuilder();
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
-        parameters.add(apiVersionId);
+        parameters.add(UUID.fromString(apiVersionId)); // ensure apiVersionId is converted to UUID
 
         StringBuilder whereClause = new StringBuilder();
         addCondition(whereClause, parameters, "v.api_id", apiId);
@@ -1070,7 +968,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
         addCondition(whereClause, parameters, "e.endpoint_path", path);
         addCondition(whereClause, parameters, "e.endpoint_desc", desc);
 
-        if(!whereClause.isEmpty()) {
+        if (!whereClause.isEmpty()) {
             sqlBuilder.append(" AND ").append(whereClause);
         }
 
@@ -1081,7 +979,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
+        String sql = s + sqlBuilder.toString(); // Append the WHERE and ORDER BY clauses to the initial select
         int total = 0;
         List<Map<String, Object>> endpoints = new ArrayList<>();
 
@@ -1136,13 +1034,13 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
         Result<String> result = null;
         String sql =
                 """
-                    SELECT s.host_id, s.endpoint_id, e.endpoint, s.scope, s.scope_desc
-                    FROM api_endpoint_scope_t s
-                    INNER JOIN api_endpoint_t e ON e.host_id = s.host_id AND e.endpoint_id = s.endpoint_id
-                    WHERE host_id = ?
-                    AND endpoint_id = ?
-                    ORDER BY scope
-                """;
+                            SELECT s.host_id, s.endpoint_id, e.endpoint, s.scope, s.scope_desc
+                            FROM api_endpoint_scope_t s
+                            INNER JOIN api_endpoint_t e ON e.host_id = s.host_id AND e.endpoint_id = s.endpoint_id
+                            WHERE s.host_id = ?
+                            AND s.endpoint_id = ?
+                            ORDER BY scope
+                        """;
 
         List<Map<String, Object>> scopes = new ArrayList<>();
 
@@ -1178,18 +1076,18 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
         Result<String> result = null;
         String sql =
                 """
-                    SELECT ae.host_id, ae.endpoint_id, a.api_id, av.api_version, e.endpoint, r.rule_type, ae.rule_id
-                    FROM api_endpoint_rule_t ae
-                    INNER JOIN rule_t r ON ae.rule_id = r.rule_id
-                    INNER JOIN api_endpoint_t e ON ae.endpoint_id = e.endpoint_id
-                    INNER JOIN api_version_t av ON e.api_version_id = av.api_version_id
-                    INNER JOIN api_t a ON av.api_id = a.api_id\s
-                    WHERE ae.host_id = ?
-                    AND a.api_id = ?
-                    AND av.api_version = ?
-                    AND e.endpoint = ?
-                    ORDER BY r.rule_type
-                """;
+                            SELECT ae.host_id, ae.endpoint_id, a.api_id, av.api_version, e.endpoint, r.rule_type, ae.rule_id
+                            FROM api_endpoint_rule_t ae
+                            INNER JOIN rule_t r ON ae.rule_id = r.rule_id
+                            INNER JOIN api_endpoint_t e ON ae.endpoint_id = e.endpoint_id
+                            INNER JOIN api_version_t av ON e.api_version_id = av.api_version_id
+                            INNER JOIN api_t a ON av.api_id = a.api_id
+                            WHERE ae.host_id = ?
+                            AND a.api_id = ?
+                            AND av.api_version = ?
+                            AND e.endpoint = ?
+                            ORDER BY r.rule_type
+                        """;
 
         List<Map<String, Object>> rules = new ArrayList<>();
 
@@ -1225,121 +1123,90 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     }
 
     @Override
-    public Result<String> createEndpointRule(Map<String, Object> event) {
+    public void createEndpointRule(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String insertUser =
                 """
-                INSERT INTO api_endpoint_rule_t (host_id, endpoint_id, rule_id,
-                update_user, update_ts)
-                VALUES (
-                ?,
-                (SELECT e.endpoint_id
-                 FROM api_endpoint_t e
-                 JOIN api_version_t v ON e.host_id = v.host_id
-                                     AND e.api_version_id = v.api_version_id
-                 WHERE e.host_id = ?
-                   AND v.api_id = ?
-                   AND v.api_version = ?
-                   AND e.endpoint = ?
-                ),
-                ?,
-                ?,
-                ?
-                )
-                """;
-        Result<String> result = null;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            // no duplicate record, insert the user into database and write a success notification.
-            try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setObject(2, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(3, (String)map.get("apiId"));
-                statement.setString(4, (String)map.get("apiVersion"));
-                statement.setString(5, (String)map.get("endpoint"));
-                statement.setString(6, (String)map.get("ruleId"));
-                statement.setString(7, (String)event.get(Constants.USER));
-                statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    throw new SQLException(String.format("no record is inserted for api version " + "hostId " + event.get(Constants.HOST) + " endpoint " + map.get("endpoint")));
-                }
-                conn.commit();
-                result = Success.of((String)map.get("endpointId"));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+                        INSERT INTO api_endpoint_rule_t (host_id, endpoint_id, rule_id,
+                        update_user, update_ts)
+                        VALUES (
+                        ?,
+                        (SELECT e.endpoint_id
+                         FROM api_endpoint_t e
+                         JOIN api_version_t v ON e.host_id = v.host_id
+                                             AND e.api_version_id = v.api_version_id
+                         WHERE e.host_id = ?
+                           AND v.api_id = ?
+                           AND v.api_version = ?
+                           AND e.endpoint = ?
+                        ),
+                        ?,
+                        ?,
+                        ?
+                        )
+                        """;
+        Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
+        String endpointFromMap = (String) map.get("endpoint"); // For logging
+        try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
+            statement.setObject(1, UUID.fromString((String) event.get(Constants.HOST)));
+            statement.setObject(2, UUID.fromString((String) event.get(Constants.HOST)));
+            statement.setString(3, (String) map.get("apiId"));
+            statement.setString(4, (String) map.get("apiVersion"));
+            statement.setString(5, endpointFromMap);
+            statement.setString(6, (String) map.get("ruleId"));
+            statement.setString(7, (String) event.get(Constants.USER));
+            statement.setObject(8, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException(String.format("no record is inserted for endpoint rule for endpoint %s", endpointFromMap));
             }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during createEndpointRule for endpoint {}: {}", endpointFromMap, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createEndpointRule for endpoint {}: {}", endpointFromMap, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
-    public Result<String> deleteEndpointRule(Map<String, Object> event) {
+    public void deleteEndpointRule(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String deleteApplication =
                 """
-                DELETE FROM api_endpoint_rule_t er
-                WHERE er.host_id = ?
-                  AND er.rule_id = ?
-                  AND er.endpoint_id IN (
-                    SELECT e.endpoint_id
-                    FROM api_endpoint_t e
-                    JOIN api_version_t v ON e.host_id = v.host_id
-                                        AND e.api_version_id = v.api_version_id
-                    WHERE e.host_id = ?
-                      AND v.api_id = ?
-                      AND v.api_version = ?
-                      AND e.endpoint = ?
-                  )
-                """;
-        Result<String> result;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        try (Connection conn = ds.getConnection()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement statement = conn.prepareStatement(deleteApplication)) {
-                statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(2, (String)map.get("ruleId"));
-                statement.setObject(3, UUID.fromString((String)event.get(Constants.HOST)));
-                statement.setString(4, (String)map.get("apiId"));
-                statement.setString(5, (String)map.get("apiVersion"));
-                statement.setString(6, (String)map.get("endpoint"));
+                        DELETE FROM api_endpoint_rule_t er
+                        WHERE er.host_id = ?
+                          AND er.rule_id = ?
+                          AND er.endpoint_id IN (
+                            SELECT e.endpoint_id
+                            FROM api_endpoint_t e
+                            JOIN api_version_t v ON e.host_id = v.host_id
+                                                AND e.api_version_id = v.api_version_id
+                            WHERE e.host_id = ?
+                              AND v.api_id = ?
+                              AND v.api_version = ?
+                              AND e.endpoint = ?
+                          )
+                        """;
+        Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
+        String endpointFromMap = (String) map.get("endpoint"); // For logging
+        try (PreparedStatement statement = conn.prepareStatement(deleteApplication)) {
+            statement.setObject(1, UUID.fromString((String) event.get(Constants.HOST)));
+            statement.setString(2, (String) map.get("ruleId"));
+            statement.setObject(3, UUID.fromString((String) event.get(Constants.HOST)));
+            statement.setString(4, (String) map.get("apiId"));
+            statement.setString(5, (String) map.get("apiVersion"));
+            statement.setString(6, endpointFromMap);
 
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    // no record is deleted, write an error notification.
-                    throw new SQLException(String.format("no record is deleted for endpoint rule " + "hostId " + event.get(Constants.HOST) + " endpoint " + map.get("endpoint")));
-                }
-                conn.commit();
-                result = Success.of((String)event.get(Constants.USER));
-                notificationService.insertNotification(event, true, null);
-            } catch (SQLException e) {
-                logger.error("SQLException:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-            } catch (Exception e) {
-                logger.error("Exception:", e);
-                conn.rollback();
-                notificationService.insertNotification(event, false, e.getMessage());
-                result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException(String.format("no record is deleted for endpoint rule for endpoint %s", endpointFromMap));
             }
-
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            logger.error("SQLException during deleteEndpointRule for endpoint {}: {}", endpointFromMap, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deleteEndpointRule for endpoint {}: {}", endpointFromMap, e.getMessage(), e);
+            throw e;
         }
-        return result;
     }
 
     @Override
@@ -1347,17 +1214,17 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
         Result<String> result = null;
         String sql =
                 """
-                SELECT ae.host_id, a.api_id, av.api_version, e.endpoint, r.rule_type, ae.rule_id
-                FROM api_endpoint_rule_t ae
-                INNER JOIN rule_t r ON ae.rule_id = r.rule_id
-                INNER JOIN api_endpoint_t e ON e.endpoint_id = ae.endpoint_id
-                INNER JOIN api_version_t av ON av.api_version_id = e.api_version_id
-                INNER JOIN api_t a ON a.api_id = av.api_id
-                WHERE a.host_id =?
-                AND a.api_id = ?
-                AND a.api_version = ?
-                ORDER BY r.rule_type
-                """;
+                        SELECT ae.host_id, a.api_id, av.api_version, e.endpoint, r.rule_type, ae.rule_id
+                        FROM api_endpoint_rule_t ae
+                        INNER JOIN rule_t r ON ae.rule_id = r.rule_id
+                        INNER JOIN api_endpoint_t e ON e.endpoint_id = ae.endpoint_id
+                        INNER JOIN api_version_t av ON av.api_version_id = e.api_version_id
+                        INNER JOIN api_t a ON a.api_id = av.api_id
+                        WHERE a.host_id =?
+                        AND a.api_id = ?
+                        AND av.api_version = ?
+                        ORDER BY r.rule_type
+                        """;
         String sqlRuleBody = "SELECT rule_id, rule_body FROM rule_t WHERE rule_id = ?";
         List<Map<String, Object>> rules = new ArrayList<>();
         Map<String, Object> ruleBodies = new HashMap<>();
@@ -1371,6 +1238,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
                     map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("endpointId", resultSet.getObject("endpoint_id", UUID.class));
                     map.put("apiId", resultSet.getString("api_id"));
                     map.put("apiVersion", resultSet.getString("api_version"));
                     map.put("endpoint", resultSet.getString("endpoint"));
@@ -1430,10 +1298,12 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 "                            )\n" +
                 "                        )\n" +
                 "                        FROM role_permission_t rp\n" +
+                "                        INNER JOIN api_endpoint_t re ON rp.endpoint_id = re.endpoint_id AND rp.host_id = re.host_id\n" + // Added join for correct filtering
+                "                        INNER JOIN api_version_t rv ON re.api_version_id = rv.api_version_id AND re.host_id = rv.host_id\n" + // Added join for correct filtering
                 "                        WHERE rp.host_id = ?\n" +
-                "                        AND rp.api_id = ?\n" +
-                "                        AND rp.api_version = ?\n" +
-                "                        AND rp.endpoint = ae.endpoint\n" +
+                "                        AND rv.api_id = ?\n" + // Filter on v.api_id from api_version_t
+                "                        AND rv.api_version = ?\n" + // Filter on v.api_version from api_version_t
+                "                        AND re.endpoint = ae.endpoint\n" +
                 "                    ), '[]'),\n" +
                 "                    'positions', COALESCE((\n" +
                 "                        SELECT JSON_ARRAYAGG(\n" +
@@ -1442,10 +1312,12 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 "                             )\n" +
                 "                         )\n" +
                 "                        FROM position_permission_t pp\n" +
+                "                        INNER JOIN api_endpoint_t pe ON pp.endpoint_id = pe.endpoint_id AND pp.host_id = pe.host_id\n" + // Added join for correct filtering
+                "                        INNER JOIN api_version_t pv ON pe.api_version_id = pv.api_version_id AND pe.host_id = pv.host_id\n" + // Added join for correct filtering
                 "                        WHERE pp.host_id = ?\n" +
-                "                        AND pp.api_id = ?\n" +
-                "                        AND pp.api_version = ?\n" +
-                "                        AND pp.endpoint = ae.endpoint\n" +
+                "                        AND pv.api_id = ?\n" + // Filter on v.api_id from api_version_t
+                "                        AND pv.api_version = ?\n" + // Filter on v.api_version from api_version_t
+                "                        AND pe.endpoint = ae.endpoint\n" +
                 "                    ), '[]'),\n" +
                 "                    'groups', COALESCE((\n" +
                 "                        SELECT JSON_ARRAYAGG(\n" +
@@ -1454,10 +1326,12 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 "                            )\n" +
                 "                        )\n" +
                 "                        FROM group_permission_t gp\n" +
+                "                        INNER JOIN api_endpoint_t ge ON gp.endpoint_id = ge.endpoint_id AND gp.host_id = ge.host_id\n" + // Added join for correct filtering
+                "                        INNER JOIN api_version_t gv ON ge.api_version_id = gv.api_version_id AND ge.host_id = gv.host_id\n" + // Added join for correct filtering
                 "                        WHERE gp.host_id = ?\n" +
-                "                        AND gp.api_id = ?\n" +
-                "                        AND gp.api_version = ?\n" +
-                "                        AND gp.endpoint = ae.endpoint\n" +
+                "                        AND gv.api_id = ?\n" + // Filter on v.api_id from api_version_t
+                "                        AND gv.api_version = ?\n" + // Filter on v.api_version from api_version_t
+                "                        AND ge.endpoint = ae.endpoint\n" +
                 "                    ), '[]'),\n" +
                 "                    'attributes', COALESCE((\n" +
                 "                        SELECT JSON_ARRAYAGG(\n" +
@@ -1468,11 +1342,13 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 "                            )\n" +
                 "                        )\n" +
                 "                        FROM attribute_permission_t ap, attribute_t a\n" +
+                "                        INNER JOIN api_endpoint_t ate ON ap.endpoint_id = ate.endpoint_id AND ap.host_id = ate.host_id\n" + // Added join for correct filtering
+                "                        INNER JOIN api_version_t atv ON ate.api_version_id = atv.api_version_id AND ate.host_id = atv.host_id\n" + // Added join for correct filtering
                 "                        WHERE ap.attribute_id = a.attribute_id\n" +
                 "                        AND ap.host_id = ?\n" +
-                "                        AND ap.api_id = ?\n" +
-                "                        AND ap.api_version = ?\n" +
-                "                        AND ap.endpoint = ae.endpoint\n" +
+                "                        AND atv.api_id = ?\n" + // Filter on v.api_id from api_version_t
+                "                        AND atv.api_version = ?\n" + // Filter on v.api_version from api_version_t
+                "                        AND ate.endpoint = ae.endpoint\n" +
                 "                    ), '[]'),\n" +
                 "                    'users', COALESCE((\n" +
                 "                        SELECT JSON_ARRAYAGG(\n" +
@@ -1483,10 +1359,12 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 "                            )\n" +
                 "                        )\n" +
                 "                        FROM user_permission_t up\n" +
+                "                        INNER JOIN api_endpoint_t ue ON up.endpoint_id = ue.endpoint_id AND up.host_id = ue.host_id\n" + // Added join for correct filtering
+                "                        INNER JOIN api_version_t uv ON ue.api_version_id = uv.api_version_id AND ue.host_id = uv.host_id\n" + // Added join for correct filtering
                 "                        WHERE up.host_id = ?\n" +
-                "                        AND up.api_id = ?\n" +
-                "                        AND up.api_version = ?\n" +
-                "                        AND up.endpoint = ae.endpoint\n" +
+                "                        AND uv.api_id = ?\n" + // Filter on v.api_id from api_version_t
+                "                        AND uv.api_version = ?\n" + // Filter on v.api_version from api_version_t
+                "                        AND ue.endpoint = ae.endpoint\n" +
                 "                    ), '[]')\n" +
                 "                )\n" +
                 "            )\n" +
@@ -1494,28 +1372,35 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 "    END AS permissions\n" +
                 "FROM\n" +
                 "    api_endpoint_t ae\n" +
+                "INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id\n" + // Join to filter endpoints by apiId and apiVersion
                 "WHERE\n" +
                 "    ae.host_id = ?\n" +
-                "    AND ae.api_id = ?\n" +
-                "    AND ae.api_version = ?;\n";
+                "    AND av.api_id = ?\n" + // Use alias for consistency
+                "    AND av.api_version = ?;\n"; // Use alias for consistency
 
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            // Parameters for roles subquery
             preparedStatement.setObject(1, UUID.fromString(hostId));
             preparedStatement.setString(2, apiId);
             preparedStatement.setString(3, apiVersion);
+            // Parameters for positions subquery
             preparedStatement.setObject(4, UUID.fromString(hostId));
             preparedStatement.setString(5, apiId);
             preparedStatement.setString(6, apiVersion);
+            // Parameters for groups subquery
             preparedStatement.setObject(7, UUID.fromString(hostId));
             preparedStatement.setString(8, apiId);
             preparedStatement.setString(9, apiVersion);
+            // Parameters for attributes subquery
             preparedStatement.setObject(10, UUID.fromString(hostId));
             preparedStatement.setString(11, apiId);
             preparedStatement.setString(12, apiVersion);
+            // Parameters for users subquery
             preparedStatement.setObject(13, UUID.fromString(hostId));
             preparedStatement.setString(14, apiId);
             preparedStatement.setString(15, apiVersion);
+            // Parameters for main query
             preparedStatement.setObject(16, UUID.fromString(hostId));
             preparedStatement.setString(17, apiId);
             preparedStatement.setString(18, apiVersion);
@@ -1539,244 +1424,244 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     @Override
     public Result<List<String>> queryServiceFilter(String hostId, String apiId, String apiVersion) {
         Result<List<String>> result = null;
+        // Corrected SQL to use endpoint_id from filters and join to api_endpoint_t and api_version_t
+        // to filter by api_id and api_version.
         String sql = "SELECT\n" +
                 "    JSON_BUILD_OBJECT(\n" +
                 "        'role_row', JSON_AGG(\n" +
                 "            JSON_BUILD_OBJECT(\n" +
-                "                'endpoint', endpoint,\n" +
-                "                'roleId', role_id,\n" +
-                "                'colName', col_name,\n" +
-                "                'operator', operator,\n" +
-                "                'colValue', col_value\n" +
+                "                'endpoint', ae.endpoint,\n" +
+                "                'roleId', rrf.role_id,\n" +
+                "                'colName', rrf.col_name,\n" +
+                "                'operator', rrf.operator,\n" +
+                "                'colValue', rrf.col_value\n" +
                 "            )\n" +
                 "        )\n" +
                 "    ) AS result\n" +
                 "FROM\n" +
-                "    role_row_filter_t\n" +
+                "    role_row_filter_t rrf\n" +
+                "INNER JOIN api_endpoint_t ae ON rrf.endpoint_id = ae.endpoint_id AND rrf.host_id = ae.host_id\n" +
+                "INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id\n" +
                 "WHERE\n" +
-                "    host_id = ?\n" +
-                "    AND api_id = ?\n" +
-                "    AND api_version = ?\n" +
-                "GROUP BY ()\n" +
+                "    rrf.host_id = ?\n" +
+                "    AND av.api_id = ?\n" +
+                "    AND av.api_version = ?\n" +
+                "GROUP BY 1\n" + // Group by a constant to aggregate all results into one JSON_AGG
                 "HAVING COUNT(*) > 0 \n" +
                 "UNION ALL\n" +
                 "SELECT\n" +
                 "    JSON_BUILD_OBJECT(\n" +
                 "        'role_col', JSON_AGG(\n" +
                 "            JSON_BUILD_OBJECT(\n" +
-                "                'endpoint', endpoint,\n" +
-                "                'roleId', role_id,\n" +
-                "                'columns', columns\n" +
+                "                'endpoint', ae.endpoint,\n" +
+                "                'roleId', rcf.role_id,\n" +
+                "                'columns', rcf.columns\n" +
                 "            )\n" +
                 "        )\n" +
                 "    ) AS result\n" +
                 "FROM\n" +
-                "    role_col_filter_t\n" +
+                "    role_col_filter_t rcf\n" +
+                "INNER JOIN api_endpoint_t ae ON rcf.endpoint_id = ae.endpoint_id AND rcf.host_id = ae.host_id\n" +
+                "INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id\n" +
                 "WHERE\n" +
-                "    host_id = ?\n" +
-                "    AND api_id = ?\n" +
-                "    AND api_version = ?\n" +
-                "GROUP BY ()\n" +
+                "    rcf.host_id = ?\n" +
+                "    AND av.api_id = ?\n" +
+                "    AND av.api_version = ?\n" +
+                "GROUP BY 1\n" +
                 "HAVING COUNT(*) > 0\n" +
                 "UNION ALL\n" +
                 "SELECT\n" +
                 "    JSON_BUILD_OBJECT(\n" +
                 "        'group_row', JSON_AGG(\n" +
                 "            JSON_BUILD_OBJECT(\n" +
-                "                'endpoint', endpoint,\n" +
-                "                'groupId', group_id,\n" +
-                "                'colName', col_name,\n" +
-                "                'operator', operator,\n" +
-                "                'colValue', col_value\n" +
+                "                'endpoint', ae.endpoint,\n" +
+                "                'groupId', grf.group_id,\n" +
+                "                'colName', grf.col_name,\n" +
+                "                'operator', grf.operator,\n" +
+                "                'colValue', grf.col_value\n" +
                 "            )\n" +
                 "        )\n" +
                 "    ) AS result\n" +
                 "FROM\n" +
-                "    group_row_filter_t\n" +
+                "    group_row_filter_t grf\n" +
+                "INNER JOIN api_endpoint_t ae ON grf.endpoint_id = ae.endpoint_id AND grf.host_id = ae.host_id\n" +
+                "INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id\n" +
                 "WHERE\n" +
-                "    host_id = ?\n" +
-                "    AND api_id = ?\n" +
-                "    AND api_version = ?\n" +
-                "GROUP BY ()\n" +
+                "    grf.host_id = ?\n" +
+                "    AND av.api_id = ?\n" +
+                "    AND av.api_version = ?\n" +
+                "GROUP BY 1\n" +
                 "HAVING COUNT(*) > 0 \n" +
                 "UNION ALL\n" +
                 "SELECT\n" +
                 "    JSON_BUILD_OBJECT(\n" +
                 "        'group_col', JSON_AGG(\n" +
                 "            JSON_BUILD_OBJECT(\n" +
-                "                'endpoint', endpoint,\n" +
-                "                'groupId', group_id,\n" +
-                "                'columns', columns\n" +
+                "                'endpoint', ae.endpoint,\n" +
+                "                'groupId', gcf.group_id,\n" +
+                "                'columns', gcf.columns\n" +
                 "            )\n" +
                 "        )\n" +
                 "    ) AS result\n" +
                 "FROM\n" +
-                "    group_col_filter_t\n" +
+                "    group_col_filter_t gcf\n" +
+                "INNER JOIN api_endpoint_t ae ON gcf.endpoint_id = ae.endpoint_id AND gcf.host_id = ae.host_id\n" +
+                "INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id\n" +
                 "WHERE\n" +
-                "    host_id = ?\n" +
-                "    AND api_id = ?\n" +
-                "    AND api_version = ?\n" +
-                "GROUP BY ()\n" +
+                "    gcf.host_id = ?\n" +
+                "    AND av.api_id = ?\n" +
+                "    AND av.api_version = ?\n" +
+                "GROUP BY 1\n" +
                 "HAVING COUNT(*) > 0\n" +
                 "UNION ALL\n" +
                 "SELECT\n" +
                 "    JSON_BUILD_OBJECT(\n" +
                 "        'position_row', JSON_AGG(\n" +
                 "            JSON_BUILD_OBJECT(\n" +
-                "                'endpoint', endpoint,\n" +
-                "                'positionId', position_id,\n" +
-                "                'colName', col_name,\n" +
-                "                'operator', operator,\n" +
-                "                'colValue', col_value\n" +
+                "                'endpoint', ae.endpoint,\n" +
+                "                'positionId', prf.position_id,\n" +
+                "                'colName', prf.col_name,\n" +
+                "                'operator', prf.operator,\n" +
+                "                'colValue', prf.col_value\n" +
                 "            )\n" +
                 "        )\n" +
                 "    ) AS result\n" +
                 "FROM\n" +
-                "    position_row_filter_t\n" +
+                "    position_row_filter_t prf\n" +
+                "INNER JOIN api_endpoint_t ae ON prf.endpoint_id = ae.endpoint_id AND prf.host_id = ae.host_id\n" +
+                "INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id\n" +
                 "WHERE\n" +
-                "    host_id = ?\n" +
-                "    AND api_id = ?\n" +
-                "    AND api_version = ?\n" +
-                "GROUP BY ()\n" +
+                "    prf.host_id = ?\n" +
+                "    AND av.api_id = ?\n" +
+                "    AND av.api_version = ?\n" +
+                "GROUP BY 1\n" +
                 "HAVING COUNT(*) > 0 \n" +
                 "UNION ALL\n" +
                 "SELECT\n" +
                 "    JSON_BUILD_OBJECT(\n" +
                 "        'position_col', JSON_AGG(\n" +
                 "            JSON_BUILD_OBJECT(\n" +
-                "                'endpoint', endpoint,\n" +
-                "                'positionId', position_id,\n" +
-                "                'columns', columns\n" +
+                "                'endpoint', ae.endpoint,\n" +
+                "                'positionId', pcf.position_id,\n" +
+                "                'columns', pcf.columns\n" +
                 "            )\n" +
                 "        )\n" +
                 "    ) AS result\n" +
                 "FROM\n" +
-                "    position_col_filter_t\n" +
+                "    position_col_filter_t pcf\n" +
+                "INNER JOIN api_endpoint_t ae ON pcf.endpoint_id = ae.endpoint_id AND pcf.host_id = ae.host_id\n" +
+                "INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id\n" +
                 "WHERE\n" +
-                "    host_id = ?\n" +
-                "    AND api_id = ?\n" +
-                "    AND api_version = ?\n" +
-                "GROUP BY ()\n" +
+                "    pcf.host_id = ?\n" +
+                "    AND av.api_id = ?\n" +
+                "    AND av.api_version = ?\n" +
+                "GROUP BY 1\n" +
                 "HAVING COUNT(*) > 0\n" +
                 "UNION ALL\n" +
                 "SELECT\n" +
                 "    JSON_BUILD_OBJECT(\n" +
                 "        'attribute_row', JSON_AGG(\n" +
                 "            JSON_BUILD_OBJECT(\n" +
-                "                'endpoint', endpoint,\n" +
-                "                'attributeId', attribute_id,\n" +
-                "                'attributeValue', attribute_value,\n" +
-                "                'colName', col_name,\n" +
-                "                'operator', operator,\n" +
-                "                'colValue', col_value\n" +
+                "                'endpoint', ae.endpoint,\n" +
+                "                'attributeId', arf.attribute_id,\n" +
+                "                'attributeValue', arf.attribute_value,\n" +
+                "                'colName', arf.col_name,\n" +
+                "                'operator', arf.operator,\n" +
+                "                'colValue', arf.col_value\n" +
                 "            )\n" +
                 "        )\n" +
                 "    ) AS result\n" +
                 "FROM\n" +
-                "    attribute_row_filter_t\n" +
+                "    attribute_row_filter_t arf\n" +
+                "INNER JOIN api_endpoint_t ae ON arf.endpoint_id = ae.endpoint_id AND arf.host_id = ae.host_id\n" +
+                "INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id\n" +
                 "WHERE\n" +
-                "    host_id = ?\n" +
-                "    AND api_id = ?\n" +
-                "    AND api_version = ?\n" +
-                "GROUP BY ()\n" +
+                "    arf.host_id = ?\n" +
+                "    AND av.api_id = ?\n" +
+                "    AND av.api_version = ?\n" +
+                "GROUP BY 1\n" +
                 "HAVING COUNT(*) > 0 \n" +
                 "UNION ALL\n" +
                 "SELECT\n" +
                 "    JSON_BUILD_OBJECT(\n" +
                 "        'attribute_col', JSON_AGG(\n" +
                 "            JSON_BUILD_OBJECT(\n" +
-                "                'endpoint', endpoint,\n" +
-                "                'attributeId', attribute_id,\n" +
-                "                'attributeValue', attribute_value,\n" +
-                "                'columns', columns\n" +
+                "                'endpoint', ae.endpoint,\n" +
+                "                'attributeId', acf.attribute_id,\n" +
+                "                'attributeValue', acf.attribute_value,\n" +
+                "                'columns', acf.columns\n" +
                 "            )\n" +
                 "        )\n" +
                 "    ) AS result\n" +
                 "FROM\n" +
-                "    attribute_col_filter_t\n" +
+                "    attribute_col_filter_t acf\n" +
+                "INNER JOIN api_endpoint_t ae ON acf.endpoint_id = ae.endpoint_id AND acf.host_id = ae.host_id\n" +
+                "INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id\n" +
                 "WHERE\n" +
-                "    host_id = ?\n" +
-                "    AND api_id = ?\n" +
-                "    AND api_version = ?\n" +
-                "GROUP BY ()\n" +
+                "    acf.host_id = ?\n" +
+                "    AND av.api_id = ?\n" +
+                "    AND av.api_version = ?\n" +
+                "GROUP BY 1\n" +
                 "HAVING COUNT(*) > 0\n" +
                 "UNION ALL\n" +
                 "SELECT\n" +
                 "    JSON_BUILD_OBJECT(\n" +
                 "        'user_row', JSON_AGG(\n" +
                 "            JSON_BUILD_OBJECT(\n" +
-                "                'endpoint', endpoint,\n" +
-                "                'userId', user_id,\n" +
-                "                'startTs', start_ts,\n" +
-                "                'endTs', end_ts,\n" +
-                "                'colName', col_name,\n" +
-                "                'operator', operator,\n" +
-                "                'colValue', col_value\n" +
+                "                'endpoint', ae.endpoint,\n" +
+                "                'userId', urf.user_id,\n" +
+                "                'startTs', urf.start_ts,\n" +
+                "                'endTs', urf.end_ts,\n" +
+                "                'colName', urf.col_name,\n" +
+                "                'operator', urf.operator,\n" +
+                "                'colValue', urf.col_value\n" +
                 "            )\n" +
                 "        )\n" +
                 "    ) AS result\n" +
                 "FROM\n" +
-                "    user_row_filter_t\n" +
+                "    user_row_filter_t urf\n" +
+                "INNER JOIN api_endpoint_t ae ON urf.endpoint_id = ae.endpoint_id AND urf.host_id = ae.host_id\n" +
+                "INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id\n" +
                 "WHERE\n" +
-                "    host_id = ?\n" +
-                "    AND api_id = ?\n" +
-                "    AND api_version = ?\n" +
-                "GROUP BY ()\n" +
+                "    urf.host_id = ?\n" +
+                "    AND av.api_id = ?\n" +
+                "    AND av.api_version = ?\n" +
+                "GROUP BY 1\n" +
                 "HAVING COUNT(*) > 0 \n" +
                 "UNION ALL\n" +
                 "SELECT\n" +
                 "    JSON_BUILD_OBJECT(\n" +
                 "        'user_col', JSON_AGG(\n" +
                 "            JSON_BUILD_OBJECT(\n" +
-                "                'endpoint', endpoint,\n" +
-                "                'userId', user_id,\n" +
-                "                'startTs', start_ts,\n" +
-                "                'endTs', end_ts,\n" +
-                "                'columns', columns\n" +
+                "                'endpoint', ae.endpoint,\n" +
+                "                'userId', ucf.user_id,\n" +
+                "                'startTs', ucf.start_ts,\n" +
+                "                'endTs', ucf.end_ts,\n" +
+                "                'columns', ucf.columns\n" +
                 "            )\n" +
                 "        )\n" +
                 "    ) AS result\n" +
                 "FROM\n" +
-                "    user_col_filter_t\n" +
+                "    user_col_filter_t ucf\n" +
+                "INNER JOIN api_endpoint_t ae ON ucf.endpoint_id = ae.endpoint_id AND ucf.host_id = ae.host_id\n" +
+                "INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id\n" +
                 "WHERE\n" +
-                "    host_id = ?\n" +
-                "    AND api_id = ?\n" +
-                "    AND api_version = ?\n" +
-                "GROUP BY ()\n" +
+                "    ucf.host_id = ?\n" +
+                "    AND av.api_id = ?\n" +
+                "    AND av.api_version = ?\n" +
+                "GROUP BY 1\n" +
                 "HAVING COUNT(*) > 0\n";
 
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setObject(1, UUID.fromString(hostId));
-            preparedStatement.setString(2, apiId);
-            preparedStatement.setString(3, apiVersion);
-            preparedStatement.setObject(4, UUID.fromString(hostId));
-            preparedStatement.setString(5, apiId);
-            preparedStatement.setString(6, apiVersion);
-            preparedStatement.setObject(7, UUID.fromString(hostId));
-            preparedStatement.setString(8, apiId);
-            preparedStatement.setString(9, apiVersion);
-            preparedStatement.setObject(10, UUID.fromString(hostId));
-            preparedStatement.setString(11, apiId);
-            preparedStatement.setString(12, apiVersion);
-            preparedStatement.setObject(13, UUID.fromString(hostId));
-            preparedStatement.setString(14, apiId);
-            preparedStatement.setString(15, apiVersion);
-            preparedStatement.setObject(16, UUID.fromString(hostId));
-            preparedStatement.setString(17, apiId);
-            preparedStatement.setString(18, apiVersion);
-            preparedStatement.setObject(19, UUID.fromString(hostId));
-            preparedStatement.setString(20, apiId);
-            preparedStatement.setString(21, apiVersion);
-            preparedStatement.setObject(22, UUID.fromString(hostId));
-            preparedStatement.setString(23, apiId);
-            preparedStatement.setString(24, apiVersion);
-            preparedStatement.setObject(25, UUID.fromString(hostId));
-            preparedStatement.setString(26, apiId);
-            preparedStatement.setString(27, apiVersion);
-            preparedStatement.setObject(28, UUID.fromString(hostId));
-            preparedStatement.setString(29, apiId);
-            preparedStatement.setString(30, apiVersion);
+            // Each UNION ALL block needs its set of parameters. There are 8 blocks, each takes hostId, apiId, apiVersion.
+            // So, 8 * 3 = 24 parameters in total.
+            for (int i = 0; i < 8; i++) {
+                preparedStatement.setObject(i * 3 + 1, UUID.fromString(hostId));
+                preparedStatement.setString(i * 3 + 2, apiId);
+                preparedStatement.setString(i * 3 + 3, apiVersion);
+            }
+
             List<String> list = new ArrayList<>();
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
