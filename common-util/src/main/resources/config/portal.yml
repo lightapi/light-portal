@@ -18,38 +18,6 @@ admin: ${portal.admin:steve.hu@lightapi.net}
 # Portal data folder for contents that are not suitable for Kafka
 dataPath: ${portal.dataPath:/data}
 
-# User Streams
-# Kafka Streams User application.id which is the consumer group.id
-userApplicationId: ${portal.userApplicationId:user}
-# Kafka Streams User application portal-userid topic.
-userIdTopic: ${portal.userIdTopic:portal-userid}
-# Kafka Streams User application portal-taiji topic
-taijiTopic: ${portal.taijiTopic:portal-taiji}
-# Kafka Streams User application portal-reference topic
-referenceTopic: ${portal.referenceTopic:portal-reference}
-
-# Notification Streams
-# Kafka Streams Notification application.id which is the consumer group.id
-notificationApplicationId: ${portal.notificationApplicationId:notification}
-# Kafka Streams Notification topic
-notificationTopic: ${portal.notificationTopic:portal-notification}
-
-# Nonce Streams
-# Kafka Streams Nonce application.id which is the consumer group.id
-nonceApplicationId: ${portal.nonceApplicationId:nonce}
-# Kafka Streams Nonce topic
-nonceTopic: ${portal.nonceTopic:portal-nonce}
-
-# Market Streams
-# Kafka Streams Market application.id which is the consumer group.id
-marketApplicationId: ${portal.marketApplication:market}
-
-# Maproot Streams
-# Kafka Streams Maproot application.id which is the consumer group.id
-maprootApplicationId: ${portal.maprootApplication:maproot}
-
 # Schedule Streams
 # Kafka Streams Schedule application.id which is the consumer group.id
 scheduleApplicationId: ${portal.scheduleApplication:schedule}
-# Kafka Streams Schedule topic
-scheduleTopic: ${portal.scheduleTopic:light-scheduler}

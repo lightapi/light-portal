@@ -20,19 +20,7 @@ public class PortalConfig {
     String portalHost;
     String admin;
     String dataPath;
-    String userApplicationId;
-    String userIdTopic;
-    String taijiTopic;
-    String referenceTopic;
-    String notificationApplicationId;
-    String notificationTopic;
-    String nonceApplicationId;
-    String nonceTopic;
-    String marketApplicationId;
-    String maprootApplicationId;
     String scheduleApplicationId;
-    String scheduleTopic;
-
 
     public PortalConfig() {
     }
@@ -109,99 +97,11 @@ public class PortalConfig {
         this.dataPath = dataPath;
     }
 
-    public String getUserApplicationId() {
-        return userApplicationId;
-    }
-
-    public void setUserApplicationId(String userApplicationId) {
-        this.userApplicationId = userApplicationId;
-    }
-
-    public String getUserIdTopic() {
-        return userIdTopic;
-    }
-
-    public void setUserIdTopic(String userIdTopic) {
-        this.userIdTopic = userIdTopic;
-    }
-
-    public String getTaijiTopic() {
-        return taijiTopic;
-    }
-
-    public void setTaijiTopic(String taijiTopic) {
-        this.taijiTopic = taijiTopic;
-    }
-
-    public String getReferenceTopic() {
-        return referenceTopic;
-    }
-
-    public void setReferenceTopic(String referenceTopic) {
-        this.referenceTopic = referenceTopic;
-    }
-
-    public String getNotificationApplicationId() {
-        return notificationApplicationId;
-    }
-
-    public void setNotificationApplicationId(String notificationApplicationId) {
-        this.notificationApplicationId = notificationApplicationId;
-    }
-
-    public String getNotificationTopic() {
-        return notificationTopic;
-    }
-
-    public void setNotificationTopic(String notificationTopic) {
-        this.notificationTopic = notificationTopic;
-    }
-
-    public String getNonceApplicationId() {
-        return nonceApplicationId;
-    }
-
-    public void setNonceApplicationId(String nonceApplicationId) {
-        this.nonceApplicationId = nonceApplicationId;
-    }
-
-    public String getNonceTopic() {
-        return nonceTopic;
-    }
-
-    public void setNonceTopic(String nonceTopic) {
-        this.nonceTopic = nonceTopic;
-    }
-
-    public String getMarketApplicationId() {
-        return marketApplicationId;
-    }
-
-    public void setMarketApplicationId(String marketApplicationId) {
-        this.marketApplicationId = marketApplicationId;
-    }
-
-    public String getMaprootApplicationId() {
-        return maprootApplicationId;
-    }
-
-    public void setMaprootApplicationId(String maprootApplicationId) {
-        this.maprootApplicationId = maprootApplicationId;
-    }
-
     public String getScheduleApplicationId() {
         return scheduleApplicationId;
     }
 
     public void setScheduleApplicationId(String scheduleApplicationId) {
         this.scheduleApplicationId = scheduleApplicationId;
-    }
-
-    public String getScheduleTopic() {
-        return scheduleTopic;
-    }
-
-    public void setScheduleTopic(String scheduleTopic) {
-        this.scheduleTopic = scheduleTopic;
     }
 }
