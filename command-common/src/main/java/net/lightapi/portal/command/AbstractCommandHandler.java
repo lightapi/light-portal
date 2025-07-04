@@ -1,6 +1,5 @@
 package net.lightapi.portal.command;
 
-import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
 import com.networknt.db.provider.DbProvider;
 import com.networknt.httpstring.AttachmentConstants;
@@ -15,14 +14,11 @@ import com.networknt.utility.NioUtils;
 import com.networknt.utility.UuidUtil;
 import io.cloudevents.CloudEvent;
 import io.cloudevents.core.builder.CloudEventBuilder;
-import io.cloudevents.jackson.JsonFormat;
 import io.undertow.server.HttpServerExchange;
 import net.lightapi.portal.HybridQueryClient;
-import net.lightapi.portal.PortalConfig;
 import net.lightapi.portal.PortalConstants;
 import net.lightapi.portal.PortalUtil;
 import net.lightapi.portal.db.PortalDbProvider;
-import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
 
 import java.nio.ByteBuffer;
@@ -30,7 +26,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.CountDownLatch;
 /**
  * Abstract base class for handling schema commands that produce CloudEvents.
  * Implements the common logic for validation, nonce retrieval, event creation,
@@ -43,14 +38,12 @@ public abstract class AbstractCommandHandler implements HybridHandler {
     // protected final Logger logger = LoggerFactory.getLogger(getClass());
 
     // Make config and constants protected or private static final
-    protected static final PortalConfig config = (PortalConfig) Config.getInstance().getJsonObjectConfig(PortalConfig.CONFIG_NAME, PortalConfig.class);
     public static PortalDbProvider dbProvider = (PortalDbProvider) SingletonServiceFactory.getBean(DbProvider.class);
-    private static final JsonFormat jsonFormat = new JsonFormat();
     public static final String USER_ID = "userId";
     public static final String HOST_ID = "hostId";
 
     protected static final String INCORRECT_TOKEN_TYPE = "ERR11601";
-    protected static final String SEND_MESSAGE_EXCEPTION = "ERR11605";
+    protected static final String OBJECT_NOT_FOUND = "ERR11637";
 
     /**
      * Subclasses must implement this to provide the specific CloudEvent type string. The type must be unique within the event source.
@@ -125,6 +118,32 @@ public abstract class AbstractCommandHandler implements HybridHandler {
         return Success.of(map);
     }
 
+    /**
+     * Subclasses can override this to use customized logic to populate the old aggregateVersion and new aggregateVersion
+     * based on the event type and existing aggregateVersion in the data map.
+     *
+     */
+    protected Result<Map<String, Object>> populateAggregateVersion(Map<String, Object> map) {
+        String eventType = getCloudEventType();
+        // for created event, we can derive the new aggregate versions.
+        if (eventType.endsWith("CreatedEvent")) {
+            // For auth code created event, we don't need to increment the aggregate version.
+            map.put(PortalConstants.NEW_AGGREGATE_VERSION, 1L);
+            map.put(PortalConstants.AGGREGATE_VERSION, 0L);
+            return Success.of(map);
+        }
+        // For other events, we need to increment the aggregate version.
+        if( !map.containsKey(PortalConstants.AGGREGATE_VERSION)) {
+            getLogger().error("The input map does not contain the aggregate version for event type {}.", eventType);
+            return Failure.of(new Status(OBJECT_NOT_FOUND, "aggregateVersion", eventType));
+        }
+        long oldAggregateVersion = ((Number) Objects.requireNonNull(map.get(PortalConstants.AGGREGATE_VERSION))).longValue();
+        // Increment the aggregate version by 1 for the new event.
+        long newAggregateVersion = oldAggregateVersion + 1;
+        map.put(PortalConstants.NEW_AGGREGATE_VERSION, newAggregateVersion);
+        return Success.of(map);
+    }
+
     @Override
     public ByteBuffer handle(HttpServerExchange exchange, Object input) {
         Logger logger = getLogger();
@@ -181,6 +200,12 @@ public abstract class AbstractCommandHandler implements HybridHandler {
         Number nonce = PortalUtil.parseNumber(result.getResult());
         if(logger.isTraceEnabled()) logger.trace("nonce = {}", nonce);
 
+        // get the new aggregate version and put it in the map.
+        Result<Map<String, Object>> aggregateVersionResult = populateAggregateVersion(map);
+        if (aggregateVersionResult.isFailure()) {
+            return NioUtils.toByteBuffer(getStatus(exchange, aggregateVersionResult.getError()));
+        }
+
         // --- 3. Build CloudEvent ---
         CloudEvent[] events = buildCloudEvent(map, userId, host, nonce);
         if(logger.isTraceEnabled()) {
@@ -228,6 +253,7 @@ public abstract class AbstractCommandHandler implements HybridHandler {
                 .withExtension(PortalConstants.NONCE, nonce)
                 .withExtension(Constants.HOST, host)
                 .withExtension(PortalConstants.AGGREGATE_TYPE, getCloudEventAggregateType())
+                .withExtension(PortalConstants.EVENT_AGGREGATE_VERSION, (Number)map.get(PortalConstants.NEW_AGGREGATE_VERSION))
                 .withData("application/json", data.getBytes(StandardCharsets.UTF_8))
                 .build()};
     }

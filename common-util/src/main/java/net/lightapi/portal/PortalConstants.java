@@ -304,6 +304,9 @@ public class PortalConstants {
 
     // aggregate id
     public static final String AGGREGATE_ID = "aggregateid";
+    public static final String EVENT_AGGREGATE_VERSION = "aggregateversion";
+    public static final String AGGREGATE_VERSION = "aggregateVersion";
+    public static final String NEW_AGGREGATE_VERSION = "newAggregateVersion";
     // aggregate type
     public static final String AGGREGATE_TYPE = "aggregatetype";
 

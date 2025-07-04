@@ -345,7 +345,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> queryRoleLabel(String hostId);
 
     // RolePermission
-    Result<String> queryRolePermission(int offset, int limit, String hostId, String roleId, String apiId, String apiVersion, String endpoint);
+    Result<String> queryRolePermission(int offset, int limit, String hostId, String roleId, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint);
     void createRolePermission(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteRolePermission(Connection conn, Map<String, Object> event) throws SQLException, Exception;
 
@@ -356,7 +356,7 @@ public interface PortalDbProvider extends DbProvider {
     void deleteRoleUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;
 
     // RoleRowFilter
-    Result<String> queryRoleRowFilter(int offset, int limit, String hostId, String roleId, String apiId, String apiVersion, String endpoint);
+    Result<String> queryRoleRowFilter(int offset, int limit, String hostId, String roleId, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint);
     void createRoleRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateRoleRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteRoleRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;

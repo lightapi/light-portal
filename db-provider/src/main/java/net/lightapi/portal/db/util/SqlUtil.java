@@ -1,6 +1,11 @@
 package net.lightapi.portal.db.util;
 
+import io.cloudevents.CloudEvent;
+import io.cloudevents.core.v1.CloudEventV1;
+import net.lightapi.portal.PortalConstants;
+
 import java.util.List;
+import java.util.Map;
 
 public class SqlUtil {
 
@@ -81,5 +86,37 @@ public class SqlUtil {
             conditions.add(columnName + " LIKE ?");
             parameters.add("%" + columnValue + "%");
         }
+    }
+
+    public static Map<String, Object> extractEventData(Map<String, Object> event) {
+        Object data = event.get(PortalConstants.DATA);
+        if (data instanceof Map) {
+            return (Map<String, Object>) data;
+        }
+        throw new IllegalArgumentException("CloudEvent data is missing or not a Map.");
+    }
+
+    // This is the expected version from the projection. It is the existing version of the aggregate.
+    public static long getOldAggregateVersion(Map<String, Object> event) {
+        Map<String, Object> dataMap = extractEventData(event);
+        if (dataMap.containsKey("aggregateVersion") && dataMap.get("aggregateVersion") instanceof Number) {
+            return ((Number) dataMap.get("aggregateVersion")).longValue();
+        }
+        throw new IllegalArgumentException("CloudEvent data missing 'aggregateVersion' for aggregate versioning.");
+    }
+
+    // This is the new version of the aggregate that is being created or updated.
+    public static long getNewAggregateVersion(Map<String, Object> event) {
+        Map<String, Object> dataMap = extractEventData(event);
+        if (dataMap.containsKey("newAggregateVersion") && dataMap.get("newAggregateVersion") instanceof Number) {
+            return ((Number) dataMap.get("newAggregateVersion")).longValue();
+        }
+        // For CREATE events, aggregateVersion is typically 0. For UPDATE/DELETE, it should be present.
+        // Differentiate here, or rely on caller to only call this for update/delete events.
+        String eventType = (String) event.get(CloudEventV1.TYPE);
+        if (eventType != null && eventType.endsWith("CreatedEvent")) {
+            return 1L; // For creation events, expected version is 1 (no prior state)
+        }
+        throw new IllegalArgumentException("CloudEvent data missing 'newAggregateVersion' for optimistic concurrency check.");
     }
 }

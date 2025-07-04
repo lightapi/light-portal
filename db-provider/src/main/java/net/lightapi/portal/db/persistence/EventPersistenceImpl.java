@@ -10,6 +10,8 @@ import com.networknt.utility.Constants;
 import io.cloudevents.CloudEvent;
 import io.cloudevents.jackson.JsonFormat;
 import net.lightapi.portal.PortalConstants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
@@ -17,6 +19,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -26,7 +29,7 @@ import static net.lightapi.portal.db.PortalDbProviderImpl.GENERIC_EXCEPTION;
 import static net.lightapi.portal.db.PortalDbProviderImpl.SQL_EXCEPTION;
 
 public class EventPersistenceImpl implements EventPersistence {
-
+    private static final Logger logger = LoggerFactory.getLogger(EventPersistenceImpl.class);
     private static final JsonFormat jsonFormat = new JsonFormat();
     /**
      * Inserts multiple CloudEvents into the event_store_t and outbox_message_t tables
@@ -39,13 +42,13 @@ public class EventPersistenceImpl implements EventPersistence {
     public Result<String> insertEventStore(CloudEvent[] events) {
         // SQL for event_store_t table
         final String insertEventStoreSql = "INSERT INTO event_store_t " +
-                "(id, host_id, user_id, aggregate_id, aggregate_type, event_type, sequence_number, event_ts, payload, metadata) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb)"; // Use ?::jsonb for JSONB casting
+                "(id, host_id, user_id, nonce, aggregate_id, aggregate_version, aggregate_type, event_type, event_ts, payload, metadata) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb)"; // Use ?::jsonb for JSONB casting
 
         // SQL for outbox_message_t table
         final String insertOutboxMessageSql = "INSERT INTO outbox_message_t " +
-                "(id, host_id, user_id, aggregate_id, aggregate_type, event_type, event_ts, payload, metadata) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb)"; // Use ?::jsonb for JSONB casting
+                "(id, host_id, user_id, nonce, aggregate_id, aggregate_version, aggregate_type, event_type, event_ts, payload, metadata) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb)"; // Use ?::jsonb for JSONB casting
 
         if (events == null || events.length == 0) {
             return Success.of("No events to insert.");
@@ -89,12 +92,21 @@ public class EventPersistenceImpl implements EventPersistence {
                         throw new IllegalArgumentException("CloudEvent missing required user_id extension.");
                     }
 
-                    // Assuming aggregate_type is also an extension or derived from event.getType()
+                    // Assuming nonce is also an extension
+                    long nonce = ((Number) Objects.requireNonNull(event.getExtension(PortalConstants.NONCE))).longValue();
+
+                    // Assuming aggregate_type is also an extension
                     String aggregateType =(String)event.getExtension(PortalConstants.AGGREGATE_TYPE);
                     if (aggregateType == null) {
                         throw new IllegalArgumentException("Could not determine aggregatetype from CloudEvent.");
                     }
 
+                    // Assuming aggregateVersion is also an extension
+                    Number aggregateVersionNumber = (Number)event.getExtension(PortalConstants.EVENT_AGGREGATE_VERSION);
+                    if (aggregateVersionNumber == null) {
+                        throw new IllegalArgumentException("CloudEvent missing required aggregate_version extension.");
+                    }
+                    long aggregateVersion = aggregateVersionNumber.longValue();
 
                     // Extract payload which is the CloudEvent
                     byte[] payloadByte = jsonFormat.serialize(event);
@@ -104,52 +116,45 @@ public class EventPersistenceImpl implements EventPersistence {
                     // or just custom extensions not explicitly mapped to columns.
                     // For simplicity, let's just include all extensions as metadata JSON.
                     Map<String, Object> extensions = event.getExtensionNames().stream()
-                            .filter(extName -> !extName.equals(Constants.HOST) && !extName.equals(Constants.USER) && !extName.equals(PortalConstants.AGGREGATE_TYPE))
+                            .filter(
+                                    extName -> !extName.equals(Constants.HOST) &&
+                                            !extName.equals(Constants.USER) &&
+                                            !extName.equals(PortalConstants.AGGREGATE_TYPE) &&
+                                            !extName.equals(PortalConstants.EVENT_AGGREGATE_VERSION) &&
+                                            !extName.equals(PortalConstants.NONCE)
+                            )
                             .collect(Collectors.toMap(
                                     extName -> extName,
                                     event::getExtension
                             ));
                     String metadataJson = objectMapper.writeValueAsString(extensions);
 
-                    // Sequence Number: This is the tricky one in a batch of events
-                    // The ApplicationService should have already determined the correct sequence number for each event
-                    // before calling this insert method. The DomainEvent object (which gets serialized into payload)
-                    // should contain the sequence number.
-                    // For simplicity here, I'll assume you extract it from the CloudEvent payload,
-                    // or it's provided as an extension.
-                    // This is CRITICAL for OCC.
-                    long sequenceNumber = 0; // Placeholder
-                    // You MUST retrieve the sequence number from your event payload or metadata correctly.
-                    // E.g., if your payload JSON structure has a "sequenceNumber" field:
-                    // JsonNode payloadNode = objectMapper.readTree(payloadJson);
-                    // sequenceNumber = payloadNode.has("sequenceNumber") ? payloadNode.get("sequenceNumber").asLong() : 0;
-                    // Or if it's a CloudEvent extension:
-                    // if (event.getExtension("sequenceNumber") instanceof Long seq) sequenceNumber = seq;
-
-
                     // Set parameters for event_store_t
                     eventStorePst.setObject(1, eventId);
                     eventStorePst.setObject(2, hostId);
                     eventStorePst.setObject(3, userId);
-                    eventStorePst.setString(4, aggregateId);
-                    eventStorePst.setString(5, aggregateType);
-                    eventStorePst.setString(6, eventType);
-                    eventStorePst.setLong(7, sequenceNumber); // Make sure this is correct for OCC
-                    eventStorePst.setObject(8, eventTs); // Use OffsetDateTime for TIMESTAMP WITH TIME ZONE
-                    eventStorePst.setString(9, payloadJson);
-                    eventStorePst.setString(10, metadataJson);
+                    eventStorePst.setLong(4,  nonce);
+                    eventStorePst.setString(5, aggregateId);
+                    eventStorePst.setLong(6,  aggregateVersion);
+                    eventStorePst.setString(7, aggregateType);
+                    eventStorePst.setString(8, eventType);
+                    eventStorePst.setObject(9, eventTs); // Use OffsetDateTime for TIMESTAMP WITH TIME ZONE
+                    eventStorePst.setString(10, payloadJson);
+                    eventStorePst.setString(11, metadataJson);
                     eventStorePst.addBatch();
 
                     // Set parameters for outbox_message_t
                     outboxPst.setObject(1, eventId);
                     outboxPst.setObject(2, hostId);
                     outboxPst.setObject(3, userId);
-                    outboxPst.setString(4, aggregateId);
-                    outboxPst.setString(5, aggregateType);
-                    outboxPst.setString(6, eventType);
-                    outboxPst.setObject(7, eventTs); // Use OffsetDateTime for TIMESTAMP WITH TIME ZONE
-                    outboxPst.setString(8, payloadJson);
-                    outboxPst.setString(9, metadataJson);
+                    outboxPst.setLong(4,  nonce);
+                    outboxPst.setString(5, aggregateId);
+                    outboxPst.setLong(6,  aggregateVersion);
+                    outboxPst.setString(7, aggregateType);
+                    outboxPst.setString(8, eventType);
+                    outboxPst.setObject(9, eventTs); // Use OffsetDateTime for TIMESTAMP WITH TIME ZONE
+                    outboxPst.setString(10, payloadJson);
+                    outboxPst.setString(11, metadataJson);
                     outboxPst.addBatch();
                 }
 
@@ -165,22 +170,65 @@ public class EventPersistenceImpl implements EventPersistence {
                 // notificationService.insertNotification(event, true, null); // This belongs to a consumer of Kafka
             } catch (SQLException e) {
                 // Log and rollback on SQL errors
-                // logger.error("SQLException:", e);
+                logger.error("SQLException:", e);
                 conn.rollback();
                 // notificationService.insertNotification(event, false, e.getMessage()); // This belongs to a consumer of Kafka
                 result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
             } catch (Exception e) {
                 // Catch other exceptions
-                // logger.error("Exception:", e);
+                logger.error("Exception:", e);
                 conn.rollback();
                 result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
             }
         } catch (SQLException e) {
             // Catch connection errors
-            // logger.error("SQLException:", e);
+            logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
         }
         return result;
+    }
+
+    /**
+     * Retrieves events from the event store based on various filters. This method supports pagination and it is
+     * used on the UI from the event page.
+     *
+     * @param offset offset for pagination
+     * @param limit limit for pagination
+     * @param hostId host identifier, can be null
+     * @param id unique identifier for the event, can be null
+     * @param userId user identifier, can be null
+     * @param nonce user nonce
+     * @param aggregateId aggregate identifier, can be null
+     * @param aggregateVersion sequence number for optimistic concurrency control
+     * @param aggregateType aggregate type, can be null
+     * @param eventType event type, can be null
+     * @param payload payload of the event, can be null
+     * @param metaData metadata of the event, can be null
+     * @return a Result containing the events in JSON format or an error status
+     */
+    @Override
+    public Result<String> getEventStore(int offset, int limit, String hostId, String id, String userId, Long nonce, String aggregateId, Long aggregateVersion, String aggregateType, String eventType, String payload, String metaData) {
+        return null;
+    }
+
+    /**
+     * This method is used on the UI for exporting the event store data to a file.
+     *
+     * @param hostId host identifier, can be null
+     * @param id unique identifier for the event, can be null
+     * @param userId user identifier, can be null
+     * @param nonce user nonce
+     * @param aggregateId aggregate identifier, can be null
+     * @param aggregateVersion sequence number for optimistic concurrency control
+     * @param aggregateType aggregate type, can be null
+     * @param eventType event type, can be null
+     * @param payload payload of the event, can be null
+     * @param metaData metadata of the event, can be null
+     * @return a Result containing the events in JSON format or an error status
+     */
+    @Override
+    public Result<String> exportEventStore(String hostId, String id, String userId, Long nonce, String aggregateId, Long aggregateVersion, String aggregateType, String eventType, String payload, String metaData) {
+        return null;
     }
 
 }

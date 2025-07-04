@@ -10,6 +10,7 @@ import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.PortalConstants;
 import net.lightapi.portal.db.PortalDbProvider;
 import net.lightapi.portal.db.util.NotificationService;
+import net.lightapi.portal.db.util.SqlUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,14 +72,11 @@ public class AuthPersistenceImpl implements AuthPersistence {
             if (count == 0) {
                 throw new SQLException("Failed to insert the app with id " + appId);
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
             logger.error("SQLException during createApp for id {}: {}", appId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         } catch (Exception e) {
             logger.error("Exception during createApp for id {}: {}", appId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
@@ -124,14 +122,11 @@ public class AuthPersistenceImpl implements AuthPersistence {
             if (count == 0) {
                 throw new SQLException("Failed to update the app with id " + appId);
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
             logger.error("SQLException during updateApp for id {}: {}", appId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         } catch (Exception e) {
             logger.error("Exception during updateApp for id {}: {}", appId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
@@ -150,14 +145,11 @@ public class AuthPersistenceImpl implements AuthPersistence {
             if (count == 0) {
                 throw new SQLException("Failed to delete the app with id " + appId);
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
             logger.error("SQLException during deleteApp for id {}: {}", appId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         } catch (Exception e) {
             logger.error("Exception during deleteApp for id {}: {}", appId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
@@ -255,14 +247,11 @@ public class AuthPersistenceImpl implements AuthPersistence {
             if (count == 0) {
                 throw new SQLException(String.format("Failed to insert client %s", clientId));
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
             logger.error("SQLException during createClient for id {}: {}", clientId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         } catch (Exception e) {
             logger.error("Exception during createClient for id {}: {}", clientId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
@@ -332,14 +321,11 @@ public class AuthPersistenceImpl implements AuthPersistence {
             if (count == 0) {
                 throw new SQLException(String.format("no record is updated for client %s", clientId));
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
             logger.error("SQLException during updateClient for id {}: {}", clientId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         } catch (Exception e) {
             logger.error("Exception during updateClient for id {}: {}", clientId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
@@ -356,14 +342,11 @@ public class AuthPersistenceImpl implements AuthPersistence {
             if (count == 0) {
                 throw new SQLException(String.format("no record is deleted for client %s", clientId));
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
             logger.error("SQLException during deleteClient for id {}: {}", clientId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         } catch (Exception e) {
             logger.error("Exception during deleteClient for id {}: {}", clientId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
@@ -602,14 +585,11 @@ public class AuthPersistenceImpl implements AuthPersistence {
                 logger.error("SQLException during createAuthProvider key insert for provider id {}: {}", providerId, ex.getMessage(), ex);
                 throw new SQLException("Failed to insert the auth provider key with provider id " + providerId, ex);
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
             logger.error("SQLException during createAuthProvider for id {}: {}", providerId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         } catch (Exception e) {
             logger.error("Exception during createAuthProvider for id {}: {}", providerId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
@@ -675,14 +655,11 @@ public class AuthPersistenceImpl implements AuthPersistence {
                     throw new SQLException("Failed to delete the auth provider key with provider id " + providerId);
                 }
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
             logger.error("SQLException during rotateAuthProvider for id {}: {}", providerId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         } catch (Exception e) {
             logger.error("Exception during rotateAuthProvider for id {}: {}", providerId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
@@ -721,14 +698,11 @@ public class AuthPersistenceImpl implements AuthPersistence {
             if (count == 0) {
                 throw new SQLException("Failed to update the auth provider with id " + providerId);
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
             logger.error("SQLException during updateAuthProvider for id {}: {}", providerId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         } catch (Exception e) {
             logger.error("Exception during updateAuthProvider for id {}: {}", providerId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
@@ -747,14 +721,11 @@ public class AuthPersistenceImpl implements AuthPersistence {
             if (count == 0) {
                 throw new SQLException("Failed to delete the auth provider with id " + providerId);
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
             logger.error("SQLException during deleteAuthProvider for id {}: {}", providerId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         } catch (Exception e) {
             logger.error("Exception during deleteAuthProvider for id {}: {}", providerId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
@@ -1033,14 +1004,11 @@ public class AuthPersistenceImpl implements AuthPersistence {
             if (count == 0) {
                 throw new SQLException(String.format("Failed to insert refresh token %s", refreshToken));
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
             logger.error("SQLException during createRefreshToken for id {}: {}", refreshToken, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         } catch (Exception e) {
             logger.error("Exception during createRefreshToken for id {}: {}", refreshToken, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
@@ -1057,14 +1025,11 @@ public class AuthPersistenceImpl implements AuthPersistence {
             if (count == 0) {
                 throw new SQLException(String.format("no record is deleted for refresh token %s", refreshToken));
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
             logger.error("SQLException during deleteRefreshToken for id {}: {}", refreshToken, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         } catch (Exception e) {
             logger.error("Exception during deleteRefreshToken for id {}: {}", refreshToken, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
@@ -1231,10 +1196,11 @@ public class AuthPersistenceImpl implements AuthPersistence {
     public void createAuthCode(Connection conn, Map<String, Object> event) throws SQLException, Exception {
 
         final String insertAuthCode = "INSERT INTO auth_code_t(host_id, provider_id, auth_code, user_id, entity_id, user_type, email, roles," +
-                "redirect_uri, scope, remember, code_challenge, challenge_method, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?, ?, ?, ?)";
+                "redirect_uri, scope, remember, code_challenge, challenge_method, update_user, update_ts, aggregate_version) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
         String authCode = (String) map.get("authCode");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(insertAuthCode)) {
             statement.setObject(1, UUID.fromString((String) map.get("hostId")));
             statement.setString(2, (String) map.get("providerId"));
@@ -1291,42 +1257,40 @@ public class AuthPersistenceImpl implements AuthPersistence {
             }
             statement.setString(14, (String) event.get(Constants.USER));
             statement.setObject(15, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            statement.setLong(16, newAggregateVersion);
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert the auth code with id " + authCode);
+                throw new SQLException("Failed to insert the auth code with authCode " + authCode + " aggregateVersion " + newAggregateVersion);
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during createAuthCode for id {}: {}", authCode, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during createAuthCode for authCode {} aggregateVersion {}: {}", authCode, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createAuthCode for id {}: {}", authCode, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during createAuthCode for authCode {} aggregateVersion {}: {}", authCode, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
     public void deleteAuthCode(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String deleteAuthCode = "DELETE FROM auth_code_t WHERE host_id = ? AND auth_code = ?";
-        Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
+        final String deleteAuthCode = "DELETE FROM auth_code_t WHERE host_id = ? AND auth_code = ? AND aggregate_version = ?";
+        Map<String, Object> map = SqlUtil.extractEventData(event);
         String authCode = (String) map.get("authCode");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(deleteAuthCode)) {
             statement.setObject(1, UUID.fromString((String) map.get("hostId")));
             statement.setString(2, authCode);
+            statement.setLong(3, oldAggregateVersion);
             int count = statement.executeUpdate();
             if (count == 0) {
+                // there shouldn't be any conflict in aggregate version, so if no record is deleted, it means the auth code doesn't exist
                 throw new SQLException(String.format("no record is deleted for auth code %s", authCode));
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during deleteAuthCode for id {}: {}", authCode, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during deleteAuthCode for authCode {} aggregateVersion {}: {}", authCode, oldAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteAuthCode for id {}: {}", authCode, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during deleteAuthCode for authCode {} aggregateVersion {}: {}", authCode, oldAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -1334,7 +1298,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
     @Override
     public Result<String> queryAuthCode(String authCode) {
         final String sql = "SELECT host_id, provider_id, auth_code, user_id, entity_id, user_type, email, " +
-                "roles, redirect_uri, scope, remember, code_challenge, challenge_method " +
+                "roles, redirect_uri, scope, remember, code_challenge, challenge_method, aggregate_version " +
                 "FROM auth_code_t WHERE auth_code = ?";
         Result<String> result;
         try (Connection connection = ds.getConnection();
@@ -1356,6 +1320,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                     map.put("remember", resultSet.getString("remember"));
                     map.put("codeChallenge", resultSet.getString("code_challenge"));
                     map.put("challengeMethod", resultSet.getString("challenge_method"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     result = Success.of(JsonMapper.toJson(map));
                 } else {
                     result = Failure.of(new Status(OBJECT_NOT_FOUND, "auth code", authCode));
@@ -1377,13 +1342,16 @@ public class AuthPersistenceImpl implements AuthPersistence {
                                        String attributes, String redirectUri, String scope, String remember, String codeChallenge,
                                        String challengeMethod, String updateUser, Timestamp updateTs) {
         Result<String> result = null;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "host_id, auth_code, user_id, entity_id, user_type, email, roles, redirect_uri, scope, remember, " +
-                "code_challenge, challenge_method, update_user, update_ts\n" +
-                "FROM auth_code_t\n" +
-                "WHERE host_id = ?\n");
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                host_id, auth_code, user_id, entity_id, user_type, email, roles, redirect_uri, scope, remember,
+                code_challenge, challenge_method, update_user, update_ts, aggregate_version
+                FROM auth_code_t
+                WHERE host_id = ?
+                """;
 
+        StringBuilder sqlBuilder = new StringBuilder();
 
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
@@ -1401,6 +1369,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
         addCondition(whereClause, parameters, "remember", remember);
         addCondition(whereClause, parameters, "code_challenge", codeChallenge);
         addCondition(whereClause, parameters, "challenge_method", challengeMethod);
+
 
         if (!whereClause.isEmpty()) {
             sqlBuilder.append("AND ").append(whereClause);
@@ -1448,6 +1417,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                     map.put("challengeMethod", resultSet.getString("challenge_method"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
 
                     authCodes.add(map);
                 }

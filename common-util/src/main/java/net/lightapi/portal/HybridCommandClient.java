@@ -172,8 +172,8 @@ public class HybridCommandClient {
      * @param token access token
      * @return Result of authCode
      */
-    public static Result<String> deleteAuthCode(String hostId, String authCode, String token) {
-        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"oauth\",\"action\":\"deleteAuthCode\",\"version\":\"0.1.0\",\"data\":{\"hostId\":\"%s\",\"authCode\":\"%s\"}}", hostId, authCode);
+    public static Result<String> deleteAuthCode(String hostId, String authCode, Long aggregateVersion, String token) {
+        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"oauth\",\"action\":\"deleteAuthCode\",\"version\":\"0.1.0\",\"data\":{\"hostId\":\"%s\",\"authCode\":\"%s\",\"aggregateVersion\":%d}}", hostId, authCode, aggregateVersion);
         if (config.isPortalByServiceUrl()) {
             return callCommandWithToken(command, token, config.getPortalCommandServiceUrl());
         } else {
