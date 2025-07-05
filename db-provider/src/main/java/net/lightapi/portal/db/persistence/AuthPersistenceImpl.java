@@ -944,10 +944,11 @@ public class AuthPersistenceImpl implements AuthPersistence {
     @Override
     public void createRefreshToken(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String insertRefreshToken = "INSERT INTO auth_refresh_token_t (refresh_token, host_id, provider_id, user_id, entity_id, user_type, " +
-                "email, roles, groups, positions, attributes, client_id, scope, csrf, custom_claim, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?, ?, ?, ?)";
-        Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
+                "email, roles, groups, positions, attributes, client_id, scope, csrf, custom_claim, update_user, update_ts, aggregate_version) " +
+                "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?, ?, ?, ?, ?)";
+        Map<String, Object> map = SqlUtil.extractEventData(event);
         String refreshToken = (String) map.get("refreshToken");
+        long aggregateVersion = SqlUtil.getNewAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(insertRefreshToken)) {
             statement.setObject(1, UUID.fromString(refreshToken));
             statement.setObject(2, UUID.fromString((String) map.get("hostId")));
@@ -1000,36 +1001,39 @@ public class AuthPersistenceImpl implements AuthPersistence {
 
             statement.setString(16, (String) event.get(Constants.USER));
             statement.setObject(17, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            statement.setLong(18, aggregateVersion);
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("Failed to insert refresh token %s", refreshToken));
+                throw new SQLException(String.format("Failed to insert refresh token %s with aggregateVersion %d", refreshToken, aggregateVersion));
             }
         } catch (SQLException e) {
-            logger.error("SQLException during createRefreshToken for id {}: {}", refreshToken, e.getMessage(), e);
+            logger.error("SQLException during createRefreshToken for refreshToken {} aggregateVersion {}: {}", refreshToken, aggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createRefreshToken for id {}: {}", refreshToken, e.getMessage(), e);
+            logger.error("Exception during createRefreshToken for refreshToken {} aggregateVersion {}: {}", refreshToken, aggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
     public void deleteRefreshToken(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String deleteRefreshToken = "DELETE from auth_refresh_token_t WHERE refresh_token = ? AND user_id = ?";
-        Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
+        final String deleteRefreshToken = "DELETE from auth_refresh_token_t WHERE refresh_token = ? AND user_id = ? AND aggregate_version = ?";
+        Map<String, Object> map = SqlUtil.extractEventData(event);
         String refreshToken = (String) map.get("refreshToken");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(deleteRefreshToken)) {
             statement.setObject(1, UUID.fromString(refreshToken));
             statement.setObject(2, UUID.fromString((String) map.get("userId")));
+            statement.setLong(3, oldAggregateVersion);
             int count = statement.executeUpdate();
             if (count == 0) {
                 throw new SQLException(String.format("no record is deleted for refresh token %s", refreshToken));
             }
         } catch (SQLException e) {
-            logger.error("SQLException during deleteRefreshToken for id {}: {}", refreshToken, e.getMessage(), e);
+            logger.error("SQLException during deleteRefreshToken for refreshToken {} aggregateVersion {}: {}", refreshToken, oldAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteRefreshToken for id {}: {}", refreshToken, e.getMessage(), e);
+            logger.error("Exception during deleteRefreshToken for refreshToken {} aggregateVersion {}: {}", refreshToken, oldAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -1040,14 +1044,18 @@ public class AuthPersistenceImpl implements AuthPersistence {
                                            String appName, String scope, String userType, String roles, String groups, String positions,
                                            String attributes, String csrf, String customClaim, String updateUser, Timestamp updateTs) {
         Result<String> result = null;
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                r.host_id, r.refresh_token, r.user_id, r.user_type, r.entity_id, r.email, u.first_name, u.last_name,
+                r.client_id, a.app_id, a.app_name, r.scope, r.roles, r.groups, r.positions, r.attributes, r.csrf,
+                r.custom_claim, r.update_user, r.update_ts, r.aggregate_version
+                FROM auth_refresh_token_t r, user_t u, app_t a, auth_client_t c
+                WHERE r.user_id = u.user_id AND r.client_id = c.client_id AND a.app_id = c.app_id
+                AND r.host_id = ?
+                """;
+
         StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "r.host_id, r.refresh_token, r.user_id, r.user_type, r.entity_id, r.email, u.first_name, u.last_name, \n" +
-                "r.client_id, a.app_id, a.app_name, r.scope, r.roles, r.groups, r.positions, r.attributes, r.csrf, " +
-                "r.custom_claim, r.update_user, r.update_ts \n" +
-                "FROM auth_refresh_token_t r, user_t u, app_t a, auth_client_t c\n" +
-                "WHERE r.user_id = u.user_id AND r.client_id = c.client_id AND a.app_id = c.app_id\n" +
-                "AND r.host_id = ?\n");
 
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
@@ -1126,6 +1134,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                     map.put("customClaim", resultSet.getString("custom_claim"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     tokens.add(map);
                 }
             }
@@ -1150,10 +1159,12 @@ public class AuthPersistenceImpl implements AuthPersistence {
     public Result<String> queryRefreshToken(String refreshToken) {
         Result<String> result = null;
         String sql =
-                "SELECT refresh_token, host_id, provider_id, user_id, entity_id, user_type, email, roles, groups, " +
-                        "positions, attributes, client_id, scope, csrf, custom_claim\n" +
-                        "FROM auth_refresh_token_t\n" +
-                        "WHERE refresh_token = ?\n";
+                """
+                SELECT refresh_token, host_id, provider_id, user_id, entity_id, user_type, email, roles, groups,
+                positions, attributes, client_id, scope, csrf, custom_claim, update_user, update_ts, aggregate_version
+                FROM auth_refresh_token_t
+                WHERE refresh_token = ?
+                """;
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
@@ -1175,6 +1186,9 @@ public class AuthPersistenceImpl implements AuthPersistence {
                         map.put("scope", resultSet.getString("scope"));
                         map.put("csrf", resultSet.getString("csrf"));
                         map.put("customClaim", resultSet.getString("custom_claim"));
+                        map.put("updateUser", resultSet.getString("update_user"));
+                        map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                        map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     }
                 }
             }
