@@ -8,6 +8,7 @@ import com.networknt.status.Status;
 import com.networknt.utility.Constants;
 import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.PortalConstants;
+import net.lightapi.portal.db.ConcurrencyException;
 import net.lightapi.portal.db.PortalDbProvider;
 import net.lightapi.portal.db.util.NotificationService;
 import net.lightapi.portal.db.util.SqlUtil;
@@ -36,11 +37,11 @@ public class AuthPersistenceImpl implements AuthPersistence {
 
     @Override
     public void createApp(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "INSERT INTO app_t(host_id, app_id, app_name, app_desc, is_kafka_app, operation_owner, delivery_owner, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
+        final String sql = "INSERT INTO app_t(host_id, app_id, app_name, app_desc, is_kafka_app, operation_owner, delivery_owner, update_user, update_ts, aggregate_version) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        Map<String, Object> map = SqlUtil.extractEventData(event);
         String appId = (String) map.get("appId");
-
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString((String) event.get(Constants.HOST)));
             statement.setString(2, appId);
@@ -70,23 +71,43 @@ public class AuthPersistenceImpl implements AuthPersistence {
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert the app with id " + appId);
+                throw new SQLException("Failed to insert the app with appId " + appId + " with aggregate version " + newAggregateVersion);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during createApp for id {}: {}", appId, e.getMessage(), e);
+            logger.error("SQLException during createApp for appId {} aggregateVersion {}: {}", appId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createApp for id {}: {}", appId, e.getMessage(), e);
+            logger.error("Exception during createApp for appId {} aggregateVersion {}: {}", appId, newAggregateVersion, e.getMessage(), e);
             throw e;
+        }
+    }
+
+    private boolean queryAppExists(Connection conn, String hostId, String appId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM app_t WHERE host_id = ? AND app_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(hostId));
+            pst.setString(2, appId);
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
     @Override
     public void updateApp(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "UPDATE app_t SET app_name = ?, app_desc = ?, is_kafka_app = ?, operation_owner = ?, delivery_owner = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? and app_id = ?";
-        Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
+        final String sql =
+                """
+                UPDATE app_t SET app_name = ?, app_desc = ?, is_kafka_app = ?, operation_owner = ?,
+                delivery_owner = ?, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? AND app_id = ? AND aggregate_version = ?
+                """;
+        Map<String, Object> map = SqlUtil.extractEventData(event);
         String appId = (String) map.get("appId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setString(1, (String) map.get("appName"));
@@ -115,41 +136,61 @@ public class AuthPersistenceImpl implements AuthPersistence {
             }
             statement.setString(6, (String) event.get(Constants.USER));
             statement.setObject(7, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-            statement.setObject(8, UUID.fromString((String) map.get("hostId")));
-            statement.setString(9, appId);
+            statement.setLong(8, newAggregateVersion);
+            statement.setObject(9, UUID.fromString((String) map.get("hostId")));
+            statement.setString(10, appId);
+            statement.setLong(11, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to update the app with id " + appId);
+                if (queryAppExists(conn, (String)event.get(Constants.HOST), appId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict for appId " + appId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found to update for appId " + appId + ".");
+                }
             }
         } catch (SQLException e) {
-            logger.error("SQLException during updateApp for id {}: {}", appId, e.getMessage(), e);
+            logger.error("SQLException during updateApp for appId {} (old: {}) -> (new: {}): {}", appId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateApp for id {}: {}", appId, e.getMessage(), e);
+            logger.error("Exception during updateApp for appId {} (old: {}) -> (new: {}): {}", appId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
     public void deleteApp(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM app_t WHERE host_id = ? AND app_id = ?";
-        Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
+        final String sql =
+                """
+                DELETE FROM app_t WHERE host_id = ? AND app_id = ? AND aggregate_version = ?
+                """;
+
+        Map<String, Object> map = SqlUtil.extractEventData(event);
         String appId = (String) map.get("appId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString((String) map.get("hostId")));
             statement.setString(2, appId);
+            statement.setLong(3, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to delete the app with id " + appId);
+                if (queryAppExists(conn, (String)event.get(Constants.HOST), appId)) {
+                    String s = String.format("Optimistic concurrency conflict during deleteApp for appId %s aggregateVersion %d but found a different version.", appId, oldAggregateVersion);
+                    logger.warn(s);
+                    throw new ConcurrencyException(s);
+                } else {
+                    String s = String.format("No record found during deleteApp for appId %s. It might have been already deleted.", appId);
+                    logger.warn(s);
+                    throw new SQLException(s);
+                }
             }
         } catch (SQLException e) {
-            logger.error("SQLException during deleteApp for id {}: {}", appId, e.getMessage(), e);
+            logger.error("SQLException during deleteApp for appId {} aggregateVersion {}: {}", appId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteApp for id {}: {}", appId, e.getMessage(), e);
+            logger.error("Exception during deleteApp for appId {} aggregateVersion {}: {}", appId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -184,13 +225,17 @@ public class AuthPersistenceImpl implements AuthPersistence {
 
     @Override
     public void createClient(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String insertClient = "INSERT INTO auth_client_t (host_id, app_id, api_id, client_name, client_id, " +
-                "client_type, client_profile, client_secret, client_scope, custom_claim, redirect_uri, " +
-                "authenticate_class, deref_client_id, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?, ?)";
-        Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
-        String clientId = (String) map.get("clientId");
+        final String insertClient =
+                """
+                INSERT INTO auth_client_t (host_id, app_id, api_id, client_name, client_id,
+                client_type, client_profile, client_secret, client_scope, custom_claim, redirect_uri,
+                authenticate_class, deref_client_id, update_user, update_ts, aggregate_version)
+                VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,  ?)
+                """;
 
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String clientId = (String) map.get("clientId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(insertClient)) {
             statement.setObject(1, UUID.fromString((String) event.get(Constants.HOST)));
             String appId = (String) map.get("appId");
@@ -243,29 +288,50 @@ public class AuthPersistenceImpl implements AuthPersistence {
             }
             statement.setString(14, (String) event.get(Constants.USER));
             statement.setObject(15, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            statement.setLong(16, newAggregateVersion);
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("Failed to insert client %s", clientId));
+                throw new SQLException(String.format("Failed to insert client %s with aggregateVersion %d", clientId, newAggregateVersion));
             }
         } catch (SQLException e) {
-            logger.error("SQLException during createClient for id {}: {}", clientId, e.getMessage(), e);
+            logger.error("SQLException during createClient for clientId {} aggregateVersion {}: {}", clientId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createClient for id {}: {}", clientId, e.getMessage(), e);
+            logger.error("Exception during createClient for clientId {} aggregateVersion {}: {}", clientId, newAggregateVersion, e.getMessage(), e);
             throw e;
+        }
+    }
+
+
+    private boolean queryClientExists(Connection conn, String hostId, String clientId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM auth_client_t WHERE host_id = ? AND client_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(hostId));
+            pst.setString(2, clientId);
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
     @Override
     public void updateClient(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String updateClient = "UPDATE auth_client_t SET app_id = ?, api_id = ?, client_name = ?, " +
-                "client_type = ?, client_profile = ?, " +
-                "client_scope = ?, custom_claim = ?, redirect_uri = ?, authenticate_class = ?, " +
-                "deref_client_id = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? AND client_id = ?";
+        final String updateClient =
+                """
+                UPDATE auth_client_t SET app_id = ?, api_id = ?, client_name = ?,
+                client_type = ?, client_profile = ?,
+                client_scope = ?, custom_claim = ?, redirect_uri = ?, authenticate_class = ?,
+                deref_client_id = ?, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? AND client_id = ? AND aggregate_version = ?
+                """;
 
         Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
         String clientId = (String) map.get("clientId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(updateClient)) {
             String appId = (String) map.get("appId");
@@ -315,38 +381,54 @@ public class AuthPersistenceImpl implements AuthPersistence {
             }
             statement.setString(11, (String) event.get(Constants.USER));
             statement.setObject(12, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-            statement.setObject(13, UUID.fromString((String) map.get("hostId")));
-            statement.setObject(14, UUID.fromString(clientId));
+            statement.setLong(13, newAggregateVersion);
+            statement.setObject(14, UUID.fromString((String) map.get("hostId")));
+            statement.setObject(15, UUID.fromString(clientId));
+            statement.setLong(16, oldAggregateVersion);
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("no record is updated for client %s", clientId));
+                if (queryClientExists(conn, (String)event.get(Constants.HOST), clientId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict for client " + clientId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found to update for client " + clientId + ".");
+                }
             }
         } catch (SQLException e) {
-            logger.error("SQLException during updateClient for id {}: {}", clientId, e.getMessage(), e);
+            logger.error("SQLException during updateClient for clientId {} (old: {}) -> (new: {}): {}", clientId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateClient for id {}: {}", clientId, e.getMessage(), e);
+            logger.error("Exception during updateClient for clientId {} (old: {}) -> (new: {}): {}", clientId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
     public void deleteClient(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String deleteClient = "DELETE from auth_client_t WHERE host_id = ? AND client_id = ?";
+        final String deleteClient =
+                """
+                DELETE from auth_client_t WHERE host_id = ? AND client_id = ? AND aggregate_version = ?
+                """;
         Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
         String clientId = (String) map.get("clientId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+
         try (PreparedStatement statement = conn.prepareStatement(deleteClient)) {
             statement.setObject(1, UUID.fromString((String) map.get("hostId")));
             statement.setObject(2, UUID.fromString(clientId));
+            statement.setLong(3, oldAggregateVersion);
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("no record is deleted for client %s", clientId));
+                if (queryClientExists(conn, (String)event.get(Constants.HOST), clientId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteClient for clientId " + clientId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deleteClient for clientId " + clientId + ". It might have been already deleted.");
+                }
             }
         } catch (SQLException e) {
-            logger.error("SQLException during deleteClient for id {}: {}", clientId, e.getMessage(), e);
+            logger.error("SQLException during deleteClient for clientId {} aggregateVersion {}: {}", clientId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteClient for id {}: {}", clientId, e.getMessage(), e);
+            logger.error("Exception during deleteClient for clientId {} aggregateVersion {}: {}", clientId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -356,11 +438,13 @@ public class AuthPersistenceImpl implements AuthPersistence {
         if (logger.isTraceEnabled()) logger.trace("queryClientByClientId: clientId = {}", clientId);
         Result<String> result;
         String sql =
-                "SELECT host_id, app_id, api_id, client_name, client_id, client_type, client_profile, client_secret, " +
-                        "client_scope, custom_claim,\n" +
-                        "redirect_uri, authenticate_class, deref_client_id, update_user, update_ts\n" +
-                        "FROM auth_client_t \n" +
-                        "WHERE client_id = ?";
+                """
+                SELECT host_id, app_id, api_id, client_name, client_id, client_type,
+                client_profile, client_secret, client_scope, custom_claim, redirect_uri,
+                authenticate_class, deref_client_id, update_user, update_ts, aggregate_version
+                FROM auth_client_t
+                WHERE client_id = ?
+                """;
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
@@ -382,6 +466,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                         map.put("deRefClientId", resultSet.getObject("deref_client_id", UUID.class));
                         map.put("updateUser", resultSet.getString("update_user"));
                         map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                        map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     }
                 }
             }
@@ -404,12 +489,15 @@ public class AuthPersistenceImpl implements AuthPersistence {
     public Result<String> queryClientByProviderClientId(String providerId, String clientId) {
         Result<String> result;
         String sql =
-                "SELECT c.host_id, a.provider_id, a.client_id, c.client_type, c.client_profile, c.client_secret, \n" +
-                        "c.client_scope, c.custom_claim, c.redirect_uri, c.authenticate_class, c.deref_client_id\n" +
-                        "FROM auth_client_t c, auth_provider_client_t a\n" +
-                        "WHERE c.host_id = a.host_id AND c.client_id = a.client_id\n" +
-                        "AND a.provider_id = ?\n" +
-                        "AND a.client_id = ?\n";
+                """
+                SELECT c.host_id, a.provider_id, a.client_id, c.client_type, c.client_profile,\s
+                c.client_secret, c.client_scope, c.custom_claim, c.redirect_uri,\s
+                c.authenticate_class, c.deref_client_id, a.aggregate_version
+                FROM auth_client_t c, auth_provider_client_t a
+                WHERE c.host_id = a.host_id AND c.client_id = a.client_id
+                AND a.provider_id = ?
+                AND a.client_id = ?
+                """;
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
@@ -429,6 +517,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                         map.put("redirectUri", resultSet.getString("redirect_uri"));
                         map.put("authenticateClass", resultSet.getString("authenticate_class"));
                         map.put("deRefClientId", resultSet.getObject("deref_client_id", UUID.class));
+                        map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     }
                 }
             }
@@ -450,10 +539,12 @@ public class AuthPersistenceImpl implements AuthPersistence {
     public Result<String> queryClientByHostAppId(String host_id, String appId) {
         Result<String> result;
         String sql =
-                "SELECT host_id, app_id, client_id, client_type, client_profile, client_scope, custom_claim, \n" +
-                        "redirect_uri, authenticate_class, deref_client_id, update_user, update_ts \n" +
-                        "FROM auth_client_t c\n" +
-                        "WHERE host_id = ? AND app_id = ?";
+                """
+                SELECT host_id, app_id, client_id, client_type, client_profile, client_scope, custom_claim,
+                redirect_uri, authenticate_class, deref_client_id, update_user, update_ts, aggregate_version
+                FROM auth_client_t c
+                WHERE host_id = ? AND app_id = ?
+                """;
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
@@ -473,6 +564,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                         map.put("deRefClientId", resultSet.getObject("deref_client_id", UUID.class));
                         map.put("updateUser", resultSet.getString("update_user"));
                         map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                        map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     }
                 }
             }
@@ -493,11 +585,15 @@ public class AuthPersistenceImpl implements AuthPersistence {
 
     @Override
     public void createAuthProvider(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "INSERT INTO auth_provider_t(host_id, provider_id, provider_name, provider_desc, " +
-                "operation_owner, delivery_owner, jwk, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        final String sql =
+                """
+                INSERT INTO auth_provider_t(host_id, provider_id, provider_name, provider_desc,
+                operation_owner, delivery_owner, jwk, update_user, update_ts, aggregate_version)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """;
         Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
         String providerId = (String) map.get("providerId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString((String) map.get("hostId")));
@@ -526,15 +622,19 @@ public class AuthPersistenceImpl implements AuthPersistence {
             }
             statement.setString(8, (String) event.get(Constants.USER));
             statement.setObject(9, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            statement.setLong(10, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert the auth provider with id " + providerId);
+                throw new SQLException("Failed to insert the auth provider " + providerId + " with aggregate version " + newAggregateVersion);
             }
 
             // Insert keys into auth_provider_key_t
-            String keySql = "INSERT INTO auth_provider_key_t(provider_id, kid, public_key, private_key, key_type, update_user, update_ts) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?)";
+            String keySql =
+                    """
+                    INSERT INTO auth_provider_key_t(provider_id, kid, public_key, private_key, key_type, update_user, update_ts, aggregate_version)
+                    VALUES (?, ?, ?, ?, ?,  ?, ?, ?)
+                    """;
 
             try (PreparedStatement keyStatement = conn.prepareStatement(keySql)) {
                 Map<String, Object> keys = (Map<String, Object>) map.get("keys");
@@ -549,6 +649,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                 keyStatement.setString(5, "LC");
                 keyStatement.setString(6, (String) event.get(Constants.USER));
                 keyStatement.setObject(7, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                keyStatement.setLong(8, newAggregateVersion);
                 keyStatement.executeUpdate();
 
                 // add long live previous key
@@ -559,6 +660,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                 keyStatement.setString(5, "LP");
                 keyStatement.setString(6, (String) event.get(Constants.USER));
                 keyStatement.setObject(7, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                keyStatement.setLong(8, newAggregateVersion);
                 keyStatement.executeUpdate();
 
                 // add token current key
@@ -569,6 +671,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                 keyStatement.setString(5, "TC");
                 keyStatement.setString(6, (String) event.get(Constants.USER));
                 keyStatement.setObject(7, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                keyStatement.setLong(8, newAggregateVersion);
                 keyStatement.executeUpdate();
 
                 // add token previous key
@@ -579,6 +682,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                 keyStatement.setString(5, "TP");
                 keyStatement.setString(6, (String) event.get(Constants.USER));
                 keyStatement.setObject(7, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                keyStatement.setLong(8, newAggregateVersion);
                 keyStatement.executeUpdate();
 
             } catch (SQLException ex) {
@@ -596,26 +700,35 @@ public class AuthPersistenceImpl implements AuthPersistence {
 
     @Override
     public void rotateAuthProvider(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sqlJwk = "UPDATE auth_provider_t SET jwk = ?, update_user = ?, update_ts = ? " +
-                "WHERE provider_id = ?";
-        final String sqlInsert = "INSERT INTO auth_provider_key_t(provider_id, kid, public_key, private_key, key_type, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?,  ?, ?)";
-        final String sqlUpdate = "UPDATE auth_provider_key_t SET key_type = ?, update_user = ?, update_ts = ? " +
-                "WHERE provider_id = ? AND kid = ?";
-        final String sqlDelete = "DELETE FROM auth_provider_key_t WHERE provider_id = ? AND kid = ?";
+        // update the auth_provider_t table with the new jwk
+        final String sqlJwk = "UPDATE auth_provider_t SET jwk = ?, update_user = ?, update_ts = ?, aggregate_version = ?" +
+                "WHERE provider_id = ? AND aggregate_version = ?";
+        // insert the new key into auth_provider_key_t
+        final String sqlInsert = "INSERT INTO auth_provider_key_t(provider_id, kid, public_key, private_key, key_type, update_user, update_ts, aggregate_version) " +
+                "VALUES (?, ?, ?, ?, ?,  ?, ?, ?)";
+        // update the existing key in auth_provider_key_t
+        final String sqlUpdate = "UPDATE auth_provider_key_t SET key_type = ?, update_user = ?, update_ts = ?, aggregate_version = ?" +
+                "WHERE provider_id = ? AND kid = ? AND aggregate_version = ?";
+        // delete the old key from auth_provider_key_t
+        final String sqlDelete = "DELETE FROM auth_provider_key_t WHERE provider_id = ? AND kid = ? AND aggregate_version = ?";
 
         Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
         String providerId = (String) map.get("providerId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sqlJwk)) {
             String jwk = (String) map.get("jwk");
             statement.setString(1, jwk);
             statement.setString(2, (String) event.get(Constants.USER));
             statement.setObject(3, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            statement.setLong(4, newAggregateVersion);
             statement.setString(4, providerId);
+            statement.setLong(5, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
+
                 throw new SQLException("Failed to update the jwk for auth provider with id " + providerId);
             }
 
@@ -628,6 +741,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                 statementInsert.setString(5, (String) insertMap.get("keyType"));
                 statementInsert.setString(6, (String) event.get(Constants.USER));
                 statementInsert.setObject(7, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                statementInsert.setLong(8, newAggregateVersion);
 
                 count = statementInsert.executeUpdate();
                 if (count == 0) {
@@ -639,8 +753,10 @@ public class AuthPersistenceImpl implements AuthPersistence {
                 statementUpdate.setString(1, (String) updateMap.get("keyType"));
                 statementUpdate.setString(2, (String) event.get(Constants.USER));
                 statementUpdate.setObject(3, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-                statementUpdate.setString(4, providerId);
-                statementUpdate.setString(5, (String) updateMap.get("kid"));
+                statementUpdate.setLong(4, newAggregateVersion);
+                statementUpdate.setString(5, providerId);
+                statementUpdate.setString(6, (String) updateMap.get("kid"));
+                statementUpdate.setLong(7, oldAggregateVersion);
                 count = statementUpdate.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("Failed to update the auth provider key with provider id " + providerId);
@@ -650,6 +766,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                 Map<String, Object> deleteMap = (Map<String, Object>) map.get("delete");
                 statementDelete.setString(1, providerId);
                 statementDelete.setString(2, (String) deleteMap.get("kid"));
+                statementDelete.setLong(3, oldAggregateVersion);
                 count = statementDelete.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("Failed to delete the auth provider key with provider id " + providerId);
@@ -664,13 +781,32 @@ public class AuthPersistenceImpl implements AuthPersistence {
         }
     }
 
+    private boolean queryAuthProviderExists(Connection conn, String hostId, String providerId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM auth_provider_t WHERE host_id = ? AND provider_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(hostId));
+            pst.setString(2, providerId);
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        }
+    }
+
     @Override
     public void updateAuthProvider(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "UPDATE auth_provider_t SET provider_name = ?, provider_desc = ?, " +
-                "operation_owner = ?, delivery_owner = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? and provider_id = ?";
+        final String sql =
+                """
+                UPDATE auth_provider_t SET provider_name = ?, provider_desc = ?, operation_owner = ?,
+                delivery_owner = ?, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? AND provider_id = ? AND aggregate_version = ?
+                """;
         Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
         String providerId = (String) map.get("providerId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setString(1, (String) map.get("providerName"));
@@ -691,41 +827,52 @@ public class AuthPersistenceImpl implements AuthPersistence {
             }
             statement.setString(5, (String) event.get(Constants.USER));
             statement.setObject(6, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-            statement.setObject(7, UUID.fromString((String) map.get("hostId")));
-            statement.setString(8, providerId);
+            statement.setLong(7, newAggregateVersion);
+            statement.setObject(8, UUID.fromString((String) map.get("hostId")));
+            statement.setString(9, providerId);
+            statement.setLong(10, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to update the auth provider with id " + providerId);
+                if (queryAuthProviderExists(conn, (String)event.get(Constants.HOST), providerId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict for provider " + providerId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found to update for provider " + providerId + ".");
+                }
             }
         } catch (SQLException e) {
-            logger.error("SQLException during updateAuthProvider for id {}: {}", providerId, e.getMessage(), e);
+            logger.error("SQLException during updateAuthProvider for providerId {} (old: {}) -> (new: {}): {}", providerId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateAuthProvider for id {}: {}", providerId, e.getMessage(), e);
+            logger.error("Exception during updateAuthProvider for providerId {} (old: {}) -> (new: {}): {}", providerId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
     public void deleteAuthProvider(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM auth_provider_t WHERE host_id = ? and provider_id = ?";
+        final String sql = "DELETE FROM auth_provider_t WHERE host_id = ? and provider_id = ? AND aggregate_version = ?";
         Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
         String providerId = (String) map.get("providerId");
-
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString((String) map.get("hostId")));
             statement.setString(2, providerId);
+            statement.setLong(3, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to delete the auth provider with id " + providerId);
+                if (queryAuthProviderExists(conn, (String)event.get(Constants.HOST), providerId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteAuthProvider for provider " + providerId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found to update for provider " + providerId + ".");
+                }
             }
         } catch (SQLException e) {
-            logger.error("SQLException during deleteAuthProvider for id {}: {}", providerId, e.getMessage(), e);
+            logger.error("SQLException during deleteAuthProvider for providerId {} aggregateVersion {}: {}", providerId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteAuthProvider for id {}: {}", providerId, e.getMessage(), e);
+            logger.error("Exception during deleteAuthProvider for providerId {} aggregateVersion {}: {}", providerId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -733,9 +880,12 @@ public class AuthPersistenceImpl implements AuthPersistence {
     @Override
     public Result<String> queryProviderKey(String providerId) {
         Result<String> result = null;
-        String sql = "SELECT provider_id, kid, public_key, private_key, key_type, update_user, update_ts\n" +
-                "FROM auth_provider_key_t\n" +
-                "WHERE provider_id = ?\n";
+        String sql =
+                """
+                SELECT provider_id, kid, public_key, private_key, key_type, update_user, update_ts, aggregate_version
+                FROM auth_provider_key_t
+                WHERE provider_id = ?
+                """;
 
         List<Map<String, Object>> providerKeys = new ArrayList<>();
 
@@ -753,6 +903,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     // handling date properly
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     providerKeys.add(map);
                 }
             }
@@ -771,11 +922,14 @@ public class AuthPersistenceImpl implements AuthPersistence {
     public Result<String> queryApp(int offset, int limit, String hostId, String appId, String appName, String appDesc,
                                    Boolean isKafkaApp, String operationOwner, String deliveryOwner) {
         Result<String> result = null;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "host_id, app_id, app_name, app_desc, is_kafka_app, operation_owner, delivery_owner\n" +
-                "FROM app_t\n" +
-                "WHERE host_id = ?\n");
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                host_id, app_id, app_name, app_desc, is_kafka_app, operation_owner, delivery_owner, aggregate_version
+                FROM app_t
+                WHERE host_id = ?
+                """;
+        StringBuilder sqlBuilder = new StringBuilder(s);
 
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
@@ -826,6 +980,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                     map.put("isKafkaApp", resultSet.getBoolean("is_kafka_app"));
                     map.put("operationOwner", resultSet.getObject("operation_owner", UUID.class));
                     map.put("deliveryOwner", resultSet.getObject("delivery_owner", UUID.class));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     apps.add(map);
                 }
             }
@@ -852,13 +1007,17 @@ public class AuthPersistenceImpl implements AuthPersistence {
                                       String customClaim, String redirectUri, String authenticateClass,
                                       String deRefClientId) {
         Result<String> result = null;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "client_id, host_id, app_id, api_id, client_name, client_type, client_profile, " +
-                "client_scope, custom_claim, " +
-                "redirect_uri, authenticate_class, deref_client_id, update_user, update_ts\n" +
-                "FROM auth_client_t\n" +
-                "WHERE host_id = ?\n");
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                client_id, host_id, app_id, api_id, client_name, client_type, client_profile,
+                client_scope, custom_claim, redirect_uri, authenticate_class, deref_client_id,
+                update_user, update_ts, aggregate_version
+                FROM auth_client_t
+                WHERE host_id = ?
+                """;
+
+        StringBuilder sqlBuilder = new StringBuilder(s);
 
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
@@ -922,6 +1081,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                     map.put("deRefClientId", resultSet.getObject("deref_client_id", UUID.class));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     clients.add(map);
                 }
             }
@@ -1454,8 +1614,12 @@ public class AuthPersistenceImpl implements AuthPersistence {
 
     @Override
     public Result<Map<String, Object>> queryProviderById(String providerId) {
-        final String sql = "SELECT host_id, provider_id, provider_name, jwk " +
-                "from auth_provider_t WHERE provider_id = ?";
+        final String sql =
+                """
+                SELECT host_id, provider_id, provider_name, jwk, aggregate_version
+                FROM auth_provider_t
+                WHERE provider_id = ?
+                """;
         Result<Map<String, Object>> result;
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
@@ -1467,6 +1631,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                         map.put("providerId", resultSet.getString("provider_id"));
                         map.put("providerName", resultSet.getString("provider_name"));
                         map.put("jwk", resultSet.getString("jwk"));
+                        map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     }
                 }
             }
@@ -1488,11 +1653,15 @@ public class AuthPersistenceImpl implements AuthPersistence {
     public Result<String> queryProvider(int offset, int limit, String hostId, String providerId, String providerName, String providerDesc,
                                         String operationOwner, String deliveryOwner, String jwk, String updateUser, Timestamp updateTs) {
         Result<String> result = null;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "host_id, provider_id, provider_name, provider_desc, operation_owner, delivery_owner, jwk, update_user, update_ts\n" +
-                "FROM auth_provider_t\n" +
-                "WHERE host_id = ?\n");
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                host_id, provider_id, provider_name, provider_desc, operation_owner,
+                delivery_owner, jwk, update_user, update_ts, aggregate_version
+                FROM auth_provider_t
+                WHERE host_id = ?
+                """;
+        StringBuilder sqlBuilder = new StringBuilder(s);
 
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
@@ -1545,6 +1714,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     // handling date properly
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     providers.add(map);
                 }
             }
@@ -1567,9 +1737,13 @@ public class AuthPersistenceImpl implements AuthPersistence {
 
     @Override
     public Result<Map<String, Object>> queryCurrentProviderKey(String providerId) {
-        final String queryConfigById = "SELECT provider_id, kid, public_key, " +
-                "private_key, key_type, update_user, update_ts " +
-                "FROM auth_provider_key_t WHERE provider_id = ? AND key_type = 'TC'";
+        final String queryConfigById =
+                """
+                SELECT provider_id, kid, public_key, private_key,\s
+                key_type, update_user, update_ts, aggregate_version
+                FROM auth_provider_key_t
+                WHERE provider_id = ? AND key_type = 'TC'
+                """;
         Result<Map<String, Object>> result;
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
@@ -1584,6 +1758,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                         map.put("keyType", resultSet.getString("key_type"));
                         map.put("updateUser", resultSet.getString("update_user"));
                         map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                        map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     }
                 }
             }
@@ -1603,9 +1778,13 @@ public class AuthPersistenceImpl implements AuthPersistence {
 
     @Override
     public Result<Map<String, Object>> queryLongLiveProviderKey(String providerId) {
-        final String queryConfigById = "SELECT provider_id, kid, public_key, " +
-                "private_key, key_type, update_user, update_ts " +
-                "FROM auth_provider_key_t WHERE provider_id = ? AND key_type = 'LC'";
+        final String queryConfigById =
+                """
+                SELECT provider_id, kid, public_key, private_key,
+                key_type, update_user, update_ts, aggregate_version
+                FROM auth_provider_key_t
+                WHERE provider_id = ? AND key_type = 'LC'
+                """;
         Result<Map<String, Object>> result;
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
@@ -1620,6 +1799,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                         map.put("keyType", resultSet.getString("key_type"));
                         map.put("updateUser", resultSet.getString("update_user"));
                         map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                        map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     }
                 }
             }
