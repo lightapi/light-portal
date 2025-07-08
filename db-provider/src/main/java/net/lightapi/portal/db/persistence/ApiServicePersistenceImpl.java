@@ -8,6 +8,7 @@ import com.networknt.status.Status;
 import com.networknt.utility.Constants;
 import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.PortalConstants;
+import net.lightapi.portal.db.ConcurrencyException;
 import net.lightapi.portal.db.PortalDbProvider;
 import net.lightapi.portal.db.util.NotificationService;
 import net.lightapi.portal.db.util.SqlUtil;
@@ -36,14 +37,18 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
 
     @Override
     public void createService(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String insertService = "INSERT INTO api_t (host_id, api_id, api_name, " +
-                "api_desc, operation_owner, delivery_owner, region, business_group, " +
-                "lob, platform, capability, git_repo, api_tags, " +
-                "api_status, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?)";
+        final String insertService =
+                """
+                INSERT INTO api_t (host_id, api_id, api_name,
+                api_desc, operation_owner, delivery_owner, region, business_group,
+                lob, platform, capability, git_repo, api_tags,
+                api_status, update_user, update_ts, aggregate_version)
+                VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?)
+                """;
 
         Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
         String apiId = (String) map.get("apiId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(insertService)) {
             statement.setObject(1, UUID.fromString((String) map.get("hostId")));
             statement.setString(2, apiId);
@@ -145,28 +150,48 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
             statement.setString(14, (String) map.get("apiStatus"));
             statement.setString(15, (String) event.get(Constants.USER));
             statement.setObject(16, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            statement.setLong(17, newAggregateVersion);
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("Failed to insert service %s", apiId));
+                throw new SQLException(String.format("Failed to insert apiId %s", apiId + " with aggregate version " + newAggregateVersion));
             }
         } catch (SQLException e) {
-            logger.error("SQLException during createService for id {}: {}", apiId, e.getMessage(), e);
+            logger.error("SQLException during createService for apiId {} aggregateVersion {}: {}", apiId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createService for id {}: {}", apiId, e.getMessage(), e);
+            logger.error("Exception during createService for apiId {} aggregateVersion {}: {}", apiId, newAggregateVersion, e.getMessage(), e);
             throw e;
+        }
+    }
+
+    private boolean queryApiExists(Connection conn, String hostId, String apiId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM api_t WHERE host_id = ? AND api_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(hostId));
+            pst.setString(2, apiId);
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
     @Override
     public void updateService(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String updateApi = "UPDATE api_t SET api_name = ?, api_desc = ?, " + // Removed extraneous ' ' before operation_owner
-                "operation_owner = ?, delivery_owner = ?, region = ?, business_group = ?, lob = ?, platform = ?, " +
-                "capability = ?, git_repo = ?, api_tags = ?, api_status = ?,  update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? AND api_id = ?";
+        final String updateApi =
+                """
+                UPDATE api_t SET api_name = ?, api_desc = ?,
+                operation_owner = ?, delivery_owner = ?, region = ?, business_group = ?, lob = ?, platform = ?,
+                capability = ?, git_repo = ?, api_tags = ?, api_status = ?, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? AND api_id = ? AND aggregate_version = ?
+                """;
 
         Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
         String apiId = (String) map.get("apiId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(updateApi)) {
             statement.setString(1, (String) map.get("apiName"));
             if (map.containsKey("apiDesc")) {
@@ -266,39 +291,51 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
             statement.setString(12, (String) map.get("apiStatus"));
             statement.setString(13, (String) event.get(Constants.USER));
             statement.setObject(14, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-            statement.setObject(15, UUID.fromString((String) map.get("hostId")));
-            statement.setString(16, apiId);
+            statement.setLong(15, newAggregateVersion);
+            statement.setObject(16, UUID.fromString((String) map.get("hostId")));
+            statement.setString(17, apiId);
+            statement.setLong(18, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("no record is updated for api %s", apiId));
+                if (queryApiExists(conn, (String)event.get(Constants.HOST), apiId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict for api " + apiId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found to update for api " + apiId + ".");
+                }
             }
         } catch (SQLException e) {
-            logger.error("SQLException during updateService for id {}: {}", apiId, e.getMessage(), e);
+            logger.error("SQLException during updateService for apiId {} (old: {}) -> (new: {}): {}", apiId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateService for id {}: {}", apiId, e.getMessage(), e);
+            logger.error("Exception during updateService for apiId {} (old: {}) -> (new: {}): {}", apiId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
     public void deleteService(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String deleteApplication = "DELETE from api_t WHERE host_id = ? AND api_id = ?";
+        final String deleteApplication = "DELETE from api_t WHERE host_id = ? AND api_id = ? AND aggregate_version = ?";
         Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
         String apiId = (String) map.get("apiId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(deleteApplication)) {
             statement.setObject(1, UUID.fromString((String) map.get("hostId")));
             statement.setString(2, apiId);
+            statement.setLong(3, oldAggregateVersion);
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("no record is deleted for api %s", apiId));
+                if (queryApiExists(conn, (String)event.get(Constants.HOST), apiId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteService for apiId " + apiId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deleteService for apiId " + apiId + ". It might have been already deleted.");
+                }
             }
         } catch (SQLException e) {
-            logger.error("SQLException during deleteService for id {}: {}", apiId, e.getMessage(), e);
+            logger.error("SQLException during deleteService for apiId {} aggregateVersion: {}: {}", apiId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteService for id {}: {}", apiId, e.getMessage(), e);
+            logger.error("Exception during deleteService for apiId {} aggregateVersion {}: {}", apiId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -308,14 +345,18 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                                        String apiDesc, String operationOwner, String deliveryOwner, String region, String businessGroup,
                                        String lob, String platform, String capability, String gitRepo, String apiTags, String apiStatus) {
         Result<String> result = null;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "host_id, api_id, api_name,\n" +
-                "api_desc, operation_owner, delivery_owner, region, business_group,\n" +
-                "lob, platform, capability, git_repo, api_tags, api_status\n" +
-                "FROM api_t\n" +
-                "WHERE host_id = ?\n");
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                host_id, api_id, api_name,
+                api_desc, operation_owner, delivery_owner, region, business_group,
+                lob, platform, capability, git_repo, api_tags, api_status,
+                update_user, update_ts, aggregate_version
+                FROM api_t
+                WHERE host_id = ?
+                """;
 
+        StringBuilder sqlBuilder = new StringBuilder(s);
 
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
@@ -382,6 +423,9 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                     map.put("gitRepo", resultSet.getString("git_repo"));
                     map.put("apiTags", resultSet.getString("api_tags"));
                     map.put("apiStatus", resultSet.getString("api_status"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts", OffsetDateTime.class));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     services.add(map);
                 }
             }
@@ -405,11 +449,11 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
         Result<String> result = null;
         String sql =
                 """
-                        SELECT av.api_version_id, av.api_id, a.api_name, av.api_version
-                        FROM api_version_t av, api_t a
-                        WHERE av.api_id = a.api_id
-                        AND av.host_id = ?
-                        """;
+                SELECT av.api_version_id, av.api_id, a.api_name, av.api_version
+                FROM api_version_t av, api_t a
+                WHERE av.api_id = a.api_id
+                AND av.host_id = ?
+                """;
 
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
@@ -526,17 +570,18 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     @Override
     public void createServiceVersion(Connection conn, Map<String, Object> event, List<Map<String, Object>> endpoints) throws SQLException, Exception {
         final String insertServiceVersion = "INSERT INTO api_version_t (host_id, api_version_id, api_id, api_version, api_type, service_id, api_version_desc, " +
-                "spec_link, spec, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,  ?)";
+                "spec_link, spec, update_user, update_ts, aggregate_version) " +
+                "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,  ?, ?)";
         final String insertEndpoint = "INSERT INTO api_endpoint_t (host_id, endpoint_id, api_version_id, endpoint, http_method, " +
-                "endpoint_path, endpoint_name, endpoint_desc, update_user, update_ts) " +
-                "VALUES (?,? ,?, ?, ?,  ?, ?, ?, ?, ?)";
+                "endpoint_path, endpoint_name, endpoint_desc, update_user, update_ts, aggregate_version) " +
+                "VALUES (?,? ,?, ?, ?,  ?, ?, ?, ?, ?,  ?)";
         final String insertScope = "INSERT INTO api_endpoint_scope_t (host_id, endpoint_id, scope, scope_desc, " +
-                "update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?,  ?)";
+                "update_user, update_ts, aggregate_version) " +
+                "VALUES (?, ?, ?, ?, ?,  ?, ?)";
 
         Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
         String apiVersionId = (String) map.get("apiVersionId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(insertServiceVersion)) {
             statement.setObject(1, UUID.fromString((String) map.get("hostId")));
             statement.setObject(2, UUID.fromString(apiVersionId));
@@ -577,9 +622,10 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
             }
             statement.setString(10, (String) event.get(Constants.USER));
             statement.setObject(11, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            statement.setLong(12, newAggregateVersion);
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("Failed to insert api version %s", apiVersionId));
+                throw new SQLException(String.format("Failed to insert api version %s with aggregateVersion %d", apiVersionId, newAggregateVersion));
             }
             if (endpoints != null && !endpoints.isEmpty()) {
                 // insert endpoints
@@ -612,6 +658,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
 
                         statementInsert.setString(9, (String) event.get(Constants.USER));
                         statementInsert.setObject(10, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                        statementInsert.setLong(11, newAggregateVersion);
                         statementInsert.executeUpdate();
                     }
                     // insert scopes
@@ -629,6 +676,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                                     statementScope.setString(4, scopeDesc[1]);
                                 statementScope.setString(5, (String) event.get(Constants.USER));
                                 statementScope.setObject(6, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                                statementScope.setLong(7, newAggregateVersion);
                                 statementScope.executeUpdate();
                             }
                         }
@@ -636,11 +684,25 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 }
             }
         } catch (SQLException e) {
-            logger.error("SQLException during createServiceVersion for id {}: {}", apiVersionId, e.getMessage(), e);
+            logger.error("SQLException during createServiceVersion for id {} and aggregateVersion {}: {}", apiVersionId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createServiceVersion for id {}: {}", apiVersionId, e.getMessage(), e);
+            logger.error("Exception during createServiceVersion for id {} and aggregateVersion {}: {}", apiVersionId, newAggregateVersion, e.getMessage(), e);
             throw e;
+        }
+    }
+
+    private boolean queryServiceVersionExists(Connection conn, String hostId, String apiVersionId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM api_version_t WHERE host_id = ? AND api_version_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(hostId));
+            pst.setString(2, apiVersionId);
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
@@ -649,18 +711,20 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     public void updateServiceVersion(Connection conn, Map<String, Object> event, List<Map<String, Object>> endpoints) throws SQLException, Exception {
         final String updateApi = "UPDATE api_version_t SET api_id = ?, api_version = ?, api_type = ?, service_id = ?, " +
                 "api_version_desc = ?, spec_link = ?,  spec = ?," +
-                "update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? AND api_version_id = ?";
-        final String deleteEndpoint = "DELETE FROM api_endpoint_t WHERE host_id = ? AND api_version_id = ?";
+                "update_user = ?, update_ts = ?, aggregate_version =? " +
+                "WHERE host_id = ? AND api_version_id = ? AND aggregate_version = ?";
+        final String deleteEndpoint = "DELETE FROM api_endpoint_t WHERE host_id = ? AND api_version_id = ? AND aggregate_version = ?";
         final String insertEndpoint = "INSERT INTO api_endpoint_t (host_id, endpoint_id, api_version_id, endpoint, http_method, " +
-                "endpoint_path, endpoint_name, endpoint_desc, update_user, update_ts) " +
-                "VALUES (?,? ,?, ?, ?,  ?, ?, ?, ?, ?)";
+                "endpoint_path, endpoint_name, endpoint_desc, update_user, update_ts, aggregate_version) " +
+                "VALUES (?,? ,?, ?, ?,  ?, ?, ?, ?, ?,  ?)";
         final String insertScope = "INSERT INTO api_endpoint_scope_t (host_id, endpoint_id, scope, scope_desc, " +
-                "update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?,  ?)";
+                "update_user, update_ts, aggregate_version) " +
+                "VALUES (?, ?, ?, ?, ?,  ?, ?)";
 
         Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
         String apiVersionId = (String) map.get("apiVersionId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(updateApi)) {
             statement.setString(1, (String) map.get("apiId"));
             statement.setString(2, (String) map.get("apiVersion"));
@@ -700,18 +764,25 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
 
             statement.setString(8, (String) event.get(Constants.USER));
             statement.setObject(9, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-            statement.setObject(10, UUID.fromString((String) map.get("hostId")));
-            statement.setObject(11, UUID.fromString(apiVersionId));
+            statement.setLong(10, newAggregateVersion);
+            statement.setObject(11, UUID.fromString((String) map.get("hostId")));
+            statement.setObject(12, UUID.fromString(apiVersionId));
+            statement.setLong(13, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("no record is updated for api version %s", apiVersionId));
+                if (queryServiceVersionExists(conn, (String)event.get(Constants.HOST), apiVersionId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict for apiVersionId " + apiVersionId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found to update for apiVersionId " + apiVersionId + ".");
+                }
             }
             if (endpoints != null && !endpoints.isEmpty()) {
                 // delete endpoints for the api version. the api_endpoint_scope_t will be deleted by the cascade.
                 try (PreparedStatement statementDelete = conn.prepareStatement(deleteEndpoint)) {
                     statementDelete.setObject(1, UUID.fromString((String) map.get("hostId")));
                     statementDelete.setObject(2, UUID.fromString(apiVersionId));
+                    statementDelete.setLong(3, oldAggregateVersion);
                     statementDelete.executeUpdate();
                 }
                 // insert endpoints
@@ -744,6 +815,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
 
                         statementInsert.setString(9, (String) event.get(Constants.USER));
                         statementInsert.setObject(10, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                        statementInsert.setLong(11, newAggregateVersion);
                         statementInsert.executeUpdate();
                     }
                     // insert scopes
@@ -761,6 +833,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                                     statementScope.setString(4, scopeDesc[1]);
                                 statementScope.setString(5, (String) event.get(Constants.USER));
                                 statementScope.setObject(6, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                                statementScope.setLong(7, newAggregateVersion);
                                 statementScope.executeUpdate();
                             }
                         }
@@ -768,31 +841,37 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 }
             }
         } catch (SQLException e) {
-            logger.error("SQLException during updateServiceVersion for id {}: {}", apiVersionId, e.getMessage(), e);
+            logger.error("SQLException during updateServiceVersion for id {} (old: {}) -> (new: {}): {}", apiVersionId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateServiceVersion for id {}: {}", apiVersionId, e.getMessage(), e);
+            logger.error("Exception during updateServiceVersion for id {} (old: {}) -> (new: {}): {}", apiVersionId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
     public void deleteServiceVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String deleteApplication = "DELETE from api_version_t WHERE host_id = ? AND api_version_id = ?";
+        final String deleteApplication = "DELETE from api_version_t WHERE host_id = ? AND api_version_id = ? AND aggregate_version = ?";
         Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
         String apiVersionId = (String) map.get("apiVersionId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(deleteApplication)) {
             statement.setObject(1, UUID.fromString((String) map.get("hostId")));
             statement.setObject(2, UUID.fromString(apiVersionId));
+            statement.setLong(3, oldAggregateVersion);
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("no record is deleted for api version %s", apiVersionId));
+                if (queryServiceVersionExists(conn, (String)event.get(Constants.HOST), apiVersionId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteServiceVersion for apiVersionId " + apiVersionId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deleteServiceVersion for apiVersionId " + apiVersionId + ". It might have been already deleted.");
+                }
             }
         } catch (SQLException e) {
-            logger.error("SQLException during deleteServiceVersion for id {}: {}", apiVersionId, e.getMessage(), e);
+            logger.error("SQLException during deleteServiceVersion for id {} aggregateVersion {}: {}", apiVersionId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteServiceVersion for id {}: {}", apiVersionId, e.getMessage(), e);
+            logger.error("Exception during deleteServiceVersion for id {} aggregateVersion {}: {}", apiVersionId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -800,12 +879,14 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     @Override
     public Result<String> queryServiceVersion(String hostId, String apiId) {
         Result<String> result = null;
-        String sql = """
-                    SELECT host_id, api_version_id, api_id, api_version, api_type,
-                    service_id, api_version_desc, spec_link, spec
-                    FROM api_version_t
-                    WHERE host_id = ? AND api_id = ?
-                    ORDER BY api_version
+        String sql =
+                """
+                SELECT host_id, api_version_id, api_id, api_version, api_type,
+                service_id, api_version_desc, spec_link, spec,\s
+                update_user, update_ts, aggregate_version
+                FROM api_version_t
+                WHERE host_id = ? AND api_id = ?
+                ORDER BY api_version
                 """;
         List<Map<String, Object>> serviceVersions = new ArrayList<>();
 
@@ -825,6 +906,9 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                     map.put("apiVersionDesc", resultSet.getString("api_version_desc"));
                     map.put("specLink", resultSet.getString("spec_link"));
                     map.put("spec", resultSet.getString("spec"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts", OffsetDateTime.class));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     serviceVersions.add(map);
                 }
             }
@@ -844,38 +928,47 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
         if (logger.isTraceEnabled()) logger.trace("endpoints = {}", endpoints);
         final String updateApiVersion =
                 """
-                            UPDATE api_version_t SET spec = ?,
-                            update_user = ?, update_ts = ?
-                            WHERE host_id = ? AND api_version_id = ?
-                        """;
-        final String deleteEndpoint = "DELETE FROM api_endpoint_t WHERE host_id = ? AND api_version_id = ?";
+                UPDATE api_version_t SET spec = ?,
+                update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? AND api_version_id = ? AND aggregate_version = ?
+                """;
+        final String deleteEndpoint = "DELETE FROM api_endpoint_t WHERE host_id = ? AND api_version_id = ? AND aggregate_version = ?";
         final String insertEndpoint = "INSERT INTO api_endpoint_t (host_id, endpoint_id, api_version_id, endpoint, http_method, " +
-                "endpoint_path, endpoint_name, endpoint_desc, update_user, update_ts) " +
-                "VALUES (?,? ,?, ?, ?,   ?, ?, ?, ?, ?)";
+                "endpoint_path, endpoint_name, endpoint_desc, update_user, update_ts, aggregate_version) " +
+                "VALUES (?,? ,?, ?, ?,   ?, ?, ?, ?, ?,  ?)";
         final String insertScope = "INSERT INTO api_endpoint_scope_t (host_id, endpoint_id, scope, scope_desc, " +
-                "update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?,  ?)";
+                "update_user, update_ts, aggregate_version) " +
+                "VALUES (?, ?, ?, ?, ?,  ?, ?)";
 
 
         Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
         String apiVersionId = (String) map.get("apiVersionId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
         try {
             try (PreparedStatement statement = conn.prepareStatement(updateApiVersion)) {
                 statement.setString(1, (String) map.get("spec"));
                 statement.setString(2, (String) event.get(Constants.USER));
                 statement.setObject(3, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-                statement.setObject(4, UUID.fromString((String) map.get("hostId")));
-                statement.setObject(5, UUID.fromString(apiVersionId));
+                statement.setLong(4, newAggregateVersion);
+                statement.setObject(5, UUID.fromString((String) map.get("hostId")));
+                statement.setObject(6, UUID.fromString(apiVersionId));
+                statement.setLong(7, oldAggregateVersion);
 
                 int count = statement.executeUpdate();
                 if (count == 0) {
-                    throw new SQLException(String.format("no record is updated for api version %s", apiVersionId));
+                    if (queryServiceVersionExists(conn, (String)event.get(Constants.HOST), apiVersionId)) {
+                        throw new ConcurrencyException("Optimistic concurrency conflict for apiVersionId " + apiVersionId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                    } else {
+                        throw new SQLException("No record found to update for apiVersionId " + apiVersionId + ".");
+                    }
                 }
             }
             // delete endpoints for the api version. the api_endpoint_scope_t will be deleted by the cascade.
             try (PreparedStatement statement = conn.prepareStatement(deleteEndpoint)) {
                 statement.setObject(1, UUID.fromString((String) map.get("hostId")));
                 statement.setObject(2, UUID.fromString(apiVersionId));
+                statement.setLong(3, oldAggregateVersion);
                 statement.executeUpdate();
             }
             // insert endpoints
@@ -908,6 +1001,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
 
                     statement.setString(9, (String) event.get(Constants.USER));
                     statement.setObject(10, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                    statement.setLong(11, newAggregateVersion);
                     statement.executeUpdate();
                 }
                 // insert scopes
@@ -925,6 +1019,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                                 statement.setString(4, scopeDesc[1]);
                             statement.setString(5, (String) event.get(Constants.USER));
                             statement.setObject(6, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                            statement.setLong(7, newAggregateVersion);
                             statement.executeUpdate();
                         }
                     }
@@ -932,13 +1027,12 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
             }
 
         } catch (SQLException e) {
-            logger.error("SQLException during updateServiceSpec for id {}: {}", apiVersionId, e.getMessage(), e);
+            logger.error("SQLException during updateServiceSpec for id {} (old: {}) -> (new: {}): {}", apiVersionId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateServiceSpec for id {}: {}", apiVersionId, e.getMessage(), e);
+            logger.error("Exception during updateServiceSpec for id {} (old: {}) -> (new: {}): {}", apiVersionId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
-        // update spec
     }
 
     @Override
@@ -947,13 +1041,13 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
         Result<String> result = null;
         String s =
                 """
-                            SELECT COUNT(*) OVER () AS total,
-                            e.host_id, e.endpoint_id, e.api_version_id, v.api_id, v.api_version,
-                            e.endpoint, e.http_method, e.endpoint_path, e.endpoint_desc
-                            FROM api_endpoint_t e
-                            INNER JOIN api_version_t v ON e.api_version_id = v.api_version_id
-                            WHERE e.host_id = ? AND e.api_version_id = ?
-                        """;
+                    SELECT COUNT(*) OVER () AS total,
+                    e.host_id, e.endpoint_id, e.api_version_id, v.api_id, v.api_version,
+                    e.endpoint, e.http_method, e.endpoint_path, e.endpoint_desc, e.aggregate_version
+                    FROM api_endpoint_t e
+                    INNER JOIN api_version_t v ON e.api_version_id = v.api_version_id
+                    WHERE e.host_id = ? AND e.api_version_id = ?
+                """;
 
         StringBuilder sqlBuilder = new StringBuilder();
         List<Object> parameters = new ArrayList<>();
@@ -1011,6 +1105,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                     map.put("httpMethod", resultSet.getString("http_method"));
                     map.put("endpointPath", resultSet.getString("endpoint_path"));
                     map.put("endpointDesc", resultSet.getString("endpoint_desc"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     endpoints.add(map);
                 }
             }
@@ -1034,13 +1129,13 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
         Result<String> result = null;
         String sql =
                 """
-                            SELECT s.host_id, s.endpoint_id, e.endpoint, s.scope, s.scope_desc
-                            FROM api_endpoint_scope_t s
-                            INNER JOIN api_endpoint_t e ON e.host_id = s.host_id AND e.endpoint_id = s.endpoint_id
-                            WHERE s.host_id = ?
-                            AND s.endpoint_id = ?
-                            ORDER BY scope
-                        """;
+                    SELECT s.host_id, s.endpoint_id, e.endpoint, s.scope, s.scope_desc, s.aggregate_version
+                    FROM api_endpoint_scope_t s
+                    INNER JOIN api_endpoint_t e ON e.host_id = s.host_id AND e.endpoint_id = s.endpoint_id
+                    WHERE s.host_id = ?
+                    AND s.endpoint_id = ?
+                    ORDER BY scope
+                """;
 
         List<Map<String, Object>> scopes = new ArrayList<>();
 
@@ -1056,6 +1151,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                     map.put("endpoint", resultSet.getString("endpoint"));
                     map.put("scope", resultSet.getString("scope"));
                     map.put("scopeDesc", resultSet.getString("scope_desc"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     scopes.add(map);
                 }
             }
@@ -1076,18 +1172,19 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
         Result<String> result = null;
         String sql =
                 """
-                            SELECT ae.host_id, ae.endpoint_id, a.api_id, av.api_version, e.endpoint, r.rule_type, ae.rule_id
-                            FROM api_endpoint_rule_t ae
-                            INNER JOIN rule_t r ON ae.rule_id = r.rule_id
-                            INNER JOIN api_endpoint_t e ON ae.endpoint_id = e.endpoint_id
-                            INNER JOIN api_version_t av ON e.api_version_id = av.api_version_id
-                            INNER JOIN api_t a ON av.api_id = a.api_id
-                            WHERE ae.host_id = ?
-                            AND a.api_id = ?
-                            AND av.api_version = ?
-                            AND e.endpoint = ?
-                            ORDER BY r.rule_type
-                        """;
+                    SELECT ae.host_id, ae.endpoint_id, a.api_id, av.api_version,
+                    e.endpoint, r.rule_type, ae.rule_id, ae.aggregate_version
+                    FROM api_endpoint_rule_t ae
+                    INNER JOIN rule_t r ON ae.rule_id = r.rule_id
+                    INNER JOIN api_endpoint_t e ON ae.endpoint_id = e.endpoint_id
+                    INNER JOIN api_version_t av ON e.api_version_id = av.api_version_id
+                    INNER JOIN api_t a ON av.api_id = a.api_id
+                    WHERE ae.host_id = ?
+                    AND a.api_id = ?
+                    AND av.api_version = ?
+                    AND e.endpoint = ?
+                    ORDER BY r.rule_type
+                """;
 
         List<Map<String, Object>> rules = new ArrayList<>();
 
@@ -1107,6 +1204,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                     map.put("endpoint", resultSet.getString("endpoint"));
                     map.put("ruleType", resultSet.getString("rule_type"));
                     map.put("ruleId", resultSet.getString("rule_id"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     rules.add(map);
                 }
             }
@@ -1126,44 +1224,48 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     public void createEndpointRule(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String insertUser =
                 """
-                        INSERT INTO api_endpoint_rule_t (host_id, endpoint_id, rule_id,
-                        update_user, update_ts)
-                        VALUES (
-                        ?,
-                        (SELECT e.endpoint_id
-                         FROM api_endpoint_t e
-                         JOIN api_version_t v ON e.host_id = v.host_id
-                                             AND e.api_version_id = v.api_version_id
-                         WHERE e.host_id = ?
-                           AND v.api_id = ?
-                           AND v.api_version = ?
-                           AND e.endpoint = ?
-                        ),
-                        ?,
-                        ?,
-                        ?
-                        )
-                        """;
+                INSERT INTO api_endpoint_rule_t (host_id, endpoint_id, rule_id,
+                update_user, update_ts, aggregate_version)
+                VALUES (
+                ?,
+                (SELECT e.endpoint_id
+                 FROM api_endpoint_t e
+                 JOIN api_version_t v ON e.host_id = v.host_id
+                                     AND e.api_version_id = v.api_version_id
+                 WHERE e.host_id = ?
+                   AND v.api_id = ?
+                   AND v.api_version = ?
+                   AND e.endpoint = ?
+                ),
+                ?,
+                ?,
+                ?
+                )
+                """;
         Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
-        String endpointFromMap = (String) map.get("endpoint"); // For logging
+        String endpoint = (String) map.get("endpoint");
+        String ruleId = (String) map.get("ruleId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
         try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
             statement.setObject(1, UUID.fromString((String) event.get(Constants.HOST)));
             statement.setObject(2, UUID.fromString((String) event.get(Constants.HOST)));
             statement.setString(3, (String) map.get("apiId"));
             statement.setString(4, (String) map.get("apiVersion"));
-            statement.setString(5, endpointFromMap);
-            statement.setString(6, (String) map.get("ruleId"));
+            statement.setString(5, endpoint);
+            statement.setString(6, ruleId);
             statement.setString(7, (String) event.get(Constants.USER));
             statement.setObject(8, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            statement.setLong(9, newAggregateVersion);
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("no record is inserted for endpoint rule for endpoint %s", endpointFromMap));
+                throw new SQLException("Failed to insert endpoint " + endpoint + " rule " + ruleId + " with aggregate version " + newAggregateVersion + ".");
             }
         } catch (SQLException e) {
-            logger.error("SQLException during createEndpointRule for endpoint {}: {}", endpointFromMap, e.getMessage(), e);
+            logger.error("SQLException during createEndpointRule for endpoint {} rule {} aggregateVersion {}: {}", endpoint, ruleId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createEndpointRule for endpoint {}: {}", endpointFromMap, e.getMessage(), e);
+            logger.error("Exception during createEndpointRule for endpoint {} rule {} aggregateVersion {}: {}", endpoint, ruleId, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -1172,39 +1274,43 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     public void deleteEndpointRule(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String deleteApplication =
                 """
-                        DELETE FROM api_endpoint_rule_t er
-                        WHERE er.host_id = ?
-                          AND er.rule_id = ?
-                          AND er.endpoint_id IN (
-                            SELECT e.endpoint_id
-                            FROM api_endpoint_t e
-                            JOIN api_version_t v ON e.host_id = v.host_id
-                                                AND e.api_version_id = v.api_version_id
-                            WHERE e.host_id = ?
-                              AND v.api_id = ?
-                              AND v.api_version = ?
-                              AND e.endpoint = ?
-                          )
-                        """;
+                DELETE FROM api_endpoint_rule_t er
+                WHERE er.host_id = ?
+                  AND er.rule_id = ?
+                  AND er.aggregate_version = ?
+                  AND er.endpoint_id IN (
+                    SELECT e.endpoint_id
+                    FROM api_endpoint_t e
+                    JOIN api_version_t v ON e.host_id = v.host_id
+                                        AND e.api_version_id = v.api_version_id
+                    WHERE e.host_id = ?
+                      AND v.api_id = ?
+                      AND v.api_version = ?
+                      AND e.endpoint = ?
+                  )
+                """;
         Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
-        String endpointFromMap = (String) map.get("endpoint"); // For logging
+        String endpoint = (String) map.get("endpoint");
+        String ruleId = (String) map.get("ruleId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(deleteApplication)) {
             statement.setObject(1, UUID.fromString((String) event.get(Constants.HOST)));
-            statement.setString(2, (String) map.get("ruleId"));
-            statement.setObject(3, UUID.fromString((String) event.get(Constants.HOST)));
-            statement.setString(4, (String) map.get("apiId"));
-            statement.setString(5, (String) map.get("apiVersion"));
-            statement.setString(6, endpointFromMap);
+            statement.setString(2, ruleId);
+            statement.setLong(3, SqlUtil.getOldAggregateVersion(event));
+            statement.setObject(4, UUID.fromString((String) event.get(Constants.HOST)));
+            statement.setString(5, (String) map.get("apiId"));
+            statement.setString(6, (String) map.get("apiVersion"));
+            statement.setString(7, endpoint);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("no record is deleted for endpoint rule for endpoint %s", endpointFromMap));
+                throw new SQLException(String.format("no record is deleted for endpoint rule for endpoint %s, ruleId %s and aggregateVersion", endpoint, ruleId, oldAggregateVersion));
             }
         } catch (SQLException e) {
-            logger.error("SQLException during deleteEndpointRule for endpoint {}: {}", endpointFromMap, e.getMessage(), e);
+            logger.error("SQLException during deleteEndpointRule for endpoint {} ruleId {} aggregateVersion {}: {}", endpoint, ruleId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteEndpointRule for endpoint {}: {}", endpointFromMap, e.getMessage(), e);
+            logger.error("Exception during deleteEndpointRule for endpoint {} ruleId {} aggregateVersion {}: {}", endpoint, ruleId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -1214,17 +1320,17 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
         Result<String> result = null;
         String sql =
                 """
-                        SELECT ae.host_id, a.api_id, av.api_version, e.endpoint, r.rule_type, ae.rule_id
-                        FROM api_endpoint_rule_t ae
-                        INNER JOIN rule_t r ON ae.rule_id = r.rule_id
-                        INNER JOIN api_endpoint_t e ON e.endpoint_id = ae.endpoint_id
-                        INNER JOIN api_version_t av ON av.api_version_id = e.api_version_id
-                        INNER JOIN api_t a ON a.api_id = av.api_id
-                        WHERE a.host_id =?
-                        AND a.api_id = ?
-                        AND av.api_version = ?
-                        ORDER BY r.rule_type
-                        """;
+                SELECT ae.host_id, a.api_id, av.api_version, e.endpoint, r.rule_type, ae.rule_id, ae.aggregate_version
+                FROM api_endpoint_rule_t ae
+                INNER JOIN rule_t r ON ae.rule_id = r.rule_id
+                INNER JOIN api_endpoint_t e ON e.endpoint_id = ae.endpoint_id
+                INNER JOIN api_version_t av ON av.api_version_id = e.api_version_id
+                INNER JOIN api_t a ON a.api_id = av.api_id
+                WHERE a.host_id =?
+                AND a.api_id = ?
+                AND av.api_version = ?
+                ORDER BY r.rule_type
+                """;
         String sqlRuleBody = "SELECT rule_id, rule_body FROM rule_t WHERE rule_id = ?";
         List<Map<String, Object>> rules = new ArrayList<>();
         Map<String, Object> ruleBodies = new HashMap<>();
@@ -1245,6 +1351,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                     map.put("ruleType", resultSet.getString("rule_type"));
                     String ruleId = resultSet.getString("rule_id");
                     map.put("ruleId", ruleId);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     rules.add(map);
 
                     // Get rule body if not already cached

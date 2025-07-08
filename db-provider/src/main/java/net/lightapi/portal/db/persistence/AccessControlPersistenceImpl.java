@@ -348,7 +348,8 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     @Override
     public Result<String> queryRoleUser(int offset, int limit, String hostId, String roleId, String userId, String entityId, String email, String firstName, String lastName, String userType) {
         Result<String> result;
-        String s = """
+        String s =
+                """
                 SELECT COUNT(*) OVER () AS total,
                 r.host_id, r.role_id, r.start_ts, r.end_ts,
                 u.user_id, u.email, u.user_type,
@@ -955,10 +956,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                             col_value = ?,
                             update_user = ?,
                             update_ts = ?
+                            aggregate_version = ?
                         WHERE
                             host_id = ?
                             AND role_id = ?
                             AND col_name = ?
+                            AND aggregate_version = ?
                             AND endpoint_id IN (
                                 SELECT e.endpoint_id
                                 FROM api_endpoint_t e
@@ -973,28 +976,33 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String roleId = (String)map.get("roleId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
         try (PreparedStatement statement = conn.prepareStatement(updateRole)) {
             statement.setString(1, (String)map.get("operator"));
             statement.setString(2, (String)map.get("colValue"));
             statement.setString(3, (String)event.get(Constants.USER));
             statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setObject(5, UUID.fromString((String)event.get(Constants.HOST)));
-            statement.setString(6, roleId);
-            statement.setString(7, (String)map.get("colName"));
-            statement.setObject(8, UUID.fromString((String)event.get(Constants.HOST)));
-            statement.setString(9, (String)map.get("apiId"));
-            statement.setString(10, (String)map.get("apiVersion"));
-            statement.setString(11, (String)map.get("endpoint"));
+            statement.setLong(5, newAggregateVersion);
+            statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(7, roleId);
+            statement.setString(8, (String)map.get("colName"));
+            statement.setLong(9, oldAggregateVersion);
+            statement.setObject(10, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(11, (String)map.get("apiId"));
+            statement.setString(12, (String)map.get("apiVersion"));
+            statement.setString(13, (String)map.get("endpoint"));
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("no record is updated for role row filter " + roleId);
+                throw new SQLException("no record is updated for role row filter " + roleId + " with colName " + map.get("colName") + " and aggregate version " + oldAggregateVersion + ". It might not exist or the version might have changed.");
             }
         } catch (SQLException e) {
-            logger.error("SQLException during updateRoleRowFilter for id {}: {}", roleId, e.getMessage(), e);
+            logger.error("SQLException during updateRoleRowFilter for id {} (old: {}) -> (new: {}): {}", roleId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateRoleRowFilter for id {}: {}", roleId, e.getMessage(), e);
+            logger.error("Exception during updateRoleRowFilter for id {} (old: {}) -> (new: {}): {}", roleId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -1002,12 +1010,20 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     @Override
     public Result<String> queryRoleColFilter(int offset, int limit, String hostId, String roleId, String apiId, String apiVersion, String endpoint) {
         Result<String> result;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
-                "r.host_id, r.role_id, p.api_id, p.api_version, p.endpoint, p.columns\n" +
-                "FROM role_t r, role_col_filter_t p\n" +
-                "WHERE r.role_id = p.role_id\n" +
-                "AND r.host_id = ?\n");
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                r.host_id, r.role_id, av.api_version_id, av.api_id, av.api_version,
+                ae.endpoint_id, ae.endpoint, rcf.columns, rcf.aggregate_version,
+                rcf.update_user, rcf.update_ts
+                FROM role_col_filter_t rcf
+                JOIN role_t r ON r.role_id = rcf.role_id
+                JOIN api_endpoint_t ae ON rcf.host_id = ae.host_id AND rcf.endpoint_id = ae.endpoint_id
+                JOIN api_version_t av ON ae.host_id = av.host_id AND ae.api_version_id = av.api_version_id
+                AND r.host_id = ?
+                """;
+
+        StringBuilder sqlBuilder = new StringBuilder(s);
 
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
@@ -1015,15 +1031,18 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         StringBuilder whereClause = new StringBuilder();
 
         SqlUtil.addCondition(whereClause, parameters, "r.role_id", roleId);
-        SqlUtil.addCondition(whereClause, parameters, "p.api_id", apiId);
-        SqlUtil.addCondition(whereClause, parameters, "p.api_version", apiVersion);
-        SqlUtil.addCondition(whereClause, parameters, "p.endpoint", endpoint);
+        SqlUtil.addCondition(whereClause, parameters, "av.api_version_id", apiId);
+        SqlUtil.addCondition(whereClause, parameters, "av.api_id", apiId);
+        SqlUtil.addCondition(whereClause, parameters, "av.api_version", apiVersion);
+        SqlUtil.addCondition(whereClause, parameters, "ae.endpoint_id", endpoint);
+        SqlUtil.addCondition(whereClause, parameters, "ae.endpoint", endpoint);
+
 
         if (!whereClause.isEmpty()) {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append(" ORDER BY r.role_id, p.api_id, p.api_version, p.endpoint\n" +
+        sqlBuilder.append(" ORDER BY r.role_id, av.api_id, av.api_version, ae.endpoint\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -1049,6 +1068,11 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     }
                     map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("roleId", resultSet.getString("role_id"));
+                    map.put("endpointId", resultSet.getObject("endpoint_id", UUID.class));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("apiVersionId", resultSet.getString("api_version_id"));
                     map.put("apiId", resultSet.getString("api_id"));
                     map.put("apiVersion", resultSet.getString("api_version"));
                     map.put("endpoint", resultSet.getString("endpoint"));
@@ -1082,7 +1106,8 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                         endpoint_id,  -- Using resolved endpoint_id instead of api_id/api_version/endpoint
                         columns,
                         update_user,
-                        update_ts
+                        update_ts,
+                        aggregate_version
                     )
                     SELECT
                         ?,              -- host_id parameter
@@ -1090,7 +1115,8 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                         e.endpoint_id,  -- Resolved from the join
                         ?,              -- columns parameter
                         ?,              -- update_user parameter
-                        ?               -- update_ts parameter (or use DEFAULT for CURRENT_TIMESTAMP)
+                        ?,              -- update_ts parameter (or use DEFAULT for CURRENT_TIMESTAMP)
+                        ?               -- aggregate_version parameter
                     FROM
                         api_endpoint_t e
                     JOIN
@@ -1105,27 +1131,45 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String roleId = (String)map.get("roleId");
+        String endpoint = (String)map.get("endpoint");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(insertRole)) {
             statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
             statement.setString(2, roleId);
             statement.setString(3, (String)map.get("columns"));
             statement.setString(4, (String)event.get(Constants.USER));
             statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
-            statement.setString(7, (String)map.get("apiId"));
-            statement.setString(8, (String)map.get("apiVersion"));
-            statement.setString(9, (String)map.get("endpoint"));
+            statement.setLong(6, newAggregateVersion);
+            statement.setObject(7, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setString(8, (String)map.get("apiId"));
+            statement.setString(9, (String)map.get("apiVersion"));
+            statement.setString(10, endpoint);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert role col filter " + roleId);
+                throw new SQLException(String.format("Failed to insert roleId %s col filter for endpoint %s with aggregate version %d. It might already exist.", roleId, endpoint, newAggregateVersion));
             }
         } catch (SQLException e) {
-            logger.error("SQLException during createRoleColFilter for id {}: {}", roleId, e.getMessage(), e);
+            logger.error("SQLException during createRoleColFilter for roleId {} endpoint {} aggregateVersion {}: {}", roleId, endpoint, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createRoleColFilter for id {}: {}", roleId, e.getMessage(), e);
+            logger.error("Exception during createRoleColFilter for roleId {} endpoint {} aggregateVersion {}: {}", roleId, endpoint, newAggregateVersion, e.getMessage(), e);
             throw e;
+        }
+    }
+
+    private boolean queryRoleColFilterExists(Connection conn, String hostId, String roleId, String endpointId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM role_col_filter_t WHERE host_id = ? AND role_id = ? AND endpoint_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(hostId));
+            pst.setString(2, roleId);
+            pst.setObject(3, UUID.fromString(endpointId));
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
@@ -1199,6 +1243,9 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String roleId = (String)map.get("roleId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
         try (PreparedStatement statement = conn.prepareStatement(updateRole)) {
             statement.setString(1, (String)map.get("columns"));
             statement.setString(2, (String)event.get(Constants.USER));
