@@ -8,21 +8,22 @@ import com.networknt.status.Status;
 import com.networknt.utility.Constants;
 import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.PortalConstants;
+import net.lightapi.portal.db.ConcurrencyException;
 import net.lightapi.portal.db.PortalDbProvider;
 import net.lightapi.portal.db.util.NotificationService;
+import net.lightapi.portal.db.util.SqlUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.Connection; // Added import
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.SQLException; // Added import
+import java.sql.SQLException;
 import java.sql.Types;
 import java.time.OffsetDateTime;
 import java.util.*;
 
 import static com.networknt.db.provider.SqlDbStartupHook.ds;
-import static java.sql.Types.NULL; // Assuming NULL from Types.NULL is used
 
 public class CategoryPersistenceImpl implements CategoryPersistence {
     private static final Logger logger = LoggerFactory.getLogger(CategoryPersistenceImpl.class);
@@ -39,10 +40,11 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
     @Override
     public void createCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "INSERT INTO category_t(host_id, category_id, entity_type, category_name, " +
-                "category_desc, parent_category_id, sort_order, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                "category_desc, parent_category_id, sort_order, update_user, update_ts, aggregate_version) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String categoryId = (String)map.get("categoryId"); // For logging/exceptions
+        String categoryId = (String)map.get("categoryId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             String hostId = (String)map.get("hostId");
@@ -76,30 +78,46 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
             }
             statement.setString(8, (String)event.get(Constants.USER));
             statement.setObject(9, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(10, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert the category with id " + categoryId);
+                throw new SQLException("Failed to insert the category id " + categoryId + " with aggregate version " + newAggregateVersion + ".");
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during createCategory for id {}: {}", categoryId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during createCategory for id {} aggregateVersion {}: {}", categoryId, newAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) { // Catch other potential runtime exceptions
-            logger.error("Exception during createCategory for id {}: {}", categoryId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during createCategory for id {} aggregateVersion {}: {}", categoryId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    private boolean queryCategoryExists(Connection conn, String categoryId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM category_t WHERE category_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(categoryId));
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
     @Override
     public void updateCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "UPDATE category_t SET category_name = ?, category_desc = ?, parent_category_id = ?, " +
-                "sort_order = ?, update_user = ?, update_ts = ? WHERE category_id = ?";
+        final String sql =
+                """
+                UPDATE category_t SET category_name = ?, category_desc = ?, parent_category_id = ?,
+                sort_order = ?, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE category_id = ? AND aggregate_version = ?
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String categoryId = (String)map.get("categoryId"); // For logging/exceptions
+        String categoryId = (String)map.get("categoryId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setString(1, (String)map.get("categoryName"));
@@ -124,46 +142,49 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
             }
             statement.setString(5, (String)event.get(Constants.USER));
             statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setObject(7, UUID.fromString(categoryId));
+            statement.setLong(7, newAggregateVersion);
+            statement.setObject(8, UUID.fromString(categoryId));
+            statement.setLong(9, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to update the category with id " + categoryId);
+                if (queryCategoryExists(conn, categoryId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict for category " + categoryId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found to update for category " + categoryId + ".");
+                }
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during updateCategory for id {}: {}", categoryId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during updateCategory for id {} (old: {}) -> (new: {}): {}", categoryId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) { // Catch other potential runtime exceptions
-            logger.error("Exception during updateCategory for id {}: {}", categoryId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during updateCategory for id {} (old: {}) -> (new: {}): {}", categoryId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
     @Override
     public void deleteCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM category_t WHERE category_id = ?";
+        final String sql = "DELETE FROM category_t WHERE category_id = ? AND aggregate_version = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String categoryId = (String) map.get("categoryId");
-
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(categoryId));
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to delete the category with id " + categoryId);
+                if (queryCategoryExists(conn, categoryId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteCategory for category " + categoryId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deleteCategory for category " + categoryId + ". It might have been already deleted.");
+                }
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during deleteCategory for id {}: {}", categoryId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
-        } catch (Exception e) { // Catch other potential runtime exceptions
-            logger.error("Exception during deleteCategory for id {}: {}", categoryId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("SQLException during deleteCategory for id {} aggregateVersion {}: {}", categoryId, oldAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deleteCategory for id {} aggregateVersion {}: {}", categoryId, oldAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -172,15 +193,18 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
                                       String categoryName, String categoryDesc, String parentCategoryId,
                                       String parentCategoryName, Integer sortOrder) {
         Result<String> result = null;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "cat.category_id, cat.host_id, cat.entity_type, cat.category_name, cat.category_desc, cat.parent_category_id, \n" +
-                "cat.sort_order, cat.update_user, cat.update_ts,\n" +
-                "parent_cat.category_name AS parent_category_name\n" + // Select parent category name
-                "FROM category_t cat\n" +
-                "LEFT JOIN category_t parent_cat ON cat.parent_category_id = parent_cat.category_id\n" + // Self-join
-                "WHERE ");
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                cat.category_id, cat.host_id, cat.entity_type, cat.category_name, cat.category_desc, cat.parent_category_id,
+                cat.sort_order, cat.update_user, cat.update_ts, cat.aggregate_version,
+                parent_cat.category_name AS parent_category_name
+                FROM category_t cat
+                LEFT JOIN category_t parent_cat ON cat.parent_category_id = parent_cat.category_id
+                WHERE
+                """;
 
+        StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
         // Use a separate list to build condition strings to manage AND correctly
         List<String> conditions = new ArrayList<>();
@@ -243,7 +267,7 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
                     map.put("sortOrder", resultSet.getInt("sort_order"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
-
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     categories.add(map);
                 }
             }
@@ -313,7 +337,7 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
     public Result<String> getCategoryById(String categoryId) {
         Result<String> result = null;
         String sql = "SELECT category_id, host_id, entity_type, category_name, category_desc, parent_category_id, " +
-                "sort_order, update_user, update_ts FROM category_t WHERE category_id = ?";
+                "sort_order, update_user, update_ts, aggregate_version FROM category_t WHERE category_id = ?";
         Map<String, Object> map = null;
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
@@ -330,6 +354,7 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
                     map.put("sortOrder", resultSet.getInt("sort_order"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                 }
             }
             if (map != null && !map.isEmpty()) {
@@ -350,11 +375,14 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
     @Override
     public Result<String> getCategoryByName(String hostId, String categoryName) {
         Result<String> result = null;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT category_id, host_id, entity_type, category_name, category_desc, parent_category_id, \n" +
-                "sort_order, update_user, update_ts\n" +
-                "FROM category_t\n" +
-                "WHERE category_name = ?\n"); // Filter by category_name
+        String s =
+                """
+                SELECT category_id, host_id, entity_type, category_name, category_desc, parent_category_id,
+                sort_order, update_user, update_ts, aggregate_version
+                FROM category_t
+                WHERE category_name = ?
+                """;
+        StringBuilder sqlBuilder = new StringBuilder(s);
 
         if (hostId != null && !hostId.isEmpty()) {
             sqlBuilder.append("AND (host_id = ? OR host_id IS NULL)"); // Tenant-specific OR Global
@@ -387,6 +415,7 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
                     map.put("sortOrder", resultSet.getInt("sort_order"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                 }
             }
             if (map != null && !map.isEmpty()) {
@@ -407,11 +436,14 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
     @Override
     public Result<String> getCategoryByType(String hostId, String entityType) {
         Result<String> result = null;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT category_id, host_id, entity_type, category_name, category_desc, parent_category_id, \n" +
-                "sort_order, update_user, update_ts\n" +
-                "FROM category_t\n" +
-                "WHERE entity_type = ?\n"); // Filter by entity_type
+        String s =
+                """
+                SELECT category_id, host_id, entity_type, category_name, category_desc, parent_category_id,
+                sort_order, update_user, update_ts, aggregate_version
+                FROM category_t
+                WHERE entity_type = ?
+                """;
+        StringBuilder sqlBuilder = new StringBuilder(s);
 
         if (hostId != null && !hostId.isEmpty()) {
             sqlBuilder.append("AND (host_id = ? OR host_id IS NULL)"); // Tenant-specific OR Global
@@ -442,6 +474,7 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
                     map.put("sortOrder", resultSet.getInt("sort_order"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
 
                     categories.add(map);
                 }
@@ -464,11 +497,14 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
     @Override
     public Result<String> getCategoryTree(String hostId, String entityType) {
         Result<String> result = null;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT cat.category_id, cat.host_id, cat.entity_type, cat.category_name, cat.category_desc, cat.parent_category_id, \n" +
-                "cat.sort_order, cat.update_user, cat.update_ts\n" +
-                "FROM category_t cat\n" +
-                "WHERE cat.entity_type = ?\n"); // Filter by entity_type
+        String s =
+                """
+                SELECT cat.category_id, cat.host_id, cat.entity_type, cat.category_name, cat.category_desc, cat.parent_category_id,
+                cat.sort_order, cat.update_user, cat.update_ts, cat.aggregate_version
+                FROM category_t cat
+                WHERE cat.entity_type = ?
+                """;
+        StringBuilder sqlBuilder = new StringBuilder(s);
 
         if (hostId != null && !hostId.isEmpty()) {
             sqlBuilder.append("AND (cat.host_id = ? OR cat.host_id IS NULL)"); // Tenant-specific OR Global
@@ -502,6 +538,7 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
                     map.put("sortOrder", resultSet.getInt("sort_order"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     map.put("children", new ArrayList<>()); // Initialize children list for tree structure
 
                     categoryList.add(map);
