@@ -4,6 +4,7 @@ import com.networknt.monad.Result;
 import java.sql.Connection; // Added import
 import java.sql.SQLException; // Added import
 import java.util.Map;
+import java.util.Set;
 
 public interface ConfigPersistence {
     // Config
@@ -82,4 +83,7 @@ public interface ConfigPersistence {
     // Snapshot
     void commitConfigInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception; // Applied pattern
     void rollbackConfigInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception; // Applied pattern
+
+    // Product / Instance Applicable Properties
+    Result<String> getApplicableConfigPropertiesForInstance(int offset, int limit, String hostId, String instanceId, Set<String> resourceTypes, Set<String> configTypes, Set<String> propertyTypes);
 }
