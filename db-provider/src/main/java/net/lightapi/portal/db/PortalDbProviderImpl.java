@@ -15,6 +15,7 @@ import java.sql.SQLException; // Added import
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class PortalDbProviderImpl implements PortalDbProvider {
     public static final Logger logger = LoggerFactory.getLogger(PortalDbProviderImpl.class);
@@ -446,5 +447,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     // --- Event ---
     @Override public Result<String> insertEventStore(CloudEvent[] events) { return eventPersistence.insertEventStore(events); }
+
+    // --- Product / Instance Applicable Properties
+    @Override
+    public Result<String> getApplicableConfigPropertiesForInstance(int offset, int limit, String hostId, String instanceId, Set<String> resourceTypes, Set<String> configTypes, Set<String> propertyTypes) { return configPersistence.getApplicableConfigPropertiesForInstance(offset, limit, hostId, instanceId, resourceTypes, configTypes, propertyTypes); }
 
 }

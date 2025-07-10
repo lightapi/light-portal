@@ -1172,7 +1172,8 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 """
                 SELECT COUNT(*) OVER () AS total,
                 iap.host_id, iap.instance_api_id, ia.instance_id, i.instance_name, ia.api_version_id, av.api_id, av.api_version, ia.active,
-                ia.update_user, ia.update_ts, p.config_id, c.config_name, iap.property_id, p.property_name, iap.property_value
+                ia.update_user, ia.update_ts, p.config_id, c.config_name, iap.property_id, p.property_name, iap.property_value,
+                p.required, p.property_desc, p.property_type, p.resource_type, p.value_type, c.config_type, c.config_desc, c.class_path
                 FROM instance_api_t ia
                 INNER JOIN api_version_t av ON av.api_version_id = ia.api_version_id
                 INNER JOIN instance_t i ON ia.host_id =i.host_id AND ia.instance_id = i.instance_id
@@ -1243,6 +1244,14 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("propertyId", resultSet.getObject("property_id", UUID.class));
                     map.put("propertyName", resultSet.getString("property_name"));
                     map.put("propertyValue", resultSet.getString("property_value"));
+                    map.put("required", resultSet.getString("required"));
+                    map.put("propertyDesc", resultSet.getString("property_desc"));
+                    map.put("propertyType", resultSet.getString("property_type"));
+                    map.put("resourceType", resultSet.getString("resource_type"));
+                    map.put("valueType", resultSet.getString("value_type"));
+                    map.put("configType", resultSet.getString("config_type"));
+                    map.put("configDesc", resultSet.getString("config_desc"));
+                    map.put("classPath", resultSet.getString("class_path"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     instanceApis.add(map);
@@ -1385,8 +1394,10 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
-                iap.host_id, iap.instance_app_id, ia.instance_id, i.instance_name, ia.app_id, ia.app_version, ia.active,\s
-                ia.update_user, ia.update_ts, p.config_id, c.config_name, iap.property_id, p.property_name, iap.property_value
+                iap.host_id, iap.instance_app_id, ia.instance_id, i.instance_name, ia.app_id, ia.app_version, ia.active,
+                p.config_id, c.config_name, iap.property_id, p.property_name, iap.property_value,
+                p.required, p.property_desc, p.property_type, p.resource_type, p.value_type, c.config_type, c.config_desc, c.class_path,
+                ia.update_user, ia.update_ts
                 FROM instance_app_t ia
                 INNER JOIN instance_t i ON ia.host_id =i.host_id AND ia.instance_id = i.instance_id
                 INNER JOIN instance_app_property_t iap ON ia.host_id = iap.host_id AND ia.instance_app_id = iap.instance_app_id
@@ -1454,6 +1465,14 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("propertyId", resultSet.getObject("property_id", UUID.class));
                     map.put("propertyName", resultSet.getString("property_name"));
                     map.put("propertyValue", resultSet.getString("property_value"));
+                    map.put("required", resultSet.getString("required"));
+                    map.put("propertyDesc", resultSet.getString("property_desc"));
+                    map.put("propertyType", resultSet.getString("property_type"));
+                    map.put("resourceType", resultSet.getString("resource_type"));
+                    map.put("valueType", resultSet.getString("value_type"));
+                    map.put("configType", resultSet.getString("config_type"));
+                    map.put("configDesc", resultSet.getString("config_desc"));
+                    map.put("classPath", resultSet.getString("class_path"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     instanceApps.add(map);
@@ -1601,7 +1620,9 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 SELECT COUNT(*) OVER () AS total,
                 iaap.host_id, iaap.instance_app_id, iaap.instance_api_id, i.instance_id, i.instance_name, iap.app_id, iap.app_version,
                 iai.api_version_id, av.api_id, av.api_version, p.config_id, c.config_name, iaap.property_id,
-                p.property_name, iaap.property_value, iaap.update_user, iaap.update_ts
+                p.property_name, iaap.property_value, p.required, p.property_desc, p.property_type, p.resource_type, p.value_type,
+                c.config_type, c.config_desc, c.class_path,
+                iaap.update_user, iaap.update_ts
                 FROM instance_app_t iap
                 INNER JOIN instance_t i ON iap.host_id =i.host_id AND iap.instance_id = i.instance_id
                 INNER JOIN instance_app_api_property_t iaap ON iaap.host_id = iap.host_id AND iaap.instance_app_id = iap.instance_app_id
@@ -1678,6 +1699,14 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("propertyId", resultSet.getObject("property_id", UUID.class));
                     map.put("propertyName", resultSet.getString("property_name"));
                     map.put("propertyValue", resultSet.getString("property_value"));
+                    map.put("required", resultSet.getString("required"));
+                    map.put("propertyDesc", resultSet.getString("property_desc"));
+                    map.put("propertyType", resultSet.getString("property_type"));
+                    map.put("resourceType", resultSet.getString("resource_type"));
+                    map.put("valueType", resultSet.getString("value_type"));
+                    map.put("configType", resultSet.getString("config_type"));
+                    map.put("configDesc", resultSet.getString("config_desc"));
+                    map.put("classPath", resultSet.getString("class_path"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     instanceAppApis.add(map);
@@ -2676,7 +2705,8 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 """
                 SELECT COUNT(*) OVER () AS total,
                 ip.host_id, ip.instance_id, i.instance_name, p.config_id, c.config_name, ip.property_id,
-                p.property_name, ip.property_value, ip.update_user, ip.update_ts
+                p.property_name, ip.property_value, p.required, p.property_desc, p.property_type, p.resource_type, p.value_type, c.config_type,
+                c.config_desc, c.class_path, ip.update_user, ip.update_ts
                 FROM instance_property_t ip
                 INNER JOIN config_property_t p ON p.property_id = ip.property_id
                 INNER JOIN instance_t i ON i.instance_id = ip.instance_id
@@ -2735,6 +2765,14 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("propertyId", resultSet.getObject("property_id", UUID.class));
                     map.put("propertyName", resultSet.getString("property_name"));
                     map.put("propertyValue", resultSet.getString("property_value"));
+                    map.put("required", resultSet.getString("required"));
+                    map.put("propertyDesc", resultSet.getString("property_desc"));
+                    map.put("propertyType", resultSet.getString("property_type"));
+                    map.put("resourceType", resultSet.getString("resource_type"));
+                    map.put("valueType", resultSet.getString("value_type"));
+                    map.put("configType", resultSet.getString("config_type"));
+                    map.put("configDesc", resultSet.getString("config_desc"));
+                    map.put("classPath", resultSet.getString("class_path"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
 
@@ -3602,6 +3640,154 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             Map<String, Object> resultMap = new HashMap<>();
             resultMap.put("total", total);
             resultMap.put("productVersionProperties", productVersionProperties);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getApplicableConfigPropertiesForInstance(
+            int offset, int limit,
+            String hostId, String instanceId,
+            Set<String> resourceTypes, Set<String> configTypes, Set<String> propertyTypes
+    ) {
+
+        Result<String> result;
+        String sql =
+                """
+                    WITH applicable_instance_config_properties AS (
+                        SELECT DISTINCT pvc.config_id, pvcp.property_id, i.host_id, i.instance_id, i.product_version_id
+                        FROM instance_t i
+                        JOIN product_version_config_t pvc ON i.host_id = pvc.host_id AND i.product_version_id = pvc.product_version_id
+                        JOIN product_version_config_property_t pvcp ON i.host_id = pvcp.host_id AND i.product_version_id = pvcp.product_version_id
+                        WHERE i.host_id = ? AND i.instance_id = ?
+                    ),
+                    property_values AS (
+                        SELECT
+                            cp.property_id,
+                            CASE
+                                WHEN ep.property_value IS NOT NULL THEN ep.property_value
+                                WHEN pvp.property_value IS NOT NULL THEN pvp.property_value
+                                WHEN pp.property_value IS NOT NULL THEN pp.property_value
+                                ELSE cp.property_value
+                            END AS effective_property_value,
+                            CASE
+                                WHEN ep.property_value IS NOT NULL THEN 'environment_property'
+                                WHEN pvp.property_value IS NOT NULL THEN 'product_version_property'
+                                WHEN pp.property_value IS NOT NULL THEN 'product_property'
+                                ELSE 'config_property'
+                            END AS property_source_type,
+                            CASE
+                                WHEN ep.property_value IS NOT NULL THEN COALESCE( ep.environment, '' )
+                                WHEN pvp.property_value IS NOT NULL THEN CONCAT( COALESCE( pv.product_id, '' ), '-', COALESCE( pv.product_version, '' ) )
+                                WHEN pp.property_value IS NOT NULL THEN COALESCE ( pp.product_id, '' )
+                                ELSE 'global'
+                            END AS property_source
+                        FROM config_property_t cp
+                        JOIN applicable_instance_config_properties aicp ON aicp.config_id = cp.config_id AND aicp.property_id = cp.property_id
+                        JOIN product_version_t pv ON aicp.host_id = pv.host_id AND aicp.product_version_id = pv.product_version_id
+                        LEFT JOIN product_property_t pp ON cp.property_id = pp.property_id AND pv.product_id = pp.product_id
+                        LEFT JOIN product_version_property_t pvp ON cp.property_id = pvp.property_id AND aicp.host_id = pvp.host_id AND aicp.product_version_id = pvp.product_version_id
+                        LEFT JOIN environment_property_t ep ON cp.property_id = ep.property_id AND aicp.host_id = ep.host_id
+                    )
+                    SELECT
+                        COUNT(*) OVER () AS total,
+                        ac.host_id, ac.instance_id,
+                        c.config_id, c.config_name, c.config_phase, c.config_type, c.class_path, c.config_desc,
+                        cp.property_id, cp.property_name, cp.property_type, cp.display_order, cp.required, cp.property_desc, cp.value_type, cp.resource_type,
+                        pv.effective_property_value AS property_value, pv.property_source, pv.property_source_type
+                    FROM config_t c
+                    JOIN config_property_t cp ON c.config_id = cp.config_id
+                    JOIN applicable_instance_config_properties aicp ON c.config_id = aicp.config_id AND cp.config_id = aicp.config_id AND cp.property_id = aicp.property_id
+                    LEFT JOIN property_values pv ON cp.property_id = pv.property_id
+                    WHERE 1 = 1
+                        AND ( array_length(?, 1) IS NULL OR cp.resource_type = ANY(?) )
+                        AND ( array_length(?, 1) IS NULL OR c.config_type = ANY(?) )
+                        AND ( array_length(?, 1) IS NULL OR cp.property_type = ANY(?) )
+                    ORDER BY c.config_name, cp.property_name, cp.display_order
+                    LIMIT ? OFFSET ?
+                """;
+
+        int total = 0;
+        List<Map<String, Object>> instanceApplicableProperties = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            preparedStatement.setObject(1, hostId != null ? UUID.fromString(hostId) : null);
+            preparedStatement.setObject(2, instanceId != null ? UUID.fromString(instanceId) : null);
+
+            if (resourceTypes == null || resourceTypes.isEmpty()) {
+                preparedStatement.setNull(3, Types.ARRAY);
+                preparedStatement.setNull(4, Types.ARRAY);
+            } else {
+                Array sqlArray = connection.createArrayOf("VARCHAR", resourceTypes.toArray());
+                preparedStatement.setArray(3, sqlArray);
+                preparedStatement.setArray(4, sqlArray);
+            }
+
+            if (configTypes == null || configTypes.isEmpty()) {
+                preparedStatement.setNull(5, Types.ARRAY);
+                preparedStatement.setNull(6, Types.ARRAY);
+            } else {
+                Array sqlArray = connection.createArrayOf("VARCHAR", configTypes.toArray());
+                preparedStatement.setArray(5, sqlArray);
+                preparedStatement.setArray(6, sqlArray);
+            }
+
+            if (propertyTypes == null || propertyTypes.isEmpty()) {
+                preparedStatement.setNull(7, Types.ARRAY);
+                preparedStatement.setNull(8, Types.ARRAY);
+            } else {
+                Array sqlArray = connection.createArrayOf("VARCHAR", propertyTypes.toArray());
+                preparedStatement.setArray(7, sqlArray);
+                preparedStatement.setArray(8, sqlArray);
+            }
+
+            preparedStatement.setObject(9, limit);
+            preparedStatement.setObject(10, offset);
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
+                    map.put("configId", resultSet.getObject("config_id", UUID.class));
+                    map.put("configName", resultSet.getString("config_name"));
+                    map.put("configPhase", resultSet.getString("config_phase"));
+                    map.put("configType", resultSet.getString("config_type"));
+                    map.put("classPath", resultSet.getString("class_path"));
+                    map.put("configDesc", resultSet.getString("config_desc"));
+                    map.put("propertyId", resultSet.getObject("property_id", UUID.class));
+                    map.put("propertyName", resultSet.getString("property_name"));
+                    map.put("displayOrder", resultSet.getInt("display_order"));
+                    map.put("required", resultSet.getBoolean("required"));
+                    map.put("propertyDesc", resultSet.getString("property_desc"));
+                    map.put("propertyValue", resultSet.getString("property_value"));
+                    map.put("propertySource", resultSet.getString("property_source"));
+                    map.put("propertySourceType", resultSet.getString("property_source_type"));
+                    map.put("valueType", resultSet.getString("value_type"));
+                    map.put("resourceType", resultSet.getString("resource_type"));
+
+                    instanceApplicableProperties.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("instanceApplicableProperties", instanceApplicableProperties);
             result = Success.of(JsonMapper.toJson(resultMap));
 
         } catch (SQLException e) {
