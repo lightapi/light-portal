@@ -6,9 +6,9 @@ import com.networknt.monad.Result;
 import com.networknt.monad.Success;
 import com.networknt.status.Status;
 import com.networknt.utility.Constants;
-import com.networknt.utility.UuidUtil;
 import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.PortalConstants;
+import net.lightapi.portal.db.ConcurrencyException;
 import net.lightapi.portal.db.PortalDbProvider;
 import net.lightapi.portal.db.util.NotificationService;
 import net.lightapi.portal.db.util.SqlUtil;
@@ -23,7 +23,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.networknt.db.provider.SqlDbStartupHook.ds;
-import static java.sql.Types.NULL;
 import static net.lightapi.portal.db.util.SqlUtil.addCondition;
 
 public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPersistence {
@@ -44,8 +43,8 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 """
                 INSERT INTO instance_t(host_id, instance_id, instance_name, product_version_id,
                 service_id, current, readonly, environment, service_desc, instance_desc, zone, region, lob,
-                resource_name, business_name, env_tag, topic_classification, update_user, update_ts)
-                VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?, ?)
+                resource_name, business_name, env_tag, topic_classification, update_user, update_ts, aggregate_version)
+                VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?)
                 """;
         final String sqlUpdateCurrent =
                 """
@@ -56,9 +55,10 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 """;
 
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String instanceId = (String)map.get("instanceId"); // For logging/exceptions
-        String serviceId = (String)map.get("serviceId"); // For logging/exceptions
+        String hostId = (String)event.get(Constants.HOST);
+        String instanceId = (String)map.get("instanceId");
+        String serviceId = (String)map.get("serviceId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
@@ -141,10 +141,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
             statement.setString(18, (String)event.get(Constants.USER));
             statement.setObject(19, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(20, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert the instance with id " + instanceId);
+                throw new SQLException(String.format("Failed during createInstance for hostId %s instanceId %s with aggregateVersion %d", hostId, instanceId, newAggregateVersion));
             }
             // try to update current to false for others if current is true.
             if(current != null && current) {
@@ -155,15 +156,26 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     statementUpdate.executeUpdate();
                 }
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during createInstance for id {}: {}", instanceId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during createInstance for hostId {} instanceId {} aggregateVersion {}: {}", hostId, instanceId, newAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during createInstance for id {}: {}", instanceId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during createInstance for hostId {} instanceId {} aggregateVersion {}: {}", hostId, instanceId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    private boolean queryInstanceExists(Connection conn, String hostId, String instanceId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM instance_t WHERE host_id = ? AND instance_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(hostId));
+            pst.setObject(2, UUID.fromString(instanceId));
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
@@ -174,8 +186,8 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 UPDATE instance_t SET instance_name = ?, product_version_id = ?, service_id = ?,
                 current = ?, readonly = ?, environment = ?, service_desc = ?, instance_desc = ?,
                 zone = ?, region = ?, lob = ?, resource_name = ?, business_name = ?, env_tag = ?,
-                topic_classification = ?, update_user = ?, update_ts = ?
-                WHERE host_id = ? and instance_id = ?
+                topic_classification = ?, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? and instance_id = ? AND aggregate_version = ?
                 """;
         final String sqlUpdateCurrent =
                 """
@@ -186,9 +198,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 """;
 
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String instanceId = (String)map.get("instanceId"); // For logging/exceptions
-        String serviceId = (String)map.get("serviceId"); // For logging/exceptions
+        String hostId = (String)event.get(Constants.HOST);
+        String instanceId = (String)map.get("instanceId");
+        String serviceId = (String)map.get("serviceId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setString(1, (String)map.get("instanceName"));
@@ -268,12 +282,18 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             }
             statement.setString(16, (String)event.get(Constants.USER));
             statement.setObject(17, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setObject(18, UUID.fromString(hostId));
-            statement.setObject(19, UUID.fromString(instanceId));
+            statement.setLong(18, newAggregateVersion);
+            statement.setObject(19, UUID.fromString(hostId));
+            statement.setObject(20, UUID.fromString(instanceId));
+            statement.setLong(21, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to update the instance with id " + instanceId);
+                if (queryInstanceExists(conn, hostId, instanceId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during updateInstance for hostId " + hostId + " instanceId " + instanceId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found during updateInstance for hostId " + hostId + " instanceId " + instanceId + ".");
+                }
             }
             // try to update current to false for others if current is true.
             if(current != null && current) {
@@ -284,25 +304,22 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     statementUpdate.executeUpdate();
                 }
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during updateInstance for id {}: {}", instanceId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during updateInstance for hostId {} instanceId {} (old: {}) -> (new: {}): {}", hostId, instanceId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateInstance for id {}: {}", instanceId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during updateInstance for hostId {} instanceId {} (old: {}) -> (new: {}): {}", hostId, instanceId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
     @Override
     public void deleteInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM instance_t WHERE host_id = ? AND instance_id = ?";
+        final String sql = "DELETE FROM instance_t WHERE host_id = ? AND instance_id = ? AND aggregate_version = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String instanceId = (String)map.get("instanceId"); // For logging/exceptions
+        String hostId = (String)event.get(Constants.HOST);
+        String instanceId = (String)map.get("instanceId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
@@ -310,18 +327,18 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to delete the instance with id " + instanceId);
+                if (queryInstanceExists(conn, hostId, instanceId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteInstance for hostId " + hostId + " instanceId " + instanceId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deleteInstance for hostId " + hostId + " instanceId " + instanceId + ". It might have been already deleted.");
+                }
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during deleteInstance for id {}: {}", instanceId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during deleteInstance for hostId {} instanceId {} aggregateVersion {}: {}", hostId, instanceId, oldAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteInstance for id {}: {}", instanceId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during deleteInstance for hostId {} instanceId {} aggregateVersion {}: {}", hostId, instanceId, oldAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -337,7 +354,8 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                         SELECT COUNT(*) OVER () AS total,
                         i.host_id, i.instance_id, i.instance_name, i.product_version_id, pv.product_id, pv.product_version,
                         i.service_id, i.current, i.readonly, i.environment, i.service_desc, i.instance_desc, i.zone, i.region,
-                        i.lob, i.resource_name, i.business_name, i.env_tag, i.topic_classification, i.update_user, i.update_ts
+                        i.lob, i.resource_name, i.business_name, i.env_tag, i.topic_classification, i.update_user, i.update_ts,
+                        i.aggregate_version
                         FROM instance_t i
                         INNER JOIN product_version_t pv ON pv.product_version_id = i.product_version_id
                         WHERE 1=1
@@ -418,8 +436,8 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("envTag", resultSet.getString("env_tag"));
                     map.put("topicClassification", resultSet.getString("topic_classification"));
                     map.put("updateUser", resultSet.getString("update_user"));
-                    // handling date properly
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     instances.add(map);
                 }
             }
@@ -442,10 +460,10 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         Result<String> result = null;
         String sql =
                 """
-                        SELECT i.instance_id, i.instance_name, pv.product_id, pv.product_version
-                        FROM instance_t i
-                        INNER JOIN product_version_t pv ON pv.product_version_id = i.product_version_id
-                        WHERE i.host_id = ?
+                SELECT i.instance_id, i.instance_name, pv.product_id, pv.product_version
+                FROM instance_t i
+                INNER JOIN product_version_t pv ON pv.product_version_id = i.product_version_id
+                WHERE i.host_id = ?
                 """;
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
@@ -473,13 +491,18 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
     @Override
     public void createInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "INSERT INTO instance_api_t(host_id, instance_api_id, instance_id, api_version_id, active, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        final String sql =
+                """
+                INSERT INTO instance_api_t(host_id, instance_api_id, instance_id, api_version_id,
+                active, update_user, update_ts, aggregate_version)
+                VALUES (?, ?, ?, ?, ?,  ?, ?, ?)
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
         String instanceApiId = (String)map.get("instanceApiId"); // For logging/exceptions
         String instanceId = (String)map.get("instanceId"); // For logging/exceptions
         String apiVersionId = (String)map.get("apiVersionId"); // For logging/exceptions
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
@@ -494,32 +517,48 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             }
             statement.setString(6, (String)event.get(Constants.USER));
             statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(8, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("Failed to insert the instance API for hostId: %s, instanceApiId: %s, instanceId: %s, apiVersionId: %s",
-                        hostId, instanceApiId, instanceId, apiVersionId));
+                throw new SQLException(String.format("Failed during createInstanceApi for hostId %s instanceApiId %s with aggregateVersion %d", hostId, instanceApiId, newAggregateVersion));
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during createInstanceApi for instanceApiId {}: {}", instanceApiId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during createInstanceApi for hostId {} instanceApiId {} aggregateVersion {}: {}", hostId, instanceApiId, newAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during createInstanceApi for instanceApiId {}: {}", instanceApiId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during createInstanceApi for hostId {} instanceApiId {} aggregateVersion {}: {}", hostId, instanceApiId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    private boolean queryInstanceApiExists(Connection conn, String hostId, String instanceApiId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM instance_api_t WHERE host_id = ? AND instance_api_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(hostId));
+            pst.setObject(2, UUID.fromString(instanceApiId));
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
     @Override
     public void updateInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "UPDATE instance_api_t SET instance_id = ?, api_version_id = ?, active = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? and instance_api_id = ?";
+        final String sql =
+                """
+                UPDATE instance_api_t SET instance_id = ?, api_version_id = ?,
+                active = ?, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? and instance_api_id = ? AND aggregate_version = ?
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
         String instanceApiId = (String)map.get("instanceApiId"); // For logging/exceptions
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString((String)map.get("instanceId")));
@@ -532,50 +571,55 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             }
             statement.setString(4, (String)event.get(Constants.USER));
             statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setObject(6, UUID.fromString(hostId));
-            statement.setObject(7, UUID.fromString(instanceApiId));
+            statement.setLong(6, newAggregateVersion);
+            statement.setObject(7, UUID.fromString(hostId));
+            statement.setObject(8, UUID.fromString(instanceApiId));
+            statement.setLong(9, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to update instance api for hostId: " + hostId + ", instanceApiId: " + instanceApiId);
+                if (queryInstanceApiExists(conn, hostId, instanceApiId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during updateInstanceApi for hostId " + hostId + " instanceApiId " + instanceApiId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found during updateInstanceApi for hostId " + hostId + " instanceApiId " + instanceApiId + ".");
+                }
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during updateInstanceApi for instanceApiId {}: {}", instanceApiId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during updateInstanceApi for hostId {} instanceApiId {} (old: {}) -> (new: {}): {}", hostId, instanceApiId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateInstanceApi for instanceApiId {}: {}", instanceApiId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during updateInstanceApi for hostId {} instanceApiId {} (old: {}) -> (new: {}): {}", hostId, instanceApiId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
     @Override
     public void deleteInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM instance_api_t WHERE host_id = ? AND instance_api_id = ?";
+        final String sql = "DELETE FROM instance_api_t WHERE host_id = ? AND instance_api_id = ? AND aggregate_version = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String instanceApiId = (String)map.get("instanceApiId"); // For logging/exceptions
+        String hostId = (String)event.get(Constants.HOST);
+        String instanceApiId = (String)map.get("instanceApiId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
             statement.setObject(2, UUID.fromString(instanceApiId));
+            statement.setLong(3, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to delete the instance api with instanceApiId " + instanceApiId);
+                if (queryInstanceApiExists(conn, hostId, instanceApiId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteInstanceApi for hostId " + hostId + " instanceApiId " + instanceApiId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deleteInstanceApi for hostId " + hostId + " instanceApiId " + instanceApiId + ". It might have been already deleted.");
+                }
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during deleteInstanceApi for instanceApiId {}: {}", instanceApiId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during deleteInstanceApi for hostId {} instanceApiId {} aggregateVersion {}: {}", hostId, instanceApiId, oldAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteInstanceApi for instanceApiId {}: {}", instanceApiId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during deleteInstanceApi for hostId {} instanceApiId {} aggregateVersion {}: {}", hostId, instanceApiId, oldAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -589,7 +633,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                         SELECT COUNT(*) OVER () AS total,
                         ia.host_id, ia.instance_api_id, ia.instance_id, i.instance_name, pv.product_id,
                         pv.product_version, ia.api_version_id, av.api_id, av.api_version, ia.active,
-                        ia.update_user, ia.update_ts
+                        ia.update_user, ia.update_ts, ia.aggregate_version
                         FROM instance_api_t ia
                         INNER JOIN instance_t i ON ia.instance_id = i.instance_id
                         INNER JOIN product_version_t pv ON i.product_version_id = pv.product_version_id
@@ -655,6 +699,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("active", resultSet.getBoolean("active"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     instanceApis.add(map);
                 }
             }
@@ -679,11 +724,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         Result<String> result = null;
         String sql =
                 """
-                        SELECT ia.instance_api_id, i.instance_name, av.api_id, av.api_version
-                        FROM instance_api_t ia
-                        INNER JOIN instance_t i ON i.instance_id = ia.instance_id
-                        INNER JOIN api_version_t av ON av.api_version_id = ia.api_version_id
-                        WHERE ia.host_id = ?
+                SELECT ia.instance_api_id, i.instance_name, av.api_id, av.api_version
+                FROM instance_api_t ia
+                INNER JOIN instance_t i ON i.instance_id = ia.instance_id
+                INNER JOIN api_version_t av ON av.api_version_id = ia.api_version_id
+                WHERE ia.host_id = ?
                 """;
         if(instanceId != null) sql += " AND ia.instance_id = ?";
         List<Map<String, Object>> labels = new ArrayList<>();
@@ -714,12 +759,16 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
     @Override
     public void createInstanceApiPathPrefix(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "INSERT INTO instance_api_path_prefix_t(host_id, instance_api_id, path_prefix, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?)";
+        final String sql =
+                """
+                INSERT INTO instance_api_path_prefix_t(host_id, instance_api_id, path_prefix, update_user, update_ts, aggregate_version)
+                VALUES (?, ?, ?, ?, ?,  ?)
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String instanceApiId = (String)map.get("instanceApiId"); // For logging/exceptions
-        String pathPrefix = (String)map.get("pathPrefix"); // For logging/exceptions
+        String hostId = (String)event.get(Constants.HOST);
+        String instanceApiId = (String)map.get("instanceApiId");
+        String pathPrefix = (String)map.get("pathPrefix");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
@@ -727,86 +776,105 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             statement.setString(3, pathPrefix);
             statement.setString(4, (String)event.get(Constants.USER));
             statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(6, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("Failed to insert the instance api path prefix for hostId: %s, instanceApiId: %s, pathPrefix: %s",
-                        hostId, instanceApiId, pathPrefix));
+                throw new SQLException(String.format("Failed during createInstanceApiPathPrefix for hostId %s instanceApiId %s pathPrefix %s with aggregateVersion %d", hostId, instanceApiId, pathPrefix, newAggregateVersion));
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during createInstanceApiPathPrefix for instanceApiId {} pathPrefix {}: {}", instanceApiId, pathPrefix, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during createInstanceApiPathPrefix for hostId {} instanceApiId {} pathPrefix {} aggregateVersion {}: {}", hostId, instanceApiId, pathPrefix, newAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during createInstanceApiPathPrefix for instanceApiId {} pathPrefix {}: {}", instanceApiId, pathPrefix, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during createInstanceApiPathPrefix for hostId {} instanceApiId {} pathPrefix {} aggregateVersion {}: {}", hostId, instanceApiId, pathPrefix, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    private boolean queryInstanceApiPathPrefixExists(Connection conn, String hostId, String instanceApiId, String pathPrefix) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM instance_api_path_prefix_t WHERE host_id = ? AND instanceApiId = ? AND path_prefix = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(hostId));
+            pst.setObject(2, UUID.fromString(instanceApiId));
+            pst.setString(3, pathPrefix);
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
     @Override
     public void updateInstanceApiPathPrefix(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "UPDATE instance_api_path_prefix_t SET path_prefix = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? and instance_api_id = ?";
+        final String sql =
+                """
+                UPDATE instance_api_path_prefix_t SET path_prefix = ?, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? and instance_api_id = ? AND aggregate_version = ?
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
         String instanceApiId = (String)map.get("instanceApiId"); // For logging/exceptions
         String pathPrefix = (String)map.get("pathPrefix"); // For logging/exceptions
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setString(1, pathPrefix);
             statement.setString(2, (String)event.get(Constants.USER));
             statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setObject(4, UUID.fromString(hostId));
-            statement.setObject(5, UUID.fromString(instanceApiId));
+            statement.setLong(4, newAggregateVersion);
+            statement.setObject(5, UUID.fromString(hostId));
+            statement.setObject(6, UUID.fromString(instanceApiId));
+            statement.setLong(7, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("Failed to update instance api path prefix for hostId: %s, instanceApiId: %s",
-                        hostId, instanceApiId));
+                if (queryInstanceApiPathPrefixExists(conn, hostId, instanceApiId, pathPrefix)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during updateInstanceApiPathPrefix for hostId " + hostId + " instanceApiId " + instanceApiId + " pathPrefix " + pathPrefix + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found during updateInstanceApiPathPrefix for hostId " + hostId + " instanceApiId " + instanceApiId + " pathPrefix " + pathPrefix + ".");
+                }
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during updateInstanceApiPathPrefix for instanceApiId {} pathPrefix {}: {}", instanceApiId, pathPrefix, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during updateInstanceApiPathPrefix for hostId {} instanceApiId {} pathPrefix {} (old: {}) -> (new: {}): {}", hostId, instanceApiId, pathPrefix, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateInstanceApiPathPrefix for instanceApiId {} pathPrefix {}: {}", instanceApiId, pathPrefix, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during updateInstanceApiPathPrefix for hostId {} instanceApiId {} pathPrefix {} (old: {}) -> (new: {}): {}", hostId, instanceApiId, pathPrefix, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
     @Override
     public void deleteInstanceApiPathPrefix(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM instance_api_path_prefix_t WHERE host_id = ? AND instance_api_id = ? AND path_prefix = ?";
+        final String sql = "DELETE FROM instance_api_path_prefix_t WHERE host_id = ? AND instance_api_id = ? AND path_prefix = ? AND aggregate_version = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String instanceApiId = (String)map.get("instanceApiId"); // For logging/exceptions
-        String pathPrefix = (String)map.get("pathPrefix"); // For logging/exceptions
+        String hostId = (String)event.get(Constants.HOST);
+        String instanceApiId = (String)map.get("instanceApiId");
+        String pathPrefix = (String)map.get("pathPrefix");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
             statement.setObject(2, UUID.fromString(instanceApiId));
             statement.setString(3, pathPrefix);
+            statement.setLong(4, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("Failed to delete the instance api path prefix for hostId: %s, instanceApiId: %s, pathPrefix: %s",
-                        hostId, instanceApiId, pathPrefix));
+                if (queryInstanceApiPathPrefixExists(conn, hostId, instanceApiId, pathPrefix)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteInstanceApiPathPrefix for hostId " + hostId + " instanceApiId " + instanceApiId + " pathPrefix " + pathPrefix + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deleteInstanceApiPathPrefix for hostId " + hostId + " instanceApiId " + instanceApiId + " pathPrefix " + pathPrefix + ". It might have been already deleted.");
+                }
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during deleteInstanceApiPathPrefix for instanceApiId {} pathPrefix {}: {}", instanceApiId, pathPrefix, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during deleteInstanceApiPathPrefix for hostId {} instanceApiId {} pathPrefix {} aggregateVersion {}: {}", hostId, instanceApiId, pathPrefix, oldAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteInstanceApiPathPrefix for instanceApiId {} pathPrefix {}: {}", instanceApiId, pathPrefix, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during deleteInstanceApiPathPrefix for hostId {} instanceApiId {} pathPrefix {} aggregateVersion {}: {}", hostId, instanceApiId, pathPrefix, oldAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -820,7 +888,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                         SELECT COUNT(*) OVER () AS total,
                         iapp.host_id, iapp.instance_api_id, iai.instance_id, i.instance_name,
                         pv.product_id, pv.product_version, iai.api_version_id, av.api_id,
-                        av.api_version, iapp.path_prefix, iapp.update_user, iapp.update_ts
+                        av.api_version, iapp.path_prefix, iapp.update_user, iapp.update_ts, iapp.aggregate_version
                         FROM instance_api_path_prefix_t iapp
                         INNER JOIN instance_api_t iai ON iapp.instance_api_id = iai.instance_api_id
                         INNER JOIN instance_t i ON i.instance_id = iai.instance_id
@@ -889,6 +957,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("pathPrefix", resultSet.getString("path_prefix"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     instanceApiPathPrefixes.add(map);
                 }
             }
@@ -912,12 +981,16 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
     @Override
     public void createInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "INSERT INTO instance_app_api_t(host_id, instance_app_id, instance_api_id, active, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?)";
+        final String sql =
+                """
+                INSERT INTO instance_app_api_t(host_id, instance_app_id, instance_api_id, active, update_user, update_ts, aggregate_version)
+                VALUES (?, ?, ?, ?, ?,  ?, ?)
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String instanceAppId = (String)map.get("instanceAppId"); // For logging/exceptions
-        String instanceApiId = (String)map.get("instanceApiId"); // For logging/exceptions
+        String hostId = (String)event.get(Constants.HOST);
+        String instanceAppId = (String)map.get("instanceAppId");
+        String instanceApiId = (String)map.get("instanceApiId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
@@ -931,32 +1004,49 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             }
             statement.setString(5, (String)event.get(Constants.USER));
             statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(7, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("Failed to insert the instance app api for hostId: %s, instanceAppId: %s, instanceApiId: %s",
-                        hostId, instanceAppId, instanceApiId));
+                throw new SQLException(String.format("Failed during createInstanceAppApi for hostId %s instanceAppId %s instanceApiId %s with aggregateVersion %d", hostId, instanceAppId, instanceApiId, newAggregateVersion));
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during createInstanceAppApi for instanceAppId {} instanceApiId {}: {}", instanceAppId, instanceApiId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during createInstanceAppApi for hostId {} instanceAppId {} instanceApiId {} aggregateVersion {}: {}", hostId, instanceAppId, instanceApiId, newAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during createInstanceAppApi for instanceAppId {} instanceApiId {}: {}", instanceAppId, instanceApiId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during createInstanceAppApi for hostId {} instanceAppId {} instanceApiId {} aggregateVersion {}: {}", hostId, instanceAppId, instanceApiId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    private boolean queryInstanceAppApiExists(Connection conn, String hostId, String instanceAppId, String instanceApiId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM instance_app_api_t WHERE host_id = ? AND instance_app_id = ? AND instance_api_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(hostId));
+            pst.setObject(2, UUID.fromString(instanceAppId));
+            pst.setObject(3, UUID.fromString(instanceApiId));
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
     @Override
     public void updateInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "UPDATE instance_app_api_t SET active = ?, update_user = ?, update_ts = ? " + // Corrected table name based on interface
-                "WHERE host_id = ? AND instance_app_id = ? AND instance_api_id = ?";
+        final String sql =
+                """
+                UPDATE instance_app_api_t SET active = ?, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? AND instance_app_id = ? AND instance_api_id = ? AND aggregate_version = ?
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String instanceAppId = (String)map.get("instanceAppId"); // For logging/exceptions
-        String instanceApiId = (String)map.get("instanceApiId"); // For logging/exceptions
+        String hostId = (String)event.get(Constants.HOST);
+        String instanceAppId = (String)map.get("instanceAppId");
+        String instanceApiId = (String)map.get("instanceApiId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             Boolean active = (Boolean)map.get("active");
@@ -967,55 +1057,58 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             }
             statement.setString(2, (String)event.get(Constants.USER));
             statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setObject(4, UUID.fromString(hostId));
-            statement.setObject(5, UUID.fromString(instanceAppId));
-            statement.setObject(6, UUID.fromString(instanceApiId));
+            statement.setLong(4, newAggregateVersion);
+            statement.setObject(5, UUID.fromString(hostId));
+            statement.setObject(6, UUID.fromString(instanceAppId));
+            statement.setObject(7, UUID.fromString(instanceApiId));
+            statement.setLong(8, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("Failed to update instance app api for hostId: %s, instanceAppId: %s, instanceApiId: %s",
-                        hostId, instanceAppId, instanceApiId));
+                if (queryInstanceAppApiExists(conn, hostId, instanceAppId, instanceApiId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during updateInstanceAppApi for hostId " + hostId + " instanceAppId " + instanceAppId + " instanceApiId " + instanceApiId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found during updateInstanceAppApi for hostId " + hostId + " instanceAppId " + instanceAppId + "instanceApiId " + instanceApiId + ".");
+                }
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during updateInstanceAppApi for instanceAppId {} instanceApiId {}: {}", instanceAppId, instanceApiId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during updateInstanceAppApi for hostId {} instanceAppId {} instanceApiId {} (old: {}) -> (new: {}): {}", hostId, instanceAppId, instanceApiId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateInstanceAppApi for instanceAppId {} instanceApiId {}: {}", instanceAppId, instanceApiId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during updateInstanceAppApi for hostId {} instanceAppId {} instanceApiId {} (old: {}) -> (new: {}): {}", hostId, instanceAppId, instanceApiId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
     @Override
     public void deleteInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM instance_app_api_t WHERE host_id = ? AND instance_app_id = ? AND instance_api_id = ?";
+        final String sql = "DELETE FROM instance_app_api_t WHERE host_id = ? AND instance_app_id = ? AND instance_api_id = ? AND aggregate_version = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String instanceAppId = (String)map.get("instanceAppId"); // For logging/exceptions
-        String instanceApiId = (String)map.get("instanceApiId"); // For logging/exceptions
+        String hostId = (String)event.get(Constants.HOST);
+        String instanceAppId = (String)map.get("instanceAppId");
+        String instanceApiId = (String)map.get("instanceApiId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
             statement.setObject(2, UUID.fromString(instanceAppId));
             statement.setObject(3, UUID.fromString(instanceApiId));
+            statement.setLong(4, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("Failed to delete the instance app api for hostId: %s, instanceAppId: %s, instanceApiId: %s",
-                        hostId, instanceAppId, instanceApiId));
+                if (queryInstanceAppApiExists(conn, hostId, instanceAppId, instanceApiId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteInstanceAppApi for hostId " + hostId + " instanceAppId " + instanceAppId + " instanceApiId " + instanceApiId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deleteInstanceAppApi for hostId " + hostId + " instanceAppId " + instanceAppId + " instanceApiId " + instanceApiId + ". It might have been already deleted.");
+                }
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during deleteInstanceAppApi for instanceAppId {} instanceApiId {}: {}", instanceAppId, instanceApiId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during deleteInstanceAppApi for hostId {} instanceAppId {} instanceApiId {} aggregateVersion {}: {}", hostId, instanceAppId, instanceApiId, oldAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteInstanceAppApi for instanceAppId {} instanceApiId {}: {}", instanceAppId, instanceApiId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during deleteInstanceAppApi for hostId {} instanceAppId {} instanceApiId {} aggregateVersion {}: {}", hostId, instanceAppId, instanceApiId, oldAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -1031,7 +1124,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                                 iaa.host_id, iaa.instance_app_id, iap.app_id, iap.app_version,
                                 iaa.instance_api_id, iai.instance_id, i.instance_name, pv.product_id,
                                 pv.product_version, iai.api_version_id, av.api_id, av.api_version, iaa.active,
-                                iaa.update_user, iaa.update_ts
+                                iaa.update_user, iaa.update_ts, iaa.aggregate_version
                                 FROM instance_app_api_t iaa
                                 INNER JOIN instance_app_t iap ON iaa.instance_app_id = iap.instance_app_id
                                 INNER JOIN app_t a ON iap.app_id = a.app_id
@@ -1107,6 +1200,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("active", resultSet.getBoolean("active"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     instanceApis.add(map);
                 }
             }
@@ -1130,11 +1224,15 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
     @Override
     public void createInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "INSERT INTO instance_app_t(host_id, instance_app_id, instance_id, app_id, app_version, active, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        final String sql =
+                """
+                INSERT INTO instance_app_t(host_id, instance_app_id, instance_id, app_id, app_version, active, update_user, update_ts, aggregate_version)
+                VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?)
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String instanceAppId = (String)map.get("instanceAppId"); // For logging/exceptions
+        String hostId = (String)event.get(Constants.HOST);
+        String instanceAppId = (String)map.get("instanceAppId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
@@ -1149,30 +1247,46 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             }
             statement.setString(7, (String)event.get(Constants.USER));
             statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(9, newAggregateVersion);
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert the instance app for hostId: " + hostId + ", instanceAppId: " + instanceAppId);
+                throw new SQLException(String.format("Failed during createInstanceApp for hostId %s instanceAppId %s with aggregateVersion %d", hostId, instanceAppId, newAggregateVersion));
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during createInstanceApp for instanceAppId {}: {}", instanceAppId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during createInstanceApp for hostId {} instanceAppId {} aggregateVersion {}: {}", hostId, instanceAppId, newAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during createInstanceApp for instanceAppId {}: {}", instanceAppId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during createInstanceApp for hostId {} instanceAppId {} aggregateVersion {}: {}", hostId, instanceAppId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    private boolean queryInstanceAppExists(Connection conn, String hostId, String instanceAppId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM instance_app_t WHERE host_id = ? AND instance_app_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(hostId));
+            pst.setObject(2, UUID.fromString(instanceAppId));
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
     @Override
     public void updateInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "UPDATE instance_app_t SET instance_id = ?, app_id = ?, app_version = ?, active = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? and instance_app_id = ?";
+        final String sql =
+                """
+                UPDATE instance_app_t SET instance_id = ?, app_id = ?, app_version = ?, active = ?, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? and instance_app_id = ? AND aggregate_version = ?
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
         String instanceAppId = (String)map.get("instanceAppId"); // For logging/exceptions
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString((String)map.get("instanceId")));
@@ -1186,50 +1300,55 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             }
             statement.setString(5, (String)event.get(Constants.USER));
             statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setObject(7, UUID.fromString(hostId));
-            statement.setObject(8, UUID.fromString(instanceAppId));
+            statement.setLong(7, newAggregateVersion);
+            statement.setObject(8, UUID.fromString(hostId));
+            statement.setObject(9, UUID.fromString(instanceAppId));
+            statement.setLong(10, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to update the instance app with instanceAppId " + instanceAppId);
+                if (queryInstanceAppExists(conn, hostId, instanceAppId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during updateInstanceApp for hostId " + hostId + " instanceAppId " + instanceAppId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found during updateInstanceApp for hostId " + hostId + " instanceAppId " + instanceAppId + ".");
+                }
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during updateInstanceApp for instanceAppId {}: {}", instanceAppId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during updateInstanceApp for hostId {} instanceAppId {} (old: {}) -> (new: {}): {}", hostId, instanceAppId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateInstanceApp for instanceAppId {}: {}", instanceAppId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during updateInstanceApp for hostId {} instanceAppId {} (old: {}) -> (new: {}): {}", hostId, instanceAppId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
     @Override
     public void deleteInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM instance_app_t WHERE host_id = ? AND instance_app_id = ?";
+        final String sql = "DELETE FROM instance_app_t WHERE host_id = ? AND instance_app_id = ? AND aggregate_version = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String instanceAppId = (String)map.get("instanceAppId"); // For logging/exceptions
+        String hostId = (String)event.get(Constants.HOST);
+        String instanceAppId = (String)map.get("instanceAppId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
             statement.setObject(2, UUID.fromString(instanceAppId));
+            statement.setLong(3, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to delete the instance app with instanceAppId " + instanceAppId);
+                if (queryInstanceAppExists(conn, hostId, instanceAppId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteInstanceApp for hostId " + hostId + " instanceAppId " + instanceAppId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deleteInstanceApp for hostId " + hostId + " instanceAppId " + instanceAppId + ". It might have been already deleted.");
+                }
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during deleteInstanceApp for instanceAppId {}: {}", instanceAppId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during deleteInstanceApp for hostId {} instanceAppId {} aggregateVersion {}: {}", hostId, instanceAppId, oldAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteInstanceApp for instanceAppId {}: {}", instanceAppId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during deleteInstanceApp for hostId {} instanceAppId {} aggregateVersion {}: {}", hostId, instanceAppId, oldAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -1240,8 +1359,8 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         String s =
                 """
                         SELECT COUNT(*) OVER () AS total,
-                        ia.host_id, ia.instance_app_id, ia.instance_id, i.instance_name, pv.product_id, pv.product_version,\s
-                        ia.app_id, ia.app_version, ia.active, ia.update_user, ia.update_ts
+                        ia.host_id, ia.instance_app_id, ia.instance_id, i.instance_name, pv.product_id, pv.product_version,
+                        ia.app_id, ia.app_version, ia.active, ia.update_user, ia.update_ts, ia.aggregate_version
                         FROM instance_app_t ia
                         INNER JOIN instance_t i ON ia.instance_id = i.instance_id
                         INNER JOIN product_version_t pv ON i.product_version_id = pv.product_version_id
@@ -1305,6 +1424,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("active", resultSet.getBoolean("active"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     instanceApps.add(map);
                 }
             }
@@ -1364,19 +1484,23 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
     @Override
     public void createProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "INSERT INTO product_version_t(host_id, product_version_id, product_id, product_version, " +
-                "light4j_version, break_code, break_config, release_note, version_desc, release_type, current, " +
-                "version_status, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        final String sql =
+                """
+                INSERT INTO product_version_t(host_id, product_version_id, product_id, product_version,
+                light4j_version, break_code, break_config, release_note, version_desc, release_type, current,
+                version_status, update_user, update_ts, aggregate_version)
+                VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?)
+                """;
         final String sqlUpdate = "UPDATE product_version_t SET current = false \n" +
                 "WHERE host_id = ?\n" +
                 "AND product_id = ?\n" +
                 "AND product_version != ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String productId = (String)map.get("productId"); // For logging/exceptions
-        String productVersion = (String)map.get("productVersion"); // For logging/exceptions
-        Boolean current = (Boolean)map.get("current"); // For conditional update
+        String hostId = (String)event.get(Constants.HOST);
+        String productId = (String)map.get("productId");
+        String productVersion = (String)map.get("productVersion");
+        Boolean current = (Boolean)map.get("current");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
@@ -1409,10 +1533,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             statement.setString(12, (String)map.get("versionStatus"));
             statement.setString(13, (String)event.get(Constants.USER));
             statement.setObject(14, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(15, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert the product with id " + productId + " and version " + productVersion);
+                throw new SQLException(String.format("Failed during createProduct for hostId %s productId %s productVersion %s with aggregateVersion %d", hostId, productId, productVersion, newAggregateVersion));
             }
             // try to update current to false for others if current is true.
             if(current != null && current) {
@@ -1423,34 +1548,51 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     statementUpdate.executeUpdate();
                 }
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
             logger.error("SQLException during createProduct (version) for productId {} version {}: {}", productId, productVersion, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            throw e;
         } catch (Exception e) {
             logger.error("Exception during createProduct (version) for productId {} version {}: {}", productId, productVersion, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            throw e;
+        }
+    }
+
+    private boolean queryProductExists(Connection conn, String hostId, String productVersionId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM product_version_t WHERE host_id = ? AND product_version_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(hostId));
+            pst.setObject(2, UUID.fromString(productVersionId));
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
     @Override
     public void updateProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "UPDATE product_version_t SET light4j_version = ?, break_code = ?, break_config = ?, " +
-                "release_note = ?, version_desc = ?, release_type = ?, current = ?, version_status = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? AND product_version_id = ?";
+        final String sql =
+                """
+                UPDATE product_version_t SET light4j_version = ?, break_code = ?, break_config = ?,
+                release_note = ?, version_desc = ?, release_type = ?, current = ?, version_status = ?,
+                update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? AND product_version_id = ? AND aggregate_version = ?
+                """;
         final String sqlUpdate = "UPDATE product_version_t SET current = false \n" +
                 "WHERE host_id = ?\n" +
                 "AND product_id = ?\n" +
                 "AND product_version != ?";
 
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String productId = (String)map.get("productId"); // For logging/exceptions
-        String productVersion = (String)map.get("productVersion"); // For logging/exceptions
-        String productVersionId = (String)map.get("productVersionId"); // For logging/exceptions
-        Boolean current = (Boolean)map.get("current"); // For conditional update
+        String hostId = (String)event.get(Constants.HOST);
+        String productId = (String)map.get("productId");
+        String productVersion = (String)map.get("productVersion");
+        String productVersionId = (String)map.get("productVersionId");
+        Boolean current = (Boolean)map.get("current");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setString(1, (String)map.get("light4jVersion"));
@@ -1480,12 +1622,18 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             statement.setString(8, (String)map.get("versionStatus"));
             statement.setString(9, (String)event.get(Constants.USER));
             statement.setObject(10, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setObject(11, UUID.fromString(hostId));
-            statement.setObject(12, UUID.fromString(productVersionId));
+            statement.setLong(11, newAggregateVersion);
+            statement.setObject(12, UUID.fromString(hostId));
+            statement.setObject(13, UUID.fromString(productVersionId));
+            statement.setLong(14, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to update the product (version) with id " + productId + " and version " + productVersion);
+                if (queryProductExists(conn, hostId, productVersionId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during updateProduct for hostId " + hostId + " productVersionId " + productVersionId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found during updateProduct for hostId " + hostId + " productVersionId " + productVersionId + ".");
+                }
             }
             // try to update current to false for others if current is true.
             if(current != null && current) {
@@ -1496,45 +1644,47 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     statementUpdate.executeUpdate();
                 }
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during updateProduct (version) for productId {} version {}: {}", productId, productVersion, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during updateProduct for hostId {} productVersionId {} (old: {}) -> (new: {}): {}", hostId, productVersionId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateProduct (version) for productId {} version {}: {}", productId, productVersion, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during updateProduct for hostId {} productVersionId {} (old: {}) -> (new: {}): {}", hostId, productVersionId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
     @Override
     public void deleteProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM product_version_t WHERE host_id = ? " +
-                "AND product_version_id = ?";
+        final String sql =
+                """
+                DELETE FROM product_version_t WHERE host_id = ?
+                AND product_version_id = ? AND aggregate_version = ?
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String productVersionId = (String)map.get("productVersionId"); // For logging/exceptions
-        String productId = (String)map.get("productId"); // For logging/exceptions (for message only)
+        String hostId = (String)event.get(Constants.HOST);
+        String productVersionId = (String)map.get("productVersionId");
+        String productId = (String)map.get("productId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
             statement.setObject(2, UUID.fromString(productVersionId));
+            statement.setLong(3, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to delete the product (version) with id " + productId + " and productVersionId " + productVersionId);
+                if (queryProductExists(conn, hostId, productVersionId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteProduct for hostId " + hostId + " productVersionId " + productVersionId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deleteProduct for hostId " + hostId + " productVersionId " + productVersionId + ". It might have been already deleted.");
+                }
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during deleteProduct (version) for productId {} productVersionId {}: {}", productId, productVersionId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during deleteProduct for hostId {} productVersionId {} aggregateVersion {}: {}", hostId, productVersionId, oldAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteProduct (version) for productId {} productVersionId {}: {}", productId, productVersionId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during deleteProduct for hostId {} productVersionId {} aggregateVersion {}: {}", hostId, productVersionId, oldAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -1546,7 +1696,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         String s = """
                 SELECT COUNT(*) OVER () AS total,
                 host_id, product_version_id, product_id, product_version, light4j_version, break_code, break_config,
-                release_note, version_desc, release_type, current, version_status, update_user, update_ts
+                release_note, version_desc, release_type, current, version_status, update_user, update_ts, aggregate_version
                 FROM product_version_t
                 WHERE 1=1
                 """;
@@ -1611,6 +1761,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("updateUser", resultSet.getString("update_user"));
                     // handling date properly
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     products.add(map);
                 }
             }
@@ -1715,64 +1866,72 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
     @Override
     public void createProductVersionEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "INSERT INTO product_version_environment_t(host_id, product_version_id, " +
-                "system_env, runtime_env, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?)";
+        final String sql =
+                """
+                INSERT INTO product_version_environment_t(host_id, product_version_id,
+                system_env, runtime_env, update_user, update_ts, aggregate_version)
+                VALUES (?, ?, ?, ?, ?,  ?, ?)
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String productVersionId = (String)map.get("productVersionId"); // For logging/exceptions
+        String hostId = (String)event.get(Constants.HOST);
+        String productVersionId = (String)map.get("productVersionId");
+        String systemEnv = (String)map.get("systemEnv");
+        String runtimeEnv = (String)map.get("runtimeEnv");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
             statement.setObject(2, UUID.fromString(productVersionId));
-            statement.setString(3, (String)map.get("systemEnv"));
-            statement.setString(4, (String)map.get("runtimeEnv"));
+            statement.setString(3, systemEnv);
+            statement.setString(4, runtimeEnv);
             statement.setString(5, (String)event.get(Constants.USER));
             statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(7, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert the product version environment with id " + productVersionId);
+                throw new SQLException(String.format("Failed during createProductVersionEnvironment for hostId %s productVersionId %s systemEnv %s runtimeEnv %s with aggregateVersion %d", hostId, productVersionId, systemEnv, runtimeEnv, newAggregateVersion));
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during createProductVersionEnvironment for productVersionId {}: {}", productVersionId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during createProductVersionEnvironment for hostId {} productVersionId {} systemEnv {} runtimeEnv {} aggregateVersion {}: {}", hostId, productVersionId, systemEnv, runtimeEnv, newAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during createProductVersionEnvironment for productVersionId {}: {}", productVersionId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during createProductVersionEnvironment for hostId {} productVersionId {} systemEnv {} runtimeEnv {} aggregateVersion {}: {}", hostId, productVersionId, systemEnv, runtimeEnv, newAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
     @Override
     public void deleteProductVersionEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM product_version_environment_t WHERE host_id = ? " +
-                "AND product_version_id = ? AND system_env = ? AND runtime_env = ?";
+        final String sql =
+                """
+                DELETE FROM product_version_environment_t WHERE host_id = ?
+                AND product_version_id = ? AND system_env = ? AND runtime_env = ? AND aggregate_version = ?
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String productVersionId = (String)map.get("productVersionId"); // For logging/exceptions
+        String hostId = (String)event.get(Constants.HOST);
+        String productVersionId = (String)map.get("productVersionId");
+        String systemEnv = (String)map.get("systemEnv");
+        String runtimeEnv = (String)map.get("runtimeEnv");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
             statement.setObject(2, UUID.fromString(productVersionId));
-            statement.setString(3, (String)map.get("systemEnv"));
-            statement.setString(4, (String)map.get("runtimeEnv"));
+            statement.setString(3, systemEnv);
+            statement.setString(4, runtimeEnv);
+            statement.setLong(5, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to delete the product version environment with id " + productVersionId);
+                throw new SQLException("Failed during deleteProductVersionEnvironment for hostId " + hostId + " productVersionId " + productVersionId + " systemEnv " + systemEnv + " runtimeEnv " + runtimeEnv);
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during deleteProductVersionEnvironment for productVersionId {}: {}", productVersionId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during deleteProductVersionEnvironment for hostId {} productVersionId {} systemEnv {} runtimeEnv {} aggregateVersion {}: {}", hostId, productVersionId, systemEnv, runtimeEnv, oldAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteProductVersionEnvironment for productVersionId {}: {}", productVersionId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during deleteProductVersionEnvironment for hostId {} productVersionId {} systemEnv {} runtimeEnv {} aggregateVersion {}: {}", hostId, productVersionId, systemEnv, runtimeEnv, oldAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -1784,7 +1943,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 """
                 SELECT COUNT(*) OVER () AS total,
                 pve.host_id, pve.product_version_id, pv.product_id, pv.product_version,
-                pve.system_env, pve.runtime_env, pve.update_user, pve.update_ts
+                pve.system_env, pve.runtime_env, pve.update_user, pve.update_ts, pve.aggregate_version
                 FROM product_version_environment_t pve
                 INNER JOIN product_version_t pv ON pv.product_version_id = pve.product_version_id
                 WHERE 1=1
@@ -1837,6 +1996,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("runtimeEnv", resultSet.getString("runtime_env"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     productEnvironments.add(map);
                 }
             }
@@ -1858,12 +2018,13 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     @Override
     public void createProductVersionPipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "INSERT INTO product_version_pipeline_t(host_id, product_version_id, " +
-                "pipeline_id, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?)";
+                "pipeline_id, update_user, update_ts, aggregate_version) " +
+                "VALUES (?, ?, ?, ?, ?, ?)";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String productVersionId = (String)map.get("productVersionId"); // For logging/exceptions
-        String pipelineId = (String)map.get("pipelineId"); // For logging/exceptions
+        String hostId = (String)event.get(Constants.HOST);
+        String productVersionId = (String)map.get("productVersionId");
+        String pipelineId = (String)map.get("pipelineId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
@@ -1871,20 +2032,18 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             statement.setObject(3, UUID.fromString(pipelineId));
             statement.setString(4, (String)event.get(Constants.USER));
             statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(6, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert the product version pipeline with productVersionId " + productVersionId + " and pipelineId " + pipelineId);
+                throw new SQLException(String.format("Failed during createProductVersionPipeline for hostId %s productVersionId %s pipelineId %s with aggregateVersion %d", hostId, productVersionId, pipelineId, newAggregateVersion));
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during createProductVersionPipeline for productVersionId {} pipelineId {}: {}", productVersionId, pipelineId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during createProductVersionPipeline for hostId {} productVersionId {} pipelineId {} aggregateVersion {}: {}", hostId, productVersionId, pipelineId, newAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during createProductVersionPipeline for productVersionId {} pipelineId {}: {}", productVersionId, pipelineId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during createProductVersionPipeline for hostId {} productVersionId {} pipelineId {} aggregateVersion {}: {}", hostId, productVersionId, pipelineId, newAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -1927,7 +2086,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 """
                 SELECT COUNT(*) OVER () AS total,
                 pvp.host_id, pvp.product_version_id, pv.product_id, pv.product_version,
-                pvp.pipeline_id, p.pipeline_name, p.pipeline_version, pvp.update_user, pvp.update_ts
+                pvp.pipeline_id, p.pipeline_name, p.pipeline_version, pvp.update_user, pvp.update_ts, pvp.aggregate_version
                 FROM product_version_pipeline_t pvp
                 INNER JOIN product_version_t pv ON pv.product_version_id = pvp.product_version_id
                 INNER JOIN pipeline_t p ON p.pipeline_id = pvp.pipeline_id
@@ -1983,6 +2142,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("pipelineVersion", resultSet.getString("pipeline_version"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     productPipelines.add(map);
                 }
             }
@@ -2003,13 +2163,17 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
     @Override
     public void createProductVersionConfig(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "INSERT INTO product_version_config_t(host_id, product_version_id, " +
-                "config_id, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?)";
+        final String sql =
+                """
+                INSERT INTO product_version_config_t(host_id, product_version_id,
+                config_id, update_user, update_ts, aggregate_version)
+                VALUES (?, ?, ?, ?, ?,  ?)
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String productVersionId = (String)map.get("productVersionId"); // For logging/exceptions
-        String configId = (String)map.get("configId"); // For logging/exceptions
+        String hostId = (String)event.get(Constants.HOST);
+        String productVersionId = (String)map.get("productVersionId");
+        String configId = (String)map.get("configId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
@@ -2017,20 +2181,18 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             statement.setObject(3, UUID.fromString(configId));
             statement.setString(4, (String)event.get(Constants.USER));
             statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(6, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert the product version config with productVersionId " + productVersionId + " and configId " + configId);
+                throw new SQLException(String.format("Failed during createProductVersionConfig for hostId %s productVersionId %s configId %s with aggregateVersion %d", hostId, productVersionId, configId, newAggregateVersion));
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during createProductVersionConfig for productVersionId {} configId {}: {}", productVersionId, configId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during createProductVersionConfig for hostId {} productVersionId {} configId {} aggregateVersion {}: {}", hostId, productVersionId, configId, newAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during createProductVersionConfig for productVersionId {} configId {}: {}", productVersionId, configId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during createProductVersionConfig for hostId {} productVersionId {} configId {} aggregateVersion {}: {}", hostId, productVersionId, configId, newAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -2039,9 +2201,9 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         final String sql = "DELETE FROM product_version_config_t WHERE host_id = ? " +
                 "AND product_version_id = ? AND config_id = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String productVersionId = (String)map.get("productVersionId"); // For logging/exceptions
-        String configId = (String)map.get("configId"); // For logging/exceptions
+        String hostId = (String)event.get(Constants.HOST);
+        String productVersionId = (String)map.get("productVersionId");
+        String configId = (String)map.get("configId");
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
@@ -2056,11 +2218,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         } catch (SQLException e) {
             logger.error("SQLException during deleteProductVersionConfig for productVersionId {} configId {}: {}", productVersionId, configId, e.getMessage(), e);
             notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            throw e;
         } catch (Exception e) {
             logger.error("Exception during deleteProductVersionConfig for productVersionId {} configId {}: {}", productVersionId, configId, e.getMessage(), e);
             notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            throw e;
         }
     }
 
@@ -2083,7 +2245,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 """
                 SELECT COUNT(*) OVER () AS total,
                 pvc.host_id, pvc.product_version_id, pv.product_id, pv.product_version,
-                pvc.config_id, c.config_name, pvc.update_user, pvc.update_ts
+                pvc.config_id, c.config_name, pvc.update_user, pvc.update_ts, pvc.aggregate_version
                 FROM product_version_config_t pvc
                 INNER JOIN product_version_t pv ON pv.host_id = pvc.host_id AND pv.product_version_id = pvc.product_version_id
                 INNER JOIN config_t c ON c.config_id = pvc.config_id
@@ -2194,6 +2356,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("configName", resultSet.getString("config_name"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class).toString() : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     productConfigs.add(map);
                 }
             }
@@ -2212,13 +2375,17 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
     @Override
     public void createProductVersionConfigProperty(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "INSERT INTO product_version_config_property_t(host_id, product_version_id, " +
-                "property_id, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?)";
+        final String sql =
+                """
+                INSERT INTO product_version_config_property_t(host_id, product_version_id,
+                property_id, update_user, update_ts, aggregate_version)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String productVersionId = (String)map.get("productVersionId"); // For logging/exceptions
-        String propertyId = (String)map.get("propertyId"); // For logging/exceptions
+        String hostId = (String)event.get(Constants.HOST);
+        String productVersionId = (String)map.get("productVersionId");
+        String propertyId = (String)map.get("propertyId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
@@ -2226,20 +2393,18 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             statement.setObject(3, UUID.fromString(propertyId));
             statement.setString(4, (String)event.get(Constants.USER));
             statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(6, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert the product version config property with productVersionId " + productVersionId + " and propertyId " + propertyId);
+                throw new SQLException(String.format("Failed during createProductVersionConfigProperty for hostId %s productVersionId %s propertyId %s with aggregateVersion %d", hostId, productVersionId, propertyId, newAggregateVersion));
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during createProductVersionConfigProperty for productVersionId {} propertyId {}: {}", productVersionId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during createProductVersionConfigProperty for hostId {} productVersionId {} propertyId {} aggregateVersion {}: {}", hostId, productVersionId, propertyId, newAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during createProductVersionConfigProperty for productVersionId {} propertyId {}: {}", productVersionId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during createProductVersionConfigProperty for hostId {} productVersionId {} propertyId {} aggregateVersion {}: {}", hostId, productVersionId, propertyId, newAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -2282,7 +2447,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 """
                         SELECT COUNT(*) OVER () AS total,
                         pvcp.host_id, pvcp.product_version_id, pv.product_id, pv.product_version,
-                        cp.config_id, c.config_name, pvcp.property_id, cp.property_name, pvcp.update_user, pvcp.update_ts
+                        cp.config_id, c.config_name, pvcp.property_id, cp.property_name, pvcp.update_user, pvcp.update_ts, pvcp.aggregate_version
                         FROM product_version_config_property_t pvcp
                         INNER JOIN product_version_t pv ON pv.host_id = pvcp.host_id AND pv.product_version_id = pvcp.product_version_id
                         INNER JOIN config_property_t cp ON cp.property_id = pvcp.property_id
@@ -2342,6 +2507,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("propertyName", resultSet.getString("property_name"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     productProperties.add(map);
                 }
             }
@@ -2362,9 +2528,13 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
     @Override
     public void createPipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "INSERT INTO pipeline_t(host_id, pipeline_id, platform_id, pipeline_version, pipeline_name, " +
-                "current, endpoint, version_status, system_env, runtime_env, request_schema, response_schema, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?, ?)";
+        final String sql =
+                """
+                INSERT INTO pipeline_t(host_id, pipeline_id, platform_id, pipeline_version, pipeline_name,
+                current, endpoint, version_status, system_env, runtime_env, request_schema,
+                response_schema, update_user, update_ts, aggregate_version)
+                VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?)
+                """;
         final String sqlUpdateCurrent =
                 """
                 UPDATE pipeline_t
@@ -2374,10 +2544,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 AND pipeline_id != ?
                 """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String pipelineId = (String)map.get("pipelineId"); // For logging/exceptions
-        String pipelineName = (String)map.get("pipelineName"); // For conditional update
-        Boolean current = (Boolean)map.get("current"); // For conditional update
+        String hostId = (String)event.get(Constants.HOST);
+        String pipelineId = (String)map.get("pipelineId");
+        String pipelineName = (String)map.get("pipelineName");
+        Boolean current = (Boolean)map.get("current");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
@@ -2414,7 +2585,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert the pipeline with id " + pipelineId);
+                throw new SQLException(String.format("Failed during createPipeline for hostId %s pipelineId %s with aggregateVersion %d", hostId, pipelineId, newAggregateVersion));
             }
             // try to update current to false for others if current is true.
             if(current != null && current) {
@@ -2425,24 +2596,38 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     statementUpdate.executeUpdate();
                 }
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during createPipeline for pipelineId {}: {}", pipelineId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during createPipeline for hostId {} pipelineId {} aggregateVersion {}: {}", hostId, pipelineId, newAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during createPipeline for pipelineId {}: {}", pipelineId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during createPipeline for hostId {} pipelineId {} aggregateVersion {}: {}", hostId, pipelineId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    private boolean queryPipelineExists(Connection conn, String hostId, String pipelineId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM pipeline_t WHERE host_id = ? AND pipeline_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(hostId));
+            pst.setObject(2, UUID.fromString(pipelineId));
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
     @Override
     public void updatePipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "UPDATE pipeline_t SET platform_id = ?, pipeline_version = ?, pipeline_name = ?, current = ?, " +
-                "endpoint = ?, version_status = ?, system_env = ?, runtime_env = ?, request_schema = ?, response_schema = ?, " +
-                "update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? AND pipeline_id = ?";
+        final String sql =
+                """
+                UPDATE pipeline_t SET platform_id = ?, pipeline_version = ?, pipeline_name = ?, current = ?,
+                endpoint = ?, version_status = ?, system_env = ?, runtime_env = ?, request_schema = ?, response_schema = ?,
+                update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? AND pipeline_id = ? AND aggregate_version = ?
+                """;
         final String sqlUpdateCurrent =
                 """
                 UPDATE pipeline_t
@@ -2453,10 +2638,12 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 """;
 
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String pipelineId = (String)map.get("pipelineId"); // For logging/exceptions
-        String pipelineName = (String)map.get("pipelineName"); // For conditional update
-        Boolean current = (Boolean)map.get("current"); // For conditional update
+        String hostId = (String)event.get(Constants.HOST);
+        String pipelineId = (String)map.get("pipelineId");
+        String pipelineName = (String)map.get("pipelineName");
+        Boolean current = (Boolean)map.get("current");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString((String)map.get("platformId")));
@@ -2486,12 +2673,18 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             statement.setString(10, (String)map.get("responseSchema"));
             statement.setString(11,(String) event.get(Constants.USER));
             statement.setObject(12, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setObject(13, UUID.fromString(hostId));
-            statement.setString(14, pipelineId);
+            statement.setLong(13, newAggregateVersion);
+            statement.setObject(14, UUID.fromString(hostId));
+            statement.setString(15, pipelineId);
+            statement.setLong(16, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to update the pipeline with id " + pipelineId);
+                if (queryPipelineExists(conn, hostId, pipelineId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during updatePipeline for hostId " + hostId + " pipelineId " + pipelineId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found during updatePipeline for hostId " + hostId + " pipelineId " + pipelineId + ".");
+                }
             }
             // try to update current to false for others if current is true.
             if(current != null && current) {
@@ -2502,43 +2695,42 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     statementUpdate.executeUpdate();
                 }
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during updatePipeline for pipelineId {}: {}", pipelineId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during updatePipeline for hostId {} pipelineId {} (old: {}) -> (new: {}): {}", hostId, pipelineId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during updatePipeline for pipelineId {}: {}", pipelineId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during updatePipeline for hostId {} pipelineId {} (old: {}) -> (new: {}): {}", hostId, pipelineId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
     @Override
     public void deletePipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM pipeline_t WHERE host_id = ? AND pipeline_id = ?";
+        final String sql = "DELETE FROM pipeline_t WHERE host_id = ? AND pipeline_id = ? AND aggregate_version = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String pipelineId = (String)map.get("pipelineId"); // For logging/exceptions
+        String hostId = (String)event.get(Constants.HOST);
+        String pipelineId = (String)map.get("pipelineId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
             statement.setObject(2, UUID.fromString(pipelineId));
+            statement.setLong(3, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to delete the pipeline with id " + pipelineId);
+                if (queryPipelineExists(conn, hostId, pipelineId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deletePipeline for hostId " + hostId + " pipelineId " + pipelineId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deletePipeline for hostId " + hostId + " pipelineId " + pipelineId+ ". It might have been already deleted.");
+                }
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during deletePipeline for pipelineId {}: {}", pipelineId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during deletePipeline for hostId {} pipelineId {} aggregateVersion {}: {}", hostId, pipelineId, oldAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during deletePipeline for pipelineId {}: {}", pipelineId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during deletePipeline for hostId {} pipelineId {} aggregateVersion {}: {}", hostId, pipelineId, oldAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -2553,7 +2745,8 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 SELECT COUNT(*) OVER () AS total,
                 p.host_id, p.pipeline_id, p.platform_id, pf.platform_name, pf.platform_version,
                 p.pipeline_version, p.pipeline_name, p.current, p.endpoint, p.version_status,
-                p.system_env, p.runtime_env, p.request_schema, p.response_schema, p.update_user, p.update_ts
+                p.system_env, p.runtime_env, p.request_schema, p.response_schema,
+                p.update_user, p.update_ts, p.aggregate_version
                 FROM pipeline_t p
                 INNER JOIN platform_t pf ON pf.platform_id = p.platform_id
                 WHERE 1=1
@@ -2626,6 +2819,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("updateUser", resultSet.getString("update_user"));
                     // handling date properly
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     pipelines.add(map);
                 }
             }
@@ -2677,13 +2871,17 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
     @Override
     public void createInstancePipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "INSERT INTO instance_pipeline_t(host_id, instance_id, pipeline_id, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?)";
+        final String sql =
+                """
+                INSERT INTO instance_pipeline_t(host_id, instance_id, pipeline_id, update_user, update_ts, aggregate_version)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String instanceId = (String)map.get("instanceId"); // For logging/exceptions
-        String pipelineId = (String)map.get("pipelineId"); // For logging/exceptions
+        String hostId = (String)event.get(Constants.HOST);
+        String instanceId = (String)map.get("instanceId");
+        String pipelineId = (String)map.get("pipelineId");
         String key = String.format("hostId: %s, instanceId: %s pipelineId: %s", hostId, instanceId, pipelineId);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
@@ -2691,83 +2889,107 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             statement.setObject(3, UUID.fromString(pipelineId));
             statement.setString(4, (String)event.get(Constants.USER));
             statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(6, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert the instance_pipeline_t with id " + key);
+                throw new SQLException(String.format("Failed during createInstancePipeline for hostId %s instanceId %s pipelineId %s with aggregateVersion %d", hostId, instanceId, pipelineId, newAggregateVersion));
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during createInstancePipeline for key {}: {}", key, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during createInstancePipeline for hostId {} instanceId {} pipelineId {} aggregateVersion {}: {}", hostId, instanceId, pipelineId, newAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during createInstancePipeline for key {}: {}", key, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during createInstancePipeline for hostId {} instanceId {} pipelineId {} aggregateVersion {}: {}", hostId, instanceId, pipelineId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    private boolean queryInstancePipelineExists(Connection conn, String hostId, String instanceId, String pipelineId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM instance_pipeline_t WHERE host_id = ? AND instance_id = ? AND pipeline_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(hostId));
+            pst.setObject(2, UUID.fromString(instanceId));
+            pst.setObject(3, UUID.fromString(pipelineId));
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
     @Override
     public void updateInstancePipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "UPDATE instance_pipeline_t SET update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? and instance_id = ? and pipeline_id = ?";
+        final String sql =
+                """
+                UPDATE instance_pipeline_t SET update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? and instance_id = ? and pipeline_id = ? AND aggregate_version = ?
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String instanceId = (String)map.get("instanceId"); // For logging/exceptions
-        String pipelineId = (String)map.get("pipelineId"); // For logging/exceptions
+        String hostId = (String)event.get(Constants.HOST);
+        String instanceId = (String)map.get("instanceId");
+        String pipelineId = (String)map.get("pipelineId");
         String key = String.format("hostId: %s, instanceId: %s pipelineId: %s", hostId, instanceId, pipelineId);
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setString(1,(String) event.get(Constants.USER));
             statement.setObject(2, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setObject(3, UUID.fromString(hostId));
-            statement.setObject(4, UUID.fromString(instanceId));
-            statement.setObject(5, UUID.fromString(pipelineId));
+            statement.setLong(3, newAggregateVersion);
+            statement.setObject(4, UUID.fromString(hostId));
+            statement.setObject(5, UUID.fromString(instanceId));
+            statement.setObject(6, UUID.fromString(pipelineId));
+            statement.setLong(7, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to update the pipeline with id " + key);
+                if (queryInstancePipelineExists(conn, hostId, instanceId, pipelineId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during updateInstancePipeline for hostId" + hostId + " instanceId " + instanceId + " pipelineId " + pipelineId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found during updateInstancePipeline for hostId " + hostId + " instanceId " + instanceId + " pipelineId " + pipelineId + ".");
+                }
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during updateInstancePipeline for key {}: {}", key, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during updateInstancePipeline for hostId {} instanceId {} pipelineId {} (old: {}) -> (new: {}): {}", hostId, instanceId, pipelineId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateInstancePipeline for key {}: {}", key, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during updateInstancePipeline for hostId {} instanceId {} pipelineId {} (old: {}) -> (new: {}): {}", hostId, instanceId, pipelineId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
     @Override
     public void deleteInstancePipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM instance_pipeline_t WHERE host_id = ? AND instance_id = ? AND pipeline_id = ?";
+        final String sql = "DELETE FROM instance_pipeline_t WHERE host_id = ? AND instance_id = ? AND pipeline_id = ? AND aggregate_version = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String instanceId = (String)map.get("instanceId"); // For logging/exceptions
-        String pipelineId = (String)map.get("pipelineId"); // For logging/exceptions
+        String hostId = (String)event.get(Constants.HOST);
+        String instanceId = (String)map.get("instanceId");
+        String pipelineId = (String)map.get("pipelineId");
         String key = String.format("hostId: %s, instanceId: %s pipelineId: %s", hostId, instanceId, pipelineId);
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
             statement.setObject(2, UUID.fromString(instanceId));
             statement.setObject(3, UUID.fromString(pipelineId));
+            statement.setLong(4, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to delete the pipeline with id " + key);
+                if (queryInstancePipelineExists(conn, hostId, instanceId, pipelineId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteInstancePipeline for hostId " + hostId + " instanceId " + instanceId + " pipelineId " + pipelineId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deleteInstancePipeline for hostId " + hostId + " instanceId" + instanceId + " pipelineId " + pipelineId + ". It might have been already deleted.");
+                }
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during deleteInstancePipeline for key {}: {}", key, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during deleteInstancePipeline for hostId {} instanceId {} pipelineId {} aggregateVersion {}: {}", hostId, instanceId, pipelineId, oldAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteInstancePipeline for key {}: {}", key, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during deleteInstancePipeline for hostId {} instanceId {} pipelineId {} aggregateVersion {}: {}", hostId, instanceId, pipelineId, oldAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -2778,9 +3000,9 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         Result<String> result = null;
         String s =
                 """
-                        SELECT ip.host_id, ip.instance_id, i.instance_name, pv.product_id,\s
-                        pv.product_version, ip.pipeline_id, pf.platform_name, pf.platform_version,\s
-                        p.pipeline_name, p.pipeline_version, ip.update_user, ip.update_ts\s
+                        SELECT ip.host_id, ip.instance_id, i.instance_name, pv.product_id,
+                        pv.product_version, ip.pipeline_id, pf.platform_name, pf.platform_version,
+                        p.pipeline_name, p.pipeline_version, ip.update_user, ip.update_ts, ip.aggregate_version,
                         FROM instance_pipeline_t ip
                         INNER JOIN instance_t i ON ip.instance_id = i.instance_id
                         INNER JOIN product_version_t pv ON i.product_version_id = pv.product_version_id
@@ -2846,6 +3068,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("pipelineVersion", resultSet.getString("pipeline_version"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     instancePipelines.add(map);
                 }
             }
@@ -2865,13 +3088,17 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
     @Override
     public void createPlatform(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "INSERT INTO platform_t(host_id, platform_id, platform_name, platform_version, " +
-                "client_type, handler_class, client_url, credentials, proxy_url, proxy_port, console_url, " +
-                "environment, zone, region, lob, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?)";
+        final String sql =
+                """
+                INSERT INTO platform_t(host_id, platform_id, platform_name, platform_version,
+                client_type, handler_class, client_url, credentials, proxy_url, proxy_port, console_url,
+                environment, zone, region, lob, update_user, update_ts, aggregate_version)
+                VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?)
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
         String platformId = (String)map.get("platformId"); // For logging/exceptions
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
@@ -2920,34 +3147,50 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             }
             statement.setString(16, (String)event.get(Constants.USER));
             statement.setObject(17, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(18, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert the platform with id " + platformId);
+                throw new SQLException(String.format("Failed during createPlatform for hostId %s platformId %s with aggregateVersion %d", hostId, platformId, newAggregateVersion));
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during createPlatform for platformId {}: {}", platformId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during createPlatform for hostId {} platformId {} aggregateVersion {}: {}", hostId, platformId, newAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during createPlatform for platformId {}: {}", platformId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during createPlatform for hostId {} platformId {} aggregateVersion {}: {}", hostId, platformId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    private boolean queryPlatformExists(Connection conn, String hostId, String platformId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM platform_t WHERE host_id = ? AND platform_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(hostId));
+            pst.setObject(2, UUID.fromString(platformId));
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
     @Override
     public void updatePlatform(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "UPDATE platform_t SET platform_name = ?, platform_version = ?, " +
-                "client_type = ?, handler_class = ?, client_url = ?, credentials = ?, proxy_url = ?, proxy_port = ?, " +
-                "console_url = ?, environment = ?, zone = ?, region = ?, lob = ?, " +
-                "update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? and platform_id = ?";
+        final String sql =
+                """
+                UPDATE platform_t SET platform_name = ?, platform_version = ?,
+                client_type = ?, handler_class = ?, client_url = ?, credentials = ?, proxy_url = ?, proxy_port = ?,
+                console_url = ?, environment = ?, zone = ?, region = ?, lob = ?,
+                update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? and platform_id = ? AND aggregate_version = ?
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String platformId = (String)map.get("platformId"); // For logging/exceptions
+        String hostId = (String)event.get(Constants.HOST);
+        String platformId = (String)map.get("platformId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setString(1, (String)map.get("platformName"));
@@ -2993,32 +3236,35 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             }
             statement.setString(14, (String)event.get(Constants.USER));
             statement.setObject(15, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setObject(16, UUID.fromString(hostId));
-            statement.setObject(17, UUID.fromString(platformId));
+            statement.setLong(16, newAggregateVersion);
+            statement.setObject(17, UUID.fromString(hostId));
+            statement.setObject(18, UUID.fromString(platformId));
+            statement.setLong(19, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to update the platform with id " + platformId);
+                if (queryPlatformExists(conn, hostId, platformId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during updatePlatform for hostId " + hostId + " platformId " + platformId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found during updatePlatform for hostId " + hostId + " platformId " + platformId + ".");
+                }
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during updatePlatform for platformId {}: {}", platformId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during updatePlatform for hostId {} platformId {} (old: {}) -> (new: {}): {}", hostId, platformId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during updatePlatform for platformId {}: {}", platformId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during updatePlatform for hostId {} platformId {} (old: {}) -> (new: {}): {}", hostId, platformId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
     @Override
     public void deletePlatform(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM platform_t WHERE host_id = ? AND platform_id = ?";
+        final String sql = "DELETE FROM platform_t WHERE host_id = ? AND platform_id = ? AND aggregate_version = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String platformId = (String)map.get("platformId"); // For logging/exceptions
+        String hostId = (String)event.get(Constants.HOST);
+        String platformId = (String)map.get("platformId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
@@ -3026,18 +3272,18 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to delete the platform with id " + platformId);
+                if (queryPlatformExists(conn, hostId, platformId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deletePlatform for hostId " + hostId + " platformId " + platformId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deletePlatform for hostId " + hostId +  " platformId " + platformId + ". It might have been already deleted.");
+                }
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during deletePlatform for platformId {}: {}", platformId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during deletePlatform for hostId {} platformId {} aggregateVersion {}: {}", hostId, platformId, oldAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during deletePlatform for platformId {}: {}", platformId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during deletePlatform for hostId {} platformId {} aggregateVersion {}: {}", hostId, platformId, oldAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -3050,7 +3296,8 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 """
                 SELECT COUNT(*) OVER () AS total,
                 host_id, platform_id, platform_name, platform_version, client_type, client_url,
-                credentials, proxy_url, proxy_port, handler_class, console_url, environment, zone, region, lob, update_user, update_ts
+                credentials, proxy_url, proxy_port, handler_class, console_url, environment,
+                zone, region, lob, update_user, update_ts, aggregate_version
                 FROM platform_t
                 WHERE 1=1
                 """;
@@ -3122,6 +3369,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("lob", resultSet.getString("lob"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
 
                     platforms.add(map);
                 }
@@ -3172,14 +3420,18 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     @Override
     public void createDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         // deployStatus is not set here but use the default value.
-        final String sql = "INSERT INTO deployment_instance_t(host_id, instance_id, deployment_instance_id, " +
-                "service_id, ip_address, port_number, system_env, runtime_env, pipeline_id, " +
-                "update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        final String sql =
+                """
+                INSERT INTO deployment_instance_t(host_id, instance_id, deployment_instance_id,
+                service_id, ip_address, port_number, system_env, runtime_env, pipeline_id,
+                update_user, update_ts, aggregate_version)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """;
         Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
         String deploymentInstanceId = (String)map.get("deploymentInstanceId"); // For logging/exceptions
         String instanceId = (String)map.get("instanceId"); // For logging/exceptions
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
@@ -3212,40 +3464,58 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             statement.setObject(9, UUID.fromString((String) map.get("pipelineId")));
             statement.setString(10, (String) event.get(Constants.USER));
             statement.setObject(11, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            statement.setLong(12, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert the deployment instance with id " + deploymentInstanceId);
+                throw new SQLException(String.format("Failed during for hostId %s deploymentInstanceId %s with aggregateVersion %d", hostId, deploymentInstanceId, newAggregateVersion));
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during createDeploymentInstance for deploymentInstanceId {}: {}", deploymentInstanceId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during createDeploymentInstance for hostId {} deploymentInstanceId {} aggregateVersion {}: {}", hostId, deploymentInstanceId, newAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during createDeploymentInstance for deploymentInstanceId {}: {}", deploymentInstanceId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during createDeploymentInstance for hostId {} deploymentInstanceId {} aggregateVersion {}: {}", hostId, deploymentInstanceId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    private boolean queryDeploymentInstanceExists(Connection conn, String hostId, String deploymentInstanceId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM deployment_instance_t WHERE host_id = ? AND deployment_instance_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(hostId));
+            pst.setObject(2, UUID.fromString(deploymentInstanceId));
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
     @Override
     public void updateDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         // instanceId is FK and deployStatus is not updated here.
-        final String sql = "UPDATE deployment_instance_t SET " +
-                "service_id = ?, " +
-                "ip_address = ?, " +
-                "port_number = ?, " +
-                "system_env = ?, " +
-                "runtime_env = ?, " +
-                "pipeline_id = ?, " +
-                "update_user = ?, " +
-                "update_ts = ? " +
-                "WHERE host_id = ? AND deployment_instance_id = ?";
+        final String sql =
+                """
+                UPDATE deployment_instance_t SET
+                service_id = ?,
+                ip_address = ?,
+                port_number = ?,
+                system_env = ?,
+                runtime_env = ?,
+                pipeline_id = ?,
+                update_user = ?,
+                update_ts = ?,
+                aggregate_version = ?
+                WHERE host_id = ? AND deployment_instance_id = ? AND aggregate_version = ?
+                """;
 
         Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String deploymentInstanceId = (String) map.get("deploymentInstanceId"); // For messages
+        String hostId = (String)event.get(Constants.HOST);
+        String deploymentInstanceId = (String) map.get("deploymentInstanceId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             // Set parameters in the order they appear in the SQL SET clause, then WHERE clause
@@ -3283,52 +3553,57 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             statement.setString(paramIdx++, (String) event.get(Constants.USER));
             // update_ts
             statement.setObject(paramIdx++, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            // aggregate_version
+            statement.setLong(paramIdx++, newAggregateVersion);
 
             // WHERE clause parameters
             statement.setObject(paramIdx++, UUID.fromString(hostId));
             statement.setObject(paramIdx++, UUID.fromString(deploymentInstanceId));
+            statement.setLong(paramIdx++, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                // The template throws SQLException for 0 count.
-                throw new SQLException("Failed to update the deployment instance with id " + deploymentInstanceId + " (record not found or no changes made)");
+                if (queryDeploymentInstanceExists(conn, hostId, deploymentInstanceId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during updateDeploymentInstance for hostId " + hostId + " deploymentInstanceId " + deploymentInstanceId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found during updateDeploymentInstance for hostId " + hostId + " deploymentInstanceId " + deploymentInstanceId + ".");
+                }
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during updateDeploymentInstance for deploymentInstanceId {}: {}", deploymentInstanceId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during updateDeploymentInstance for hostId {} deploymentInstanceId {} (old: {}) -> (new: {}): {}", hostId, deploymentInstanceId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
-        } catch (Exception e) { // Generic catch for other runtime errors like NullPointerException if map keys are missing
-            logger.error("Exception during updateDeploymentInstance for deploymentInstanceId {}: {}", deploymentInstanceId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+        } catch (Exception e) {
+            logger.error("Exception during updateDeploymentInstance for hostId {} deploymentInstanceId {} (old: {}) -> (new: {}): {}", hostId, deploymentInstanceId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
     public void deleteDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM deployment_instance_t WHERE host_id = ? AND deployment_instance_id = ?";
+        final String sql = "DELETE FROM deployment_instance_t WHERE host_id = ? AND deployment_instance_id = ? AND aggregate_version = ?";
         Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String deploymentInstanceId = (String) map.get("deploymentInstanceId"); // For messages
+        String hostId = (String)event.get(Constants.HOST);
+        String deploymentInstanceId = (String) map.get("deploymentInstanceId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
             statement.setObject(2, UUID.fromString(deploymentInstanceId));
+            statement.setLong(3, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                // Following template: throw SQLException if no rows affected
-                throw new SQLException("Failed to delete the deployment instance with id " + deploymentInstanceId + " and host " + hostId);
+                if (queryDeploymentInstanceExists(conn, hostId, deploymentInstanceId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteDeploymentInstance for hostId " + hostId + " deploymentInstanceId " + deploymentInstanceId +  " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deleteDeploymentInstance for hostId " + hostId + " deploymentInstanceId " + deploymentInstanceId + ". It might have been already deleted.");
+                }
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during deleteDeploymentInstance for deploymentInstanceId {}: {}", deploymentInstanceId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during deleteDeploymentInstance for hostId {} deploymentInstanceId {} aggregateVersion {}: {}", hostId, deploymentInstanceId, oldAggregateVersion, e.getMessage(), e);
             throw e;
-        } catch (Exception e) { // Catch other potential runtime errors like NullPointerException or IllegalArgumentException
-            logger.error("Exception during deleteDeploymentInstance for deploymentInstanceId {}: {}", deploymentInstanceId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+        } catch (Exception e) {
+            logger.error("Exception during deleteDeploymentInstance for hostId {} deploymentInstanceId {} aggregateVersion {}: {}", hostId, deploymentInstanceId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -3343,7 +3618,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 SELECT COUNT(*) OVER () AS total,
                 di.host_id, di.instance_id, i.instance_name, di.deployment_instance_id, di.service_id, di.ip_address,
                 di.port_number, di.system_env, di.runtime_env, di.pipeline_id, p.pipeline_name, p.pipeline_version,
-                di.deploy_status, di.update_user, di.update_ts
+                di.deploy_status, di.update_user, di.update_ts, di.aggregate_version
                 FROM deployment_instance_t di
                 INNER JOIN instance_t i ON i.instance_id = di.instance_id
                 INNER JOIN pipeline_t p ON p.pipeline_id = di.pipeline_id
@@ -3428,6 +3703,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("deployStatus", resultSet.getString("deploy_status"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
 
                     deploymentInstances.add(map); // Changed variable name
                 }
@@ -3550,12 +3826,16 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
     @Override
     public void createDeployment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "INSERT INTO deployment_t(host_id, deployment_id, deployment_instance_id, " +
-                "deployment_status, deployment_type, schedule_ts, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?,  ?, ?, ?)";
+        final String sql =
+                """
+                INSERT INTO deployment_t(host_id, deployment_id, deployment_instance_id,
+                deployment_status, deployment_type, schedule_ts, update_user, update_ts, aggregate_version)
+                VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?)
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String deploymentId = (String)map.get("deploymentId"); // For logging/exceptions
+        String hostId = (String)event.get(Constants.HOST);
+        String deploymentId = (String)map.get("deploymentId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
@@ -3566,54 +3846,70 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             statement.setObject(6, map.get("scheduleTs") != null ? OffsetDateTime.parse((String)map.get("scheduleTs")) : OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
             statement.setString(7, (String)event.get(Constants.USER));
             statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(9, SqlUtil.getNewAggregateVersion(event));
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert the deployment with id " + deploymentId);
+                throw new SQLException(String.format("Failed during createDeployment for hostId %s deploymentId %s with aggregateVersion %d", hostId, deploymentId, newAggregateVersion));
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during createDeployment for deploymentId {}: {}", deploymentId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during createDeployment for hostId {} deploymentId {} aggregateVersion {}: {}", hostId, deploymentId, newAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during createDeployment for deploymentId {}: {}", deploymentId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during createDeployment for hostId {} deploymentId {} aggregateVersion {}: {}", hostId, deploymentId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    private boolean queryDeploymentExists(Connection conn, String hostId, String deploymentId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM deployment_t WHERE host_id = ? AND deployment_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(hostId));
+            pst.setObject(2, UUID.fromString(deploymentId));
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
     @Override
     public void updateDeployment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "UPDATE deployment_t SET deployment_status = ?, deployment_type = ?, " +
-                "schedule_ts = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? and deployment_id = ?";
+                "schedule_ts = ?, update_user = ?, update_ts = ?, aggregate_version =? " +
+                "WHERE host_id = ? and deployment_id = ? AND aggregate_version = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String deploymentId = (String)map.get("deploymentId"); // For logging/exceptions
+        String hostId = (String)event.get(Constants.HOST);
+        String deploymentId = (String)map.get("deploymentId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setString(1, (String)map.get("deploymentStatus"));
             statement.setString(2, (String)map.get("deploymentType"));
-            // use the event time if schedule time is not provided. We cannot use now as this event might be replayed.
             statement.setObject(3, map.get("scheduleTs") != null ? OffsetDateTime.parse((String)map.get("scheduleTs")) : OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
             statement.setString(4, (String)event.get(Constants.USER));
             statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setObject(6, UUID.fromString(hostId));
-            statement.setObject(7, UUID.fromString(deploymentId));
+            statement.setLong(6, newAggregateVersion);
+            statement.setObject(7, UUID.fromString(hostId));
+            statement.setObject(8, UUID.fromString(deploymentId));
+            statement.setLong(9, oldAggregateVersion);
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to update the deployment with id " + deploymentId);
+                if (queryDeploymentExists(conn, hostId, deploymentId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during updateDeployment for hostId " + hostId + " deploymentId " + deploymentId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found during updateDeployment for hostId " + hostId + " deploymentId " + deploymentId + ".");
+                }
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during updateDeployment for deploymentId {}: {}", deploymentId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during updateDeployment for hostId {} deploymentId {} (old: {}) -> (new: {}): {}", hostId, deploymentId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateDeployment for deploymentId {}: {}", deploymentId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during updateDeployment for hostId {} deploymentId {} (old: {}) -> (new: {}): {}", hostId, deploymentId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -3679,10 +3975,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
     @Override
     public void deleteDeployment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM deployment_t WHERE host_id = ? AND deployment_id = ?";
+        final String sql = "DELETE FROM deployment_t WHERE host_id = ? AND deployment_id = ? AND aggregate_version = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
         String deploymentId = (String)map.get("deploymentId"); // For logging/exceptions
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
@@ -3690,18 +3987,18 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to delete the deployment with id " + deploymentId);
+                if (queryDeploymentExists(conn, hostId, deploymentId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteDeployment for hostId " + hostId + " deploymentId " + deploymentId +  " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deleteDeployment for hostId " + hostId + " deploymentId " + deploymentId + ". It might have been already deleted.");
+                }
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during deleteDeployment for deploymentId {}: {}", deploymentId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during deleteDeployment for hostId {} deploymentId {} aggregateVersion {}: {}", hostId, deploymentId, oldAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteDeployment for deploymentId {}: {}", deploymentId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during deleteDeployment for hostId {} deploymentId {} aggregateVersion {}: {}", hostId, deploymentId, oldAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -3714,7 +4011,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 """
                 SELECT COUNT(*) OVER () AS total,
                 d.host_id, d.deployment_id, d.deployment_instance_id, di.service_id, d.deployment_status,
-                d.deployment_type, d.schedule_ts, d.platform_job_id, d.update_user, d.update_ts
+                d.deployment_type, d.schedule_ts, d.platform_job_id, d.update_user, d.update_ts, d.aggregate_version
                 FROM deployment_t d
                 INNER JOIN deployment_instance_t di ON di.deployment_instance_id = d.deployment_instance_id
                 WHERE 1=1
@@ -3772,6 +4069,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("platformJobId", resultSet.getString("platform_job_id"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
 
                     deployments.add(map);
                 }
