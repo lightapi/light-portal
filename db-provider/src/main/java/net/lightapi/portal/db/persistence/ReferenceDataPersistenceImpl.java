@@ -144,8 +144,10 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
             statement.setString(5, (String)event.get(Constants.USER));
 
             statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(7, newAggregateVersion);
 
-            statement.setObject(7, UUID.fromString(tableId));
+            statement.setObject(8, UUID.fromString(tableId));
+            statement.setLong(9, oldAggregateVersion);
 
             // Execute update
             int count = statement.executeUpdate();

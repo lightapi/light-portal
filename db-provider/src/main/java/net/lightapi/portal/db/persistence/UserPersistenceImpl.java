@@ -1,7 +1,6 @@
 package net.lightapi.portal.db.persistence;
 
 import com.networknt.config.JsonMapper;
-import com.networknt.db.provider.SqlDbStartupHook;
 import com.networknt.monad.Failure;
 import com.networknt.monad.Result;
 import com.networknt.monad.Success;
@@ -9,6 +8,7 @@ import com.networknt.status.Status;
 import com.networknt.utility.Constants;
 import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.PortalConstants;
+import net.lightapi.portal.db.ConcurrencyException;
 import net.lightapi.portal.db.PortalDbProvider;
 import net.lightapi.portal.db.util.NotificationService;
 import net.lightapi.portal.db.util.SqlUtil;
@@ -51,18 +51,18 @@ public class UserPersistenceImpl implements UserPersistence {
                 INSERT INTO user_t
                   (user_id, email, password, language, first_name, last_name, user_type,
                    phone_number, gender, birthday, country, province, city, address,
-                   post_code, verified, token, locked)
+                   post_code, verified, token, locked, aggregate_version)
                 VALUES
-                  (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                  (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
         final String insertUserHost = """
-                INSERT INTO user_host_t (user_id, host_id) VALUES (?, ?)
+                INSERT INTO user_host_t (user_id, host_id, aggregate_version) VALUES (?, ?, ?)
                 """;
         final String insertCustomer = """
-                INSERT INTO customer_t (host_id, customer_id, user_id, referral_id) VALUES (?, ?, ?, ?)
+                INSERT INTO customer_t (host_id, customer_id, user_id, referral_id, aggregate_version) VALUES (?, ?, ?, ?, ?)
                 """;
         final String insertEmployee = """
-                INSERT INTO employee_t (host_id, employee_id, user_id, manager_id) VALUES (?, ?, ?, ?)
+                INSERT INTO employee_t (host_id, employee_id, user_id, manager_id, aggregate_version) VALUES (?, ?, ?, ?, ?)
                 """;
 
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -71,6 +71,7 @@ public class UserPersistenceImpl implements UserPersistence {
         String entityId = (String)map.get("entityId");
         String hostId = (String)map.get("hostId");
         String userType = (String)map.get("userType");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try {
             try (PreparedStatement statement = conn.prepareStatement(queryEmailEntityId)) {
@@ -114,11 +115,13 @@ public class UserPersistenceImpl implements UserPersistence {
                 statement.setBoolean(16, (Boolean)map.get("verified"));
                 statement.setString(17, (String)map.get("token"));
                 statement.setBoolean(18, (Boolean)map.get("locked"));
+                statement.setLong(19, newAggregateVersion);
                 statement.execute();
             }
             try (PreparedStatement statement = conn.prepareStatement(insertUserHost)) {
                 statement.setObject(1, UUID.fromString(userId));
                 statement.setObject(2, UUID.fromString(hostId));
+                statement.setLong(3, newAggregateVersion);
                 statement.execute();
             }
             if("E".equals(userType)) {
@@ -128,6 +131,7 @@ public class UserPersistenceImpl implements UserPersistence {
                     statement.setObject(3, UUID.fromString(userId));
                     String managerId = (String)map.get("managerId");
                     if(managerId != null && !managerId.isEmpty()) statement.setString(4, managerId); else statement.setNull(4, Types.VARCHAR);
+                    statement.setLong(5, newAggregateVersion);
                     statement.execute();
                 }
             } else if("C".equals(userType)) {
@@ -137,19 +141,17 @@ public class UserPersistenceImpl implements UserPersistence {
                     statement.setObject(3, UUID.fromString(userId));
                     String referralId = (String)map.get("referralId");
                     if(referralId != null && !referralId.isEmpty()) statement.setString(4, referralId); else statement.setNull(4, Types.VARCHAR);
+                    statement.setLong(5, newAggregateVersion);
                     statement.execute();
                 }
             } else {
                 throw new SQLException("user_type is not valid: " + userType);
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during createUser for id {}: {}", userId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during createUser for userId {} aggregateVersion {}: {}", userId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createUser for id {}: {}", userId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during createUser for userId {} aggregateVersion {}: {}", userId, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -246,13 +248,15 @@ public class UserPersistenceImpl implements UserPersistence {
     public Result<String> queryUserByEmail(String email) {
         Result<String> result = null;
         String sql =
-                "SELECT h.host_id, u.user_id, u.email, u.password, u.language, \n" +
-                        "u.first_name, u.last_name, u.user_type, u.phone_number, u.gender,\n" +
-                        "u.birthday, u.country, u.province, u.city, u.address,\n" +
-                        "u.post_code, u.verified, u.token, u.locked, u.nonce \n" +
-                        "FROM user_t u, user_host_t h\n" +
-                        "WHERE u.user_id = h.user_id\n" +
-                        "AND email = ?";
+                """
+                SELECT h.host_id, u.user_id, u.email, u.password, u.language,
+                u.first_name, u.last_name, u.user_type, u.phone_number, u.gender,
+                u.birthday, u.country, u.province, u.city, u.address,
+                u.post_code, u.verified, u.token, u.locked, u.nonce, aggregate_version
+                FROM user_t u, user_host_t h
+                WHERE u.user_id = h.user_id
+                AND email = ?
+                """;
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
@@ -282,6 +286,7 @@ public class UserPersistenceImpl implements UserPersistence {
                         map.put("token", resultSet.getString("token"));
                         map.put("locked", resultSet.getBoolean("locked"));
                         map.put("nonce", resultSet.getLong("nonce"));
+                        map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     }
                 }
             }
@@ -307,7 +312,7 @@ public class UserPersistenceImpl implements UserPersistence {
                 SELECT h.host_id, u.user_id, u.email, u.password, u.language,
                 u.first_name, u.last_name, u.user_type, u.phone_number, u.gender,
                 u.birthday, u.country, u.province, u.city, u.address,
-                u.post_code, u.verified, u.token, u.locked, u.nonce
+                u.post_code, u.verified, u.token, u.locked, u.nonce, u.aggregate_version
                 FROM user_t u, user_host_t h
                 WHERE u.user_id = h.user_id
                 AND u.user_id = ?
@@ -342,6 +347,7 @@ public class UserPersistenceImpl implements UserPersistence {
                         map.put("token", resultSet.getString("token"));
                         map.put("locked", resultSet.getBoolean("locked"));
                         map.put("nonce", resultSet.getLong("nonce"));
+                        map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     }
                 }
             }
@@ -368,7 +374,7 @@ public class UserPersistenceImpl implements UserPersistence {
                 u.language, u.first_name, u.last_name, u.user_type, u.phone_number,
                 u.gender, u.birthday, u.country, u.province, u.city,
                 u.address, u.post_code, u.verified, u.token, u.locked,
-                u.nonce
+                u.nonce, u.aggregate_version
                 FROM user_t u, user_host_t h, employee_t e
                 WHERE u.user_id = h.user_id
                 AND h.host_id = e.host_id
@@ -377,16 +383,18 @@ public class UserPersistenceImpl implements UserPersistence {
                 """;
 
         String sqlCustomer =
-                "SELECT h.host_id, u.user_id, c.customer_id as entity_id, u.email, u.password, \n" +
-                        "u.language, u.first_name, u.last_name, u.user_type, u.phone_number, \n" +
-                        "u.gender, u.birthday, u.country, u.province, u.city, \n" +
-                        "u.address, u.post_code, u.verified, u.token, u.locked, \n" +
-                        "u.nonce\n" +
-                        "FROM user_t u, user_host_t h, customer_t c\n" +
-                        "WHERE u.user_id = h.user_id\n" +
-                        "AND h.host_id = c.host_id\n" +
-                        "AND h.user_id = c.user_id\n" +
-                        "AND c.customer_id = ? \n";
+                """
+                SELECT h.host_id, u.user_id, c.customer_id as entity_id, u.email, u.password,
+                u.language, u.first_name, u.last_name, u.user_type, u.phone_number,
+                u.gender, u.birthday, u.country, u.province, u.city,
+                u.address, u.post_code, u.verified, u.token, u.locked,
+                u.nonce, u.aggregate_version
+                FROM user_t u, user_host_t h, customer_t c
+                WHERE u.user_id = h.user_id
+                AND h.host_id = c.host_id
+                AND h.user_id = c.user_id
+                AND c.customer_id = ?
+                """;
 
         String sql = userType.equals("E") ? sqlEmployee : sqlCustomer;
         try (final Connection conn = ds.getConnection()) {
@@ -420,6 +428,7 @@ public class UserPersistenceImpl implements UserPersistence {
                         map.put("locked", resultSet.getBoolean("locked"));
 
                         map.put("nonce", resultSet.getLong("nonce"));
+                        map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     }
                 }
             }
@@ -441,15 +450,17 @@ public class UserPersistenceImpl implements UserPersistence {
     public Result<String> queryUserByWallet(String cryptoType, String cryptoAddress) {
         Result<String> result = null;
         String sql =
-                "SELECT h.host_id, u.user_id, u.email, u.password, u.language, \n" +
-                        "u.first_name, u.last_name, u.user_type, u.phone_number, u.gender,\n" +
-                        "u.birthday, u.country, u.province, u.city, u.address,\n" +
-                        "u.post_code, u.verified, u.token, u.locked, u.nonce \n" +
-                        "FROM user_t u, user_host_t h, user_crypto_wallet_t w\n" +
-                        "WHERE u.user_id = h.user_id\n" +
-                        "AND u.user_id = w.user_id\n" +
-                        "AND w.crypto_type = ?\n" +
-                        "AND w.crypto_address = ?";
+                """
+                SELECT h.host_id, u.user_id, u.email, u.password, u.language,
+                u.first_name, u.last_name, u.user_type, u.phone_number, u.gender,
+                u.birthday, u.country, u.province, u.city, u.address,
+                u.post_code, u.verified, u.token, u.locked, u.nonce, u.aggregate_version
+                FROM user_t u, user_host_t h, user_crypto_wallet_t w
+                WHERE u.user_id = h.user_id
+                AND u.user_id = w.user_id
+                AND w.crypto_type = ?
+                AND w.crypto_address = ?
+                """;
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap();
             try (PreparedStatement statement = conn.prepareStatement(sql)) {
@@ -474,6 +485,8 @@ public class UserPersistenceImpl implements UserPersistence {
                         map.put("verified", resultSet.getBoolean("verified"));
                         map.put("token", resultSet.getString("token"));
                         map.put("locked", resultSet.getBoolean("locked"));
+                        map.put("nonce", resultSet.getLong("nonce"));
+                        map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     }
                 }
             }
@@ -497,16 +510,19 @@ public class UserPersistenceImpl implements UserPersistence {
                                             String phoneNumber, String gender, String birthday, String country, String province, String city,
                                             String address, String postCode, Boolean verified, Boolean locked) {
         Result<String> result = null;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "uh.host_id, u.user_id, u.email, u.language, u.first_name, u.last_name, u.user_type, u.phone_number, " +
-                "u.gender, u.birthday, u.country, u.province, u.city, u.address, u.post_code, u.verified, u.locked,\n" +
-                "COALESCE(c.customer_id, e.employee_id) AS entity_id, c.referral_id, e.manager_id\n" +
-                "FROM user_t u\n" +
-                "LEFT JOIN user_host_t uh ON u.user_id = uh.user_id\n" +
-                "LEFT JOIN customer_t c ON uh.host_id = c.host_id AND u.user_id = c.user_id\n" +
-                "LEFT JOIN employee_t e ON uh.host_id = e.host_id AND u.user_id = e.user_id\n" +
-                "WHERE uh.host_id = ?\n");
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                uh.host_id, u.user_id, u.email, u.language, u.first_name, u.last_name, u.user_type, u.phone_number,
+                u.gender, u.birthday, u.country, u.province, u.city, u.address, u.post_code, u.verified, u.locked,
+                COALESCE(c.customer_id, e.employee_id) AS entity_id, c.referral_id, e.manager_id, u.aggregate_version
+                FROM user_t u
+                LEFT JOIN user_host_t uh ON u.user_id = uh.user_id
+                LEFT JOIN customer_t c ON uh.host_id = c.host_id AND u.user_id = c.user_id
+                LEFT JOIN employee_t e ON uh.host_id = e.host_id AND u.user_id = e.user_id
+                WHERE uh.host_id = ?
+                """;
+        StringBuilder sqlBuilder = new StringBuilder(s);
 
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
@@ -584,6 +600,7 @@ public class UserPersistenceImpl implements UserPersistence {
                     map.put("entityId", resultSet.getString("entity_id"));
                     map.put("referralId", resultSet.getString("referral_id"));
                     map.put("managerId", resultSet.getString("manager_id"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
 
                     users.add(map);
                 }
@@ -672,7 +689,6 @@ public class UserPersistenceImpl implements UserPersistence {
      * and nonce in the user_t table and a success notification. If not matched, write an error notification.
      *
      * @param event event that is created by user service
-     * @return result of email
      */
     @Override
     public void confirmUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
@@ -747,12 +763,16 @@ public class UserPersistenceImpl implements UserPersistence {
     @Override
     public void createSocialUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String queryIdEmail = "SELECT nonce FROM user_t WHERE user_id = ? OR email = ?";
-        final String insertUser = "INSERT INTO user_t (host_id, user_id, first_name, last_name, email, language, " +
-                "verified, gender, birthday, country, province, city, post_code, address) " +
-                "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?)";
+        final String insertUser =
+                """
+                INSERT INTO user_t (host_id, user_id, first_name, last_name, email, language,
+                verified, gender, birthday, country, province, city, post_code, address, aggregate_version)
+                VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?, ?)
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String userId = (String)map.get("userId");
         String email = (String)map.get("email");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try {
             try (PreparedStatement statement = conn.prepareStatement(queryIdEmail)) {
@@ -825,17 +845,28 @@ public class UserPersistenceImpl implements UserPersistence {
                 } else {
                     statement.setNull(14, NULL);
                 }
+                statement.setLong(15, newAggregateVersion);
                 statement.execute();
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during createSocialUser for userId {}: {}", userId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during createSocialUser for userId {} aggregateVersion {}: {}", userId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createSocialUser for userId {}: {}", userId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during createSocialUser for userId {} aggregateVersion {}: {}", userId, newAggregateVersion, e.getMessage(), e);
             throw e;
+        }
+    }
+
+    private boolean queryUserExists(Connection conn, String userId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM user_t WHERE user_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(userId));
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
@@ -843,13 +874,16 @@ public class UserPersistenceImpl implements UserPersistence {
      * update user if it exists in database.
      *
      * @param event event that is created by user service
-     * @return result of email
      */
     @Override
     public void updateUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String updateUserSql = "UPDATE user_t SET language = ?, first_name = ?, last_name = ?, phone_number = ?," +
-                "gender = ?, birthday = ?, country = ?, province = ?, city = ?, address = ?, post_code = ? " +
-                "WHERE user_id = ?";
+        final String updateUserSql =
+                """
+                UPDATE user_t SET language = ?, first_name = ?, last_name = ?, phone_number = ?,
+                gender = ?, birthday = ?, country = ?, province = ?, city = ?, address = ?,
+                post_code = ?, aggregate_version = ?
+                WHERE user_id = ? AND aggregate_version = ?
+                """;
         final String updateCustomer = "UPDATE customer_t SET referral_id = ? WHERE host_id = ? AND customer_id = ?";
         final String updateEmployee = "UPDATE employee_t SET manager_id = ? WHERE host_id = ? AND employee_id = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -857,6 +891,8 @@ public class UserPersistenceImpl implements UserPersistence {
         String hostId = (String)map.get("hostId");
         String userType = (String)map.get("userType");
         String entityId = (String)map.get("entityId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(updateUserSql)) {
             statement.setString(1, (String)map.get("language"));
@@ -923,11 +959,17 @@ public class UserPersistenceImpl implements UserPersistence {
             } else {
                 statement.setNull(11, NULL);
             }
-            statement.setObject(12, UUID.fromString(userId));
+            statement.setLong(12, newAggregateVersion);
+            statement.setObject(13, UUID.fromString(userId));
+            statement.setLong(14, oldAggregateVersion);
+
             int count = statement.executeUpdate();
             if (count == 0) {
-                // no record is updated, write an error notification.
-                throw new SQLException(String.format("no record is updated by userId %s", userId));
+                if (queryUserExists(conn, userId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during updateUser for userId " + userId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found during updateUser for userId " + userId + ".");
+                }
             }
             // TODO there are old country, province and city in the event for maproot, so we need to update them
             // update customer or employee based on user_type
@@ -959,14 +1001,11 @@ public class UserPersistenceImpl implements UserPersistence {
                 throw new SQLException("userType is not valid: " + userType);
             }
             if(logger.isTraceEnabled()) logger.trace("update user success: {}", userId);
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during updateUser for userId {}: {}", userId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during updateUser for userId {} (old: {}) -> (new: {}): {}", userId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateUser for userId {}: {}", userId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during updateUser for userId {} (old: {}) -> (new: {}): {}", userId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -975,30 +1014,31 @@ public class UserPersistenceImpl implements UserPersistence {
      * delete user from user_t table and all other tables related to this user.
      *
      * @param event event that is created by user service
-     * @return result of email
      */
     @Override
     public void deleteUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         // delete only user_t, other tables will be cacade deleted by database
-        final String deleteUserById = "DELETE from user_t WHERE user_id = ?";
+        final String deleteUserById = "DELETE from user_t WHERE user_id = ? AND aggregate_version = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String userId = (String)map.get("userId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(deleteUserById)) {
             statement.setObject(1, UUID.fromString(userId));
+            statement.setLong(2, oldAggregateVersion);
             int count = statement.executeUpdate();
             if (count == 0) {
-                // no record is deleted, write an error notification.
-                throw new SQLException(String.format("no record is deleted by userId %s", userId));
+                if (queryUserExists(conn, userId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteUser for userId " + userId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deleteUser for userId " + userId + ". It might have been already deleted.");
+                }
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during deleteUser for userId {}: {}", userId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during deleteUser for userId {} aggregateVersion {}: {}", userId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteUser for userId {}: {}", userId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during deleteUser for userId {} aggregateVersion {}: {}", userId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
