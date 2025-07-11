@@ -84,8 +84,7 @@ public class PortalDbProviderImplTest {
     @Test
     void testQueryRule() {
         Result<String> result = dbProvider.queryRule(0, 2, "01964b05-552a-7c4b-9184-6857e7f3dc5f", null,
-                null, null, null, null, null, null, null,
-                "Y");
+                null, null, null, null, null, null, null);
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
