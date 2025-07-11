@@ -8,22 +8,22 @@ import com.networknt.status.Status;
 import com.networknt.utility.Constants;
 import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.PortalConstants;
-import net.lightapi.portal.db.PortalDbProvider; // For shared constants initially
+import net.lightapi.portal.db.ConcurrencyException;
+import net.lightapi.portal.db.PortalDbProvider;
 import net.lightapi.portal.db.util.NotificationService;
 import net.lightapi.portal.db.util.SqlUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.Connection; // Added import
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.SQLException; // Added import
+import java.sql.SQLException;
 import java.sql.Types;
 import java.time.OffsetDateTime;
 import java.util.*;
 
 import static com.networknt.db.provider.SqlDbStartupHook.ds;
-import static java.sql.Types.NULL;
 import static net.lightapi.portal.db.util.SqlUtil.addCondition;
 
 
@@ -43,14 +43,19 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
 
     @Override
     public void createSchema(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "INSERT INTO schema_t(host_id, schema_id, schema_version, schema_type, spec_version, schema_source, schema_name, schema_desc, schema_body, schema_owner, schema_status, example, comment_status, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"; // Corrected parameter count from 16 to 15
+        final String sql =
+                """
+                INSERT INTO schema_t(host_id, schema_id, schema_version, schema_type, spec_version, schema_source, schema_name,
+                schema_desc, schema_body, schema_owner, schema_status, example, comment_status, update_user, update_ts, aggregate_version)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """;
 
         final String insertSchemaCategorySql = "INSERT INTO entity_category_t (entity_id, entity_type, category_id) VALUES (?, ?, ?)";
         final String insertSchemaTagSql = "INSERT INTO entity_tag_t (entity_id, entity_type, tag_id) VALUES (?, ?, ?)";
 
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String schemaId = (String) map.get("schemaId"); // Get schemaId for return/logging/error
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
         List<String> categoryIds = (List<String>) map.get("categoryId"); // Get categoryIds from event data if present
         List<String> tagIds = (List<String>) map.get("tagIds"); // Get tagIds from event data if present
 
@@ -88,10 +93,11 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
             statement.setString(13, (String)map.get("commentStatus")); // Required
             statement.setString(14, (String)event.get(Constants.USER));
             statement.setObject(15, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(16, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert the schema with id " + schemaId);
+                throw new SQLException(String.format("Failed during createSchema schemaId %s with aggregateVersion %d", schemaId, newAggregateVersion));
             }
 
             // Insert into entity_categories_t if categoryId is present
@@ -118,22 +124,38 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
                     insertTagStatement.executeBatch(); // Execute batch insert
                 }
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during createSchema for id {}: {}", schemaId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
-        } catch (Exception e) { // Catch other potential runtime exceptions
-            logger.error("Exception during createSchema for id {}: {}", schemaId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("SQLException during createSchema for schemaId {} aggregateVersion {}: {}", schemaId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createSchema for schemaId {} aggregateVersion {}: {}", schemaId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    private boolean querySchemaExists(Connection conn, String schemaId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM schema_t WHERE schema_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(schemaId));
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
     @Override
     public void updateSchema(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "UPDATE schema_t SET schema_version = ?, schema_type = ?, spec_version = ?, schema_source = ?, schema_name = ?, schema_desc = ?, schema_body = ?, schema_owner = ?, schema_status = ?, example = ?, comment_status = ?, update_user = ?, update_ts = ? WHERE schema_id = ?";
+        final String sql =
+                """
+                UPDATE schema_t SET schema_version = ?, schema_type = ?, spec_version = ?,
+                schema_source = ?, schema_name = ?, schema_desc = ?, schema_body = ?,
+                schema_owner = ?, schema_status = ?, example = ?, comment_status = ?,
+                update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE schema_id = ? AND aggregate_version = ?
+                """;
         final String deleteSchemaCategorySql = "DELETE FROM entity_category_t WHERE entity_id = ? AND entity_type = ?";
         final String insertSchemaCategorySql = "INSERT INTO entity_category_t (entity_id, entity_type, category_id) VALUES (?, ?, ?)";
         final String deleteSchemaTagSql = "DELETE FROM entity_tag_t WHERE entity_id = ? AND entity_type = ?";
@@ -141,6 +163,8 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
 
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String schemaId = (String) map.get("schemaId"); // For logging/exceptions
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
         List<String> categoryIds = (List<String>) map.get("categoryId");
         List<String> tagIds = (List<String>) map.get("tagIds");
 
@@ -172,7 +196,11 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to update the schema with id " + schemaId);
+                if (querySchemaExists(conn, schemaId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during updateSchema for schemaId " + schemaId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found during updateSchema for schemaId " + schemaId + ".");
+                }
             }
             // --- Replace Category Associations ---
             // 1. Delete existing links for this schema
@@ -216,43 +244,39 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
                     insertTagStatement.executeBatch(); // Execute batch insert
                 }
             }
-            // --- End Replace Tag Associations ---
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during updateSchema for id {}: {}", schemaId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
-        } catch (Exception e) { // Catch other potential runtime exceptions
-            logger.error("Exception during updateSchema for id {}: {}", schemaId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("SQLException during updateSchema for schemaId {} (old: {}) -> (new: {}): {}", schemaId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updateSchema for schemaId {} (old: {}) -> (new: {}): {}", schemaId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
     @Override
     public void deleteSchema(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM schema_t WHERE schema_id = ?";
+        final String sql = "DELETE FROM schema_t WHERE schema_id = ? AND aggregate_version = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String schemaId = (String) map.get("schemaId"); // For logging/exceptions
+        String schemaId = (String) map.get("schemaId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setString(1, schemaId);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to delete the schema with id " + schemaId);
+                if (querySchemaExists(conn, schemaId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteSchema for schemaId " + schemaId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deleteSchema for schemaId " + schemaId + ". It might have been already deleted.");
+                }
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during deleteSchema for id {}: {}", schemaId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
-        } catch (Exception e) { // Catch other potential runtime exceptions
-            logger.error("Exception during deleteSchema for id {}: {}", schemaId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("SQLException during deleteSchema for schemaId {} aggregateVersion {}: {}", schemaId, oldAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deleteSchema for schemaId {} aggregateVersion {}: {}", schemaId, oldAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -260,13 +284,16 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
     public Result<String> getSchema(int offset, int limit, String hostId, String schemaId, String schemaVersion, String schemaType,
                                     String specVersion, String schemaSource, String schemaName, String schemaDesc, String schemaBody,
                                     String schemaOwner, String schemaStatus, String example, String commentStatus) {
-        Result<String> result = null;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "schema_id, host_id, schema_version, schema_type, spec_version, schema_source, schema_name, schema_desc, schema_body, \n" +
-                "schema_owner, schema_status, example, comment_status, update_user, update_ts\n" +
-                "FROM schema_t\n" +
-                "WHERE 1=1\n");
+        Result<String> result;
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                schema_id, host_id, schema_version, schema_type, spec_version, schema_source, schema_name, schema_desc, schema_body,
+                schema_owner, schema_status, example, comment_status, update_user, update_ts, aggregate_version
+                FROM schema_t
+                WHERE 1=1
+                """;
+        StringBuilder sqlBuilder = new StringBuilder(s);
 
         List<Object> parameters = new ArrayList<>();
         StringBuilder whereClause = new StringBuilder();
@@ -332,6 +359,7 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
                     map.put("commentStatus", resultSet.getString("comment_status"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
 
                     schemas.add(map);
                 }
@@ -395,8 +423,13 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
     @Override
     public Result<String> getSchemaById(String schemaId) {
         Result<String> result = null;
-        String sql = "SELECT schema_id, host_id, schema_version, schema_type, spec_version, schema_source, schema_name, schema_desc, schema_body, " +
-                "schema_owner, schema_status, example, comment_status, update_user, update_ts FROM schema_t WHERE schema_id = ?";
+        String sql =
+                """
+                SELECT schema_id, host_id, schema_version, schema_type, spec_version, schema_source,
+                schema_name, schema_desc, schema_body, schema_owner, schema_status, example,
+                comment_status, update_user, update_ts, aggregate_version
+                FROM schema_t WHERE schema_id = ?
+                """;
         Map<String, Object> map = null;
         try (Connection conn = ds.getConnection()) {
             // No setAutoCommit(false) for read-only query
@@ -420,6 +453,7 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
                         map.put("commentStatus", resultSet.getString("comment_status"));
                         map.put("updateUser", resultSet.getString("update_user"));
                         map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                        map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     }
                 }
                 // Check if map was populated (i.e., record found)
@@ -443,12 +477,16 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
     @Override
     public Result<String> getSchemaByCategoryId(String categoryId) {
         Result<String> result = null;
-        String sqlBuilder = "SELECT schema_t.schema_id, schema_t.host_id, schema_t.schema_version, schema_t.schema_type, schema_t.spec_version, schema_t.schema_source, \n" +
-                "schema_t.schema_name, schema_t.schema_desc, schema_t.schema_body, \n" +
-                "schema_t.schema_owner, schema_t.schema_status, schema_t.example, schema_t.comment_status, schema_t.update_user, schema_t.update_ts\n" +
-                "FROM schema_t\n" +
-                "INNER JOIN entity_category_t ON schema_t.schema_id = entity_category_t.entity_id\n" + // Join with entity_category_t
-                "WHERE entity_type = 'schema' AND entity_category_t.category_id = ?"; // Filter by categoryId using join table
+        String sqlBuilder =
+                """
+                SELECT schema_t.schema_id, schema_t.host_id, schema_t.schema_version, schema_t.schema_type,
+                schema_t.spec_version, schema_t.schema_source, schema_t.schema_name, schema_t.schema_desc,
+                schema_t.schema_body, schema_t.schema_owner, schema_t.schema_status, schema_t.example,
+                schema_t.comment_status, schema_t.update_user, schema_t.update_ts, schema_t.aggregate_version
+                FROM schema_t
+                INNER JOIN entity_category_t ON schema_t.schema_id = entity_category_t.entity_id
+                WHERE entity_type = 'schema' AND entity_category_t.category_id = ?
+                """;
 
         List<Map<String, Object>> schemas = new ArrayList<>();
         try (Connection connection = ds.getConnection();
@@ -474,6 +512,7 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
                     map.put("commentStatus", resultSet.getString("comment_status"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
 
                     schemas.add(map);
                 }
@@ -496,12 +535,16 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
     @Override
     public Result<String> getSchemaByTagId(String tagId) {
         Result<String> result = null;
-        String sqlBuilder = "SELECT schema_t.schema_id, schema_t.host_id, schema_t.schema_version, schema_t.schema_type, schema_t.spec_version, schema_t.schema_source, \n" +
-                "schema_t.schema_name, schema_t.schema_desc, schema_t.schema_body, \n" +
-                "schema_t.schema_owner, schema_t.schema_status, schema_t.example, schema_t.comment_status, schema_t.update_user, schema_t.update_ts\n" +
-                "FROM schema_t\n" +
-                "INNER JOIN entity_tag_t ON schema_t.schema_id = entity_tag_t.entity_id\n" +
-                "WHERE entity_type = 'schema' AND entity_tag_t.tag_id = ?";
+        String sqlBuilder =
+                """
+                SELECT schema_t.schema_id, schema_t.host_id, schema_t.schema_version, schema_t.schema_type,
+                schema_t.spec_version, schema_t.schema_source, schema_t.schema_name, schema_t.schema_desc,
+                schema_t.schema_body, schema_t.schema_owner, schema_t.schema_status, schema_t.example,
+                schema_t.comment_status, schema_t.update_user, schema_t.update_ts, schema_t.aggregate_version
+                FROM schema_t
+                INNER JOIN entity_tag_t ON schema_t.schema_id = entity_tag_t.entity_id
+                WHERE entity_type = 'schema' AND entity_tag_t.tag_id = ?
+                """;
 
         List<Map<String, Object>> schemas = new ArrayList<>();
         try (Connection connection = ds.getConnection();
@@ -527,6 +570,7 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
                     map.put("commentStatus", resultSet.getString("comment_status"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
 
                     schemas.add(map);
                 }
