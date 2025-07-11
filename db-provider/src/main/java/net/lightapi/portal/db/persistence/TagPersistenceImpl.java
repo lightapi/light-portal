@@ -8,27 +8,26 @@ import com.networknt.status.Status;
 import com.networknt.utility.Constants;
 import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.PortalConstants;
+import net.lightapi.portal.db.ConcurrencyException;
 import net.lightapi.portal.db.PortalDbProvider; // For shared constants initially
 import net.lightapi.portal.db.util.NotificationService;
 import net.lightapi.portal.db.util.SqlUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.Connection; // Added import
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.SQLException; // Added import
+import java.sql.SQLException;
 import java.sql.Types;
 import java.time.OffsetDateTime;
 import java.util.*;
 
 import static com.networknt.db.provider.SqlDbStartupHook.ds;
-import static java.sql.Types.NULL; // Assuming NULL from Types.NULL is used
 import static net.lightapi.portal.db.util.SqlUtil.addCondition;
 
 public class TagPersistenceImpl implements TagPersistence {
     private static final Logger logger = LoggerFactory.getLogger(TagPersistenceImpl.class);
-    // Consider moving these to a shared constants class if they are truly general
     private static final String SQL_EXCEPTION = PortalDbProvider.SQL_EXCEPTION;
     private static final String GENERIC_EXCEPTION = PortalDbProvider.GENERIC_EXCEPTION;
     private static final String OBJECT_NOT_FOUND = PortalDbProvider.OBJECT_NOT_FOUND;
@@ -41,11 +40,15 @@ public class TagPersistenceImpl implements TagPersistence {
 
     @Override
     public void createTag(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "INSERT INTO tag_t(host_id, tag_id, entity_type, tag_name, " +
-                "tag_desc, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        final String sql =
+                """
+                INSERT INTO tag_t(host_id, tag_id, entity_type, tag_name,
+                tag_desc, update_user, update_ts, aggregate_version)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String tagId = (String) map.get("tagId"); // Get tagId for return/logging/error
+        String tagId = (String) map.get("tagId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             String hostId = (String)map.get("hostId");
@@ -68,29 +71,46 @@ public class TagPersistenceImpl implements TagPersistence {
 
             statement.setString(6, (String)event.get(Constants.USER));
             statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(8, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert the tag with id " + tagId);
+                throw new SQLException(String.format("Failed during createTag for tagId %s with aggregateVersion %d", tagId, newAggregateVersion));
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during createTag for id {}: {}", tagId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
-        } catch (Exception e) { // Catch other potential runtime exceptions
-            logger.error("Exception during createTag for id {}: {}", tagId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("SQLException during createTag for tagId {} aggregateVersion {}: {}", tagId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createTag for tagId {} aggregateVersion {}: {}", tagId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    private boolean queryTagExists(Connection conn, String tagId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM tag_t WHERE tag_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(tagId));
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
     @Override
     public void updateTag(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "UPDATE tag_t SET tag_name = ?, tag_desc = ?, update_user = ?, update_ts = ? WHERE tag_id = ?";
+        final String sql =
+                """
+               UPDATE tag_t
+               SET tag_name = ?, tag_desc = ?, update_user = ?, update_ts = ?, aggregate_version = ?
+               WHERE tag_id = ? AND aggregate_version = ?
+               """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String tagId = (String) map.get("tagId"); // For logging/exceptions
+        String tagId = (String) map.get("tagId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setString(1, (String)map.get("tagName"));
@@ -102,48 +122,52 @@ public class TagPersistenceImpl implements TagPersistence {
             }
             statement.setString(3, (String)event.get(Constants.USER));
             statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setObject(5, UUID.fromString(tagId));
+            statement.setLong(5, newAggregateVersion);
+            statement.setObject(6, UUID.fromString(tagId));
+            statement.setLong(7, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to update the tag with id " + tagId);
+                if (queryTagExists(conn, tagId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during updateTag for tagId " + tagId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found during updateTag for tagId " + tagId + ".");
+                }
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during updateTag for id {}: {}", tagId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
-        } catch (Exception e) { // Catch other potential runtime exceptions
-            logger.error("Exception during updateTag for id {}: {}", tagId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("SQLException during updateTag for tagId {} (old: {}) -> (new: {}): {}", tagId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updateTag for tagId {} (old: {}) -> (new: {}): {}", tagId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
     @Override
     public void deleteTag(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM tag_t WHERE tag_id = ?";
+        final String sql = "DELETE FROM tag_t WHERE tag_id = ? AND aggregate_version = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String tagId = (String) map.get("tagId"); // For logging/exceptions
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(tagId));
+            statement.setLong(2, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to delete the tag with id " + tagId);
+                if (queryTagExists(conn, tagId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteTag for tagId " + tagId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deleteTag for tagId " + tagId + ". It might have been already deleted.");
+                }
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during deleteTag for id {}: {}", tagId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
-        } catch (Exception e) { // Catch other potential runtime exceptions
-            logger.error("Exception during deleteTag for id {}: {}", tagId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("SQLException during deleteTag for tagId {} aggregateVersion {}: {}", tagId, oldAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deleteTag for tagId {} aggregateVersion {}: {}", tagId, oldAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -153,7 +177,7 @@ public class TagPersistenceImpl implements TagPersistence {
         String s =
                 """
                         SELECT COUNT(*) OVER () AS total,
-                        tag_id, host_id, entity_type, tag_name, tag_desc, update_user, update_ts
+                        tag_id, host_id, entity_type, tag_name, tag_desc, update_user, update_ts, aggregate_version
                         FROM tag_t
                 """;
         StringBuilder sqlBuilder = new StringBuilder();
@@ -215,6 +239,7 @@ public class TagPersistenceImpl implements TagPersistence {
                     map.put("tagDesc", resultSet.getString("tag_desc"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
 
                     tags.add(map);
                 }
@@ -265,7 +290,7 @@ public class TagPersistenceImpl implements TagPersistence {
     @Override
     public Result<String> getTagById(String tagId) {
         Result<String> result = null;
-        String sql = "SELECT tag_id, host_id, entity_type, tag_name, tag_desc, update_user, update_ts FROM tag_t WHERE tag_id = ?";
+        String sql = "SELECT tag_id, host_id, entity_type, tag_name, tag_desc, update_user, update_ts, aggregate_version FROM tag_t WHERE tag_id = ?";
         Map<String, Object> map = null;
         try (Connection conn = ds.getConnection()) {
             // No setAutoCommit(false) needed for SELECT
@@ -281,6 +306,7 @@ public class TagPersistenceImpl implements TagPersistence {
                         map.put("tagDesc", resultSet.getString("tag_desc"));
                         map.put("updateUser", resultSet.getString("update_user"));
                         map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                        map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     }
                 }
                 if (map != null && !map.isEmpty()) {
@@ -303,10 +329,13 @@ public class TagPersistenceImpl implements TagPersistence {
     @Override
     public Result<String> getTagByName(String hostId, String tagName) {
         Result<String> result = null;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT tag_id, host_id, entity_type, tag_name, tag_desc, update_user, update_ts\n" +
-                "FROM tag_t\n" +
-                "WHERE tag_name = ?\n"); // Filter by tagName
+        String s =
+                """
+                SELECT tag_id, host_id, entity_type, tag_name, tag_desc, update_user, update_ts, aggregate_version
+                FROM tag_t
+                WHERE tag_name = ?
+                """;
+        StringBuilder sqlBuilder = new StringBuilder(s);
 
         if (hostId != null && !hostId.isEmpty()) {
             sqlBuilder.append("AND (host_id = ? OR host_id IS NULL)"); // Tenant-specific OR Global
@@ -337,6 +366,7 @@ public class TagPersistenceImpl implements TagPersistence {
                         map.put("tagDesc", resultSet.getString("tag_desc"));
                         map.put("updateUser", resultSet.getString("update_user"));
                         map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                        map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     }
                 }
                 if (map != null && !map.isEmpty()) {
@@ -358,11 +388,14 @@ public class TagPersistenceImpl implements TagPersistence {
     @Override
     public Result<String> getTagByType(String hostId, String entityType) {
         Result<String> result = null;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT tag_id, host_id, entity_type, tag_name, tag_desc, update_user, update_ts\n" +
-                "FROM tag_t\n" +
-                "WHERE entity_type = ?\n"); // Filter by entityType
+        String s =
+                """
+                SELECT tag_id, host_id, entity_type, tag_name, tag_desc, update_user, update_ts, aggregate_version
+                FROM tag_t
+                WHERE entity_type = ?
+                """;
 
+        StringBuilder sqlBuilder = new StringBuilder(s);
         if (hostId != null && !hostId.isEmpty()) {
             sqlBuilder.append("AND (host_id = ? OR host_id IS NULL)"); // Tenant-specific OR Global
         } else {
@@ -389,6 +422,7 @@ public class TagPersistenceImpl implements TagPersistence {
                     map.put("tagDesc", resultSet.getString("tag_desc"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
 
                     tags.add(map);
                 }
