@@ -3799,4 +3799,358 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         }
         return result;
     }
+
+    @Override
+    public Result<String> getApplicableConfigPropertiesForInstanceApi(
+        int offset, int limit, String hostId, String instanceApiId
+    ) {
+
+        Result<String> result;
+        String sql =
+            """
+                WITH applicable_instance_config_properties AS (
+                    SELECT DISTINCT pvc.config_id, pvcp.property_id, i.host_id, i.instance_id, i.product_version_id
+                    FROM instance_api_t ia
+                    JOIN instance_t i ON ia.instance_id = i.instance_id AND ia.host_id = i.host_id
+                    JOIN product_version_config_t pvc ON i.host_id = pvc.host_id AND i.product_version_id = pvc.product_version_id
+                    JOIN product_version_config_property_t pvcp ON i.host_id = pvcp.host_id AND i.product_version_id = pvcp.product_version_id
+                    WHERE ia.host_id = ? AND ia.instance_api_id = ?
+                ),
+                property_values AS (
+                    SELECT
+                        cp.property_id,
+                        CASE
+                            WHEN ep.property_value IS NOT NULL THEN ep.property_value
+                            WHEN pvp.property_value IS NOT NULL THEN pvp.property_value
+                            WHEN pp.property_value IS NOT NULL THEN pp.property_value
+                            ELSE cp.property_value
+                        END AS effective_property_value,
+                        CASE
+                            WHEN ep.property_value IS NOT NULL THEN 'environment_property'
+                            WHEN pvp.property_value IS NOT NULL THEN 'product_version_property'
+                            WHEN pp.property_value IS NOT NULL THEN 'product_property'
+                            ELSE 'config_property'
+                        END AS property_source_type,
+                        CASE
+                            WHEN ep.property_value IS NOT NULL THEN COALESCE( ep.environment, '' )
+                            WHEN pvp.property_value IS NOT NULL THEN CONCAT( COALESCE( pv.product_id, '' ), '-', COALESCE( pv.product_version, '' ) )
+                            WHEN pp.property_value IS NOT NULL THEN COALESCE ( pp.product_id, '' )
+                            ELSE 'global'
+                        END AS property_source
+                    FROM config_property_t cp
+                    JOIN applicable_instance_config_properties aicp ON aicp.config_id = cp.config_id AND aicp.property_id = cp.property_id
+                    JOIN product_version_t pv ON aicp.host_id = pv.host_id AND aicp.product_version_id = pv.product_version_id
+                    LEFT JOIN product_property_t pp ON cp.property_id = pp.property_id AND pv.product_id = pp.product_id
+                    LEFT JOIN product_version_property_t pvp ON cp.property_id = pvp.property_id AND aicp.host_id = pvp.host_id AND aicp.product_version_id = pvp.product_version_id
+                    LEFT JOIN environment_property_t ep ON cp.property_id = ep.property_id AND aicp.host_id = ep.host_id
+                )
+                SELECT
+                    COUNT(*) OVER () AS total,
+                    ac.host_id, ac.instance_id,
+                    c.config_id, c.config_name, c.config_phase, c.config_type, c.class_path, c.config_desc,
+                    cp.property_id, cp.property_name, cp.property_type, cp.display_order, cp.required, cp.property_desc, cp.value_type, cp.resource_type,
+                    pv.effective_property_value AS property_value, pv.property_source, pv.property_source_type
+                FROM config_t c
+                JOIN config_property_t cp ON c.config_id = cp.config_id
+                JOIN applicable_instance_config_properties aicp ON c.config_id = aicp.config_id AND cp.config_id = aicp.config_id AND cp.property_id = aicp.property_id
+                LEFT JOIN property_values pv ON cp.property_id = pv.property_id
+                WHERE 1 = 1 AND cp.resource_type IN ('api', 'api|app_api', 'all')
+                ORDER BY c.config_name, cp.property_name, cp.display_order
+                LIMIT ? OFFSET ?
+            """;
+
+        int total = 0;
+        List<Map<String, Object>> instanceApplicableProperties = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            preparedStatement.setObject(1, hostId != null ? UUID.fromString(hostId) : null);
+            preparedStatement.setObject(2, instanceApiId != null ? UUID.fromString(instanceApiId) : null);
+
+            preparedStatement.setObject(3, limit);
+            preparedStatement.setObject(4, offset);
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
+                    map.put("configId", resultSet.getObject("config_id", UUID.class));
+                    map.put("configName", resultSet.getString("config_name"));
+                    map.put("configPhase", resultSet.getString("config_phase"));
+                    map.put("configType", resultSet.getString("config_type"));
+                    map.put("classPath", resultSet.getString("class_path"));
+                    map.put("configDesc", resultSet.getString("config_desc"));
+                    map.put("propertyId", resultSet.getObject("property_id", UUID.class));
+                    map.put("propertyName", resultSet.getString("property_name"));
+                    map.put("displayOrder", resultSet.getInt("display_order"));
+                    map.put("required", resultSet.getBoolean("required"));
+                    map.put("propertyDesc", resultSet.getString("property_desc"));
+                    map.put("propertyValue", resultSet.getString("property_value"));
+                    map.put("propertySource", resultSet.getString("property_source"));
+                    map.put("propertySourceType", resultSet.getString("property_source_type"));
+                    map.put("valueType", resultSet.getString("value_type"));
+                    map.put("resourceType", resultSet.getString("resource_type"));
+
+                    instanceApplicableProperties.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("instanceApiApplicableProperties", instanceApplicableProperties);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getApplicableConfigPropertiesForInstanceApp(
+        int offset, int limit, String hostId, String instanceAppId
+    ) {
+
+        Result<String> result;
+        String sql =
+            """
+                WITH applicable_instance_config_properties AS (
+                    SELECT DISTINCT pvc.config_id, pvcp.property_id, i.host_id, i.instance_id, i.product_version_id
+                    FROM instance_app_t ia
+                    JOIN instance_t i ON ia.instance_id = i.instance_id AND ia.host_id = i.host_id
+                    JOIN product_version_config_t pvc ON i.host_id = pvc.host_id AND i.product_version_id = pvc.product_version_id
+                    JOIN product_version_config_property_t pvcp ON i.host_id = pvcp.host_id AND i.product_version_id = pvcp.product_version_id
+                    WHERE ia.host_id = ? AND ia.instance_app_id = ?
+                ),
+                property_values AS (
+                    SELECT
+                        cp.property_id,
+                        CASE
+                            WHEN ep.property_value IS NOT NULL THEN ep.property_value
+                            WHEN pvp.property_value IS NOT NULL THEN pvp.property_value
+                            WHEN pp.property_value IS NOT NULL THEN pp.property_value
+                            ELSE cp.property_value
+                        END AS effective_property_value,
+                        CASE
+                            WHEN ep.property_value IS NOT NULL THEN 'environment_property'
+                            WHEN pvp.property_value IS NOT NULL THEN 'product_version_property'
+                            WHEN pp.property_value IS NOT NULL THEN 'product_property'
+                            ELSE 'config_property'
+                        END AS property_source_type,
+                        CASE
+                            WHEN ep.property_value IS NOT NULL THEN COALESCE( ep.environment, '' )
+                            WHEN pvp.property_value IS NOT NULL THEN CONCAT( COALESCE( pv.product_id, '' ), '-', COALESCE( pv.product_version, '' ) )
+                            WHEN pp.property_value IS NOT NULL THEN COALESCE ( pp.product_id, '' )
+                            ELSE 'global'
+                        END AS property_source
+                    FROM config_property_t cp
+                    JOIN applicable_instance_config_properties aicp ON aicp.config_id = cp.config_id AND aicp.property_id = cp.property_id
+                    JOIN product_version_t pv ON aicp.host_id = pv.host_id AND aicp.product_version_id = pv.product_version_id
+                    LEFT JOIN product_property_t pp ON cp.property_id = pp.property_id AND pv.product_id = pp.product_id
+                    LEFT JOIN product_version_property_t pvp ON cp.property_id = pvp.property_id AND aicp.host_id = pvp.host_id AND aicp.product_version_id = pvp.product_version_id
+                    LEFT JOIN environment_property_t ep ON cp.property_id = ep.property_id AND aicp.host_id = ep.host_id
+                )
+                SELECT
+                    COUNT(*) OVER () AS total,
+                    ac.host_id, ac.instance_id,
+                    c.config_id, c.config_name, c.config_phase, c.config_type, c.class_path, c.config_desc,
+                    cp.property_id, cp.property_name, cp.property_type, cp.display_order, cp.required, cp.property_desc, cp.value_type, cp.resource_type,
+                    pv.effective_property_value AS property_value, pv.property_source, pv.property_source_type
+                FROM config_t c
+                JOIN config_property_t cp ON c.config_id = cp.config_id
+                JOIN applicable_instance_config_properties aicp ON c.config_id = aicp.config_id AND cp.config_id = aicp.config_id AND cp.property_id = aicp.property_id
+                LEFT JOIN property_values pv ON cp.property_id = pv.property_id
+                WHERE 1 = 1 AND cp.resource_type IN ('app', 'app|app_api', 'all')
+                ORDER BY c.config_name, cp.property_name, cp.display_order
+                LIMIT ? OFFSET ?
+            """;
+
+        int total = 0;
+        List<Map<String, Object>> instanceApplicableProperties = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            preparedStatement.setObject(1, hostId != null ? UUID.fromString(hostId) : null);
+            preparedStatement.setObject(2, instanceAppId != null ? UUID.fromString(instanceAppId) : null);
+
+            preparedStatement.setObject(3, limit);
+            preparedStatement.setObject(4, offset);
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
+                    map.put("configId", resultSet.getObject("config_id", UUID.class));
+                    map.put("configName", resultSet.getString("config_name"));
+                    map.put("configPhase", resultSet.getString("config_phase"));
+                    map.put("configType", resultSet.getString("config_type"));
+                    map.put("classPath", resultSet.getString("class_path"));
+                    map.put("configDesc", resultSet.getString("config_desc"));
+                    map.put("propertyId", resultSet.getObject("property_id", UUID.class));
+                    map.put("propertyName", resultSet.getString("property_name"));
+                    map.put("displayOrder", resultSet.getInt("display_order"));
+                    map.put("required", resultSet.getBoolean("required"));
+                    map.put("propertyDesc", resultSet.getString("property_desc"));
+                    map.put("propertyValue", resultSet.getString("property_value"));
+                    map.put("propertySource", resultSet.getString("property_source"));
+                    map.put("propertySourceType", resultSet.getString("property_source_type"));
+                    map.put("valueType", resultSet.getString("value_type"));
+                    map.put("resourceType", resultSet.getString("resource_type"));
+
+                    instanceApplicableProperties.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("instanceAppApplicableProperties", instanceApplicableProperties);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getApplicableConfigPropertiesForInstanceAppApi(
+        int offset, int limit, String hostId, String instanceAppId, String instanceApiId
+    ) {
+
+        Result<String> result;
+        String sql =
+            """
+                WITH applicable_instance_config_properties AS (
+                    SELECT DISTINCT pvc.config_id, pvcp.property_id, i.host_id, i.instance_id, i.product_version_id
+                    FROM instance_app_api_t iappapi
+                    JOIN instance_app_t iapp ON iappapi.instance_app_id = iapp.instance_app_id AND iappapi.host_id = iapp.host_id
+                    JOIN instance_api_t iapi ON iappapi.instance_api_id = iapi.instance_api_id AND iappapi.host_id = iapi.host_id
+                    JOIN instance_t i ON iapp.instance_id = i.instance_id AND iapp.host_id = i.host_id AND iapi.instance_id = i.instance_id AND iapi.host_id = i.host_id
+                    JOIN product_version_config_t pvc ON i.host_id = pvc.host_id AND i.product_version_id = pvc.product_version_id
+                    JOIN product_version_config_property_t pvcp ON i.host_id = pvcp.host_id AND i.product_version_id = pvcp.product_version_id
+                    WHERE iappapi.host_id = ? AND iappapi.instance_api_id = ? AND iappapi.instance_app_id = ?
+                ),
+                property_values AS (
+                    SELECT
+                        cp.property_id,
+                        CASE
+                            WHEN ep.property_value IS NOT NULL THEN ep.property_value
+                            WHEN pvp.property_value IS NOT NULL THEN pvp.property_value
+                            WHEN pp.property_value IS NOT NULL THEN pp.property_value
+                            ELSE cp.property_value
+                        END AS effective_property_value,
+                        CASE
+                            WHEN ep.property_value IS NOT NULL THEN 'environment_property'
+                            WHEN pvp.property_value IS NOT NULL THEN 'product_version_property'
+                            WHEN pp.property_value IS NOT NULL THEN 'product_property'
+                            ELSE 'config_property'
+                        END AS property_source_type,
+                        CASE
+                            WHEN ep.property_value IS NOT NULL THEN COALESCE( ep.environment, '' )
+                            WHEN pvp.property_value IS NOT NULL THEN CONCAT( COALESCE( pv.product_id, '' ), '-', COALESCE( pv.product_version, '' ) )
+                            WHEN pp.property_value IS NOT NULL THEN COALESCE ( pp.product_id, '' )
+                            ELSE 'global'
+                        END AS property_source
+                    FROM config_property_t cp
+                    JOIN applicable_instance_config_properties aicp ON aicp.config_id = cp.config_id AND aicp.property_id = cp.property_id
+                    JOIN product_version_t pv ON aicp.host_id = pv.host_id AND aicp.product_version_id = pv.product_version_id
+                    LEFT JOIN product_property_t pp ON cp.property_id = pp.property_id AND pv.product_id = pp.product_id
+                    LEFT JOIN product_version_property_t pvp ON cp.property_id = pvp.property_id AND aicp.host_id = pvp.host_id AND aicp.product_version_id = pvp.product_version_id
+                    LEFT JOIN environment_property_t ep ON cp.property_id = ep.property_id AND aicp.host_id = ep.host_id
+                )
+                SELECT
+                    COUNT(*) OVER () AS total,
+                    ac.host_id, ac.instance_id,
+                    c.config_id, c.config_name, c.config_phase, c.config_type, c.class_path, c.config_desc,
+                    cp.property_id, cp.property_name, cp.property_type, cp.display_order, cp.required, cp.property_desc, cp.value_type, cp.resource_type,
+                    pv.effective_property_value AS property_value, pv.property_source, pv.property_source_type
+                FROM config_t c
+                JOIN config_property_t cp ON c.config_id = cp.config_id
+                JOIN applicable_instance_config_properties aicp ON c.config_id = aicp.config_id AND cp.config_id = aicp.config_id AND cp.property_id = aicp.property_id
+                LEFT JOIN property_values pv ON cp.property_id = pv.property_id
+                WHERE 1 = 1 AND cp.resource_type IN ('app_api', 'api|app_api', 'app|app_api', 'all')
+                ORDER BY c.config_name, cp.property_name, cp.display_order
+                LIMIT ? OFFSET ?
+            """;
+
+        int total = 0;
+        List<Map<String, Object>> instanceApplicableProperties = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            preparedStatement.setObject(1, hostId != null ? UUID.fromString(hostId) : null);
+            preparedStatement.setObject(2, instanceApiId != null ? UUID.fromString(instanceApiId) : null);
+            preparedStatement.setObject(3, instanceAppId != null ? UUID.fromString(instanceAppId) : null);
+
+            preparedStatement.setObject(4, limit);
+            preparedStatement.setObject(5, offset);
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
+                    map.put("configId", resultSet.getObject("config_id", UUID.class));
+                    map.put("configName", resultSet.getString("config_name"));
+                    map.put("configPhase", resultSet.getString("config_phase"));
+                    map.put("configType", resultSet.getString("config_type"));
+                    map.put("classPath", resultSet.getString("class_path"));
+                    map.put("configDesc", resultSet.getString("config_desc"));
+                    map.put("propertyId", resultSet.getObject("property_id", UUID.class));
+                    map.put("propertyName", resultSet.getString("property_name"));
+                    map.put("displayOrder", resultSet.getInt("display_order"));
+                    map.put("required", resultSet.getBoolean("required"));
+                    map.put("propertyDesc", resultSet.getString("property_desc"));
+                    map.put("propertyValue", resultSet.getString("property_value"));
+                    map.put("propertySource", resultSet.getString("property_source"));
+                    map.put("propertySourceType", resultSet.getString("property_source_type"));
+                    map.put("valueType", resultSet.getString("value_type"));
+                    map.put("resourceType", resultSet.getString("resource_type"));
+
+                    instanceApplicableProperties.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("instanceAppApiApplicableProperties", instanceApplicableProperties);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+        }
+        return result;
+    }
 }
