@@ -309,4 +309,41 @@ public class PortalDbProviderImplTest {
         Connection conn = SqlDbStartupHook.ds.getConnection();
         dbProvider.commitConfigInstance(conn, map);
     }
+
+    @Test
+    @Disabled
+    void testOnboardUser() throws Exception {
+
+        Map<String, Object> map = new java.util.HashMap<>(Map.of(
+                "hostId", "01964b05-552a-7c4b-9184-6857e7f3dc5f",
+                "email", "test@example.com",
+                "entityId", "cust123",
+                "userType", "C",
+                "language", "en",
+                "firstName", "John",
+                "lastName", "Doe",
+                "phoneNumber", "123-456-7890",
+                "gender", "M"
+        ));
+
+        map.put("birthday", "1980-01-01");
+        map.put("country", "US");
+        map.put("province", "CA");
+        map.put("city", "Los Angeles");
+        map.put("postCode", "12345");
+        map.put("address", "123 Main St");
+        map.put("userId", "01964b05-5532-7c79-8cde-191dcbd421b8");
+        map.put("emailToken", UUID.randomUUID().toString());
+        map.put("verified", true);
+        map.put("locked", false);
+
+        // TODO create a cloud event object and pass it to the method
+        Map<String, Object> event = new java.util.HashMap<>(Map.of(
+                "hostId", "01964b05-552a-7c4b-9184-6857e7f3dc5f"
+        ));
+
+        Connection conn = SqlDbStartupHook.ds.getConnection();
+        dbProvider.onboardUser(conn, map);
+    }
+
 }

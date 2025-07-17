@@ -31,6 +31,7 @@ public class PortalConstants {
 
     // --- User Events ---
     public static final String USER_CREATED_EVENT = "UserCreatedEvent";
+    public static final String USER_ONBOARDED_EVENT = "UserOnboardedEvent";
     public static final String SOCIAL_USER_CREATED_EVENT = "SocialUserCreatedEvent";
     public static final String USER_CONFIRMED_EVENT = "UserConfirmedEvent";
     public static final String USER_VERIFIED_EVENT = "UserVerifiedEvent";

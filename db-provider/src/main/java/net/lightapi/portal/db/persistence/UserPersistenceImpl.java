@@ -157,6 +157,126 @@ public class UserPersistenceImpl implements UserPersistence {
     }
 
     @Override
+    public void onboardUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        final String queryEmailEntityId = """
+                SELECT u.user_id, u.email, COALESCE(c.customer_id, e.employee_id) AS entity_id
+                FROM user_t u
+                LEFT JOIN user_host_t uh ON u.user_id = uh.user_id
+                LEFT JOIN customer_t c ON uh.host_id = c.host_id AND u.user_id = c.user_id
+                LEFT JOIN employee_t e ON uh.host_id = e.host_id AND u.user_id = e.user_id
+                WHERE
+                    (u.email = ? OR COALESCE(c.customer_id, e.employee_id) = ?)
+                    AND u.user_type IN ('C', 'E')
+                """;
+        final String insertUser = """
+                INSERT INTO user_t
+                  (user_id, email, language, first_name, last_name, user_type,
+                   phone_number, gender, birthday, country, province, city, address,
+                   post_code, verified, token, locked, aggregate_version)
+                VALUES
+                  (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """;
+        final String insertUserHost = """
+                INSERT INTO user_host_t (user_id, host_id, aggregate_version) VALUES (?, ?, ?)
+                """;
+        final String insertCustomer = """
+                INSERT INTO customer_t (host_id, customer_id, user_id, referral_id, aggregate_version) VALUES (?, ?, ?, ?, ?)
+                """;
+        final String insertEmployee = """
+                INSERT INTO employee_t (host_id, employee_id, user_id, manager_id, aggregate_version) VALUES (?, ?, ?, ?, ?)
+                """;
+
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String userId = (String)map.get("userId");
+        String email = (String)map.get("email");
+        String entityId = (String)map.get("entityId");
+        String hostId = (String)map.get("hostId");
+        String userType = (String)map.get("userType");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        try {
+            try (PreparedStatement statement = conn.prepareStatement(queryEmailEntityId)) {
+                statement.setString(1, email);
+                statement.setString(2, entityId);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        logger.error("entityId {} or email {} already exists in database.", entityId, email);
+                        throw new SQLException(String.format("entityId %s or email %s already exists in database.", entityId, email));
+                    }
+                }
+            }
+
+            try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
+                statement.setObject(1, UUID.fromString(userId));
+                statement.setString(2, email);
+                statement.setString(3, (String)map.get("language"));
+                // ... (rest of the parameter settings for insertUser)
+                String firstName = (String)map.get("firstName");
+                if (firstName != null && !firstName.isEmpty()) statement.setString(4, firstName); else statement.setNull(4, Types.VARCHAR);
+                String lastName = (String)map.get("lastName");
+                if (lastName != null && !lastName.isEmpty()) statement.setString(5, lastName); else statement.setNull(5, Types.VARCHAR);
+                statement.setString(6, userType);
+                String phoneNumber = (String)map.get("phoneNumber");
+                if (phoneNumber != null && !phoneNumber.isEmpty()) statement.setString(7, phoneNumber); else statement.setNull(7, Types.VARCHAR);
+                String gender = (String) map.get("gender");
+                if (gender != null && !gender.isEmpty()) statement.setString(8, gender); else statement.setNull(8, Types.VARCHAR);
+                java.util.Date birthday = (java.util.Date)map.get("birthday"); // Assuming it's passed as java.util.Date
+                if (birthday != null) statement.setDate(9, new java.sql.Date(birthday.getTime())); else statement.setNull(9, Types.DATE);
+                String country = (String)map.get("country");
+                if (country != null && !country.isEmpty()) statement.setString(10, country); else statement.setNull(10, Types.VARCHAR);
+                String province = (String)map.get("province");
+                if (province != null && !province.isEmpty()) statement.setString(11, province); else statement.setNull(11, Types.VARCHAR);
+                String city = (String)map.get("city");
+                if (city != null && !city.isEmpty()) statement.setString(12, city); else statement.setNull(12, Types.VARCHAR);
+                String address = (String)map.get("address");
+                if (address != null && !address.isEmpty()) statement.setString(13, address); else statement.setNull(13, Types.VARCHAR);
+                String postCode = (String)map.get("postCode");
+                if (postCode != null && !postCode.isEmpty()) statement.setString(14, postCode); else statement.setNull(14, Types.VARCHAR);
+                statement.setBoolean(15, (Boolean)map.get("verified"));
+                statement.setString(16, (String)map.get("token"));
+                statement.setBoolean(17, (Boolean)map.get("locked"));
+                statement.setLong(18, newAggregateVersion);
+                statement.execute();
+            }
+            try (PreparedStatement statement = conn.prepareStatement(insertUserHost)) {
+                statement.setObject(1, UUID.fromString(userId));
+                statement.setObject(2, UUID.fromString(hostId));
+                statement.setLong(3, newAggregateVersion);
+                statement.execute();
+            }
+            if("E".equals(userType)) {
+                try (PreparedStatement statement = conn.prepareStatement(insertEmployee)) {
+                    statement.setObject(1, UUID.fromString(hostId));
+                    statement.setString(2, entityId);
+                    statement.setObject(3, UUID.fromString(userId));
+                    String managerId = (String)map.get("managerId");
+                    if(managerId != null && !managerId.isEmpty()) statement.setString(4, managerId); else statement.setNull(4, Types.VARCHAR);
+                    statement.setLong(5, newAggregateVersion);
+                    statement.execute();
+                }
+            } else if("C".equals(userType)) {
+                try (PreparedStatement statement = conn.prepareStatement(insertCustomer)) {
+                    statement.setObject(1, UUID.fromString(hostId));
+                    statement.setString(2, entityId);
+                    statement.setObject(3, UUID.fromString(userId));
+                    String referralId = (String)map.get("referralId");
+                    if(referralId != null && !referralId.isEmpty()) statement.setString(4, referralId); else statement.setNull(4, Types.VARCHAR);
+                    statement.setLong(5, newAggregateVersion);
+                    statement.execute();
+                }
+            } else {
+                throw new SQLException("user_type is not valid: " + userType);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during onboardUser for userId {} aggregateVersion {}: {}", userId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during onboardUser for userId {} aggregateVersion {}: {}", userId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
     public Result<String> loginUserByEmail(String email) {
         Result<String> result;
         String sql = """

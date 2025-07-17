@@ -77,6 +77,7 @@ public interface PortalDbProvider extends DbProvider {
                                      Timestamp processTs, String eventJson, String error);
 
     void createUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void onboardUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void confirmUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void verifyUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<Long> queryNonceByUserId(String userId);
