@@ -193,11 +193,17 @@ public abstract class AbstractCommandHandler implements HybridHandler {
         }
 
         // --- 2. Get Nonce ---
+        Number nonce;
         Result<String> result = HybridQueryClient.getNonceByUserId(exchange, userId);
         if(result.isFailure()) {
-            return NioUtils.toByteBuffer(getStatus(exchange, result.getError()));
+            if(result.getError().getStatusCode() != 404) {
+                return NioUtils.toByteBuffer(getStatus(exchange, result.getError()));
+            } else {
+                // this is a brand-new user that is created or onboarded.
+                nonce = 1;
+            }
         }
-        Number nonce = PortalUtil.parseNumber(result.getResult());
+        nonce = PortalUtil.parseNumber(result.getResult());
         if(logger.isTraceEnabled()) logger.trace("nonce = {}", nonce);
 
         // get the new aggregate version and put it in the map.
