@@ -26,9 +26,7 @@ import org.xnio.OptionMap;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
@@ -1455,6 +1453,91 @@ public class HybridQueryClient {
      */
     public static Result<String> getDeploymentInstancePipeline(HttpServerExchange exchange, String hostId, String instanceId, String systemEnv, String runtimeEnv) {
         final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"deployment\",\"action\":\"getDeploymentInstancePipeline\",\"version\":\"0.1.0\",\"data\":{\"hostId\":\"%s\",\"instanceId\":\"%s\",\"systemEnv\":\"%s\",\"runtimeEnv\":\"%s\"}}", hostId, instanceId, systemEnv, runtimeEnv);
+        if (config.isPortalByServiceUrl()) {
+            return callQueryExchangeUrl(s, exchange, config.getPortalQueryServiceUrl());
+        } else {
+            return callQueryExchange(s, exchange);
+        }
+    }
+
+    /**
+     * Get Applicable Config Properties for Instance
+     *
+     * @param exchange HttpServerExchange
+     * @param hostId host id
+     * @param instanceId instance id
+     * @param resourceTypes resource Types
+     * @param configTypes config Types
+     * @param propertyTypes property Types
+     * @param limit limit
+     * @param offset offset
+     * @return Result the instance applicable properties
+     */
+    public static Result<String> getApplicableConfigPropertiesForInstance(HttpServerExchange exchange, String hostId, String instanceId, Set<String> resourceTypes, Set<String> configTypes, Set<String> propertyTypes, int offset, int limit) {
+        final String data = JsonMapper.toJson(
+                Map.of(
+                        "hostId", hostId != null ? hostId : "",
+                        "instanceId", instanceId != null ? instanceId : "",
+                        "resourceTypes", resourceTypes != null ? resourceTypes : Collections.emptySet(),
+                        "configTypes", configTypes != null ? configTypes : Collections.emptySet(),
+                        "propertyTypes", propertyTypes != null ? propertyTypes : Collections.emptySet(),
+                        "limit", limit,
+                        "offset", offset
+                )
+        );
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"config\",\"action\":\"getApplicableConfigPropertiesForInstance\",\"version\":\"0.1.0\",\"data\":%s}", data);
+        if (config.isPortalByServiceUrl()) {
+            return callQueryExchangeUrl(s, exchange, config.getPortalQueryServiceUrl());
+        } else {
+            return callQueryExchange(s, exchange);
+        }
+    }
+
+    public static Result<String> getApplicableConfigPropertiesForInstanceApi(HttpServerExchange exchange, String hostId, String instanceApiId, int offset, int limit) {
+        final String data = JsonMapper.toJson(
+            Map.of(
+                "hostId", hostId != null ? hostId : "",
+                "instanceApiId", instanceApiId != null ? instanceApiId : "",
+                "limit", limit,
+                "offset", offset
+            )
+        );
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"config\",\"action\":\"getApplicableConfigPropertiesForInstanceApi\",\"version\":\"0.1.0\",\"data\":%s}", data);
+        if (config.isPortalByServiceUrl()) {
+            return callQueryExchangeUrl(s, exchange, config.getPortalQueryServiceUrl());
+        } else {
+            return callQueryExchange(s, exchange);
+        }
+    }
+
+    public static Result<String> getApplicableConfigPropertiesForInstanceApp(HttpServerExchange exchange, String hostId, String instanceAppId, int offset, int limit) {
+        final String data = JsonMapper.toJson(
+            Map.of(
+                "hostId", hostId != null ? hostId : "",
+                "instanceAppId", instanceAppId != null ? instanceAppId : "",
+                "limit", limit,
+                "offset", offset
+            )
+        );
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"config\",\"action\":\"getApplicableConfigPropertiesForInstanceApp\",\"version\":\"0.1.0\",\"data\":%s}", data);
+        if (config.isPortalByServiceUrl()) {
+            return callQueryExchangeUrl(s, exchange, config.getPortalQueryServiceUrl());
+        } else {
+            return callQueryExchange(s, exchange);
+        }
+    }
+
+    public static Result<String> getApplicableConfigPropertiesForInstanceAppApi(HttpServerExchange exchange, String hostId, String instanceAppId, String instanceApiId, int offset, int limit) {
+        final String data = JsonMapper.toJson(
+            Map.of(
+                "hostId", hostId != null ? hostId : "",
+                "instanceAppId", instanceAppId != null ? instanceAppId : "",
+                "instanceApiId", instanceApiId != null ? instanceApiId : "",
+                "limit", limit,
+                "offset", offset
+            )
+        );
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"config\",\"action\":\"getApplicableConfigPropertiesForInstanceAppApi\",\"version\":\"0.1.0\",\"data\":%s}", data);
         if (config.isPortalByServiceUrl()) {
             return callQueryExchangeUrl(s, exchange, config.getPortalQueryServiceUrl());
         } else {
