@@ -16,6 +16,7 @@ public interface UserPersistence {
     Result<String> queryUserByHostId(int offset, int limit, String hostId, String email, String language, String userType, String entityId, String referralId, String managerId, String firstName, String lastName, String phoneNumber, String gender, String birthday, String country, String province, String city, String address, String postCode, Boolean verified, Boolean locked);
 
     void createUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void onboardUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<Long> queryNonceByUserId(String userId);
 
     void confirmUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;

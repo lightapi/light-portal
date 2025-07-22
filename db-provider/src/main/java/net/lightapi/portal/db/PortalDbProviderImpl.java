@@ -96,6 +96,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public Result<String> queryUserByWallet(String cryptoType, String cryptoAddress) { return userPersistence.queryUserByWallet(cryptoType, cryptoAddress); }
     @Override public Result<String> queryUserByHostId(int offset, int limit, String hostId, String email, String language, String userType, String entityId, String referralId, String managerId, String firstName, String lastName, String phoneNumber, String gender, String birthday, String country, String province, String city, String address, String postCode, Boolean verified, Boolean locked) { return userPersistence.queryUserByHostId(offset, limit, hostId, email, language, userType, entityId, referralId, managerId, firstName, lastName, phoneNumber, gender, birthday, country, province, city, address, postCode, verified, locked); }
     @Override public void createUser(Connection connection, Map<String, Object> event) throws SQLException, Exception { userPersistence.createUser(connection, event); }
+    @Override public void onboardUser(Connection connection, Map<String, Object> event) throws SQLException, Exception { userPersistence.onboardUser(connection, event); }
     @Override public Result<Long> queryNonceByUserId(String userId) { return userPersistence.queryNonceByUserId(userId); }
     @Override public void confirmUser(Connection connection, Map<String, Object> event) throws SQLException, Exception { userPersistence.confirmUser(connection, event); }
     @Override public void verifyUser(Connection connection, Map<String, Object> event) throws SQLException, Exception { userPersistence.verifyUser(connection, event); }
@@ -437,12 +438,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void createRule(Connection connection, Map<String, Object> event) throws SQLException, Exception { rulePersistence.createRule(connection, event); }
     @Override public void updateRule(Connection connection, Map<String, Object> event) throws SQLException, Exception { rulePersistence.updateRule(connection, event); }
     @Override public void deleteRule(Connection connection, Map<String, Object> event) throws SQLException, Exception { rulePersistence.deleteRule(connection, event); }
-    @Override public Result<List<Map<String, Object>>> queryRuleByHostGroup(String hostId, String groupId) { return rulePersistence.queryRuleByHostGroup(hostId, groupId); }
+    @Override public Result<List<Map<String, Object>>> queryRuleByGroup(String groupId) { return rulePersistence.queryRuleByGroup(groupId); }
     @Override public Result<String> queryRule(int offset, int limit, String hostId, String ruleId, String ruleName,
                                               String ruleVersion, String ruleType, String ruleGroup, String ruleDesc,
-                                              String ruleBody, String ruleOwner, String common) { return rulePersistence.queryRule(offset, limit, hostId, ruleId, ruleName, ruleVersion, ruleType, ruleGroup, ruleDesc, ruleBody, ruleOwner, common); }
+                                              String ruleBody, String ruleOwner) { return rulePersistence.queryRule(offset, limit, hostId, ruleId, ruleName, ruleVersion, ruleType, ruleGroup, ruleDesc, ruleBody, ruleOwner); }
     @Override public Result<Map<String, Object>> queryRuleById(String ruleId) { return rulePersistence.queryRuleById(ruleId); }
-    @Override public Result<String> queryRuleByHostType(String hostId, String ruleType) { return rulePersistence.queryRuleByHostType(hostId, ruleType); }
+    @Override public Result<String> queryRuleByType(String ruleType) { return rulePersistence.queryRuleByType(ruleType); }
     @Override public Result<List<Map<String, Object>>> queryRuleByHostApiId(String hostId, String apiId, String apiVersion) { return rulePersistence.queryRuleByHostApiId(hostId, apiId, apiVersion); }
 
     // --- Event ---

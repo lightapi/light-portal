@@ -9,23 +9,23 @@ import com.networknt.utility.Constants;
 import com.networknt.utility.UuidUtil;
 import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.PortalConstants;
+import net.lightapi.portal.db.ConcurrencyException;
 import net.lightapi.portal.db.PortalDbProvider;
 import net.lightapi.portal.db.util.NotificationService;
 import net.lightapi.portal.db.util.SqlUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.Connection; // Added import
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.SQLException; // Added import
+import java.sql.SQLException;
 import java.sql.Types;
-import java.sql.Array; // Added import for array handling in snapshot methods
+import java.sql.Array;
 import java.time.OffsetDateTime;
 import java.util.*;
 
 import static com.networknt.db.provider.SqlDbStartupHook.ds;
-import static java.sql.Types.NULL;
 
 public class ConfigPersistenceImpl implements ConfigPersistence {
     private static final Logger logger = LoggerFactory.getLogger(ConfigPersistenceImpl.class);
@@ -41,11 +41,15 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
     @Override
     public void createConfig(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "INSERT INTO config_t(config_id, config_name, config_phase, config_type, light4j_version, " +
-                "class_path, config_desc, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        final String sql =
+                """
+                INSERT INTO config_t(config_id, config_name, config_phase, config_type, light4j_version,
+                class_path, config_desc, update_user, update_ts, aggregate_version)
+                VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?)
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String configId = (String)map.get("configId"); // For logging/exceptions
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(configId));
@@ -72,31 +76,46 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             }
             statement.setString(8, (String)event.get(Constants.USER));
             statement.setObject(9, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(10, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert the config with id " + configId);
+                throw new SQLException("Failed to insert the config with id " + configId + " with aggregateVersion " + newAggregateVersion + ".");
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during createConfig for id {}: {}", configId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during createConfig for id {} aggregateVersion {}: {}", configId, newAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during createConfig for id {}: {}", configId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during createConfig for id {} aggregateVersion {}: {}", configId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    private boolean queryConfigExists(Connection conn, String configId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM config_t WHERE config_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(configId));
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
     @Override
     public void updateConfig(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "UPDATE config_t SET config_name = ?, config_phase = ?, config_type = ?, " +
-                "light4j_version = ?, class_path = ?, config_desc = ?, update_user = ?, update_ts = ? " +
-                "WHERE config_id = ?";
+        final String sql =
+                """
+                UPDATE config_t SET config_name = ?, config_phase = ?, config_type = ?, light4j_version = ?,
+                class_path = ?, config_desc = ?, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE config_id = ? AND aggregate_version = ?
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String configId = (String)map.get("configId"); // For logging/exceptions
+        String configId = (String)map.get("configId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setString(1, (String)map.get("configName"));
@@ -122,46 +141,51 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             }
             statement.setString(7, (String)event.get(Constants.USER));
             statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setObject(9, UUID.fromString(configId));
+            statement.setLong(9, newAggregateVersion);
+            statement.setObject(10, UUID.fromString(configId));
+            statement.setLong(11, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to update config with id " + configId);
+                if (queryConfigExists(conn, configId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict for config " + configId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found to update for config " + configId + ".");
+                }
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during updateConfig for id {}: {}", configId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during updateConfig for id {} (old: {}) -> (new: {}): {}", configId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateConfig for id {}: {}", configId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during updateConfig for id {} (old: {}) -> (new: {}): {}", configId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
     @Override
     public void deleteConfig(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM config_t WHERE config_id = ?";
+        final String sql = "DELETE FROM config_t WHERE config_id = ? AND aggregate_version = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String configId = (String)map.get("configId"); // For logging/exceptions
+        String configId = (String)map.get("configId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(configId));
-
+            statement.setLong(2, oldAggregateVersion);
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to delete config with id " + configId);
+                if (queryConfigExists(conn, configId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteConfig for config " + configId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deleteConfig for config " + configId + ". It might have been already deleted.");
+                }
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
             logger.error("SQLException during deleteConfig for id {}: {}", configId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            throw e;
         } catch (Exception e) {
             logger.error("Exception during deleteConfig for id {}: {}", configId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            throw e;
         }
     }
 
@@ -173,7 +197,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 """
                 SELECT COUNT(*) OVER () AS total,
                 config_id, config_name, config_phase, config_type, light4j_version,
-                class_path, config_desc, update_user, update_ts
+                class_path, config_desc, update_user, update_ts, aggregate_version
                 FROM config_t
                 WHERE 1=1
                 """;
@@ -227,8 +251,8 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("classPath", resultSet.getString("class_path"));
                     map.put("configDesc", resultSet.getString("config_desc"));
                     map.put("updateUser", resultSet.getString("update_user"));
-                    // handling date properly
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
 
                     configs.add(map);
                 }
@@ -252,8 +276,12 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
     @Override
     public Result<String> queryConfigById(String configId) {
-        final String queryConfigById = "SELECT config_id, config_name, config_phase, config_type, light4j_version, " +
-                "class_path, config_desc, update_user, update_ts FROM config_t WHERE config_id = ?";
+        final String queryConfigById =
+                """
+                SELECT config_id, config_name, config_phase, config_type, light4j_version,
+                class_path, config_desc, update_user, update_ts, aggregate_version
+                FROM config_t WHERE config_id = ?
+                """;
         Result<String> result;
         Map<String, Object> config = new HashMap<>();
 
@@ -272,8 +300,8 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     config.put("classPath", resultSet.getString("class_path"));
                     config.put("configDesc", resultSet.getString("config_desc"));
                     config.put("updateUser", resultSet.getString("update_user"));
-                    // handling date properly
                     config.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    config.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     result = Success.of(JsonMapper.toJson(config));
                 } else {
                     result = Failure.of(new Status(OBJECT_NOT_FOUND, "config", configId));
@@ -432,17 +460,22 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
     @Override
     public void createConfigProperty(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "INSERT INTO config_property_t (config_id, property_id, property_name, property_type, " +
-                "property_value, resource_type, value_type, display_order, required, property_desc, " +
-                "light4j_version, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?)";
+        final String sql =
+                """
+                INSERT INTO config_property_t (config_id, property_id, property_name, property_type,
+                property_value, resource_type, value_type, display_order, required, property_desc,
+                light4j_version, update_user, update_ts, aggregate_version)
+                VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?, ?)
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String configId = (String)map.get("configId");
+        String propertyId = (String)map.get("propertyId");
         String propertyName = (String)map.get("propertyName");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(configId));
-            statement.setObject(2, UUID.fromString((String)map.get("propertyId")));
+            statement.setObject(2, UUID.fromString(propertyId));
             statement.setString(3, propertyName);
             statement.setString(4, (String)map.get("propertyType"));
 
@@ -497,34 +530,49 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
             statement.setString(12, (String)event.get(Constants.USER));
             statement.setObject(13, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(14, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert the config property with id " + configId + " and name " + propertyName);
+                throw new SQLException("Failed to insert the config property with id " + propertyId + " and aggregateVersion " + newAggregateVersion + ".");
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during createConfigProperty for configId {} propertyName {}: {}", configId, propertyName, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during createConfigProperty for propertyId {} aggregateVersion {}: {}", propertyId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createConfigProperty for configId {} propertyName {}: {}", configId, propertyName, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during createConfigProperty for propertyId {} aggregateVersion {}: {}", propertyId, newAggregateVersion, e.getMessage(), e);
             throw e;
+        }
+    }
+
+    private boolean queryConfigPropertyExists(Connection conn, String propertyId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM config_property_t WHERE property_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(propertyId));
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
     @Override
     public void updateConfigProperty(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "UPDATE config_property_t SET property_name = ?, property_type = ?, property_value = ?, " +
-                "resource_type = ?, value_type = ?, display_order = ?, required = ?, property_desc = ?, " +
-                "light4j_version = ?, update_user = ?, update_ts = ? " +
-                "WHERE config_id = ? AND property_id = ?";
+        final String sql =
+                """
+                UPDATE config_property_t SET property_name = ?, property_type = ?, property_value = ?,
+                resource_type = ?, value_type = ?, display_order = ?, required = ?, property_desc = ?,
+                light4j_version = ?, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE config_id = ? AND property_id = ? AND aggregate_version = ?
+                """;
 
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String configId = (String)map.get("configId");
         String propertyId = (String)map.get("propertyId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             // Set the update values from the event and the parsed JSON
@@ -582,54 +630,56 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
             statement.setString(10, (String)event.get(Constants.USER));
             statement.setObject(11, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(12, newAggregateVersion);
 
             // WHERE clause: Crucial for updating the correct row!
-            statement.setObject(12, UUID.fromString(configId));
-            statement.setObject(13, UUID.fromString(propertyId));
+            statement.setObject(13, UUID.fromString(configId));
+            statement.setObject(14, UUID.fromString(propertyId));
+            statement.setLong(15, oldAggregateVersion);
 
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                // No rows were updated.  This could mean the config_id and property_name
-                // combination doesn't exist, or it could be a concurrency issue.
-                throw new SQLException("Failed to update config property. No rows affected for config_id: " + configId + " and property_id: " + propertyId);
+                if (queryConfigPropertyExists(conn, propertyId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict for config property " + propertyId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found to update for config property " + propertyId + ".");
+                }
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during updateConfigProperty for configId {} propertyId {}: {}", configId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during updateConfigProperty for propertyId {} (old: {}) -> (new: {}): {}", propertyId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateConfigProperty for configId {} propertyId {}: {}", configId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during updateConfigProperty for propertyId {} (old: {}) -> (new: {}): {}", propertyId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
     public void deleteConfigProperty(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM config_property_t WHERE config_id = ? AND property_id = ?";
+        final String sql = "DELETE FROM config_property_t WHERE config_id = ? AND property_id = ? AND aggregate_version = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String configId = (String)map.get("configId");
         String propertyId = (String)map.get("propertyId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(configId));
             statement.setObject(2, UUID.fromString(propertyId));
+            statement.setLong(3, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to delete config property. No rows affected for config_id: " + configId + " and property_id: " + propertyId);
+                if (queryConfigPropertyExists(conn, propertyId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict for config property " + propertyId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deleteConfigProperty for propertyId " + propertyId + ". It might have been already deleted.");
+                }
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during deleteConfigProperty for configId {} propertyId {}: {}", configId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during deleteConfigProperty for propertyId {} aggregateVersion {}: {}", propertyId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteConfigProperty for configId {} propertyId {}: {}", configId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during deleteConfigProperty for propertyId {} aggregateVersion {}: {}", propertyId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -646,7 +696,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 SELECT COUNT(*) OVER () AS total,
                 cp.config_id, cp.property_id, cp.property_name, cp.property_type, cp.light4j_version,
                 cp.display_order, cp.required, cp.property_desc, cp.property_value, cp.value_type,
-                cp.resource_type, cp.update_user, cp.update_ts, c.config_name
+                cp.resource_type, cp.update_user, cp.update_ts, c.config_name, cp.aggregate_version
                 FROM config_property_t cp
                 JOIN config_t c ON cp.config_id = c.config_id
                 WHERE 1=1
@@ -713,6 +763,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("resourceType", resultSet.getString("resource_type"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
 
                     configProperties.add(map);
                 }
@@ -741,7 +792,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 """
                 SELECT cp.config_id, cp.property_id, cp.property_name, cp.property_type, cp.light4j_version,
                 cp.display_order, cp.required, cp.property_desc, cp.property_value, cp.value_type,
-                cp.resource_type, cp.update_user, cp.update_ts, c.config_name
+                cp.resource_type, cp.update_user, cp.update_ts, c.config_name, cp.aggregate_version
                 FROM config_property_t cp
                 JOIN config_t c ON cp.config_id = c.config_id
                 WHERE cp.config_id = ?
@@ -770,6 +821,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("resourceType", resultSet.getString("resource_type"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     configProperties.add(map);
                 }
             }
@@ -797,7 +849,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 """
                 SELECT cp.config_id, cp.property_id, cp.property_name, cp.property_type, cp.light4j_version,
                 cp.display_order, cp.required, cp.property_desc, cp.property_value, cp.value_type,
-                cp.resource_type, cp.update_user, cp.update_ts, c.config_name
+                cp.resource_type, cp.update_user, cp.update_ts, c.config_name, cp.aggregate_version
                 FROM config_property_t cp
                 INNER JOIN config_t c ON cp.config_id = c.config_id
                 WHERE cp.config_id = ?
@@ -828,6 +880,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("resourceType", resultSet.getString("resource_type"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                 }
             }
 
@@ -849,12 +902,13 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     @Override
     public void createConfigEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "INSERT INTO environment_property_t (host_id, environment, property_id, " +
-                "property_value, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?,  ?)";
+                "property_value, update_user, update_ts, aggregate_version) " +
+                "VALUES (?, ?, ?, ?, ?,  ?, ?)";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)map.get("hostId");
         String environment = (String)map.get("environment");
         String propertyId = (String)map.get("propertyId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
@@ -870,33 +924,49 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
             statement.setString(5, (String)event.get(Constants.USER));
             statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(7, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert environment property for environment: " + environment +
-                        ", host_id: " + hostId + ", property_id: " + propertyId);
+                throw new SQLException(String.format("Failed to insert environment property for environment %s propertyId %s with aggregateVersion %d", environment, propertyId, newAggregateVersion));
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during createConfigEnvironment for hostId {} environment {} propertyId {}: {}", hostId, environment, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during createConfigEnvironment for hostId {} environment {} propertyId {} aggregateVersion {}: {}", hostId, environment, propertyId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createConfigEnvironment for hostId {} environment {} propertyId {}: {}", hostId, environment, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during createConfigEnvironment for hostId {} environment {} propertyId {} aggregateVersion {}: {}", hostId, environment, propertyId, newAggregateVersion, e.getMessage(), e);
             throw e;
+        }
+    }
+
+    private boolean queryConfigEnvironmentExists(Connection conn, String hostId, String environment, String propertyId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM environment_property_t WHERE host_id = ? AND environment = ? AND property_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(hostId));
+            pst.setString(2, environment);
+            pst.setObject(3, UUID.fromString(propertyId));
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
     @Override
     public void updateConfigEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "UPDATE environment_property_t SET property_value = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? AND environment = ? AND property_id = ?";
+        final String sql =
+                """
+                UPDATE environment_property_t SET property_value = ?, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? AND environment = ? AND property_id = ? AND aggregate_version = ?
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)map.get("hostId");
         String environment = (String)map.get("environment");
         String propertyId = (String)map.get("propertyId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
 
@@ -908,56 +978,59 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
             statement.setString(2, (String)event.get(Constants.USER));
             statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(4, newAggregateVersion);
 
             // WHERE clause parameters
-            statement.setObject(4, UUID.fromString(hostId));
-            statement.setString(5, environment);
-            statement.setObject(6, UUID.fromString(propertyId));
+            statement.setObject(5, UUID.fromString(hostId));
+            statement.setString(6, environment);
+            statement.setObject(7, UUID.fromString(propertyId));
+            statement.setLong(8, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to update environment property. No rows affected for environment: " + environment +
-                        ", property_id: " + propertyId);
+                if (queryConfigEnvironmentExists(conn, (String)event.get(Constants.HOST), environment, propertyId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict for environment config hostId " + hostId + " environment " + environment + " propertyId " + propertyId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found to update for environment config hostId " + hostId + " environment " + environment + " propertyId " + propertyId + ".");
+                }
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during updateConfigEnvironment for hostId {} environment {} propertyId {}: {}", hostId, environment, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during updateConfigEnvironment for hostId {} environment {} propertyId {} (old: {}) -> (new: {}): {}", hostId, environment, propertyId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateConfigEnvironment for hostId {} environment {} propertyId {}: {}", hostId, environment, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during updateConfigEnvironment for hostId {} environment {} propertyId {} (old: {}) -> (new: {}): {}", hostId, environment, propertyId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
     public void deleteConfigEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM environment_property_t WHERE host_id = ? AND environment = ? AND property_id = ?";
+        final String sql = "DELETE FROM environment_property_t WHERE host_id = ? AND environment = ? AND property_id = ? AND aggregate_version = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)map.get("hostId");
         String environment = (String)map.get("environment");
         String propertyId = (String)map.get("propertyId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
             statement.setString(2, environment);
             statement.setObject(3, UUID.fromString(propertyId));
+            statement.setLong(4, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to delete environment property. No rows affected for hostId: " + hostId + ", environment: " + environment +
-                        ", property_id: " + propertyId);
+                if (queryConfigEnvironmentExists(conn, (String)event.get(Constants.HOST), environment, propertyId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteConfigEnvironment for hostId " + hostId + " environment " + environment + " propertyId " + propertyId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deleteConfigEnvironment for hostId " + hostId + " environment " + environment + " propertyId " + propertyId + ". It might have been already deleted.");
+                }
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during deleteConfigEnvironment for hostId {} environment {} propertyId {}: {}", hostId, environment, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during deleteConfigEnvironment for hostId {} environment {} propertyId {} aggregateVersion {}: {}", hostId, environment, propertyId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteConfigEnvironment for hostId {} environment {} propertyId {}: {}", hostId, environment, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during deleteConfigEnvironment for hostId {} environment {} propertyId {} aggregateVersion {}: {}", hostId, environment, propertyId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -970,7 +1043,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 SELECT COUNT(*) OVER () AS total,
                 ep.host_id, ep.environment, c.config_id, c.config_name,
                 ep.property_id, p.property_name, ep.property_value,
-                ep.update_user, ep.update_ts
+                ep.update_user, ep.update_ts, ep.aggregate_version
                 FROM environment_property_t ep
                 JOIN config_property_t p ON ep.property_id = p.property_id
                 JOIN config_t c ON p.config_id = c.config_id
@@ -1030,6 +1103,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("propertyId", resultSet.getString("property_id"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
 
                     configEnvironments.add(map);
                 }
@@ -1052,12 +1126,16 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
     @Override
     public void createConfigInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "INSERT INTO instance_api_property_t (host_id, instance_api_id, property_id, " +
-                "property_value, update_user, update_ts) VALUES (?, ?, ?, ?, ?,  ?)";
+        final String sql =
+                """
+                INSERT INTO instance_api_property_t (host_id, instance_api_id, property_id,
+                property_value, update_user, update_ts, aggregate_version) VALUES (?, ?, ?, ?, ?,  ?, ?)
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST);
         String instanceApiId = (String)map.get("instanceApiId");
         String propertyId = (String)map.get("propertyId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
@@ -1070,34 +1148,51 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             }
             statement.setString(5, (String)event.get(Constants.USER));
             statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(7, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert instance API for host_id: " + hostId +
-                        ", instance_api_id: " + instanceApiId + ", property_id: " + propertyId);
+                throw new SQLException(String.format("Failed to insert instance api property hostId %s instanceApiId %s propertyId %s with aggregateVersion %d", hostId, instanceApiId, propertyId, newAggregateVersion));
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during createConfigInstanceApi for hostId {} instanceApiId {} propertyId {}: {}", hostId, instanceApiId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during createConfigInstanceApi for hostId {} instanceApiId {} propertyId {} aggregateVersion {}: {}", hostId, instanceApiId, propertyId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createConfigInstanceApi for hostId {} instanceApiId {} propertyId {}: {}", hostId, instanceApiId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during createConfigInstanceApi for hostId {} instanceApiId {} propertyId {} aggregateVersion {}: {}", hostId, instanceApiId, propertyId, newAggregateVersion, e.getMessage(), e);
             throw e;
+        }
+    }
+
+    private boolean queryConfigInstanceApiExists(Connection conn, String hostId, String instanceApiId, String propertyId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM instance_api_property_t WHERE host_id = ? AND instance_api_id = ? AND property_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(hostId));
+            pst.setString(2, instanceApiId);
+            pst.setObject(3, UUID.fromString(propertyId));
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
     @Override
     public void updateConfigInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "UPDATE instance_api_property_t SET " +
-                "property_value = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? AND instance_api_id = ? AND property_id = ?";
+        final String sql =
+                """
+                UPDATE instance_api_property_t SET
+                property_value = ?, update_user = ?, update_ts = ?, aggregate_version" +
+                WHERE host_id = ? AND instance_api_id = ? AND property_id = ?
+                AND aggregate_version = ?
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST);
         String instanceApiId = (String)map.get("instanceApiId");
         String propertyId = (String)map.get("propertyId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             if (map.containsKey("propertyValue")) {
@@ -1107,57 +1202,61 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             }
             statement.setString(2, (String)event.get(Constants.USER));
             statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setObject(4, UUID.fromString(hostId));
-            statement.setObject(5, UUID.fromString(instanceApiId));
-            statement.setObject(6, UUID.fromString(propertyId));
+            statement.setLong(4, newAggregateVersion);
+            statement.setObject(5, UUID.fromString(hostId));
+            statement.setObject(6, UUID.fromString(instanceApiId));
+            statement.setObject(7, UUID.fromString(propertyId));
+            statement.setLong(8, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to update instance API. No rows affected for host_id: " + hostId +
-                        ", instance_api_id: " + instanceApiId +
-                        ", property_id: " + propertyId);
+                if (queryConfigInstanceApiExists(conn, hostId, instanceApiId, propertyId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict for config instance api hostId " + hostId + " instanceApiId " + instanceApiId + " propertyId " + propertyId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found to update for config instance api hostId " + hostId + " instanceApiId " + instanceApiId + " propertyId " + propertyId + ".");
+                }
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during updateConfigInstanceApi for hostId {} instanceApiId {} propertyId {}: {}", hostId, instanceApiId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during updateConfigInstanceApi for hostId {} instanceApiId {} propertyId {} (old: {}) -> (new: {}): {}", hostId, instanceApiId, propertyId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateConfigInstanceApi for hostId {} instanceApiId {} propertyId {}: {}", hostId, instanceApiId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during updateConfigInstanceApi for hostId {} instanceApiId {} propertyId {} (old: {}) -> (new: {}): {}", hostId, instanceApiId, propertyId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
     public void deleteConfigInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM instance_api_property_t " +
-                "WHERE host_id = ? AND instance_api_id = ? AND property_id = ?";
+        final String sql =
+                """
+                DELETE FROM instance_api_property_t
+                WHERE host_id = ? AND instance_api_id = ? AND property_id = ? AND aggregate_version = ?
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST);
         String instanceApiId = (String)map.get("instanceApiId");
         String propertyId = (String)map.get("propertyId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
             statement.setObject(2, UUID.fromString(instanceApiId));
             statement.setObject(3, UUID.fromString(propertyId));
+            statement.setLong(4, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to delete instance API property. No rows affected for host_id: " + hostId +
-                        ", instance_api_id: " + instanceApiId + ", property_id: " + propertyId);
-            }
-            notificationService.insertNotification(event, true, null);
-
+                if (queryConfigInstanceApiExists(conn, hostId, instanceApiId, propertyId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteConfigInstanceApi hostId " + hostId + " instanceApiId " + instanceApiId + " propertyId " + propertyId + " aggregateVersion " + oldAggregateVersion +  " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deleteConfigInstanceApi hostId " + hostId + " instanceApiId " + instanceApiId + " propertyId " + propertyId + ". It might have been already deleted.");
+                }
+        }
         } catch (SQLException e) {
-            logger.error("SQLException during deleteConfigInstanceApi for hostId {} instanceApiId {} propertyId {}: {}", hostId, instanceApiId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during deleteConfigInstanceApi for hostId {} instanceApiId {} propertyId {} aggregateVersion {}: {}", hostId, instanceApiId, propertyId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteConfigInstanceApi for hostId {} instanceApiId {} propertyId {}: {}", hostId, instanceApiId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during deleteConfigInstanceApi for hostId {} instanceApiId {} propertyId {} aggregateVersion {}: {}", hostId, instanceApiId, propertyId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -1172,7 +1271,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 """
                 SELECT COUNT(*) OVER () AS total,
                 iap.host_id, iap.instance_api_id, ia.instance_id, i.instance_name, ia.api_version_id, av.api_id, av.api_version, ia.active,
-                ia.update_user, ia.update_ts, p.config_id, c.config_name, iap.property_id, p.property_name, iap.property_value,
+                ia.update_user, ia.update_ts, p.config_id, c.config_name, iap.property_id, p.property_name, iap.property_value, iap.aggregate_version,
                 p.required, p.property_desc, p.property_type, p.resource_type, p.value_type, c.config_type, c.config_desc, c.class_path
                 FROM instance_api_t ia
                 INNER JOIN api_version_t av ON av.api_version_id = ia.api_version_id
@@ -1244,7 +1343,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("propertyId", resultSet.getObject("property_id", UUID.class));
                     map.put("propertyName", resultSet.getString("property_name"));
                     map.put("propertyValue", resultSet.getString("property_value"));
-                    map.put("required", resultSet.getString("required"));
+                    map.put("required", resultSet.getBoolean("required"));
                     map.put("propertyDesc", resultSet.getString("property_desc"));
                     map.put("propertyType", resultSet.getString("property_type"));
                     map.put("resourceType", resultSet.getString("resource_type"));
@@ -1254,6 +1353,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("classPath", resultSet.getString("class_path"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     instanceApis.add(map);
                 }
             }
@@ -1275,12 +1375,13 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
     @Override
     public void createConfigInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "INSERT INTO instance_app_property_t (host_id, instance_app_id, property_id, property_value, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?,  ?)";
+        final String sql = "INSERT INTO instance_app_property_t (host_id, instance_app_id, property_id, property_value, update_user, update_ts, aggregate_version) " +
+                "VALUES (?, ?, ?, ?, ?,  ?, ?)";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST);
         String instanceAppId = (String)map.get("instanceAppId");
         String propertyId = (String)map.get("propertyId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
@@ -1293,35 +1394,52 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             }
             statement.setString(5, (String)event.get(Constants.USER));
             statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(7, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert instance app for host_id: " + hostId +
-                        ", instance_app_id: " + instanceAppId + ", property_id: " + propertyId);
+                throw new SQLException(String.format("Failed during createConfigInstanceApp hostId %s instanceAppId %s propertyId %s with aggregateVersion %d", hostId, instanceAppId, propertyId, newAggregateVersion));
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during createConfigInstanceApp for hostId {} instanceAppId {} propertyId {}: {}", hostId, instanceAppId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during createConfigInstanceApp for hostId {} instanceAppId {} propertyId {} aggregateVersion {}: {}", hostId, instanceAppId, propertyId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createConfigInstanceApp for hostId {} instanceAppId {} propertyId {}: {}", hostId, instanceAppId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during createConfigInstanceApp for hostId {} instanceAppId {} propertyId {} aggregateVersion {}: {}", hostId, instanceAppId, propertyId, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
+    private boolean queryConfigInstanceAppExists(Connection conn, String hostId, String instanceAppId, String propertyId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM instance_app_property_t WHERE host_id = ? AND instance_app_id = ? AND property_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(hostId));
+            pst.setObject(2, UUID.fromString(instanceAppId));
+            pst.setObject(3, UUID.fromString(propertyId));
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        }
+    }
+
+
     @Override
     public void updateConfigInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "UPDATE instance_app_property_t SET " +
-                "property_value = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? AND instance_app_id = ? AND property_id = ?";
+        final String sql =
+                """
+                UPDATE instance_app_property_t SET
+                property_value = ?, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? AND instance_app_id = ? AND property_id = ? AND aggregate_version = ?
+                """;
 
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST);
         String instanceAppId = (String)map.get("instanceAppId");
         String propertyId = (String)map.get("propertyId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             if (map.containsKey("propertyValue")) {
@@ -1331,57 +1449,61 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             }
             statement.setString(2, (String)event.get(Constants.USER));
             statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(4, newAggregateVersion);
             statement.setObject(4, UUID.fromString(hostId));
             statement.setObject(5, UUID.fromString(instanceAppId));
             statement.setObject(6, UUID.fromString(propertyId));
+            statement.setLong(7, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to update instance app. No rows affected for host_id: " + hostId +
-                        ", instance_app_id: " + instanceAppId +
-                        ", property_id: " + propertyId);
+                if (queryConfigInstanceAppExists(conn, hostId, instanceAppId, propertyId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during updateConfigInstanceApp for hostId " + hostId + " instanceAppId " + instanceAppId + " propertyId " + propertyId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found during updateConfigInstanceApp for hostId " + hostId + " instanceAppId " + instanceAppId + " propertyId " + propertyId + ".");
+                }
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during updateConfigInstanceApp for hostId {} instanceAppId {} propertyId {}: {}", hostId, instanceAppId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during updateConfigInstanceApp for hostId {} instanceAppId {} propertyId {} (old: {}) -> (new: {}): {}", hostId, instanceAppId, propertyId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateConfigInstanceApp for hostId {} instanceAppId {} propertyId {}: {}", hostId, instanceAppId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during updateConfigInstanceApp for hostId {} instanceAppId {} propertyId {} (old: {}) -> (new: {}): {}", hostId, instanceAppId, propertyId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
     public void deleteConfigInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM instance_app_property_t " +
-                "WHERE host_id = ? AND instance_app_id = ? AND property_id = ?";
+        final String sql =
+                """
+                DELETE FROM instance_app_property_t
+                WHERE host_id = ? AND instance_app_id = ? AND property_id = ? AND aggregate_version = ?
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST);
         String instanceAppId = (String)map.get("instanceAppId");
         String propertyId = (String)map.get("propertyId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
             statement.setObject(2, UUID.fromString(instanceAppId));
             statement.setObject(3, UUID.fromString(propertyId));
+            statement.setLong(4, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to delete instance app. No rows affected for host_id: " + hostId +
-                        ", instance_app_id: " + instanceAppId + ", property_id: " + propertyId);
+                if (queryConfigInstanceAppExists(conn, hostId, instanceAppId, propertyId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteConfigInstanceApp for hostId " + hostId + " instanceAppId " + instanceAppId + " propertyId " + propertyId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deleteConfigInstanceApp for hostId " + hostId + " instanceAppId " + instanceAppId + " propertyId " + propertyId + ". It might have been already deleted.");
+                }
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during deleteConfigInstanceApp for hostId {} instanceAppId {} propertyId {}: {}", hostId, instanceAppId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during deleteConfigInstanceApp for hostId {} instanceAppId {} propertyId {} aggregateVersion {}: {}", hostId, instanceAppId, propertyId, e.getMessage(), oldAggregateVersion, e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteConfigInstanceApp for hostId {} instanceAppId {} propertyId {}: {}", hostId, instanceAppId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during deleteConfigInstanceApp for hostId {} instanceAppId {} propertyId {} aggregateVersion {}: {}", hostId, instanceAppId, propertyId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -1395,7 +1517,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 """
                 SELECT COUNT(*) OVER () AS total,
                 iap.host_id, iap.instance_app_id, ia.instance_id, i.instance_name, ia.app_id, ia.app_version, ia.active,
-                p.config_id, c.config_name, iap.property_id, p.property_name, iap.property_value,
+                p.config_id, c.config_name, iap.property_id, p.property_name, iap.property_value, iap.aggregate_version,
                 p.required, p.property_desc, p.property_type, p.resource_type, p.value_type, c.config_type, c.config_desc, c.class_path,
                 ia.update_user, ia.update_ts
                 FROM instance_app_t ia
@@ -1465,7 +1587,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("propertyId", resultSet.getObject("property_id", UUID.class));
                     map.put("propertyName", resultSet.getString("property_name"));
                     map.put("propertyValue", resultSet.getString("property_value"));
-                    map.put("required", resultSet.getString("required"));
+                    map.put("required", resultSet.getBoolean("required"));
                     map.put("propertyDesc", resultSet.getString("property_desc"));
                     map.put("propertyType", resultSet.getString("property_type"));
                     map.put("resourceType", resultSet.getString("resource_type"));
@@ -1475,6 +1597,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("classPath", resultSet.getString("class_path"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     instanceApps.add(map);
                 }
             }
@@ -1495,13 +1618,18 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
     @Override
     public void createConfigInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "INSERT INTO instance_app_api_property_t (host_id, instance_app_id, instance_api_id, property_id, property_value, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?,  ?, ?)";
+        final String sql =
+                """
+                INSERT INTO instance_app_api_property_t (host_id, instance_app_id, instance_api_id,
+                property_id, property_value, update_user, update_ts, aggregate_version)
+                VALUES (?, ?, ?, ?, ?,  ?, ?, ?)
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST);
         String instanceAppId = (String)map.get("instanceAppId");
         String instanceApiId = (String)map.get("instanceApiId");
         String propertyId = (String)map.get("propertyId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
@@ -1515,35 +1643,54 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             }
             statement.setString(6, (String)event.get(Constants.USER));
             statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(8, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert instance app api for host_id: " + hostId +
-                        ", instance_app_id: " + instanceAppId + ", instance_api_id: " + instanceApiId + ", property_id: " + propertyId);
+                throw new SQLException(String.format("Failed during createConfigInstanceAppApi for hostId %s instanceAppId %s instanceApiId %s propertyId %s with aggregateVersion %d", hostId, instanceAppId, instanceApiId, propertyId, newAggregateVersion));
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during createConfigInstanceAppApi for hostId {} instanceAppId {} instanceApiId {} propertyId {}: {}", hostId, instanceAppId, instanceApiId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during createConfigInstanceAppApi for hostId {} instanceAppId {} instanceApiId {} propertyId {} aggregateVersion {}: {}", hostId, instanceAppId, instanceApiId, propertyId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createConfigInstanceAppApi for hostId {} instanceAppId {} instanceApiId {} propertyId {}: {}", hostId, instanceAppId, instanceApiId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during createConfigInstanceAppApi for hostId {} instanceAppId {} instanceApiId {} propertyId {} aggregateVersion {}: {}", hostId, instanceAppId, instanceApiId, propertyId, newAggregateVersion, e.getMessage(), e);
             throw e;
+        }
+    }
+
+    private boolean queryConfigInstanceAppApiExists(Connection conn, String hostId, String instanceAppId, String instanceApiId, String propertyId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM instance_app_api_property_t WHERE host_id = ? AND instance_app_id = ? AND instance_api_id = ? AND property_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(hostId));
+            pst.setObject(2, UUID.fromString(instanceAppId));
+            pst.setObject(3, UUID.fromString(instanceApiId));
+            pst.setObject(4, UUID.fromString(propertyId));
+
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
     @Override
     public void updateConfigInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "UPDATE instance_app_api_property_t SET " +
-                "property_value = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? AND instance_app_id = ? AND instance_api_id = ? AND property_id = ?";
+        final String sql =
+                """
+                UPDATE instance_app_api_property_t SET
+                property_value = ?, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? AND instance_app_id = ? AND instance_api_id = ? AND property_id = ? AND aggregate_version = ?
+                """;
 
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST);
         String instanceAppId = (String)map.get("instanceAppId");
         String instanceApiId = (String)map.get("instanceApiId");
         String propertyId = (String)map.get("propertyId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             if (map.containsKey("propertyValue")) {
@@ -1553,39 +1700,43 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             }
             statement.setString(2, (String)event.get(Constants.USER));
             statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setObject(4, UUID.fromString(hostId));
-            statement.setObject(5, UUID.fromString(instanceAppId));
-            statement.setObject(6, UUID.fromString(instanceApiId));
-            statement.setObject(7, UUID.fromString(propertyId));
+            statement.setLong(4, newAggregateVersion);
+            statement.setObject(5, UUID.fromString(hostId));
+            statement.setObject(6, UUID.fromString(instanceAppId));
+            statement.setObject(7, UUID.fromString(instanceApiId));
+            statement.setObject(8, UUID.fromString(propertyId));
+            statement.setLong(9, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to update instance app api. No rows affected for host_id: " + hostId +
-                        ", instance_app_id: " + instanceAppId + ", instance_api_id: " + instanceApiId +
-                        ", property_id: " + propertyId);
+                if (queryConfigInstanceAppApiExists(conn, hostId, instanceAppId, instanceApiId, propertyId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during updateConfigInstanceAppApi for hostId " + hostId + " instanceAppId " + instanceAppId + " instanceApiId " + instanceApiId + " propertyId " + propertyId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found during updateConfigInstanceAppApi for hostId " + hostId + "  instanceAppId " + instanceAppId + " instanceApiId " + instanceApiId + " propertyId " + propertyId + ".");
+                }
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during updateConfigInstanceAppApi for hostId {} instanceAppId {} instanceApiId {} propertyId {}: {}", hostId, instanceAppId, instanceApiId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during updateConfigInstanceAppApi for hostId {} instanceAppId {} instanceApiId {} propertyId {} (old: {}) -> (new: {}): {}", hostId, instanceAppId, instanceApiId, propertyId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateConfigInstanceAppApi for hostId {} instanceAppId {} instanceApiId {} propertyId {}: {}", hostId, instanceAppId, instanceApiId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during updateConfigInstanceAppApi for hostId {} instanceAppId {} instanceApiId {} propertyId {} (old: {}) -> (new: {}): {}", hostId, instanceAppId, instanceApiId, propertyId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
     public void deleteConfigInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM instance_app_api_property_t " +
-                "WHERE host_id = ? AND instance_app_id = ? AND instance_api_id = ? AND property_id = ?";
+        final String sql =
+                """
+                DELETE FROM instance_app_api_property_t
+                WHERE host_id = ? AND instance_app_id = ? AND instance_api_id = ? AND property_id = ? AND aggregate_version = ?
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST);
         String instanceAppId = (String)map.get("instanceAppId");
         String instanceApiId = (String)map.get("instanceApiId");
         String propertyId = (String)map.get("propertyId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
@@ -1595,17 +1746,17 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to delete instance app api. No rows affected for host_id: " + hostId +
-                        ", instance_app_id: " + instanceAppId  + ", instance_api_id: " + instanceApiId + ", property_id: " + propertyId);
+                if (queryConfigInstanceAppApiExists(conn, hostId, instanceAppId, instanceApiId, propertyId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteConfigInstanceAppApi for hostId " + hostId + " instanceAppId " + instanceAppId + " instanceApiId " + instanceApiId + " propertyId " + propertyId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deleteConfigInstanceAppApi for hostId " + hostId + " instanceAppId " + instanceAppId + " instanceApiId " + instanceApiId + " propertyId " + propertyId + ". It might have been already deleted.");
+                }
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during deleteConfigInstanceAppApi for hostId {} instanceAppId {} instanceApiId {} propertyId {}: {}", hostId, instanceAppId, instanceApiId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during deleteConfigInstanceAppApi for hostId {} instanceAppId {} instanceApiId {} propertyId {} aggregateVersion {}: {}", hostId, instanceAppId, instanceApiId, propertyId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteConfigInstanceAppApi for hostId {} instanceAppId {} instanceApiId {} propertyId {}: {}", hostId, instanceAppId, instanceApiId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during deleteConfigInstanceAppApi for hostId {} instanceAppId {} instanceApiId {} propertyId {} aggregateVersion {}: {}", hostId, instanceAppId, instanceApiId, propertyId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -1622,7 +1773,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 iai.api_version_id, av.api_id, av.api_version, p.config_id, c.config_name, iaap.property_id,
                 p.property_name, iaap.property_value, p.required, p.property_desc, p.property_type, p.resource_type, p.value_type,
                 c.config_type, c.config_desc, c.class_path,
-                iaap.update_user, iaap.update_ts
+                iaap.update_user, iaap.update_ts, iaap.aggregate_version
                 FROM instance_app_t iap
                 INNER JOIN instance_t i ON iap.host_id =i.host_id AND iap.instance_id = i.instance_id
                 INNER JOIN instance_app_api_property_t iaap ON iaap.host_id = iap.host_id AND iaap.instance_app_id = iap.instance_app_id
@@ -1699,7 +1850,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("propertyId", resultSet.getObject("property_id", UUID.class));
                     map.put("propertyName", resultSet.getString("property_name"));
                     map.put("propertyValue", resultSet.getString("property_value"));
-                    map.put("required", resultSet.getString("required"));
+                    map.put("required", resultSet.getBoolean("required"));
                     map.put("propertyDesc", resultSet.getString("property_desc"));
                     map.put("propertyType", resultSet.getString("property_type"));
                     map.put("resourceType", resultSet.getString("resource_type"));
@@ -1709,6 +1860,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("classPath", resultSet.getString("class_path"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     instanceAppApis.add(map);
                 }
             }
@@ -1729,13 +1881,16 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
     @Override
     public void createConfigInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        // The table is now instance_property_t, NOT instance_t
-        final String sql = "INSERT INTO instance_property_t (host_id, instance_id, property_id, " +
-                "property_value, update_user, update_ts) VALUES (?, ?, ?, ?, ?, ?)";
+        final String sql =
+                """
+                INSERT INTO instance_property_t (host_id, instance_id, property_id,
+                property_value, update_user, update_ts, aggregate_version) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST);
         String instanceId = (String)map.get("instanceId");
         String propertyId = (String)map.get("propertyId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
@@ -1750,33 +1905,49 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             }
             statement.setString(5, (String)event.get(Constants.USER));
             statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(7, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert instance property for host_id: " + hostId +
-                        ", instance_id: " + instanceId + ", property_id: " + propertyId);
+                throw new SQLException(String.format("Failed during createConfigInstance for hostId %s instanceId %s propertyId %s with aggregateVersion %d", hostId, instanceId, propertyId, newAggregateVersion));
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during createConfigInstance for hostId {} instanceId {} propertyId {}: {}", hostId, instanceId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during createConfigInstance for hostId {} instanceId {} propertyId {} aggregateVersion {}: {}", hostId, instanceId, propertyId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createConfigInstance for hostId {} instanceId {} propertyId {}: {}", hostId, instanceId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during createConfigInstance for hostId {} instanceId {} propertyId {} aggregateVersion {}: {}", hostId, instanceId, propertyId, newAggregateVersion, e.getMessage(), e);
             throw e;
+        }
+    }
+
+    private boolean queryConfigInstanceExists(Connection conn, String hostId, String instanceId, String propertyId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM instance_property_t WHERE host_id = ? AND instance_id = ? AND property_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(hostId));
+            pst.setObject(2, UUID.fromString(instanceId));
+            pst.setObject(3, UUID.fromString(propertyId));
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
     @Override
     public void updateConfigInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "UPDATE instance_property_t SET property_value = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? AND instance_id = ? AND property_id = ?";
+        final String sql =
+                """
+                UPDATE instance_property_t SET property_value = ?, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? AND instance_id = ? AND property_id = ? AND aggregate_version = ?
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST);
         String instanceId = (String)map.get("instanceId");
         String propertyId = (String)map.get("propertyId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
 
@@ -1789,57 +1960,59 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
             statement.setString(2, (String)event.get(Constants.USER));
             statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(4, newAggregateVersion);
 
             // WHERE clause parameters
             statement.setObject(4, UUID.fromString(hostId));
             statement.setObject(5, UUID.fromString(instanceId));
             statement.setObject(6, UUID.fromString(propertyId));
+            statement.setLong(7, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to update instance property. No rows affected for host_id: " + hostId +
-                        ", instance_id: " + instanceId + ", property_id: " + propertyId);
+                if (queryConfigInstanceExists(conn, hostId, instanceId, propertyId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during updateConfigInstance for hostId " + hostId + " instanceId " + instanceId + " propertyId " + propertyId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found during updateConfigInstance for hostId " + hostId + " instanceId " + instanceId + " propertyId " + propertyId + ".");
+                }
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during updateConfigInstance for hostId {} instanceId {} propertyId {}: {}", hostId, instanceId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during updateConfigInstance for hostId {} instanceId {} propertyId {} (old: {}) -> (new: {}): {}", hostId, instanceId, propertyId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateConfigInstance for hostId {} instanceId {} propertyId {}: {}", hostId, instanceId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during updateConfigInstance for hostId {} instanceId {} propertyId {} (old: {}) -> (new: {}): {}", hostId, instanceId, propertyId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
     public void deleteConfigInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM instance_property_t WHERE host_id = ? AND instance_id = ? AND property_id = ?";
+        final String sql = "DELETE FROM instance_property_t WHERE host_id = ? AND instance_id = ? AND property_id = ? AND aggregate_version = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST);
         String instanceId = (String)map.get("instanceId");
         String propertyId = (String)map.get("propertyId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
             statement.setObject(2, UUID.fromString(instanceId));
             statement.setObject(3, UUID.fromString(propertyId));
+            statement.setLong(4, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to delete instance property. No rows affected for host_id: " + hostId +
-                        ", instance_id: " + instanceId + ", property_id: " + propertyId);
+                if (queryConfigInstanceExists(conn, hostId, instanceId, propertyId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteConfigInstance for hostId " + hostId + " instanceId " + instanceId + " propertyId " + propertyId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deleteConfigInstance for hostId " + hostId + " instanceId " + instanceId + " propertyId " + propertyId + ". It might have been already deleted.");
+                }
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during deleteConfigInstance for hostId {} instanceId {} propertyId {}: {}", hostId, instanceId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during deleteConfigInstance for hostId {} instanceId {} propertyId {} aggregateVersion {}: {}", hostId, instanceId, propertyId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteConfigInstance for hostId {} instanceId {} propertyId {}: {}", hostId, instanceId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during deleteConfigInstance for hostId {} instanceId {} propertyId {} aggregateVersion {}: {}", hostId, instanceId, propertyId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -2706,7 +2879,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 SELECT COUNT(*) OVER () AS total,
                 ip.host_id, ip.instance_id, i.instance_name, p.config_id, c.config_name, ip.property_id,
                 p.property_name, ip.property_value, p.required, p.property_desc, p.property_type, p.resource_type, p.value_type, c.config_type,
-                c.config_desc, c.class_path, ip.update_user, ip.update_ts
+                c.config_desc, c.class_path, ip.update_user, ip.update_ts, ip.aggregate_version
                 FROM instance_property_t ip
                 INNER JOIN config_property_t p ON p.property_id = ip.property_id
                 INNER JOIN instance_t i ON i.instance_id = ip.instance_id
@@ -2765,7 +2938,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("propertyId", resultSet.getObject("property_id", UUID.class));
                     map.put("propertyName", resultSet.getString("property_name"));
                     map.put("propertyValue", resultSet.getString("property_value"));
-                    map.put("required", resultSet.getString("required"));
+                    map.put("required", resultSet.getBoolean("required"));
                     map.put("propertyDesc", resultSet.getString("property_desc"));
                     map.put("propertyType", resultSet.getString("property_type"));
                     map.put("resourceType", resultSet.getString("resource_type"));
@@ -2775,7 +2948,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("classPath", resultSet.getString("class_path"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
-
+                    map.put("aggregateVersion", resultSet.getInt("aggregate_version"));
                     instanceProperties.add(map);
                 }
             }
@@ -2798,12 +2971,13 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     @Override
     public void createConfigInstanceFile(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "INSERT INTO instance_file_t (host_id, instance_file_id, instance_id, file_type, " +
-                "file_name, file_value, file_desc, expiration_ts, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?)";
+                "file_name, file_value, file_desc, expiration_ts, update_user, update_ts, aggregate_version) " +
+                "VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?)";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST);
         String instanceFileId = (String)map.get("instanceFileId");
         String instanceId = (String)map.get("instanceId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
@@ -2821,32 +2995,48 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             }
             statement.setString(9, (String)event.get(Constants.USER));
             statement.setObject(10, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(11, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert instance file for host_id: " + hostId +
-                        ", instance_file_id: " + instanceFileId + ", instance_id: " + instanceId);
+                throw new SQLException(String.format("Failed during createConfigInstanceFile for hostId  %s instanceFileId %s with aggregateVersion %d", hostId, instanceFileId, newAggregateVersion));
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during createConfigInstanceFile for hostId {} instanceFileId {} instanceId {}: {}", hostId, instanceFileId, instanceId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during createConfigInstanceFile for hostId {} instanceFileId {} instanceId {} aggregateVersion {}: {}", hostId, instanceFileId, instanceId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createConfigInstanceFile for hostId {} instanceFileId {} instanceId {}: {}", hostId, instanceFileId, instanceId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during createConfigInstanceFile for hostId {} instanceFileId {} instanceId {} aggregateVersion {}: {}", hostId, instanceFileId, instanceId, newAggregateVersion, e.getMessage(), e);
             throw e;
+        }
+    }
+
+    private boolean queryConfigInstanceFileExists(Connection conn, String hostId, String instanceFileId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM instance_file_t WHERE host_id = ? AND instance_file_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(hostId));
+            pst.setObject(2, UUID.fromString(instanceFileId));
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
     @Override
     public void updateConfigInstanceFile(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "UPDATE instance_file_t SET file_type = ?, file_name = ?, file_value = ?, " +
-                "file_desc = ?, expiration_ts = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? AND instance_file_id = ?";
+        final String sql =
+                """
+                UPDATE instance_file_t SET file_type = ?, file_name = ?, file_value = ?,
+                file_desc = ?, expiration_ts = ?, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? AND instance_file_id = ? AND aggregate_version = ?
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST);
         String instanceFileId = (String)map.get("instanceFileId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
 
@@ -2883,53 +3073,55 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
             statement.setString(6, (String)event.get(Constants.USER));
             statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(8, newAggregateVersion);
 
-            statement.setObject(8, UUID.fromString(hostId));
-            statement.setObject(9, UUID.fromString(instanceFileId));
+            statement.setObject(9, UUID.fromString(hostId));
+            statement.setObject(10, UUID.fromString(instanceFileId));
+            statement.setLong(11, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to update instance file. No rows affected for host_id: " + hostId +
-                        ", instance_file_id: " + instanceFileId);
+                if (queryConfigInstanceFileExists(conn, hostId, instanceFileId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during updateConfigInstanceFile for hostId " + hostId + " instanceFileId " + instanceFileId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found during updateConfigInstanceFile for hostId " + hostId + " instanceFileId " + instanceFileId + ".");
+                }
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during updateConfigInstanceFile for hostId {} instanceFileId {}: {}", hostId, instanceFileId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during updateConfigInstanceFile for hostId {} instanceFileId {} (old: {}) -> (new: {}): {}", hostId, instanceFileId, oldAggregateVersion, newAggregateVersion,  e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateConfigInstanceFile for hostId {} instanceFileId {}: {}", hostId, instanceFileId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during updateConfigInstanceFile for hostId {} instanceFileId {} (old: {}) -> (new: {}): {}", hostId, instanceFileId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
     public void deleteConfigInstanceFile(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM instance_file_t WHERE host_id = ? AND instance_file_id = ?";
+        final String sql = "DELETE FROM instance_file_t WHERE host_id = ? AND instance_file_id = ? AND aggregate_version = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST);
         String instanceFileId = (String)map.get("instanceFileId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
             statement.setObject(2, UUID.fromString(instanceFileId));
+            statement.setLong(3, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to delete instance file. No rows affected for host_id: " + hostId +
-                        ", instance_file_id: " + instanceFileId);
+                if (queryConfigInstanceFileExists(conn, hostId, instanceFileId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteConfigInstanceFile for hostId " + hostId + " instanceFileId " + instanceFileId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deleteConfigInstanceFile for hostId " + hostId + " instanceFileId " + instanceFileId + ". It might have been already deleted.");
+                }
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during deleteConfigInstanceFile for hostId {} instanceFileId {}: {}", hostId, instanceFileId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during deleteConfigInstanceFile for hostId {} instanceFileId {} aggregateVersion {}: {}", hostId, instanceFileId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteConfigInstanceFile for hostId {} instanceFileId {}: {}", hostId, instanceFileId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during deleteConfigInstanceFile for hostId {} instanceFileId {} aggregateVersion {}: {}", hostId, instanceFileId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -2942,9 +3134,9 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
-                ift.host_id, ift.instance_file_id, ift.instance_id, i.instance_name,\s
-                ift.file_type, ift.file_name, ift.file_value, ift.file_desc,\s
-                ift.expiration_ts, ift.update_user, ift.update_ts
+                ift.host_id, ift.instance_file_id, ift.instance_id, i.instance_name,
+                ift.file_type, ift.file_name, ift.file_value, ift.file_desc,
+                ift.expiration_ts, ift.update_user, ift.update_ts, ift.aggregate_version
                 FROM instance_file_t ift
                 INNER JOIN instance_t i ON i.instance_id = ift.instance_id
                 WHERE 1=1
@@ -3006,6 +3198,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("expirationTs", resultSet.getObject("expiration_ts") != null ? resultSet.getObject("expiration_ts", OffsetDateTime.class) : null);
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getInt("aggregate_version"));
 
                     instanceFiles.add(map);
                 }
@@ -3029,13 +3222,17 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
     @Override
     public void createConfigDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "INSERT INTO deployment_instance_property_t (host_id, deployment_instance_id, property_id, " +
-                "property_value, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?,  ?)";
+        final String sql =
+                """
+                INSERT INTO deployment_instance_property_t (host_id, deployment_instance_id, property_id,
+                property_value, update_user, update_ts, aggregate_version)
+                VALUES (?, ?, ?, ?, ?,  ?, ?)
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST);
         String deploymentInstanceId = (String)map.get("deploymentInstanceId");
         String propertyId = (String)map.get("propertyId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
@@ -3049,33 +3246,51 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             }
             statement.setString(5, (String)event.get(Constants.USER));
             statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(7, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert deployment instance property for host_id: " + hostId +
-                        ", deployment_instance_id: " + deploymentInstanceId + ", property_id: " + propertyId);
+                throw new SQLException(String.format("Failed during createConfigDeploymentInstance for hostId %s deploymentInstanceId %s propertyId %s with aggregateVersion %d", hostId, deploymentInstanceId, propertyId, newAggregateVersion));
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during createConfigDeploymentInstance for hostId {} deploymentInstanceId {} propertyId {}: {}", hostId, deploymentInstanceId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during createConfigDeploymentInstance for hostId {} deploymentInstanceId {} propertyId {} aggregateVersion {}: {}", hostId, deploymentInstanceId, propertyId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createConfigDeploymentInstance for hostId {} deploymentInstanceId {} propertyId {}: {}", hostId, deploymentInstanceId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during createConfigDeploymentInstance for hostId {} deploymentInstanceId {} propertyId {} aggregateVersion {}: {}", hostId, deploymentInstanceId, propertyId, newAggregateVersion, e.getMessage(), e);
             throw e;
+        }
+    }
+
+    private boolean queryConfigDeploymentInstanceExists(Connection conn, String hostId, String deploymentInstanceId, String propertyId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM deployment_instance_property_t WHERE host_id = ? AND deployment_instance_id = ? AND property_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(hostId));
+            pst.setObject(2, UUID.fromString(deploymentInstanceId));
+            pst.setObject(3, UUID.fromString(propertyId));
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
     @Override
     public void updateConfigDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "UPDATE deployment_instance_property_t SET property_value = ?, " +
-                "update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? AND deployment_instance_id = ? AND property_id = ?";
+        final String sql =
+                """
+                UPDATE deployment_instance_property_t SET property_value = ?,
+                update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? AND deployment_instance_id = ? AND property_id = ?
+                AND aggregate_version = ?
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST);
         String deploymentInstanceId = (String)map.get("deploymentInstanceId");
         String propertyId = (String)map.get("propertyId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
 
@@ -3087,24 +3302,26 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             }
             statement.setString(2, (String)event.get(Constants.USER));
             statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(4, newAggregateVersion);
 
-            statement.setObject(4, UUID.fromString(hostId));
-            statement.setObject(5, UUID.fromString(deploymentInstanceId));
-            statement.setObject(6, UUID.fromString(propertyId));
+            statement.setObject(5, UUID.fromString(hostId));
+            statement.setObject(6, UUID.fromString(deploymentInstanceId));
+            statement.setObject(7, UUID.fromString(propertyId));
+            statement.setLong(8, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to update deployment instance property. No rows affected for host_id: " + hostId +
-                        ", deployment_instance_id: " + deploymentInstanceId + ", property_id: " + propertyId);
+                if (queryConfigDeploymentInstanceExists(conn, hostId, deploymentInstanceId, propertyId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during updateConfigDeploymentInstance for hostId " + hostId + " deploymentInstanceId " + deploymentInstanceId + " propertyId " + propertyId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found during updateConfigDeploymentInstance for hostId " + hostId + " deploymentInstanceId " + deploymentInstanceId + " propertyId " + propertyId + ".");
+                }
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during updateConfigDeploymentInstance for hostId {} deploymentInstanceId {} propertyId {}: {}", hostId, deploymentInstanceId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during updateConfigDeploymentInstance for hostId {} deploymentInstanceId {} propertyId {} (old: {}) -> (new: {}): {}", hostId, deploymentInstanceId, propertyId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateConfigDeploymentInstance for hostId {} deploymentInstanceId {} propertyId {}: {}", hostId, deploymentInstanceId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during updateConfigDeploymentInstance for hostId {} deploymentInstanceId {} propertyId {} (old: {}) -> (new: {}): {}", hostId, deploymentInstanceId, propertyId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -3112,30 +3329,32 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     @Override
     public void deleteConfigDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "DELETE FROM deployment_instance_property_t " +
-                "WHERE host_id = ? AND deployment_instance_id = ? AND property_id = ?";
+                "WHERE host_id = ? AND deployment_instance_id = ? AND property_id = ? AND aggregate_version = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST);
         String deploymentInstanceId = (String)map.get("deploymentInstanceId");
         String propertyId = (String)map.get("propertyId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
             statement.setObject(2, UUID.fromString(deploymentInstanceId));
             statement.setObject(3, UUID.fromString(propertyId));
+            statement.setLong(4, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to delete deployment instance property. No rows affected for host_id: " + hostId +
-                        ", deployment_instance_id: " + deploymentInstanceId + ", property_id: " + propertyId);
+                if (queryConfigDeploymentInstanceExists(conn, hostId, deploymentInstanceId, propertyId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteConfigDeploymentInstance for hostId " + hostId + " deploymentInstanceId " + deploymentInstanceId + " propertyId " + propertyId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deleteConfigDeploymentInstance for hostId " + hostId + " deploymentInstanceId " + deploymentInstanceId + " propertyId " + propertyId + ". It might have been already deleted.");
+                }
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during deleteConfigDeploymentInstance for hostId {} deploymentInstanceId {} propertyId {}: {}", hostId, deploymentInstanceId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during deleteConfigDeploymentInstance for hostId {} deploymentInstanceId {} propertyId {} aggregateVersion {}: {}", hostId, deploymentInstanceId, propertyId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteConfigDeploymentInstance for hostId {} deploymentInstanceId {} propertyId {}: {}", hostId, deploymentInstanceId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during deleteConfigDeploymentInstance for hostId {} deploymentInstanceId {} propertyId {} aggregateVersion {}: {}", hostId, deploymentInstanceId, propertyId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -3150,7 +3369,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 SELECT COUNT(*) OVER () AS total,
                 dip.host_id, dip.deployment_instance_id, di.instance_id, i.instance_name,
                 di.service_id, di.ip_address, di.port_number, cp.config_id, c.config_name,
-                dip.property_id, cp.property_name, dip.property_value, dip.update_user, dip.update_ts
+                dip.property_id, cp.property_name, dip.property_value, dip.update_user, dip.update_ts, dip.aggregate_version
                 FROM deployment_instance_property_t dip
                 INNER JOIN deployment_instance_t di ON di.host_id = dip.host_id
                 AND di.deployment_instance_id = dip.deployment_instance_id
@@ -3223,6 +3442,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("propertyValue", resultSet.getString("property_value"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getInt("aggregate_version"));
 
                     deploymentInstances.add(map);
                 }
@@ -3246,10 +3466,15 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
     @Override
     public void createConfigProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "INSERT INTO product_property_t (product_id, property_id, property_value, update_user, update_ts) VALUES (?, ?, ?, ?, ?)";
+        final String sql =
+                """
+                INSERT INTO product_property_t (product_id, property_id, property_value, update_user, update_ts, aggregate_version) VALUES (?, ?, ?, ?, ?, ?)
+                """;
+
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String productId = (String)map.get("productId");
         String propertyId = (String)map.get("propertyId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setString(1, productId);
@@ -3263,32 +3488,47 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
             statement.setString(4, (String)event.get(Constants.USER));
             statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(6, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert product property for product_id: " + productId +
-                        ", property_id: " + propertyId);
+                throw new SQLException(String.format("Failed during createConfigProduct for productId %s  propertyId %s with aggregateVersion %d", productId, propertyId, newAggregateVersion));
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during createConfigProduct for productId {} propertyId {}: {}", productId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during createConfigProduct for productId {} propertyId {} aggregateVersion {}: {}", productId, propertyId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createConfigProduct for productId {} propertyId {}: {}", productId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during createConfigProduct for productId {} propertyId {} aggregateVersion {}: {}", productId, propertyId, newAggregateVersion, e.getMessage(), e);
             throw e;
+        }
+    }
+
+    private boolean queryConfigProductExists(Connection conn, String productId, String propertyId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM product_property_t WHERE product_id = ? AND property_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setString(1, productId);
+            pst.setObject(2, UUID.fromString(propertyId));
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
     @Override
     public void updateConfigProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "UPDATE product_property_t SET property_value = ?, update_user = ?, update_ts = ? " +
-                "WHERE product_id = ? AND property_id = ?";
+        final String sql =
+                """
+                UPDATE product_property_t SET property_value = ?, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE product_id = ? AND property_id = ? AND aggregate_version = ?
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String productId = (String)map.get("productId");
         String propertyId = (String)map.get("propertyId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
 
@@ -3301,54 +3541,56 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
             statement.setString(2, (String)event.get(Constants.USER));
             statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(4, newAggregateVersion);
 
             // WHERE clause parameters
-            statement.setString(4, productId);
-            statement.setObject(5, UUID.fromString(propertyId));
+            statement.setString(5, productId);
+            statement.setObject(6, UUID.fromString(propertyId));
+            statement.setLong(7, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to update product property. No rows affected for product_id: " + productId +
-                        ", property_id: " + propertyId);
+                if (queryConfigProductExists(conn, productId, propertyId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during updateConfigProduct for productId " + productId + " propertyId " + propertyId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found during updateConfigProduct for productId " + productId + " propertyId " + propertyId + ".");
+                }
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during updateConfigProduct for productId {} propertyId {}: {}", productId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during updateConfigProduct for productId {} propertyId {} (old: {}) -> (new: {}): {}", productId, propertyId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateConfigProduct for productId {} propertyId {}: {}", productId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during updateConfigProduct for productId {} propertyId {} (old: {}) -> (new: {}): {}", productId, propertyId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
     public void deleteConfigProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM product_property_t WHERE product_id = ? AND property_id = ?";
+        final String sql = "DELETE FROM product_property_t WHERE product_id = ? AND property_id = ? AND aggregate_version = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String productId = (String)map.get("productId");
         String propertyId = (String)map.get("propertyId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setString(1, productId);
             statement.setObject(2, UUID.fromString(propertyId));
+            statement.setLong(3, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to delete product property. No rows affected for product_id: " + productId +
-                        ", property_id: " + propertyId);
+                if (queryConfigProductExists(conn, productId, propertyId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteConfigProduct for productId " + productId + " propertyId " + propertyId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deleteConfigProduct for productId " + productId + " propertyId " + propertyId + ". It might have been already deleted.");
+                }
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during deleteConfigProduct for productId {} propertyId {}: {}", productId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during deleteConfigProduct for productId {} propertyId {} aggregateVersion {}: {}", productId, propertyId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteConfigProduct for productId {} propertyId {}: {}", productId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during deleteConfigProduct for productId {} propertyId {} aggregateVersion {}: {}", productId, propertyId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -3362,7 +3604,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 """
                         SELECT COUNT(*) OVER () AS total,
                         pp.product_id, p.config_id, pp.property_id, p.property_name, pp.property_value,
-                        pp.update_user, pp.update_ts, c.config_name
+                        pp.update_user, pp.update_ts, c.config_name, pp.aggregate_version
                         FROM product_property_t pp
                         INNER JOIN config_property_t p ON p.property_id = pp.property_id
                         INNER JOIN config_t c ON p.config_id = c.config_id
@@ -3418,6 +3660,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("propertyValue", resultSet.getString("property_value"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getInt("aggregate_version"));
 
                     productProperties.add(map);
                 }
@@ -3440,13 +3683,17 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
     @Override
     public void createConfigProductVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "INSERT INTO product_version_property_t (host_id, product_version_id, " +
-                "property_id, property_value, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?,  ?)";
+        final String sql =
+                """
+                INSERT INTO product_version_property_t (host_id, product_version_id,
+                property_id, property_value, update_user, update_ts, aggregate_version)
+                VALUES (?, ?, ?, ?, ?,  ?, ?)
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST);
         String productVersionId = (String)map.get("productVersionId");
         String propertyId = (String)map.get("propertyId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
@@ -3462,34 +3709,50 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
             statement.setString(5, (String)event.get(Constants.USER));
             statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(7, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert product version property for host_id: " + hostId +
-                        ", product_version_id: " + productVersionId +
-                        ", property_id: " + propertyId);
+                throw new SQLException(String.format("Failed during createConfigProductVersion for hostId %s productVersionId %s propertyId %s with aggregateVersion %d", hostId, productVersionId, propertyId, newAggregateVersion));
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during createConfigProductVersion for hostId {} productVersionId {} propertyId {}: {}", hostId, productVersionId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during createConfigProductVersion for hostId {} productVersionId {} propertyId {} aggregateVersion {}: {}", hostId, productVersionId, propertyId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createConfigProductVersion for hostId {} productVersionId {} propertyId {}: {}", hostId, productVersionId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during createConfigProductVersion for hostId {} productVersionId {} propertyId {} aggregateVersion {}: {}", hostId, productVersionId, propertyId, newAggregateVersion, e.getMessage(), e);
             throw e;
+        }
+    }
+
+    private boolean queryConfigProductVersionExists(Connection conn, String hostId, String productVersionId, String propertyId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM product_version_property_t WHERE host_id = ? AND product_version_id = ? AND property_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(hostId));
+            pst.setObject(2, UUID.fromString(productVersionId));
+            pst.setObject(3, UUID.fromString(propertyId));
+
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
     @Override
     public void updateConfigProductVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "UPDATE product_version_property_t SET property_value = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? AND product_version_id = ? AND property_id = ?";
+        final String sql =
+                """
+                UPDATE product_version_property_t SET property_value = ?, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? AND product_version_id = ? AND property_id = ? AND aggregate_version = ?
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST);
         String productVersionId = (String)map.get("productVersionId");
         String propertyId = (String)map.get("propertyId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
 
@@ -3502,27 +3765,27 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
             statement.setString(2, (String)event.get(Constants.USER));
             statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(4, newAggregateVersion);
 
             // WHERE clause parameters
-            statement.setObject(4, UUID.fromString(hostId));
-            statement.setObject(5, UUID.fromString(productVersionId));
-            statement.setObject(6, UUID.fromString(propertyId));
+            statement.setObject(5, UUID.fromString(hostId));
+            statement.setObject(6, UUID.fromString(productVersionId));
+            statement.setObject(7, UUID.fromString(propertyId));
+            statement.setLong(8, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to update product version property. No rows affected for host_id: " + hostId +
-                        ", product_version_id: " + productVersionId +
-                        ", property_id: " + propertyId);
+                if (queryConfigProductVersionExists(conn, hostId, productVersionId, propertyId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during updateConfigProductVersion for hostId " + hostId + " productVersionId " + productVersionId + " propertyId " + propertyId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found during updateConfigProductVersion for hostId " + hostId + " productVersionId " + productVersionId + " propertyId " + propertyId + ".");
+                }
             }
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
-            logger.error("SQLException during updateConfigProductVersion for hostId {} productVersionId {} propertyId {}: {}", hostId, productVersionId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during updateConfigProductVersion for hostId {} productVersionId {} propertyId {} (old: {}) -> (new: {}): {}", hostId, productVersionId, propertyId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateConfigProductVersion for hostId {} productVersionId {} propertyId {}: {}", hostId, productVersionId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during updateConfigProductVersion for hostId {} productVersionId {} propertyId {} (old: {}) -> (new: {}): {}", hostId, productVersionId, propertyId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -3530,31 +3793,32 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     @Override
     public void deleteConfigProductVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql = "DELETE FROM product_version_property_t WHERE host_id = ? AND product_version_id = ? " +
-                "AND property_id = ?";
+                "AND property_id = ? AND aggregate_version = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST);
         String productVersionId = (String)map.get("productVersionId");
         String propertyId = (String)map.get("propertyId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
             statement.setObject(2, UUID.fromString(productVersionId));
             statement.setObject(3, UUID.fromString(propertyId));
+            statement.setLong(4, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to delete product version property. No rows affected for host_id: " + hostId +
-                        ", product_version_id: " + productVersionId +
-                        ", property_id: " + propertyId);
+                if (queryConfigProductVersionExists(conn, hostId, productVersionId, propertyId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteConfigProductVersion for hostId " + hostId + " productVersionId " + productVersionId + " propertyId " + propertyId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deleteConfigProductVersion for hostId " + hostId + " productVersionId " + productVersionId + " propertyId " + propertyId + ". It might have been already deleted.");
+                }
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during deleteConfigProductVersion for hostId {} productVersionId {} propertyId {}: {}", hostId, productVersionId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during deleteConfigProductVersion for hostId {} productVersionId {} propertyId {} aggregateVersion {}: {}", hostId, productVersionId, propertyId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteConfigProductVersion for hostId {} productVersionId {} propertyId {}: {}", hostId, productVersionId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during deleteConfigProductVersion for hostId {} productVersionId {} propertyId {} aggregateVersion {}: {}", hostId, productVersionId, propertyId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -3568,7 +3832,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 """
                 SELECT COUNT(*) OVER () AS total,
                 pvp.host_id, pvp.product_version_id, pv.product_id, pv.product_version, p.config_id, pvp.property_id,
-                p.property_name, pvp.property_value, pvp.update_user, pvp.update_ts, c.config_name
+                p.property_name, pvp.property_value, pvp.update_user, pvp.update_ts, c.config_name, pvp.aggregate_version
                 FROM product_version_property_t pvp
                 INNER JOIN product_version_t pv ON pv.product_version_id = pvp.product_version_id
                 INNER JOIN config_property_t p ON p.property_id = pvp.property_id
@@ -3632,6 +3896,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("propertyValue", resultSet.getString("property_value"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getInt("aggregate_version"));
 
                     productVersionProperties.add(map);
                 }

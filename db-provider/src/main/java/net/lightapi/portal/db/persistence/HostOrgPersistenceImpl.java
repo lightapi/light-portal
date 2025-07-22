@@ -8,17 +8,17 @@ import com.networknt.status.Status;
 import com.networknt.utility.Constants;
 import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.PortalConstants;
+import net.lightapi.portal.db.ConcurrencyException;
 import net.lightapi.portal.db.PortalDbProvider;
 import net.lightapi.portal.db.util.NotificationService;
 import net.lightapi.portal.db.util.SqlUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.Connection; // Added import
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.SQLException; // Added import
-import java.sql.Types;
+import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.*;
 
@@ -39,29 +39,31 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
 
     @Override
     public void createOrg(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String insertOrg = "INSERT INTO org_t (domain, org_name, org_desc, org_owner, update_user, update_ts) " +
+        final String insertOrg = "INSERT INTO org_t (domain, org_name, org_desc, org_owner, update_user, update_ts, aggregate_version) " +
+                "VALUES (?, ?, ?, ?, ?,  ?, ?)";
+        final String insertHost = "INSERT INTO host_t(host_id, domain, sub_domain, host_desc, host_owner, update_user, update_ts, aggregate_version) " +
+                "VALUES (?, ?, ?, ?, ?,  ?, ?, ?)";
+        final String insertRole = "INSERT INTO role_t (host_id, role_id, role_desc, update_user, update_ts, aggregate_version) " +
                 "VALUES (?, ?, ?, ?, ?,  ?)";
-        final String insertHost = "INSERT INTO host_t(host_id, domain, sub_domain, host_desc, host_owner, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?)";
-        final String insertRole = "INSERT INTO role_t (host_id, role_id, role_desc, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?)";
-        final String insertRoleUser = "INSERT INTO role_user_t (host_id, role_id, user_id, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?)";
+        final String insertRoleUser = "INSERT INTO role_user_t (host_id, role_id, user_id, update_user, update_ts, aggregate_version) " +
+                "VALUES (?, ?, ?, ?, ?,  ?)";
         final String updateUserHost = "UPDATE user_host_t SET host_id = ?, update_user = ?, update_ts = ? WHERE user_id = ?";
 
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String domain = (String)map.get("domain"); // For logging/exceptions
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String orgOwner = (String)map.get("orgOwner"); // For logging/exceptions
-        String hostOwner = (String)map.get("hostOwner"); // For logging/exceptions
+        String domain = (String)map.get("domain");
+        String hostId = (String)event.get(Constants.HOST);
+        String orgOwner = (String)map.get("orgOwner");
+        String hostOwner = (String)map.get("hostOwner");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(insertOrg)) {
             statement.setString(1, domain);
             statement.setString(2, (String)map.get("orgName"));
             statement.setString(3, (String)map.get("orgDesc"));
-            statement.setString(4, orgOwner);  // org owner is the user id in the eventId
+            statement.setString(4, orgOwner);
             statement.setString(5, (String)event.get(Constants.USER));
             statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(7, newAggregateVersion);
             int count = statement.executeUpdate();
             if (count == 0) {
                 throw new SQLException("Failed to insert the org " + domain);
@@ -74,6 +76,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                 hostStatement.setString(5, hostOwner); // host owner can be another person selected by the org owner.
                 hostStatement.setString(6, (String)event.get(Constants.USER));
                 hostStatement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                hostStatement.setLong(8, newAggregateVersion);
                 hostStatement.executeUpdate();
             }
             // create user, org-admin and host-admin roles for the hostId by default.
@@ -83,6 +86,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                 roleStatement.setString(3, "user role");
                 roleStatement.setString(4, (String)event.get(Constants.USER));
                 roleStatement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                roleStatement.setLong(6, newAggregateVersion);
                 roleStatement.executeUpdate();
             }
             try (PreparedStatement roleStatement = conn.prepareStatement(insertRole)) {
@@ -91,6 +95,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                 roleStatement.setString(3, "org-admin role");
                 roleStatement.setString(4, (String)event.get(Constants.USER));
                 roleStatement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                roleStatement.setLong(6, newAggregateVersion);
                 roleStatement.executeUpdate();
             }
             try (PreparedStatement roleStatement = conn.prepareStatement(insertRole)) {
@@ -99,6 +104,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                 roleStatement.setString(3, "host-admin role");
                 roleStatement.setString(4, (String)event.get(Constants.USER));
                 roleStatement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                roleStatement.setLong(6, newAggregateVersion);
                 roleStatement.executeUpdate();
             }
             // insert role user to user for the host
@@ -108,6 +114,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                 roleUserStatement.setString(3, orgOwner);
                 roleUserStatement.setString(4, (String)event.get(Constants.USER));
                 roleUserStatement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                roleUserStatement.setLong(6, newAggregateVersion);
                 roleUserStatement.executeUpdate();
             }
             // insert role org-admin to user for the host
@@ -117,6 +124,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                 roleUserStatement.setString(3, orgOwner);
                 roleUserStatement.setString(4, (String)event.get(Constants.USER));
                 roleUserStatement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                roleUserStatement.setLong(6, newAggregateVersion);
                 roleUserStatement.executeUpdate();
             }
             // insert host-admin to user for the host
@@ -126,6 +134,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                 roleUserStatement.setString(3, hostOwner);
                 roleUserStatement.setString(4, (String)event.get(Constants.USER));
                 roleUserStatement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+                roleUserStatement.setLong(6, newAggregateVersion);
                 roleUserStatement.executeUpdate();
             }
             // switch the current user to the hostId by updating to same user pointing to two hosts.
@@ -141,22 +150,37 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
         } catch (SQLException e) {
             logger.error("SQLException during createOrg for domain {}: {}", domain, e.getMessage(), e);
             notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            throw e;
         } catch (Exception e) {
             logger.error("Exception during createOrg for domain {}: {}", domain, e.getMessage(), e);
             notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            throw e;
+        }
+    }
+
+    private boolean queryOrgExists(Connection conn, String domain) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM org_t WHERE domain = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setString(1, domain);
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
     @Override
     public void updateOrg(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String updateOrgSql = "UPDATE org_t SET org_name = ?, org_desc = ?, org_owner = ?, " +
-                "update_user = ?, update_ts = ? " +
-                "WHERE domain = ?";
+                "update_user = ?, update_ts = ?, aggregate_version = ? " +
+                "WHERE domain = ? AND aggregate_version = ?";
 
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String domain = (String)map.get("domain"); // For logging/exceptions
+        String domain = (String)map.get("domain");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(updateOrgSql)) {
             String orgName = (String)map.get("orgName");
@@ -179,56 +203,65 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
             }
             statement.setString(4, (String)event.get(Constants.USER));
             statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setString(6, domain);
+            statement.setLong(6, newAggregateVersion);
+            statement.setString(7, domain);
+            statement.setLong(8, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                // no record is updated, write an error notification.
-                throw new SQLException("no record is updated for org " + domain);
+                if (queryOrgExists(conn, domain)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during updateOrg for domain " + domain + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found during updateOrg for domain " + domain + ".");
+                }
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during updateOrg for domain {}: {}", domain, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during updateOrg for domain {} (old: {}) -> (new: {}): {}", domain, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateOrg for domain {}: {}", domain, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during updateOrg for domain {} (old: {}) -> (new: {}): {}", domain, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
     @Override
     public void deleteOrg(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String deleteOrgSql = "DELETE FROM org_t WHERE domain = ?";
+        final String deleteOrgSql = "DELETE FROM org_t WHERE domain = ? AND aggregate_version = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String domain = (String)map.get("domain"); // For logging/exceptions
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(deleteOrgSql)) {
             statement.setString(1, domain);
+            statement.setLong(2, oldAggregateVersion);
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("no record is deleted for org " + domain);
+                if (queryOrgExists(conn, domain)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteOrg for domain " + domain + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deleteOrg for domain " + domain + ". It might have been already deleted.");
+                }
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during deleteOrg for domain {}: {}", domain, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during deleteOrg for domain {} aggregateVersion {}: {}", domain, oldAggregateVersion, e.getMessage(), e);
             throw e; // Re-throw SQLException
         } catch (Exception e) {
-            logger.error("Exception during deleteOrg for domain {}: {}", domain, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during deleteOrg for domain {} aggregateVersion {}: {}", domain, oldAggregateVersion, e.getMessage(), e);
             throw e; // Re-throw generic Exception
         }
     }
 
     @Override
     public void createHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String insertHost = "INSERT INTO host_t (host_id, domain, sub_domain, host_desc, host_owner, update_user, update_ts) " +
-                "VALUES (?, ?, ?, ?, ?,  ?, ?)";
+        final String insertHost =
+                """
+                INSERT INTO host_t (host_id, domain, sub_domain, host_desc, host_owner, update_user, update_ts, aggregate_version)
+                VALUES (?, ?, ?, ?, ?,  ?, ?, ?)
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String domain = (String)map.get("domain"); // For logging/exceptions
+        String hostId = (String)event.get(Constants.HOST);
+        String domain = (String)map.get("domain");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(insertHost)) {
             statement.setObject(1, UUID.fromString(hostId));
@@ -238,30 +271,46 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
             statement.setString(5, (String)map.get("hostOwner"));
             statement.setString(6, (String)event.get(Constants.USER));
             statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(8, newAggregateVersion);
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert the host " + domain);
+                throw new SQLException(String.format("Failed during createHost for hostId %s with aggregateVersion %d", hostId, newAggregateVersion));
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during createHost for hostId {}: {}", hostId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during createHost for hostId {} aggregateVersion {}: {}", hostId, newAggregateVersion, e.getMessage(), e);
             throw e; // Re-throw SQLException
         } catch (Exception e) {
-            logger.error("Exception during createHost for hostId {}: {}", hostId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during createHost for hostId {} aggregateVersion {}: {}", hostId, newAggregateVersion, e.getMessage(), e);
             throw e; // Re-throw generic Exception
+        }
+    }
+
+    private boolean queryHostExists(Connection conn, String hostId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM host_t WHERE host_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(hostId));
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
     @Override
     public void updateHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String updateHostSql = "UPDATE host_t SET domain = ?, sub_domain = ?, host_desc = ?, host_owner = ?, " +
-                "update_user = ?, update_ts = ? " +
-                "WHERE host_id = ?";
+        final String updateHostSql =
+                """
+                UPDATE host_t SET domain = ?, sub_domain = ?, host_desc = ?, host_owner = ?,
+                update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? AND aggregate_version = ?
+                """;
 
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String hostId = (String)event.get(Constants.HOST);
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(updateHostSql)) {
             statement.setString(1, (String)map.get("domain"));
@@ -285,72 +334,83 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
             }
             statement.setString(5, (String)event.get(Constants.USER));
             statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setObject(7, UUID.fromString(hostId));
+            statement.setLong(7, newAggregateVersion);
+            statement.setObject(8, UUID.fromString(hostId));
+            statement.setLong(9, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                // no record is updated, write an error notification.
-                throw new SQLException("no record is updated for host " + hostId);
+                if (queryHostExists(conn, hostId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during updateHost for hostId " + hostId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found during updateHost for hostId " + hostId + ".");
+                }
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during updateHost for hostId {}: {}", hostId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during updateHost for hostId {} (old: {}) -> (new: {}): {}", hostId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateHost for hostId {}: {}", hostId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during updateHost for hostId {} (old: {}) -> (new: {}): {}", hostId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
     @Override
     public void deleteHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String deleteHostSql = "DELETE from host_t WHERE host_id = ?";
+        final String deleteHostSql = "DELETE from host_t WHERE host_id = ? AND aggregate_version = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(deleteHostSql)) {
             statement.setObject(1, UUID.fromString(hostId));
+            statement.setLong(2, oldAggregateVersion);
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("no record is deleted for host " + hostId);
+                if (queryHostExists(conn, hostId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteHost for hostId " + hostId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deleteHost for hostId " + hostId + ". It might have been already deleted.");
+                }
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during deleteHost for hostId {}: {}", hostId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during deleteHost for hostId {} aggregateVersion {}: {}", hostId, oldAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteHost for hostId {}: {}", hostId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during deleteHost for hostId {}: {} aggregateVersion {}", hostId, oldAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
     @Override
     public void switchHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String updateUserHost = "UPDATE user_host_t SET host_id = ?, update_user = ?, update_ts = ? WHERE user_id = ?";
-        String userId = (String)event.get(Constants.USER); // For logging/exceptions
+        final String updateUserHost = "UPDATE user_host_t SET host_id = ?, update_user = ?, update_ts = ?, aggregate_version = ? WHERE user_id = ? AND aggregate_version = ?";
+        String hostId = (String)event.get(Constants.HOST);
+        String userId = (String)event.get(Constants.USER);
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(updateUserHost)) {
-            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setObject(1, UUID.fromString(hostId));
             statement.setString(2, userId);
             statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setObject(4, UUID.fromString(userId)); // user_id from event itself, not from data map.
+            statement.setLong(4, newAggregateVersion);
+            statement.setObject(5, UUID.fromString(userId)); // user_id from event itself, not from data map.
+            statement.setLong(6, oldAggregateVersion);
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("no record is updated for user " + userId);
+                if (queryHostExists(conn, hostId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during switchHost for hostId " + hostId + " userId " + userId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found during switchHost for hostId " + hostId + " userId " + userId + ".");
+                }
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during switchHost for userId {}: {}", userId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during switchHost for hostId {} (old: {}) -> (new: {}): {}", userId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during switchHost for userId {}: {}", userId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during switchHost for userId {} (old: {}) -> (new: {}): {}", userId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -383,7 +443,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
     @Override
     public Result<String> queryHostById(String id) {
         final String queryHostById = "SELECT host_id, domain, sub_domain, host_desc, host_owner, " +
-                "update_user, update_ts FROM host_t WHERE host_id = ?";
+                "update_user, update_ts, aggregate_version FROM host_t WHERE host_id = ?";
         Result<String> result;
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
@@ -398,6 +458,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                         map.put("hostOwner", resultSet.getString("host_owner"));
                         map.put("updateUser", resultSet.getString("update_user"));
                         map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                        map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     }
                 }
             }
@@ -421,7 +482,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
         // Assuming 'org_owner' might exist as 'host_owner' and 'host_domain' is derivable.
         // For now, retaining the original query for direct modification as per instructions, but this might be a data model mismatch.
         // Re-aligning with current method signature and interface for `queryHostByOwner` which expects `Map<String, Object>`
-        final String queryHostByOwner = "SELECT host_id, domain, sub_domain, host_desc, host_owner, update_user, update_ts " +
+        final String queryHostByOwner = "SELECT host_id, domain, sub_domain, host_desc, host_owner, update_user, update_ts, aggregate_version " +
                 "FROM host_t WHERE host_owner = ?"; // Changed org_owner to host_owner for host_t table
 
         Result<Map<String, Object>> result;
@@ -438,6 +499,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                         map.put("hostOwner", resultSet.getString("host_owner"));
                         map.put("updateUser", resultSet.getString("update_user"));
                         map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                        map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                         // Original had "jwk" which is not in host_t. Removed it to prevent SQLException.
                         // map.put("jwk", resultSet.getString("jwk"));
                     }
@@ -460,11 +522,14 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
     @Override
     public Result<String> getOrg(int offset, int limit, String domain, String orgName, String orgDesc, String orgOwner) {
         Result<String> result = null;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "domain, org_name, org_desc, org_owner, update_user, update_ts \n" +
-                "FROM org_t\n" +
-                "WHERE 1=1\n");
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                domain, org_name, org_desc, org_owner, update_user, update_ts, aggregate_version
+                FROM org_t
+                WHERE 1=1
+                """;
+        StringBuilder sqlBuilder = new StringBuilder(s);
 
         List<Object> parameters = new ArrayList<>();
 
@@ -510,8 +575,8 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                     map.put("orgDesc", resultSet.getString("org_desc"));
                     map.put("orgOwner", resultSet.getString("org_owner"));
                     map.put("updateUser", resultSet.getString("update_user"));
-                    // handling date properly
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     orgs.add(map);
                 }
             }
@@ -536,11 +601,14 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
     @Override
     public Result<String> getHost(int offset, int limit, String hostId, String domain, String subDomain, String hostDesc, String hostOwner) {
         Result<String> result = null;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total,\n" +
-                "host_id, domain, sub_domain, host_desc, host_owner, update_user, update_ts \n" +
-                "FROM host_t\n" +
-                "WHERE 1=1\n");
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                host_id, domain, sub_domain, host_desc, host_owner, update_user, update_ts, aggregate_version
+                FROM host_t
+                WHERE 1=1
+                """;
+        StringBuilder sqlBuilder = new StringBuilder(s);
 
 
         List<Object> parameters = new ArrayList<>();
@@ -593,6 +661,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     // handling date properly
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     hosts.add(map);
                 }
             }
@@ -615,10 +684,13 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
     @Override
     public Result<String> getHostByDomain(String domain, String subDomain, String hostDesc) {
         Result<String> result = null;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT host_id, domain, sub_domain, host_desc, host_owner, update_user, update_ts \n" +
-                "FROM host_t\n" +
-                "WHERE 1=1\n");
+        String s =
+                """
+                SELECT host_id, domain, sub_domain, host_desc, host_owner, update_user, update_ts, aggregate_version"
+                FROM host_t
+                WHERE 1=1
+                """;
+        StringBuilder sqlBuilder = new StringBuilder(s);
 
         List<Object> parameters = new ArrayList<>();
 
@@ -653,6 +725,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                     map.put("hostOwner", resultSet.getString("host_owner"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     hosts.add(map);
                 }
             }
