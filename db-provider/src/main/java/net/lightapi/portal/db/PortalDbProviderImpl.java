@@ -15,6 +15,7 @@ import java.sql.SQLException; // Added import
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class PortalDbProviderImpl implements PortalDbProvider {
     public static final Logger logger = LoggerFactory.getLogger(PortalDbProviderImpl.class);
@@ -453,4 +454,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     // --- Event ---
     @Override public Result<String> insertEventStore(CloudEvent[] events) { return eventPersistence.insertEventStore(events); }
 
+    // --- Product / Instance Applicable Properties
+    @Override
+    public Result<String> getApplicableConfigPropertiesForInstance(int offset, int limit, String hostId, String instanceId, Set<String> resourceTypes, Set<String> configTypes, Set<String> propertyTypes) { return configPersistence.getApplicableConfigPropertiesForInstance(offset, limit, hostId, instanceId, resourceTypes, configTypes, propertyTypes); }
+    @Override
+    public Result<String> getApplicableConfigPropertiesForInstanceApi(int offset, int limit, String hostId, String instanceApiId) { return configPersistence.getApplicableConfigPropertiesForInstanceApi(offset, limit, hostId, instanceApiId); }
+    @Override
+    public Result<String> getApplicableConfigPropertiesForInstanceApp(int offset, int limit, String hostId, String instanceAppId) { return configPersistence.getApplicableConfigPropertiesForInstanceApp(offset, limit, hostId, instanceAppId); }
+    @Override
+    public Result<String> getApplicableConfigPropertiesForInstanceAppApi(int offset, int limit, String hostId, String instanceAppId, String instanceApiId) { return configPersistence.getApplicableConfigPropertiesForInstanceAppApi(offset, limit, hostId, instanceAppId, instanceApiId); }
 }

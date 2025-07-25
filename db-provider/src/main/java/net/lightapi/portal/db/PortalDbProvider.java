@@ -22,6 +22,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.sql.SQLException; // Explicitly import SQLException
+import java.util.Set;
 
 /**
  * Interface class provide the contract for different database implementation for the portal. Mainly, the data is
@@ -657,4 +658,9 @@ public interface PortalDbProvider extends DbProvider {
                 .withData("application/json", data.getBytes(StandardCharsets.UTF_8))
                 .build()};
     }
+    // Product / Instance Applicable Properties
+    Result<String> getApplicableConfigPropertiesForInstance(int offset, int limit, String hostId, String instanceId, Set<String> resourceTypes, Set<String> configTypes, Set<String> propertyTypes);
+    Result<String> getApplicableConfigPropertiesForInstanceApi(int offset, int limit, String hostId, String instanceApiId);
+    Result<String> getApplicableConfigPropertiesForInstanceApp(int offset, int limit, String hostId, String instanceAppId);
+    Result<String> getApplicableConfigPropertiesForInstanceAppApi(int offset, int limit, String hostId, String instanceAppId, String instanceApiId);
 }
