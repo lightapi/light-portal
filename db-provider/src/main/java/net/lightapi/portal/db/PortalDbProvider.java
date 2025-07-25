@@ -607,4 +607,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> getApplicableConfigPropertiesForInstanceApi(int offset, int limit, String hostId, String instanceApiId);
     Result<String> getApplicableConfigPropertiesForInstanceApp(int offset, int limit, String hostId, String instanceAppId);
     Result<String> getApplicableConfigPropertiesForInstanceAppApi(int offset, int limit, String hostId, String instanceAppId, String instanceApiId);
+
+    // Aggregations
+    Result<String> getAllAggregatedInstanceRuntimeConfigs(String hostId, String instanceId);
 }

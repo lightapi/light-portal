@@ -461,4 +461,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> getApplicableConfigPropertiesForInstanceAppApi(int offset, int limit, String hostId, String instanceAppId, String instanceApiId) { return configPersistence.getApplicableConfigPropertiesForInstanceAppApi(offset, limit, hostId, instanceAppId, instanceApiId); }
+
+    @Override
+    public Result<String> getAllAggregatedInstanceRuntimeConfigs(String hostId, String instanceId) { return configPersistence.getAllAggregatedInstanceRuntimeConfigs(hostId, instanceId); }
 }
