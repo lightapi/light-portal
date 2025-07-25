@@ -15,6 +15,7 @@ import net.lightapi.portal.db.util.SqlUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.validation.Valid;
 import java.sql.*;
 import java.time.OffsetDateTime;
 import java.util.*;
@@ -1215,7 +1216,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                 AND r.host_id = ?
                 """;
 
-        StringBuilder sqlBuilder = new StringBuilder();
+        StringBuilder sqlBuilder = new StringBuilder(s);
 
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
@@ -1817,4 +1818,180 @@ public class AuthPersistenceImpl implements AuthPersistence {
         return result;
     }
 
+    @Override
+    public void createRefToken(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        final String insertRefreshToken =
+                """
+                INSERT INTO auth_ref_token_t (ref_token, host_id, jwt, client_id, update_user, update_ts, aggregate_version)
+                VALUES (?, ?, ?, ?, ?,   ?, ?)
+                """;
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String refToken = (String) map.get("refToken");
+        long aggregateVersion = SqlUtil.getNewAggregateVersion(event);
+        try (PreparedStatement statement = conn.prepareStatement(insertRefreshToken)) {
+            statement.setString(1, refToken);
+            statement.setObject(2, UUID.fromString((String) map.get("hostId")));
+            statement.setString(3, (String) map.get("jwt"));
+            statement.setObject(4, UUID.fromString((String)map.get("clientId")));
+            statement.setString(5, (String) event.get(Constants.USER));
+            statement.setObject(6, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            statement.setLong(7, aggregateVersion);
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException(String.format("Failed during createRefToken for refToken %s with aggregateVersion %d", refToken, aggregateVersion));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during createRefToken for refToken {} aggregateVersion {}: {}", refToken, aggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createRefToken for refToken {} aggregateVersion {}: {}", refToken, aggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public void deleteRefToken(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        final String deleteRefToken = "DELETE from auth_ref_token_t WHERE ref_token = ? AND aggregate_version = ?";
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String refToken = (String) map.get("refToken");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        try (PreparedStatement statement = conn.prepareStatement(deleteRefToken)) {
+            statement.setString(1, refToken);
+            statement.setLong(2, oldAggregateVersion);
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException(String.format("no record is deleted for ref token %s", refToken));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during deleteRefToken for refToken {} aggregateVersion {}: {}", refToken, oldAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deleteRefToken for refToken {} aggregateVersion {}: {}", refToken, oldAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public Result<String> listRefToken(int offset, int limit, String refToken, String hostId, String clientId, String clientName, String updateUser, Timestamp updateTs) {
+        Result<String> result = null;
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                r.host_id, r.ref_token, r.jwt_token, r.client_id, c.client_name, r.update_user, r.update_ts, r.aggregate_version
+                FROM auth_ref_token_t r, auth_client_t c
+                WHERE r.client_id = c.client_id
+                AND r.host_id = ?
+                """;
+
+        StringBuilder sqlBuilder = new StringBuilder(s);
+
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
+
+        StringBuilder whereClause = new StringBuilder();
+
+        addCondition(whereClause, parameters, "r.ref_token", refToken);
+        addCondition(whereClause, parameters, "r.client_id", clientId != null ? UUID.fromString(clientId) : null);
+        addCondition(whereClause, parameters, "c.client_name", clientName);
+        addCondition(whereClause, parameters, "r.update_user", updateUser);
+        addCondition(whereClause, parameters, "r.update_ts", updateTs);
+
+
+        if (!whereClause.isEmpty()) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append(" ORDER BY r.client_id\n" +
+                "LIMIT ? OFFSET ?");
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        String sql = sqlBuilder.toString();
+        int total = 0;
+        List<Map<String, Object>> tokens = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("refToken", resultSet.getString("ref_token"));
+                    map.put("jwtToken", resultSet.getString("jwt_token"));
+                    map.put("clientId", resultSet.getObject("client_id", UUID.class));
+                    map.put("clientName", resultSet.getString("client_name"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    tokens.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("tokens", tokens);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
+    public Result<String> queryRefToken(String refToken) {
+        Result<String> result = null;
+        String sql =
+                """
+                SELECT ref_token, host_id, jwt_token, client_id, update_user, update_ts, aggregate_version
+                FROM auth_ref_token_t
+                WHERE ref_token = ?
+                """;
+        try (final Connection conn = ds.getConnection()) {
+            Map<String, Object> map = new HashMap<>();
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, refToken);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        map.put("refToken", resultSet.getString("ref_token"));
+                        map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                        map.put("jwtToken", resultSet.getString("jwt_token"));
+                        map.put("clientId", resultSet.getObject("client_id", UUID.class));
+                        map.put("updateUser", resultSet.getString("update_user"));
+                        map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                        map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    }
+                }
+            }
+            if (map.isEmpty())
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "ref token", refToken));
+            else
+                result = Success.of(JsonMapper.toJson(map));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
 }

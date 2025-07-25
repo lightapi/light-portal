@@ -146,6 +146,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public Result<String> listRefreshToken(int offset, int limit, String refreshToken, String hostId, String userId, String entityId, String email, String firstName, String lastName, String clientId, String appId, String appName, String scope, String userType, String roles, String groups, String positions, String attributes, String csrf, String customClaim, String updateUser, Timestamp updateTs) { return authPersistence.listRefreshToken(offset, limit, refreshToken, hostId, userId, entityId, email, firstName, lastName, clientId, appId, appName, scope, userType, roles, groups, positions, attributes, csrf, customClaim, updateUser, updateTs); }
     @Override public Result<String> queryRefreshToken(String refreshToken) { return authPersistence.queryRefreshToken(refreshToken); }
 
+    @Override public void createRefToken(Connection connection, Map<String, Object> event) throws SQLException, Exception {authPersistence.createRefToken(connection, event); }
+    @Override public void deleteRefToken(Connection connection, Map<String, Object> event) throws SQLException, Exception { authPersistence.deleteRefToken(connection, event); }
+    @Override public Result<String> listRefToken(int offset, int limit, String refToken, String hostId, String clientId, String clientName, String updateUser, Timestamp updateTs) { return authPersistence.listRefToken(offset, limit, refToken, hostId, clientId, clientName, updateUser, updateTs); }
+    @Override public Result<String> queryRefToken(String refToken) {return authPersistence.queryRefToken(refToken); };
+
     // --- ApiService ---
     @Override public void createService(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.createService(connection, event); }
     @Override public void updateService(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.updateService(connection, event); }
