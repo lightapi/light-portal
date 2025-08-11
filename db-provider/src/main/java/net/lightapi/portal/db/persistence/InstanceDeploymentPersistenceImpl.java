@@ -343,6 +343,62 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
+    public void lockInstance(Connection conn, Map<String, Object> event) throws Exception {
+        String sql = "UPDATE instance_t SET readonly = true, aggregate_version = ? " +
+            "WHERE host_id = ? AND instance_id = ? AND aggregate_version = ?";
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String hostId = (String)event.get(Constants.HOST);
+        String instanceId = (String)map.get("instanceId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setLong(1, SqlUtil.getNewAggregateVersion(event));
+            pstmt.setObject(2, UUID.fromString(hostId));
+            pstmt.setObject(3, UUID.fromString(instanceId));
+            pstmt.setLong(4, oldAggregateVersion);
+
+            int affectedRows = pstmt.executeUpdate();
+            if (affectedRows == 0) {
+                throw new SQLException("Locking instance failed, no rows affected.");
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during lockInstance for hostId {} instanceId {} aggregateVersion {}: {}", hostId, instanceId, oldAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during lockInstance for hostId {} instanceId {} aggregateVersion {}: {}", hostId, instanceId, oldAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public void unlockInstance(Connection conn, Map<String, Object> event) throws Exception {
+        String sql = "UPDATE instance_t SET readonly = false, aggregate_version = ? " +
+            "WHERE host_id = ? AND instance_id = ? AND aggregate_version = ?";
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String hostId = (String)event.get(Constants.HOST);
+        String instanceId = (String)map.get("instanceId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setLong(1, SqlUtil.getNewAggregateVersion(event));
+            pstmt.setObject(2, UUID.fromString(hostId));
+            pstmt.setObject(3, UUID.fromString(instanceId));
+            pstmt.setLong(4, oldAggregateVersion);
+
+            int affectedRows = pstmt.executeUpdate();
+            if (affectedRows == 0) {
+                throw new SQLException("Unlocking instance failed, no rows affected.");
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during unlockInstance for hostId {} instanceId {} aggregateVersion {}: {}", hostId, instanceId, oldAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during unlockInstance for hostId {} instanceId {} aggregateVersion {}: {}", hostId, instanceId, oldAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
     public Result<String> getInstance(int offset, int limit, String hostId, String instanceId, String instanceName,
                                       String productVersionId, String productId, String productVersion, String serviceId,
                                       Boolean current, Boolean readonly, String environment, String serviceDesc,
