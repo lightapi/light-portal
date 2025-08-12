@@ -303,41 +303,34 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
     public void updateHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String updateHostSql =
                 """
-                UPDATE host_t SET domain = ?, sub_domain = ?, host_desc = ?, host_owner = ?,
+                UPDATE host_t SET host_desc = ?, host_owner = ?,
                 update_user = ?, update_ts = ?, aggregate_version = ?
                 WHERE host_id = ? AND aggregate_version = ?
                 """;
 
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)map.get("hostId");
+        String hostId = (String)map.get("currentHostId");
         long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(updateHostSql)) {
-            statement.setString(1, (String)map.get("domain"));
-            String subDomain = (String)map.get("subDomain");
-            if (subDomain != null && !subDomain.isEmpty()) {
-                statement.setString(2, subDomain);
-            } else {
-                statement.setNull(2, NULL);
-            }
             String hostDesc = (String)map.get("hostDesc");
             if (hostDesc != null && !hostDesc.isEmpty()) {
-                statement.setString(3, hostDesc);
+                statement.setString(1, hostDesc);
             } else {
-                statement.setNull(3, NULL);
+                statement.setNull(1, NULL);
             }
             String hostOwner = (String)map.get("hostOwner");
             if (hostOwner != null && !hostOwner.isEmpty()) {
-                statement.setObject(4, UUID.fromString(hostOwner));
+                statement.setObject(2, UUID.fromString(hostOwner));
             } else {
-                statement.setNull(4, NULL);
+                statement.setNull(2, NULL);
             }
-            statement.setString(5, (String)event.get(Constants.USER));
-            statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(7, newAggregateVersion);
-            statement.setObject(8, UUID.fromString(hostId));
-            statement.setLong(9, oldAggregateVersion);
+            statement.setString(3, (String)event.get(Constants.USER));
+            statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(5, newAggregateVersion);
+            statement.setObject(6, UUID.fromString(hostId));
+            statement.setLong(7, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
@@ -655,7 +648,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("currentHostId", resultSet.getObject("host_id", UUID.class));
                     map.put("domain", resultSet.getString("domain"));
                     map.put("subDomain", resultSet.getString("sub_domain"));
                     map.put("hostDesc", resultSet.getString("host_desc"));
