@@ -287,10 +287,63 @@ public class EventTypeUtil {
                 if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, ruleId);
                 yield ruleId;
             }
+            case PortalConstants.AGGREGATE_ROLE -> {
+                String roleId = (String) dataMap.get("roleId");
+                if (roleId == null) {
+                    logger.warn("roleId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, roleId);
+                yield roleId;
+            }
+            case PortalConstants.AGGREGATE_ROLE_PERMISSION -> {
+                String roleId = (String) dataMap.get("roleId");
+                String endpointId = (String) dataMap.get("endpointId");
+                if (endpointId == null || roleId == null) {
+                    logger.warn("roleId or endpointId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                String id = roleId + "|" + endpointId;
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, id);
+                yield id;
+            }
+            case PortalConstants.AGGREGATE_ROLE_USER -> {
+                String roleId = (String) dataMap.get("roleId");
+                String userId = (String) dataMap.get("userId");
+                if (userId == null || roleId == null) {
+                    logger.warn("roleId or userId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                String id = roleId + "|" + userId;
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, id);
+                yield id;
+            }
+            case PortalConstants.AGGREGATE_ROLE_ROW_FILTER -> {
+                String roleId = (String) dataMap.get("roleId");
+                String endpointId = (String) dataMap.get("endpointId");
+                String colName = (String) dataMap.get("colName");
+                if (endpointId == null || roleId == null || colName == null) {
+                    logger.warn("roleId or endpointId or colName is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                String id = roleId + "|" + endpointId + "|" + colName;
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, id);
+                yield id;
+            }
+            case PortalConstants.AGGREGATE_ROLE_COL_FILTER -> {
+                String roleId = (String) dataMap.get("roleId");
+                String endpointId = (String) dataMap.get("endpointId");
+                if (endpointId == null || roleId == null) {
+                    logger.warn("roleId or endpointId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                String id = roleId + "|" + endpointId;
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, id);
+                yield id;
+            }
             case "Instance" -> (String) dataMap.get("instanceId");
             case "Host" -> (String) dataMap.get("hostId");
             case "User" -> (String) dataMap.get("userId");
-            case "Role" -> (String) dataMap.get("roleId");
             case "Group" -> (String) dataMap.get("groupId");
             case "Permission" -> (String) dataMap.get("permissionId");
             case "ApiKey" -> (String) dataMap.get("apiKeyId");

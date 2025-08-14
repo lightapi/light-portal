@@ -346,9 +346,6 @@ public class PortalConstants {
     public static final String AGGREGATE_PIPELINE = "Pipeline";
     public static final String AGGREGATE_PLATFORM = "Platform";
 
-    // -- Group --
-    public static final String AGGREGATE_GROUP = "Group";
-
     // -- Host --
     public static final String AGGREGATE_HOST = "Host";
     public static final String AGGREGATE_ORG = "Org";
@@ -375,6 +372,13 @@ public class PortalConstants {
 
     // -- Role --
     public static final String AGGREGATE_ROLE = "Role";
+    public static final String AGGREGATE_ROLE_PERMISSION = "RolePermission";
+    public static final String AGGREGATE_ROLE_USER = "RoleUser";
+    public static final String AGGREGATE_ROLE_ROW_FILTER = "RoleRowFilter";
+    public static final String AGGREGATE_ROLE_COL_FILTER = "RoleColFilter";
+
+    // -- Group --
+    public static final String AGGREGATE_GROUP = "Group";
 
     // -- Rule --
     public static final String AGGREGATE_RULE = "Rule";
