@@ -503,6 +503,42 @@ public class EventTypeUtil {
                 if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, id);
                 yield id;
             }
+            case PortalConstants.AGGREGATE_DEPLOYMENT -> {
+                String deploymentId = (String) dataMap.get("deploymentId");
+                if (deploymentId == null) {
+                    logger.warn("deploymentId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, deploymentId);
+                yield deploymentId;
+            }
+            case PortalConstants.AGGREGATE_DEPLOYMENT_INSTANCE -> {
+                String deploymentInstanceId = (String) dataMap.get("deploymentInstanceId");
+                if (deploymentInstanceId == null) {
+                    logger.warn("deploymentInstanceId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, deploymentInstanceId);
+                yield deploymentInstanceId;
+            }
+            case PortalConstants.AGGREGATE_PLATFORM -> {
+                String platformId = (String) dataMap.get("platformId");
+                if (platformId == null) {
+                    logger.warn("platformId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, platformId);
+                yield platformId;
+            }
+            case PortalConstants.AGGREGATE_PIPELINE -> {
+                String pipelineId = (String) dataMap.get("pipelineId");
+                if (pipelineId == null) {
+                    logger.warn("pipelineId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, pipelineId);
+                yield pipelineId;
+            }
             case "Instance" -> (String) dataMap.get("instanceId");
             case "Host" -> (String) dataMap.get("hostId");
             case "User" -> (String) dataMap.get("userId");
@@ -511,7 +547,6 @@ public class EventTypeUtil {
             case "AuditLog" -> (String) dataMap.get("auditLogId");
             case "PasswordReset" -> (String) dataMap.get("resetId");
             case "Invitation" -> (String) dataMap.get("invitationId");
-            case "Platform" -> "platform"; // Singleton aggregate, fixed ID
             // Add more cases as needed for other aggregate types
             default -> {
                 logger.warn("No aggregate ID mapping defined for aggregate type: {}", aggregateType);
