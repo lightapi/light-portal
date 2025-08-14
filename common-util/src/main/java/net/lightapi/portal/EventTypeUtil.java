@@ -593,7 +593,56 @@ public class EventTypeUtil {
                 if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, id);
                 yield id;
             }
-            case "Instance" -> (String) dataMap.get("instanceId");
+            case PortalConstants.AGGREGATE_INSTANCE -> {
+                String instanceId = (String) dataMap.get("instanceId");
+                if (instanceId == null) {
+                    logger.warn("instanceId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, instanceId);
+                yield instanceId;
+            }
+            case PortalConstants.AGGREGATE_INSTANCE_API -> {
+                String instanceApiId = (String) dataMap.get("instanceApiId");
+                if (instanceApiId == null) {
+                    logger.warn("instanceApiId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, instanceApiId);
+                yield instanceApiId;
+            }
+            case PortalConstants.AGGREGATE_INSTANCE_APP -> {
+                String instanceAppId = (String) dataMap.get("instanceAppId");
+                if (instanceAppId == null) {
+                    logger.warn("instanceAppId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, instanceAppId);
+                yield instanceAppId;
+            }
+            case PortalConstants.AGGREGATE_INSTANCE_APP_API -> {
+                String instanceAppId = (String) dataMap.get("instanceAppId");
+                String instanceApiId = (String) dataMap.get("instanceApiId");
+                if (instanceAppId == null || instanceApiId == null) {
+                    logger.warn("instanceAppId or instanceApiId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                String id = instanceAppId + "|" + instanceApiId;
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, id);
+                yield id;
+            }
+            case PortalConstants.AGGREGATE_INSTANCE_API_PATH_PREFIX -> {
+                String instanceApiId = (String) dataMap.get("instanceApiId");
+                String pathPrefix = (String) dataMap.get("pathPrefix");
+                if (instanceApiId == null || pathPrefix == null) {
+                    logger.warn("instanceApiId or pathPrefix is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                String id = instanceApiId + "|" + pathPrefix;
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, id);
+                yield id;
+            }
+
             case "Host" -> (String) dataMap.get("hostId");
             case "User" -> (String) dataMap.get("userId");
             case "Permission" -> (String) dataMap.get("permissionId");
