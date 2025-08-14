@@ -539,6 +539,60 @@ public class EventTypeUtil {
                 if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, pipelineId);
                 yield pipelineId;
             }
+            case PortalConstants.AGGREGATE_PRODUCT_VERSION -> {
+                String productVersionId = (String) dataMap.get("productVersionId");
+                if (productVersionId == null) {
+                    logger.warn("productVersionId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, productVersionId);
+                yield productVersionId;
+            }
+            case PortalConstants.AGGREGATE_PRODUCT_VERSION_CONFIG -> {
+                String productVersionId = (String) dataMap.get("productVersionId");
+                String configId = (String) dataMap.get("configId");
+                if (configId == null || productVersionId == null) {
+                    logger.warn("productVersionId or configId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                String id = productVersionId + "|" + configId;
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, id);
+                yield id;
+            }
+            case PortalConstants.AGGREGATE_PRODUCT_VERSION_CONFIG_PROPERTY -> {
+                String productVersionId = (String) dataMap.get("productVersionId");
+                String propertyId = (String) dataMap.get("propertyId");
+                if (propertyId == null || productVersionId == null) {
+                    logger.warn("productVersionId or propertyId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                String id = productVersionId + "|" + propertyId;
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, id);
+                yield id;
+            }
+            case PortalConstants.AGGREGATE_PRODUCT_VERSION_ENVIRONMENT -> {
+                String productVersionId = (String) dataMap.get("productVersionId");
+                String systemEnv = (String) dataMap.get("systemEnv");
+                String runtimeEnv = (String) dataMap.get("runtimeEnv");
+                if (systemEnv == null || productVersionId == null || runtimeEnv == null) {
+                    logger.warn("productVersionId or systemEnv or runtimeEnv is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                String id = productVersionId + "|" + systemEnv + "|" + runtimeEnv;
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, id);
+                yield id;
+            }
+            case PortalConstants.AGGREGATE_PRODUCT_VERSION_PIPELINE -> {
+                String productVersionId = (String) dataMap.get("productVersionId");
+                String pipelineId = (String) dataMap.get("pipelineId");
+                if (pipelineId == null || productVersionId == null) {
+                    logger.warn("productVersionId or pipelineId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                String id = productVersionId + "|" + pipelineId;
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, id);
+                yield id;
+            }
             case "Instance" -> (String) dataMap.get("instanceId");
             case "Host" -> (String) dataMap.get("hostId");
             case "User" -> (String) dataMap.get("userId");

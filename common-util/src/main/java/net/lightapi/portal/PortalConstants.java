@@ -182,10 +182,10 @@ public class PortalConstants {
     public static final String AUTH_PROVIDER_UPDATED_EVENT = "AuthProviderUpdatedEvent";
     public static final String AUTH_PROVIDER_DELETED_EVENT = "AuthProviderDeletedEvent";
 
-    // --- Product Events ---
-    public static final String PRODUCT_CREATED_EVENT = "ProductCreatedEvent";
-    public static final String PRODUCT_UPDATED_EVENT = "ProductUpdatedEvent";
-    public static final String PRODUCT_DELETED_EVENT = "ProductDeletedEvent";
+    // --- Product Version Events ---
+    public static final String PRODUCT_VERSION_CREATED_EVENT = "ProductVersionCreatedEvent";
+    public static final String PRODUCT_VERSION_UPDATED_EVENT = "ProductVersionUpdatedEvent";
+    public static final String PRODUCT_VERSION_DELETED_EVENT = "ProductVersionDeletedEvent";
 
     // --- Product Version Environment Events ---
     public static final String PRODUCT_VERSION_ENVIRONMENT_CREATED_EVENT = "ProductVersionEnvironmentCreatedEvent";
@@ -354,9 +354,6 @@ public class PortalConstants {
     public static final String AGGREGATE_INSTANCE_APP_API = "InstanceAppApi";
     public static final String AGGREGATE_INSTANCE_PIPELINE = "InstancePipeline";
 
-    // -- Product --
-    public static final String AGGREGATE_PRODUCT_VERSION = "ProductVersion";
-
     // -- Ref --
     public static final String AGGREGATE_REF_TABLE = "RefTable";
     public static final String AGGREGATE_REF_VALUE = "RefValue";
@@ -410,6 +407,13 @@ public class PortalConstants {
 
     // -- User --
     public static final String AGGREGATE_USER = "User";
+
+    // -- Product --
+    public static final String AGGREGATE_PRODUCT_VERSION = "ProductVersion";
+    public static final String AGGREGATE_PRODUCT_VERSION_ENVIRONMENT = "ProductVersionEnvironment";
+    public static final String AGGREGATE_PRODUCT_VERSION_PIPELINE = "ProductVersionPipeline";
+    public static final String AGGREGATE_PRODUCT_VERSION_CONFIG = "ProductVersionConfig";
+    public static final String AGGREGATE_PRODUCT_VERSION_CONFIG_PROPERTY = "ProductVersionConfigProperty";
 
     // -- Service --
     public static final String AGGREGATE_SERVICE = "Service";
