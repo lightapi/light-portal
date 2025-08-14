@@ -46,4 +46,11 @@ public interface AuthPersistence {
     void deleteRefreshToken(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> listRefreshToken(int offset, int limit, String refreshToken, String hostId, String userId, String entityId, String email, String firstName, String lastName, String clientId, String appId, String appName, String scope, String userType, String roles, String groups, String positions, String attributes, String csrf, String customClaim, String updateUser, Timestamp updateTs);
     Result<String> queryRefreshToken(String refreshToken);
+
+    // RefToken
+    void createRefToken(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void deleteRefToken(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    Result<String> listRefToken(int offset, int limit, String refToken, String hostId, String clientId, String clientName, String updateUser, Timestamp updateTs);
+    Result<String> queryRefToken(String refToken);
+
 }

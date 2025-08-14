@@ -1,13 +1,24 @@
 package net.lightapi.portal.db;
 
+import com.networknt.config.Config;
+import com.networknt.config.JsonMapper;
 import com.networknt.db.provider.DbProvider;
 import com.networknt.monad.Result;
+import com.networknt.utility.Constants;
+import com.networknt.utility.NioUtils;
+import com.networknt.utility.UuidUtil;
 import io.cloudevents.CloudEvent;
+import io.cloudevents.core.builder.CloudEventBuilder;
+import io.cloudevents.jackson.JsonFormat;
+import net.lightapi.portal.PortalConstants;
+import net.lightapi.portal.PortalUtil;
 import net.lightapi.portal.validation.FilterCriterion;
 import net.lightapi.portal.validation.SortCriterion;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.Timestamp;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.sql.SQLException; // Explicitly import SQLException
@@ -104,6 +115,11 @@ public interface PortalDbProvider extends DbProvider {
                                     String email, String firstName, String lastName, String clientId, String appId,
                                     String appName, String scope, String userType, String roles, String groups, String positions,
                                     String attributes, String csrf, String customClaim, String updateUser, Timestamp updateTs);
+    // RefToken
+    void createRefToken(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void deleteRefToken(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    Result<String> listRefToken(int offset, int limit, String refToken, String hostId, String clientId, String clientName, String updateUser, Timestamp updateTs);
+    Result<String> queryRefToken(String refToken);
 
     // AuthCode
     void createAuthCode(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -604,6 +620,46 @@ public interface PortalDbProvider extends DbProvider {
     // Event Store
     Result<String> insertEventStore(CloudEvent[] events);
 
+    /**
+     * Builds the CloudEvent object array from the provided map, eventType, aggregateId,
+     * aggregateType, userId, host, and nonce. This allows light-portal components to
+     * directly push the event into kafka without calling the command handler API endpoint.
+     */
+    default CloudEvent[] buildCloudEvent(Map<String, Object> map, String eventType, String aggregateId,
+                                       String aggregateType, String userId, String host) {
+
+        Number nonce;
+        Result<Long> nonceResult = queryNonceByUserId(userId);
+        if(nonceResult.isFailure()) {
+            if(nonceResult.getError().getStatusCode() != 404) {
+                logger.error("Failed to query nonce for user: {} with error code {}", userId, nonceResult.getError().getCode());
+                throw new IllegalStateException("Failed to query nonce for user: " + userId);
+            } else {
+                // this is a brand-new user that is created or onboarded.
+                nonce = 1;
+            }
+        } else {
+            nonce = nonceResult.getResult();
+        }
+        if(logger.isTraceEnabled()) logger.trace("nonce = {}", nonce);
+
+        CloudEventBuilder eventTemplate = CloudEventBuilder.v1()
+                .withSource(PortalConstants.EVENT_SOURCE)
+                .withType(eventType);
+
+        String data = JsonMapper.toJson(map);
+        return new CloudEvent[]{eventTemplate.newBuilder()
+                .withId(UuidUtil.getUUID().toString())
+                .withTime(OffsetDateTime.now())
+                .withSubject(aggregateId)
+                .withExtension(Constants.USER, userId)
+                .withExtension(PortalConstants.NONCE, nonce)
+                .withExtension(Constants.HOST, host)
+                .withExtension(PortalConstants.AGGREGATE_TYPE, aggregateType)
+                .withExtension(PortalConstants.EVENT_AGGREGATE_VERSION, (Number)map.get(PortalConstants.NEW_AGGREGATE_VERSION))
+                .withData("application/json", data.getBytes(StandardCharsets.UTF_8))
+                .build()};
+    }
     // Product / Instance Applicable Properties
     Result<String> getApplicableConfigPropertiesForInstance(int offset, int limit, String hostId, String instanceId, Set<String> resourceTypes, Set<String> configTypes, Set<String> propertyTypes);
     Result<String> getApplicableConfigPropertiesForInstanceApi(int offset, int limit, String hostId, String instanceApiId);

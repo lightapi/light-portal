@@ -60,7 +60,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
             statement.setString(1, domain);
             statement.setString(2, (String)map.get("orgName"));
             statement.setString(3, (String)map.get("orgDesc"));
-            statement.setString(4, orgOwner);
+            statement.setObject(4, UUID.fromString(orgOwner));
             statement.setString(5, (String)event.get(Constants.USER));
             statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
             statement.setLong(7, newAggregateVersion);
@@ -73,7 +73,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                 hostStatement.setString(2, domain);
                 hostStatement.setString(3, (String)map.get("subDomain"));
                 hostStatement.setString(4, (String)map.get("hostDesc"));
-                hostStatement.setString(5, hostOwner); // host owner can be another person selected by the org owner.
+                hostStatement.setObject(5, UUID.fromString(hostOwner));
                 hostStatement.setString(6, (String)event.get(Constants.USER));
                 hostStatement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
                 hostStatement.setLong(8, newAggregateVersion);
@@ -111,7 +111,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
             try (PreparedStatement roleUserStatement = conn.prepareStatement(insertRoleUser)) {
                 roleUserStatement.setObject(1, UUID.fromString(hostId));
                 roleUserStatement.setString(2, "user");
-                roleUserStatement.setString(3, orgOwner);
+                roleUserStatement.setObject(3, UUID.fromString(orgOwner));
                 roleUserStatement.setString(4, (String)event.get(Constants.USER));
                 roleUserStatement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
                 roleUserStatement.setLong(6, newAggregateVersion);
@@ -121,7 +121,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
             try (PreparedStatement roleUserStatement = conn.prepareStatement(insertRoleUser)) {
                 roleUserStatement.setObject(1, UUID.fromString(hostId));
                 roleUserStatement.setString(2, "org-admin");
-                roleUserStatement.setString(3, orgOwner);
+                roleUserStatement.setObject(3, UUID.fromString(orgOwner));
                 roleUserStatement.setString(4, (String)event.get(Constants.USER));
                 roleUserStatement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
                 roleUserStatement.setLong(6, newAggregateVersion);
@@ -131,7 +131,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
             try (PreparedStatement roleUserStatement = conn.prepareStatement(insertRoleUser)) {
                 roleUserStatement.setObject(1, UUID.fromString(hostId));
                 roleUserStatement.setString(2, "host-admin");
-                roleUserStatement.setString(3, hostOwner);
+                roleUserStatement.setObject(3, UUID.fromString(hostOwner));
                 roleUserStatement.setString(4, (String)event.get(Constants.USER));
                 roleUserStatement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
                 roleUserStatement.setLong(6, newAggregateVersion);
@@ -142,7 +142,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                 userHostStatement.setObject(1, UUID.fromString(hostId));
                 userHostStatement.setString(2, (String)event.get(Constants.USER));
                 userHostStatement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                userHostStatement.setString(4, orgOwner);
+                userHostStatement.setObject(4, UUID.fromString(orgOwner));
 
                 userHostStatement.executeUpdate();
             }
@@ -197,7 +197,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
             }
             String orgOwner = (String)map.get("orgOwner");
             if (orgOwner != null && !orgOwner.isEmpty()) {
-                statement.setString(3, orgOwner);
+                statement.setObject(3, UUID.fromString(orgOwner));
             } else {
                 statement.setNull(3, NULL);
             }
@@ -259,8 +259,9 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                 VALUES (?, ?, ?, ?, ?,  ?, ?, ?)
                 """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
+        String hostId = (String)map.get("hostId"); // enriched in the service.
         String domain = (String)map.get("domain");
+        String hostOwner = (String)map.get("hostOwner");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(insertHost)) {
@@ -268,7 +269,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
             statement.setString(2, domain);
             statement.setString(3, (String)map.get("subDomain"));
             statement.setString(4, (String)map.get("hostDesc"));
-            statement.setString(5, (String)map.get("hostOwner"));
+            statement.setObject(5, UUID.fromString(hostOwner));
             statement.setString(6, (String)event.get(Constants.USER));
             statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
             statement.setLong(8, newAggregateVersion);
@@ -302,41 +303,34 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
     public void updateHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String updateHostSql =
                 """
-                UPDATE host_t SET domain = ?, sub_domain = ?, host_desc = ?, host_owner = ?,
+                UPDATE host_t SET host_desc = ?, host_owner = ?,
                 update_user = ?, update_ts = ?, aggregate_version = ?
                 WHERE host_id = ? AND aggregate_version = ?
                 """;
 
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
+        String hostId = (String)map.get("currentHostId");
         long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(updateHostSql)) {
-            statement.setString(1, (String)map.get("domain"));
-            String subDomain = (String)map.get("subDomain");
-            if (subDomain != null && !subDomain.isEmpty()) {
-                statement.setString(2, subDomain);
-            } else {
-                statement.setNull(2, NULL);
-            }
             String hostDesc = (String)map.get("hostDesc");
             if (hostDesc != null && !hostDesc.isEmpty()) {
-                statement.setString(3, hostDesc);
+                statement.setString(1, hostDesc);
             } else {
-                statement.setNull(3, NULL);
+                statement.setNull(1, NULL);
             }
             String hostOwner = (String)map.get("hostOwner");
             if (hostOwner != null && !hostOwner.isEmpty()) {
-                statement.setString(4, hostOwner);
+                statement.setObject(2, UUID.fromString(hostOwner));
             } else {
-                statement.setNull(4, NULL);
+                statement.setNull(2, NULL);
             }
-            statement.setString(5, (String)event.get(Constants.USER));
-            statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(7, newAggregateVersion);
-            statement.setObject(8, UUID.fromString(hostId));
-            statement.setLong(9, oldAggregateVersion);
+            statement.setString(3, (String)event.get(Constants.USER));
+            statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(5, newAggregateVersion);
+            statement.setObject(6, UUID.fromString(hostId));
+            statement.setLong(7, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
@@ -359,7 +353,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
     public void deleteHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String deleteHostSql = "DELETE from host_t WHERE host_id = ? AND aggregate_version = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
+        String hostId = (String)map.get("hostId");
         long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(deleteHostSql)) {
@@ -385,7 +379,8 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
     @Override
     public void switchHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String updateUserHost = "UPDATE user_host_t SET host_id = ?, update_user = ?, update_ts = ?, aggregate_version = ? WHERE user_id = ? AND aggregate_version = ?";
-        String hostId = (String)event.get(Constants.HOST);
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String hostId = (String)map.get("hostId");
         String userId = (String)event.get(Constants.USER);
         long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
@@ -455,7 +450,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                         map.put("domain", resultSet.getString("domain"));
                         map.put("subDomain", resultSet.getString("sub_domain"));
                         map.put("hostDesc", resultSet.getString("host_desc"));
-                        map.put("hostOwner", resultSet.getString("host_owner"));
+                        map.put("hostOwner", resultSet.getObject("host_owner", UUID.class));
                         map.put("updateUser", resultSet.getString("update_user"));
                         map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                         map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
@@ -496,7 +491,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                         map.put("domain", resultSet.getString("domain"));
                         map.put("subDomain", resultSet.getString("sub_domain"));
                         map.put("hostDesc", resultSet.getString("host_desc"));
-                        map.put("hostOwner", resultSet.getString("host_owner"));
+                        map.put("hostOwner", resultSet.getObject("host_owner", UUID.class));
                         map.put("updateUser", resultSet.getString("update_user"));
                         map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                         map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
@@ -573,7 +568,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                     map.put("domain", resultSet.getString("domain"));
                     map.put("orgName", resultSet.getString("org_name"));
                     map.put("orgDesc", resultSet.getString("org_desc"));
-                    map.put("orgOwner", resultSet.getString("org_owner"));
+                    map.put("orgOwner", resultSet.getObject("org_owner", UUID.class));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
@@ -653,11 +648,11 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("currentHostId", resultSet.getObject("host_id", UUID.class));
                     map.put("domain", resultSet.getString("domain"));
                     map.put("subDomain", resultSet.getString("sub_domain"));
                     map.put("hostDesc", resultSet.getString("host_desc"));
-                    map.put("hostOwner", resultSet.getString("host_owner"));
+                    map.put("hostOwner", resultSet.getObject("host_owner", UUID.class));
                     map.put("updateUser", resultSet.getString("update_user"));
                     // handling date properly
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
@@ -686,7 +681,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
         Result<String> result = null;
         String s =
                 """
-                SELECT host_id, domain, sub_domain, host_desc, host_owner, update_user, update_ts, aggregate_version"
+                SELECT host_id, domain, sub_domain, host_desc, host_owner, update_user, update_ts, aggregate_version
                 FROM host_t
                 WHERE 1=1
                 """;
@@ -722,7 +717,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                     map.put("domain", resultSet.getString("domain"));
                     map.put("subDomain", resultSet.getString("sub_domain"));
                     map.put("hostDesc", resultSet.getString("host_desc"));
-                    map.put("hostOwner", resultSet.getString("host_owner"));
+                    map.put("hostOwner", resultSet.getObject("host_owner", UUID.class));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
