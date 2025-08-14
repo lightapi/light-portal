@@ -331,6 +331,15 @@ public class PortalConstants {
     public static final String AGGREGATE_CONFIG = "Config";
     public static final String AGGREGATE_CONFIG_PROPERTY = "ConfigProperty";
     public static final String AGGREGATE_INSTANCE_FILE = "InstanceFile";
+    public static final String AGGREGATE_CONFIG_ENVIRONMENT = "ConfigEnvironment";
+    public static final String AGGREGATE_CONFIG_INSTANCE_API = "ConfigInstanceApi";
+    public static final String AGGREGATE_CONFIG_INSTANCE_APP = "ConfigInstanceApp";
+    public static final String AGGREGATE_CONFIG_INSTANCE_APP_API = "ConfigInstanceAppApi";
+    public static final String AGGREGATE_CONFIG_INSTANCE_FILE = "ConfigInstanceFile";
+    public static final String AGGREGATE_CONFIG_DEPLOYMENT_INSTANCE = "ConfigDeploymentInstance";
+    public static final String AGGREGATE_CONFIG_INSTANCE = "ConfigInstance";
+    public static final String AGGREGATE_CONFIG_PRODUCT = "ConfigProduct";
+    public static final String AGGREGATE_CONFIG_PRODUCT_VERSION = "ConfigProductVersion";
 
     // -- Deployment --
     public static final String AGGREGATE_DEPLOYMENT = "Deployment";
