@@ -357,9 +357,6 @@ public class PortalConstants {
     public static final String AGGREGATE_INSTANCE_APP_API = "InstanceAppApi";
     public static final String AGGREGATE_INSTANCE_PIPELINE = "InstancePipeline";
 
-    // -- Position --
-    public static final String AGGREGATE_POSITION = "Position";
-
     // -- Product --
     public static final String AGGREGATE_PRODUCT_VERSION = "ProductVersion";
 
@@ -384,6 +381,12 @@ public class PortalConstants {
     public static final String AGGREGATE_GROUP_ROW_FILTER = "GroupRowFilter";
     public static final String AGGREGATE_GROUP_COL_FILTER = "GroupColFilter";
 
+    // -- Position --
+    public static final String AGGREGATE_POSITION = "Position";
+    public static final String AGGREGATE_POSITION_PERMISSION = "PositionPermission";
+    public static final String AGGREGATE_POSITION_USER = "PositionUser";
+    public static final String AGGREGATE_POSITION_ROW_FILTER = "PositionRowFilter";
+    public static final String AGGREGATE_POSITION_COL_FILTER = "PositionColFilter";
 
     // -- Rule --
     public static final String AGGREGATE_RULE = "Rule";
