@@ -330,7 +330,6 @@ public class PortalConstants {
     // -- Config --
     public static final String AGGREGATE_CONFIG = "Config";
     public static final String AGGREGATE_CONFIG_PROPERTY = "ConfigProperty";
-    public static final String AGGREGATE_INSTANCE_FILE = "InstanceFile";
     public static final String AGGREGATE_CONFIG_ENVIRONMENT = "ConfigEnvironment";
     public static final String AGGREGATE_CONFIG_INSTANCE_API = "ConfigInstanceApi";
     public static final String AGGREGATE_CONFIG_INSTANCE_APP = "ConfigInstanceApp";
@@ -395,5 +394,12 @@ public class PortalConstants {
 
     // -- User --
     public static final String AGGREGATE_USER = "User";
+
+    // -- Service --
+    public static final String AGGREGATE_SERVICE = "Service";
+    public static final String AGGREGATE_SERVICE_VERSION = "ServiceVersion";
+    public static final String AGGREGATE_SERVICE_SPEC = "ServiceSpec";
+    public static final String AGGREGATE_ENDPOINT_RULE = "EndpointRule";
+
 
 }
