@@ -642,11 +642,19 @@ public class EventTypeUtil {
                 if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, id);
                 yield id;
             }
+            case PortalConstants.AGGREGATE_APP -> {
+                String appId = (String) dataMap.get("appId");
+                if (appId == null) {
+                    logger.warn("appId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, appId);
+                yield appId;
+            }
 
             case "Host" -> (String) dataMap.get("hostId");
             case "User" -> (String) dataMap.get("userId");
             case "Permission" -> (String) dataMap.get("permissionId");
-            case "ApiKey" -> (String) dataMap.get("apiKeyId");
             case "AuditLog" -> (String) dataMap.get("auditLogId");
             case "PasswordReset" -> (String) dataMap.get("resetId");
             case "Invitation" -> (String) dataMap.get("invitationId");
