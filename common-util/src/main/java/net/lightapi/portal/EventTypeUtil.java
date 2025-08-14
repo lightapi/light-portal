@@ -278,6 +278,15 @@ public class EventTypeUtil {
                 if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, id);
                 yield id;
             }
+            case PortalConstants.AGGREGATE_RULE -> {
+                String ruleId = (String) dataMap.get("ruleId");
+                if (ruleId == null) {
+                    logger.warn("ruleId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, ruleId);
+                yield ruleId;
+            }
             case "Instance" -> (String) dataMap.get("instanceId");
             case "Host" -> (String) dataMap.get("hostId");
             case "User" -> (String) dataMap.get("userId");
