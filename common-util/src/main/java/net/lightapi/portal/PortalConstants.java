@@ -312,79 +312,79 @@ public class PortalConstants {
     public static final String AGGREGATE_TYPE = "aggregatetype";
 
     // -- Auth --
-    public static final String AGGREGATE_AUTH_CODE = "authCode";
-    public static final String AGGREGATE_CLIENT = "client";
-    public static final String AGGREGATE_PROVIDER = "provider";
-    public static final String AGGREGATE_REFRESH_TOKEN = "refreshToken";
-    public static final String AGGREGATE_REF_TOKEN = "refToken";
+    public static final String AGGREGATE_AUTH_CODE = "AuthCode";
+    public static final String AGGREGATE_CLIENT = "Client";
+    public static final String AGGREGATE_PROVIDER = "Provider";
+    public static final String AGGREGATE_REFRESH_TOKEN = "RefreshToken";
+    public static final String AGGREGATE_REF_TOKEN = "RefToken";
 
     // -- Attribute --
-    public static final String AGGREGATE_ATTRIBUTE = "attribute";
+    public static final String AGGREGATE_ATTRIBUTE = "Attribute";
 
     // -- Category --
-    public static final String AGGREGATE_CATEGORY = "category";
+    public static final String AGGREGATE_CATEGORY = "Category";
 
     // -- App --
-    public static final String AGGREGATE_APP = "app";
+    public static final String AGGREGATE_APP = "App";
 
     // -- Config --
-    public static final String AGGREGATE_CONFIG = "config";
-    public static final String AGGREGATE_CONFIG_PROPERTY = "configProperty";
-    public static final String AGGREGATE_INSTANCE_FILE = "instanceFile";
+    public static final String AGGREGATE_CONFIG = "Config";
+    public static final String AGGREGATE_CONFIG_PROPERTY = "ConfigProperty";
+    public static final String AGGREGATE_INSTANCE_FILE = "InstanceFile";
 
     // -- Deployment --
-    public static final String AGGREGATE_DEPLOYMENT = "deployment";
-    public static final String AGGREGATE_DEPLOYMENT_INSTANCE = "deploymentInstance";
-    public static final String AGGREGATE_PIPELINE = "pipeline";
-    public static final String AGGREGATE_PLATFORM = "platform";
+    public static final String AGGREGATE_DEPLOYMENT = "Deployment";
+    public static final String AGGREGATE_DEPLOYMENT_INSTANCE = "DeploymentInstance";
+    public static final String AGGREGATE_PIPELINE = "Pipeline";
+    public static final String AGGREGATE_PLATFORM = "Platform";
 
     // -- Group --
-    public static final String AGGREGATE_GROUP = "group";
+    public static final String AGGREGATE_GROUP = "Group";
 
     // -- Host --
-    public static final String AGGREGATE_HOST = "host";
-    public static final String AGGREGATE_ORG = "org";
+    public static final String AGGREGATE_HOST = "Host";
+    public static final String AGGREGATE_ORG = "Org";
 
     // -- Instance --
-    public static final String AGGREGATE_INSTANCE = "instance";
-    public static final String AGGREGATE_INSTANCE_API = "instanceApi";
-    public static final String AGGREGATE_INSTANCE_APP = "instanceApp";
-    public static final String AGGREGATE_INSTANCE_APP_API = "instanceAppApi";
-    public static final String AGGREGATE_INSTANCE_PIPELINE = "instancePipeline";
+    public static final String AGGREGATE_INSTANCE = "Instance";
+    public static final String AGGREGATE_INSTANCE_API = "InstanceApi";
+    public static final String AGGREGATE_INSTANCE_APP = "InstanceApp";
+    public static final String AGGREGATE_INSTANCE_APP_API = "InstanceAppApi";
+    public static final String AGGREGATE_INSTANCE_PIPELINE = "InstancePipeline";
 
     // -- Position --
-    public static final String AGGREGATE_POSITION = "position";
+    public static final String AGGREGATE_POSITION = "Position";
 
     // -- Product --
-    public static final String AGGREGATE_PRODUCT_VERSION = "productVersion";
+    public static final String AGGREGATE_PRODUCT_VERSION = "ProductVersion";
 
     // -- Ref --
-    public static final String AGGREGATE_REF_TABLE = "refTable";
-    public static final String AGGREGATE_REF_VALUE = "refValue";
-    public static final String AGGREGATE_REF_LOCALE = "refLocale";
-    public static final String AGGREGATE_REF_RELATION_TYPE = "refRelationType";
-    public static final String AGGREGATE_REF_RELATION = "refRelation";
+    public static final String AGGREGATE_REF_TABLE = "RefTable";
+    public static final String AGGREGATE_REF_VALUE = "RefValue";
+    public static final String AGGREGATE_REF_LOCALE = "RefLocale";
+    public static final String AGGREGATE_REF_RELATION_TYPE = "RefRelationType";
+    public static final String AGGREGATE_REF_RELATION = "RefRelation";
 
     // -- Role --
-    public static final String AGGREGATE_ROLE = "role";
+    public static final String AGGREGATE_ROLE = "Role";
 
     // -- Rule --
-    public static final String AGGREGATE_RULE = "rule";
+    public static final String AGGREGATE_RULE = "Rule";
 
     // -- Schema --
 
-    public static final String AGGREGATE_SCHEMA = "schema";
+    public static final String AGGREGATE_SCHEMA = "Schema";
 
     // -- Api --
-    public static final String AGGREGATE_API = "api";
+    public static final String AGGREGATE_API = "Api";
 
     // -- Schedule --
-    public static final String AGGREGATE_SCHEDULE = "schedule";
+    public static final String AGGREGATE_SCHEDULE = "Schedule";
 
     // -- Tag --
-    public static final String AGGREGATE_TAG = "tag";
+    public static final String AGGREGATE_TAG = "Tag";
 
     // -- User --
-    public static final String AGGREGATE_USER = "user";
+    public static final String AGGREGATE_USER = "User";
 
 }
