@@ -379,6 +379,11 @@ public class PortalConstants {
 
     // -- Group --
     public static final String AGGREGATE_GROUP = "Group";
+    public static final String AGGREGATE_GROUP_PERMISSION = "GroupPermission";
+    public static final String AGGREGATE_GROUP_USER = "GroupUser";
+    public static final String AGGREGATE_GROUP_ROW_FILTER = "GroupRowFilter";
+    public static final String AGGREGATE_GROUP_COL_FILTER = "GroupColFilter";
+
 
     // -- Rule --
     public static final String AGGREGATE_RULE = "Rule";

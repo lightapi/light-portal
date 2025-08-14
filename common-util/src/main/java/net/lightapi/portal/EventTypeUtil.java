@@ -341,10 +341,63 @@ public class EventTypeUtil {
                 if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, id);
                 yield id;
             }
+            case PortalConstants.AGGREGATE_GROUP -> {
+                String groupId = (String) dataMap.get("groupId");
+                if (groupId == null) {
+                    logger.warn("groupId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, groupId);
+                yield groupId;
+            }
+            case PortalConstants.AGGREGATE_GROUP_PERMISSION -> {
+                String groupId = (String) dataMap.get("groupId");
+                String endpointId = (String) dataMap.get("endpointId");
+                if (endpointId == null || groupId == null) {
+                    logger.warn("groupId or endpointId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                String id = groupId + "|" + endpointId;
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, id);
+                yield id;
+            }
+            case PortalConstants.AGGREGATE_GROUP_USER -> {
+                String groupId = (String) dataMap.get("groupId");
+                String userId = (String) dataMap.get("userId");
+                if (userId == null || groupId == null) {
+                    logger.warn("groupId or userId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                String id = groupId + "|" + userId;
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, id);
+                yield id;
+            }
+            case PortalConstants.AGGREGATE_GROUP_ROW_FILTER -> {
+                String groupId = (String) dataMap.get("groupId");
+                String endpointId = (String) dataMap.get("endpointId");
+                String colName = (String) dataMap.get("colName");
+                if (endpointId == null || groupId == null || colName == null) {
+                    logger.warn("groupId or endpointId or colName is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                String id = groupId + "|" + endpointId + "|" + colName;
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, id);
+                yield id;
+            }
+            case PortalConstants.AGGREGATE_GROUP_COL_FILTER -> {
+                String groupId = (String) dataMap.get("groupId");
+                String endpointId = (String) dataMap.get("endpointId");
+                if (endpointId == null || groupId == null) {
+                    logger.warn("groupId or endpointId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                String id = groupId + "|" + endpointId;
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, id);
+                yield id;
+            }
             case "Instance" -> (String) dataMap.get("instanceId");
             case "Host" -> (String) dataMap.get("hostId");
             case "User" -> (String) dataMap.get("userId");
-            case "Group" -> (String) dataMap.get("groupId");
             case "Permission" -> (String) dataMap.get("permissionId");
             case "ApiKey" -> (String) dataMap.get("apiKeyId");
             case "AuditLog" -> (String) dataMap.get("auditLogId");
