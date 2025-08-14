@@ -439,13 +439,67 @@ public class EventTypeUtil {
                 yield id;
             }
             case PortalConstants.AGGREGATE_POSITION_COL_FILTER -> {
-                String positionId = (String) dataMap.get("groupId");
+                String positionId = (String) dataMap.get("positionId");
                 String endpointId = (String) dataMap.get("endpointId");
                 if (endpointId == null || positionId == null) {
                     logger.warn("positionId or endpointId is null in data map for aggregate type: {}", aggregateType);
                     yield null;
                 }
                 String id = positionId + "|" + endpointId;
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, id);
+                yield id;
+            }
+            case PortalConstants.AGGREGATE_ATTRIBUTE -> {
+                String attributeId = (String) dataMap.get("attributeId");
+                if (attributeId == null) {
+                    logger.warn("attributeId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, attributeId);
+                yield attributeId;
+            }
+            case PortalConstants.AGGREGATE_ATTRIBUTE_PERMISSION -> {
+                String attributeId = (String) dataMap.get("attributeId");
+                String endpointId = (String) dataMap.get("endpointId");
+                if (endpointId == null || attributeId == null) {
+                    logger.warn("attributeId or endpointId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                String id = attributeId + "|" + endpointId;
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, id);
+                yield id;
+            }
+            case PortalConstants.AGGREGATE_ATTRIBUTE_USER -> {
+                String attributeId = (String) dataMap.get("attributeId");
+                String userId = (String) dataMap.get("userId");
+                if (userId == null || attributeId == null) {
+                    logger.warn("attributeId or userId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                String id = attributeId + "|" + userId;
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, id);
+                yield id;
+            }
+            case PortalConstants.AGGREGATE_ATTRIBUTE_ROW_FILTER -> {
+                String attributeId = (String) dataMap.get("attributeId");
+                String endpointId = (String) dataMap.get("endpointId");
+                String colName = (String) dataMap.get("colName");
+                if (endpointId == null || attributeId == null || colName == null) {
+                    logger.warn("attributeId or endpointId or colName is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                String id = attributeId + "|" + endpointId + "|" + colName;
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, id);
+                yield id;
+            }
+            case PortalConstants.AGGREGATE_ATTRIBUTE_COL_FILTER -> {
+                String attributeId = (String) dataMap.get("attributeId");
+                String endpointId = (String) dataMap.get("endpointId");
+                if (endpointId == null || attributeId == null) {
+                    logger.warn("attributeId or endpointId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                String id = attributeId + "|" + endpointId;
                 if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, id);
                 yield id;
             }

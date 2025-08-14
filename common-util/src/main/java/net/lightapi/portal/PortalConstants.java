@@ -318,9 +318,6 @@ public class PortalConstants {
     public static final String AGGREGATE_REFRESH_TOKEN = "RefreshToken";
     public static final String AGGREGATE_REF_TOKEN = "RefToken";
 
-    // -- Attribute --
-    public static final String AGGREGATE_ATTRIBUTE = "Attribute";
-
     // -- Category --
     public static final String AGGREGATE_CATEGORY = "Category";
 
@@ -387,6 +384,13 @@ public class PortalConstants {
     public static final String AGGREGATE_POSITION_USER = "PositionUser";
     public static final String AGGREGATE_POSITION_ROW_FILTER = "PositionRowFilter";
     public static final String AGGREGATE_POSITION_COL_FILTER = "PositionColFilter";
+
+    // -- Attribute --
+    public static final String AGGREGATE_ATTRIBUTE = "Attribute";
+    public static final String AGGREGATE_ATTRIBUTE_PERMISSION = "AttributePermission";
+    public static final String AGGREGATE_ATTRIBUTE_USER = "AttributeUser";
+    public static final String AGGREGATE_ATTRIBUTE_ROW_FILTER = "AttributeRowFilter";
+    public static final String AGGREGATE_ATTRIBUTE_COL_FILTER = "AttributeColFilter";
 
     // -- Rule --
     public static final String AGGREGATE_RULE = "Rule";
