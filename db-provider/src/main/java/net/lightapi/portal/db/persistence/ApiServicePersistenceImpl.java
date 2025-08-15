@@ -568,7 +568,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     }
 
     @Override
-    public void createServiceVersion(Connection conn, Map<String, Object> event, List<Map<String, Object>> endpoints) throws SQLException, Exception {
+    public void createServiceVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String insertServiceVersion = "INSERT INTO api_version_t (host_id, api_version_id, api_id, api_version, api_type, service_id, api_version_desc, " +
                 "spec_link, spec, update_user, update_ts, aggregate_version) " +
                 "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,  ?, ?)";
@@ -627,6 +627,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
             if (count == 0) {
                 throw new SQLException(String.format("Failed to insert api version %s with aggregateVersion %d", apiVersionId, newAggregateVersion));
             }
+            List<Map<String, Object>> endpoints = (List<Map<String, Object>>) map.get("endpoints");
             if (endpoints != null && !endpoints.isEmpty()) {
                 // insert endpoints
                 for (Map<String, Object> endpoint : endpoints) {
@@ -708,7 +709,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
 
 
     @Override
-    public void updateServiceVersion(Connection conn, Map<String, Object> event, List<Map<String, Object>> endpoints) throws SQLException, Exception {
+    public void updateServiceVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String updateApi = "UPDATE api_version_t SET api_id = ?, api_version = ?, api_type = ?, service_id = ?, " +
                 "api_version_desc = ?, spec_link = ?,  spec = ?," +
                 "update_user = ?, update_ts = ?, aggregate_version =? " +
@@ -777,6 +778,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                     throw new SQLException("No record found to update for apiVersionId " + apiVersionId + ".");
                 }
             }
+            List<Map<String, Object>> endpoints = (List<Map<String, Object>>) map.get("endpoints");
             if (endpoints != null && !endpoints.isEmpty()) {
                 // delete endpoints for the api version. the api_endpoint_scope_t will be deleted by the cascade.
                 try (PreparedStatement statementDelete = conn.prepareStatement(deleteEndpoint)) {
@@ -924,8 +926,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     }
 
     @Override
-    public void updateServiceSpec(Connection conn, Map<String, Object> event, List<Map<String, Object>> endpoints) throws SQLException, Exception {
-        if (logger.isTraceEnabled()) logger.trace("endpoints = {}", endpoints);
+    public void updateServiceSpec(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String updateApiVersion =
                 """
                 UPDATE api_version_t SET spec = ?,
@@ -972,6 +973,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 statement.executeUpdate();
             }
             // insert endpoints
+            List<Map<String, Object>> endpoints = (List<Map<String, Object>>) map.get("endpoints");
             for (Map<String, Object> endpoint : endpoints) {
                 try (PreparedStatement statement = conn.prepareStatement(insertEndpoint)) {
                     statement.setObject(1, UUID.fromString((String) map.get("hostId")));
