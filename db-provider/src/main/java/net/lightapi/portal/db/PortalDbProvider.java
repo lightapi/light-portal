@@ -170,11 +170,11 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> queryEndpointLabel(String hostId, String apiId, String apiVersion);
 
     // ServiceVersion
-    void createServiceVersion(Connection conn, Map<String, Object> event, List<Map<String, Object>> endpoints) throws SQLException, Exception;
-    void updateServiceVersion(Connection conn, Map<String, Object> event, List<Map<String, Object>> endpoints) throws SQLException, Exception;
+    void createServiceVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void updateServiceVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteServiceVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> queryServiceVersion(String hostId, String apiId);
-    void updateServiceSpec(Connection conn, Map<String, Object> event, List<Map<String, Object>> endpoints) throws SQLException, Exception;
+    void updateServiceSpec(Connection conn, Map<String, Object> event) throws SQLException, Exception;
 
     // ServiceEndpoint
     Result<String> queryServiceEndpoint(int offset, int limit, String hostId, String apiVersionId, String apiId, String apiVersion,
@@ -518,6 +518,8 @@ public interface PortalDbProvider extends DbProvider {
     void createInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void lockInstance(Connection conn, Map<String, Object> event) throws Exception;
+    void unlockInstance(Connection conn, Map<String, Object> event) throws Exception;
     Result<String> getInstance(int offset, int limit, String hostId, String instanceId, String instanceName,
                                String productVersionId, String productId, String productVersion, String serviceId, Boolean current,
                                Boolean readonly, String environment, String serviceDesc, String instanceDesc, String zone,
@@ -663,4 +665,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> getApplicableConfigPropertiesForInstanceApi(int offset, int limit, String hostId, String instanceApiId);
     Result<String> getApplicableConfigPropertiesForInstanceApp(int offset, int limit, String hostId, String instanceAppId);
     Result<String> getApplicableConfigPropertiesForInstanceAppApi(int offset, int limit, String hostId, String instanceAppId, String instanceApiId);
+
+    // Aggregations
+    Result<String> getAllAggregatedInstanceRuntimeConfigs(String hostId, String instanceId);
 }

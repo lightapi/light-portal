@@ -158,13 +158,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void deleteService(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.deleteService(connection, event); }
     @Override public Result<String> queryService(int offset, int limit, String hostId, String apiId, String apiName, String apiDesc, String operationOwner, String deliveryOwner, String region, String businessGroup, String lob, String platform, String capability, String gitRepo, String apiTags, String apiStatus) { return apiServicePersistence.queryService(offset, limit, hostId, apiId, apiName, apiDesc, operationOwner, deliveryOwner, region, businessGroup, lob, platform, capability, gitRepo, apiTags, apiStatus); }
     @Override public Result<String> queryApiLabel(String hostId) { return apiServicePersistence.queryApiLabel(hostId); }
-    @Override public void createServiceVersion(Connection connection, Map<String, Object> event, List<Map<String, Object>> endpoints) throws SQLException, Exception { apiServicePersistence.createServiceVersion(connection, event, endpoints); }
-    @Override public void updateServiceVersion(Connection connection, Map<String, Object> event, List<Map<String, Object>> endpoints) throws SQLException, Exception { apiServicePersistence.updateServiceVersion(connection, event, endpoints); }
+    @Override public void createServiceVersion(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.createServiceVersion(connection, event); }
+    @Override public void updateServiceVersion(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.updateServiceVersion(connection, event); }
     @Override public void deleteServiceVersion(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.deleteServiceVersion(connection, event); }
     @Override public Result<String> queryServiceVersion(String hostId, String apiId) { return apiServicePersistence.queryServiceVersion(hostId, apiId); }
     @Override public Result<String> getApiVersionIdLabel(String hostId) { return apiServicePersistence.getApiVersionIdLabel(hostId); }
     @Override public Result<String> queryApiVersionLabel(String hostId, String apiId) { return apiServicePersistence.queryApiVersionLabel(hostId, apiId); }
-    @Override public void updateServiceSpec(Connection connection, Map<String, Object> event, List<Map<String, Object>> endpoints) throws SQLException, Exception { apiServicePersistence.updateServiceSpec(connection, event, endpoints); }
+    @Override public void updateServiceSpec(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.updateServiceSpec(connection, event); }
     @Override public Result<String> queryServiceEndpoint(int offset, int limit, String hostId, String apiVersionId, String apiId, String apiVersion, String endpoint, String method, String path, String desc) { return apiServicePersistence.queryServiceEndpoint(offset, limit, hostId, apiVersionId, apiId, apiVersion, endpoint, method, path, desc); }
     @Override public Result<String> queryEndpointLabel(String hostId, String apiId, String apiVersion) { return apiServicePersistence.queryEndpointLabel(hostId, apiId, apiVersion); }
     @Override public Result<String> queryEndpointScope(String hostId, String endpointId) { return apiServicePersistence.queryEndpointScope(hostId, endpointId); }
@@ -251,7 +251,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void createInstance(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.createInstance(connection, event); }
     @Override public void updateInstance(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.updateInstance(connection, event); }
     @Override public void deleteInstance(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.deleteInstance(connection, event); }
-    @Override public Result<String> getInstance(int offset, int limit, String hostId, String instanceId, String instanceName, String productVersionId, String productId, String productVersion, String serviceId, Boolean current, Boolean readonly, String environment, String serviceDesc, String instanceDesc, String zone,  String region, String lob, String resourceName, String businessName, String envTag, String topicClassification) { return instanceDeploymentPersistence.getInstance(offset, limit, hostId, instanceId, instanceName, productVersionId, productId, productVersion, serviceId, current, readonly, environment, serviceDesc, instanceDesc, zone, region, lob, resourceName, businessName, envTag, topicClassification); }
+    @Override public void lockInstance(Connection conn, Map<String, Object> event) throws Exception { instanceDeploymentPersistence.lockInstance(conn, event); }
+    @Override public void unlockInstance(Connection conn, Map<String, Object> event) throws Exception { instanceDeploymentPersistence.unlockInstance(conn, event); }
+    @Override public Result<String> getInstance(int offset, int limit, String hostId, String instanceId, String instanceName, String productVersionId, String productId, String productVersion, String serviceId, Boolean current, Boolean readonly, String environment, String serviceDesc, String instanceDesc, String zone, String region, String lob, String resourceName, String businessName, String envTag, String topicClassification) { return instanceDeploymentPersistence.getInstance(offset, limit, hostId, instanceId, instanceName, productVersionId, productId, productVersion, serviceId, current, readonly, environment, serviceDesc, instanceDesc, zone, region, lob, resourceName, businessName, envTag, topicClassification); }
     @Override public Result<String> getInstanceLabel(String hostId) { return instanceDeploymentPersistence.getInstanceLabel(hostId); }
     @Override public void createInstanceApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.createInstanceApi(connection, event); }
     @Override public void updateInstanceApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.updateInstanceApi(connection, event); }
@@ -466,4 +468,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> getApplicableConfigPropertiesForInstanceAppApi(int offset, int limit, String hostId, String instanceAppId, String instanceApiId) { return configPersistence.getApplicableConfigPropertiesForInstanceAppApi(offset, limit, hostId, instanceAppId, instanceApiId); }
+
+    @Override
+    public Result<String> getAllAggregatedInstanceRuntimeConfigs(String hostId, String instanceId) { return configPersistence.getAllAggregatedInstanceRuntimeConfigs(hostId, instanceId); }
 }

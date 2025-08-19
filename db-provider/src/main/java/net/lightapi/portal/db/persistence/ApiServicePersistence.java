@@ -16,13 +16,13 @@ public interface ApiServicePersistence {
     Result<String> queryApiLabel(String hostId);
 
     // Service Version
-    void createServiceVersion(Connection conn, Map<String, Object> event, List<Map<String, Object>> endpoints) throws SQLException, Exception;
-    void updateServiceVersion(Connection conn, Map<String, Object> event, List<Map<String, Object>> endpoints) throws SQLException, Exception;
+    void createServiceVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void updateServiceVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteServiceVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> queryServiceVersion(String hostId, String apiId);
     Result<String> getApiVersionIdLabel(String hostId);
     Result<String> queryApiVersionLabel(String hostId, String apiId);
-    void updateServiceSpec(Connection conn, Map<String, Object> event, List<Map<String, Object>> endpoints) throws SQLException, Exception;
+    void updateServiceSpec(Connection conn, Map<String, Object> event) throws SQLException, Exception;
 
     // Service Endpoint
     Result<String> queryServiceEndpoint(int offset, int limit, String hostId, String apiVersionId, String apiId, String apiVersion, String endpoint, String method, String path, String desc);
