@@ -4612,4 +4612,249 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         }
         return result;
     }
+    @Override
+    public Result<String> getPromotableInstanceConfigs(String hostId, String instanceId,Set<String> propertyNames,Set<String> apiUids){
+        Result<String> result;
+        String instanceConfigsSql = """
+                WITH params AS MATERIALIZED (
+                    SELECT
+                        CAST(v.instance_id as UUID) as instance_id,
+                        CAST(v.hostId as UUID) as hostId,
+                        v.property_names::VARCHAR[] as property_names
+                    FROM (
+                        values
+                            (?, ?, ?)
+                    ) as v(instance_id, hostId, property_names)
+                ),
+                instance_properties AS (
+                    SELECT
+                        CASE
+                            WHEN config.config_phase = 'D' OR cp.property_type IN ('File', 'Cert') THEN cp.property_name
+                            ELSE CONCAT(config.config_name, '.', cp.property_name)
+                        END as property_name,
+                        CASE
+                            WHEN cp.property_type IN ('File', 'Cert') THEN ip.property_value
+                            ELSE ip.property_value
+                        END as property_value,
+                        cp.value_type as property_value_type,
+                        cp.property_type as property_type,
+                        'instance_property' as property_source_type
+                    FROM
+                        instance_property_t as ip
+                        JOIN config_property_t as cp ON cp.property_id = ip.property_id
+                        JOIN config_t as config ON config.config_id = cp.config_id
+                        JOIN instance_t as instance ON instance.instance_id = ip.instance_id
+                        JOIN params ON params.instance_id = instance.instance_id
+                            AND params.instance_id = ip.instance_id
+                            AND params.hostId = instance.host_id
+                )
+                SELECT property_name, property_value, property_value_type, property_type, property_source_type
+                FROM instance_properties
+                    JOIN params ON
+                        array_length(params.property_names, 1) IS NULL
+                            OR instance_properties.property_name = ANY(params.property_names)
+                ORDER BY
+                    property_name
+                """;
+
+
+        String subresourceConfigsSql = """
+                WITH params AS MATERIALIZED (
+                    SELECT
+                        CAST(v.instance_id as UUID) as instance_id,
+                        v.api_uids::VARCHAR[] as api_uids
+                    FROM (
+                        values
+                            (?, ?)
+                    ) as v(instance_id, api_uids)
+                ),
+                instance_api_path_prefix AS (
+                    SELECT
+                        STRING_AGG(
+                            instance_api_path_prefix.path_prefix,
+                            ', '
+                            ORDER BY instance_api_path_prefix.path_prefix
+                        ) as api_path_prefixes,
+                        instance_api.instance_api_id
+                    FROM
+                        instance_api_t as instance_api
+                        JOIN instance_t as instance
+                            ON instance.instance_id = instance_api.instance_id
+                        JOIN params
+                            ON params.instance_id = instance_api.instance_id
+                                AND params.instance_id = instance.instance_id
+                                AND (
+                                    array_length(params.api_uids, 1) IS NULL
+                                    OR CONCAT(instance_api.api_id, '-', instance_api.api_version) = ANY(params.api_uids)
+                                )
+                        LEFT JOIN instance_api_path_prefix_t as instance_api_path_prefix
+                            ON instance_api.instance_api_id = instance_api_path_prefix.instance_api_id
+                    GROUP BY
+                        instance_api.instance_api_id
+                ),
+                configuration_properties AS (
+                    SELECT
+                        config_property.property_id as property_id,
+                        CASE
+                            WHEN config.config_phase = 'D' OR config_property.property_type IN ('File', 'Cert') THEN config_property.property_name
+                            ELSE CONCAT( config.config_name, '.', config_property.property_name )
+                        END as property_name,
+                        config_property.value_type as property_value_type,
+                        config_property.property_type as property_type
+                    FROM
+                        config_property_t as config_property
+                        JOIN config_t as config ON config.config_id = config_property.config_id
+                    WHERE config_property.property_type = 'Config'
+                )
+                SELECT
+                    configuration_properties.property_id as property_id,
+                    configuration_properties.property_name as property_name,
+                    configuration_properties.property_value_type as property_value_type,
+                    configuration_properties.property_type as property_type,
+                    'instance_api_property' as property_source_type,
+                    instance_api_property.property_value as property_value,
+                    instance_api_property.instance_api_id as instance_api_id,
+                    CONCAT(instance_api.api_id, '-', instance_api.api_version) as api_uid,
+                    instance_api.api_id as api_id,
+                    instance_api.api_version as api_version_value,
+                    instance_api_path_prefix.api_path_prefixes as api_path_prefixes,
+                    CAST( NULL as UUID) as instance_app_id,
+                    CAST( NULL as VARCHAR) as app_id
+                FROM
+                    instance_api_property_t AS instance_api_property
+                    JOIN configuration_properties ON configuration_properties.property_id = instance_api_property.property_id
+                    JOIN instance_api_t AS instance_api ON instance_api.instance_api_id = instance_api_property.instance_api_id
+                    JOIN params
+                        ON params.instance_id = instance_api.instance_id
+                        AND (
+                            array_length(params.api_uids, 1) IS NULL
+                            OR CONCAT(instance_api.api_id, '-', instance_api.api_version) = ANY(params.api_uids)
+                        )
+                    LEFT JOIN instance_api_path_prefix
+                        ON instance_api_path_prefix.instance_api_id = instance_api.instance_api_id
+                UNION ALL
+                SELECT
+                    configuration_properties.property_id as property_id,
+                    configuration_properties.property_name as property_name,
+                    configuration_properties.property_value_type as property_value_type,
+                    configuration_properties.property_type as property_type,
+                    'instance_app_property' as property_source_type,
+                    instance_app_property.property_value as property_value,
+                    CAST( NULL as UUID) as instance_api_id,
+                    CAST( NULL as VARCHAR) as api_uid,
+                    CAST( NULL as VARCHAR) as api_id,
+                    CAST( NULL as VARCHAR) as api_version_value,
+                    CAST( NULL as VARCHAR) as api_path_prefixes,
+                    instance_app_property.instance_app_id as instance_app_id,
+                    instance_app.app_id as app_id
+                FROM
+                    instance_app_property_t AS instance_app_property
+                    JOIN configuration_properties ON configuration_properties.property_id = instance_app_property.property_id
+                    JOIN instance_app_t AS instance_app ON instance_app.instance_app_id = instance_app_property.instance_app_id
+                    JOIN params
+                        ON params.instance_id = instance_app.instance_id
+                UNION ALL
+                SELECT
+                    configuration_properties.property_id as property_id,
+                    configuration_properties.property_name as property_name,
+                    configuration_properties.property_value_type as property_value_type,
+                    configuration_properties.property_type as property_type,
+                    'instance_app_api_property' as property_source_type,
+                    instance_app_api_property.property_value as property_value,
+                    instance_app_api_property.instance_api_id as instance_api_id,
+                    CONCAT(instance_api.api_id, '-', instance_api.api_version) as api_uid,
+                    instance_api.api_id as api_id,
+                    instance_api.api_version as api_version_value,
+                    instance_api_path_prefix.api_path_prefixes as api_path_prefixes,
+                    instance_app_api_property.instance_app_id as instance_app_id,
+                    instance_app.app_id as app_id
+                FROM
+                    instance_app_api_property_t AS instance_app_api_property
+                    JOIN configuration_properties ON configuration_properties.property_id = instance_app_api_property.property_id
+                    JOIN instance_app_api_t AS instance_app_api
+                        ON instance_app_api.instance_api_id = instance_app_api_property.instance_api_id
+                        AND instance_app_api.instance_app_id = instance_app_api_property.instance_app_id
+                    JOIN instance_app_t AS instance_app
+                        ON instance_app.instance_app_id = instance_app_api_property.instance_app_id
+                        AND instance_app.instance_app_id = instance_app_api.instance_app_id
+                    JOIN instance_api_t as instance_api
+                        ON instance_api.instance_api_id = instance_app_api_property.instance_api_id
+                        AND instance_api.instance_api_id = instance_app_api.instance_api_id
+                    JOIN params
+                        ON params.instance_id = instance_app.instance_id
+                        AND params.instance_id = instance_api.instance_id
+                        AND (
+                            array_length(params.api_uids, 1) IS NULL
+                            OR CONCAT(instance_api.api_id, '-', instance_api.api_version) = ANY(params.api_uids)
+                        )
+                    LEFT JOIN instance_api_path_prefix
+                        ON instance_api_path_prefix.instance_api_id = instance_api.instance_api_id
+                """;
+
+        List<Map<String, Object>> instanceConfigs = new ArrayList<>();
+        List<Map<String, Object>> subresourceConfigs = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement instanceConfigsPs = connection.prepareStatement(instanceConfigsSql);
+             PreparedStatement subresourceConfigsPs = connection.prepareStatement(subresourceConfigsSql);
+        ) {
+
+            instanceConfigsPs.setObject(1, instanceId != null ? UUID.fromString(instanceId) : null);
+            instanceConfigsPs.setObject(2, hostId != null ? UUID.fromString(hostId) : null);
+            instanceConfigsPs.setObject(3, propertyNames != null ? propertyNames : null);
+
+
+            try (ResultSet resultSet = instanceConfigsPs.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
+                    map.put("propertyId", resultSet.getObject("property_id", UUID.class));
+                    map.put("propertyName", resultSet.getString("property_name"));
+                    map.put("propertyValue", resultSet.getString("property_value"));
+                    map.put("propertySourceType", resultSet.getString("property_source_type"));
+                    map.put("valueType", resultSet.getString("value_type"));
+                    map.put("propertyType", resultSet.getString("property_type"));
+                    instanceConfigs.add(map);
+                }
+            }
+
+            subresourceConfigsPs.setObject(1, instanceId != null ? UUID.fromString(instanceId) : null);
+            subresourceConfigsPs.setObject(2, apiUids != null ? apiUids : null);
+
+            try (ResultSet resultSet = subresourceConfigsPs.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
+                    map.put("propertyId", resultSet.getObject("property_id", UUID.class));
+                    map.put("propertyName", resultSet.getString("property_name"));
+                    map.put("propertyValue", resultSet.getString("property_value"));
+                    map.put("propertySourceType", resultSet.getString("property_source_type"));
+                    map.put("valueType", resultSet.getString("value_type"));
+                    map.put("propertyType", resultSet.getString("property_type"));
+                    map.put("instanceApiId", resultSet.getString("instance_api_id"));
+                    map.put("apiVersionId", resultSet.getObject("api_version_id", UUID.class));
+                    map.put("apiId", resultSet.getString("api_id"));
+                    map.put("apiVersion", resultSet.getString("api_version"));
+                    map.put("apiPathPrefixes", resultSet.getString("api_path_prefixes"));
+                    map.put("instanceAppId", resultSet.getObject("instance_app_id", UUID.class));
+                    map.put("appId", resultSet.getObject("app_id", UUID.class));
+                    subresourceConfigs.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("instanceConfigs", instanceConfigs);
+            resultMap.put("subresourceConfigs", subresourceConfigs);
+            result = Success.of(JsonMapper.toJson(resultMap));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+        }
+        return result;
+    }
 }
