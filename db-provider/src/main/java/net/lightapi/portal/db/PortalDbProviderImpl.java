@@ -471,4 +471,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> getAllAggregatedInstanceRuntimeConfigs(String hostId, String instanceId) { return configPersistence.getAllAggregatedInstanceRuntimeConfigs(hostId, instanceId); }
+
+    @Override
+    public Result<String> getPromotableInstanceConfigs(String hostId, String instanceId,Set<String> propertyNames,Set<String> apiUids){return configPersistence.getPromotableInstanceConfigs(hostId,instanceId,propertyNames,apiUids);}
 }

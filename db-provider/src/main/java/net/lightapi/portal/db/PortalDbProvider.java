@@ -668,4 +668,5 @@ public interface PortalDbProvider extends DbProvider {
 
     // Aggregations
     Result<String> getAllAggregatedInstanceRuntimeConfigs(String hostId, String instanceId);
+    Result<String> getPromotableInstanceConfigs(String hostId, String instanceId,Set<String> propertyNames,Set<String> apiUids);
 }
