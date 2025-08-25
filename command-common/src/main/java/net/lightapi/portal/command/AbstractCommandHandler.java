@@ -15,6 +15,7 @@ import com.networknt.utility.UuidUtil;
 import io.cloudevents.CloudEvent;
 import io.cloudevents.core.builder.CloudEventBuilder;
 import io.undertow.server.HttpServerExchange;
+import net.lightapi.portal.EventTypeUtil;
 import net.lightapi.portal.HybridQueryClient;
 import net.lightapi.portal.PortalConstants;
 import net.lightapi.portal.PortalUtil;
@@ -55,14 +56,18 @@ public abstract class AbstractCommandHandler implements HybridHandler {
      * Subclasses must implement this to provide aggregate type
      * @return The CloudEvent aggregate type (e.g., "AuthCode").
      */
-    protected abstract String getCloudEventAggregateType();
+    protected String getCloudEventAggregateType() {
+        return EventTypeUtil.deriveAggregateTypeFromEventType(getCloudEventType());
+    }
 
     /**
      * Subclasses must implement this to provide aggregate io
      * @param map The input map.
      * @return The CloudEvent aggregate id (e.g., "01964b05-5532-7c79-8cde-191dcbd421b7").
      */
-    protected abstract String getCloudEventAggregateId(Map<String, Object> map);
+    protected String getCloudEventAggregateId(Map<String, Object> map) {
+        return EventTypeUtil.getAggregateId(getCloudEventType(), map);
+    }
 
     /**
      * Subclasses can implement this to do additional validation with input map.
@@ -244,21 +249,40 @@ public abstract class AbstractCommandHandler implements HybridHandler {
      * you want to customize the CloudEvent creation logic to emit more than one CloudEvent.
      */
     protected CloudEvent[] buildCloudEvent(Map<String, Object> map, String userId, String host, Number nonce) {
+        String eventType = getCloudEventType(); // e.g., "ClientCreatedEvent"
+        String derivedAggregateType = EventTypeUtil.deriveAggregateTypeFromEventType(eventType);
+        if (derivedAggregateType == null) {
+            // Fallback to explicit Aggregate Type defined in command handler (if derivation fails)
+            derivedAggregateType = getCloudEventAggregateType(); // e.g., PortalConstants.AGGREGATE_CLIENT
+            if (derivedAggregateType == null) {
+                throw new IllegalStateException("Failed to derive or get aggregate type for event: " + eventType);
+            }
+            logger.warn("Could not derive aggregate type for eventType '{}'. Using explicit aggregate type: {}", eventType, derivedAggregateType);
+        }
+        String aggregateId = EventTypeUtil.getAggregateId(eventType, map);
+        if (aggregateId == null) {
+            // Fallback to the method that gets aggregate id from the map.
+            aggregateId = getCloudEventAggregateId(map);
+            if (aggregateId == null) {
+                throw new IllegalStateException("Failed to derive or get aggregate id for event: " + eventType);
+            }
+            logger.warn("Could not derive aggregate id for eventType '{}'. Using aggregateId from map", eventType);
+        }
 
         CloudEventBuilder eventTemplate = CloudEventBuilder.v1()
                 .withSource(PortalConstants.EVENT_SOURCE)
-                .withType(getCloudEventType());
+                .withType(eventType);
 
         String data = JsonMapper.toJson(map);
         if(getLogger().isTraceEnabled()) getLogger().trace("event user = {} host = {} type = {} and data = {}", userId, host, getCloudEventType(), data);
         return new CloudEvent[]{eventTemplate.newBuilder()
                 .withId(UuidUtil.getUUID().toString())
                 .withTime(OffsetDateTime.now())
-                .withSubject(getCloudEventAggregateId(map))
+                .withSubject(aggregateId)
                 .withExtension(Constants.USER, userId)
                 .withExtension(PortalConstants.NONCE, nonce)
                 .withExtension(Constants.HOST, host)
-                .withExtension(PortalConstants.AGGREGATE_TYPE, getCloudEventAggregateType())
+                .withExtension(PortalConstants.AGGREGATE_TYPE, derivedAggregateType)
                 .withExtension(PortalConstants.EVENT_AGGREGATE_VERSION, (Number)map.get(PortalConstants.NEW_AGGREGATE_VERSION))
                 .withData("application/json", data.getBytes(StandardCharsets.UTF_8))
                 .build()};

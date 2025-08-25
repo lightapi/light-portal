@@ -170,11 +170,11 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> queryEndpointLabel(String hostId, String apiId, String apiVersion);
 
     // ServiceVersion
-    void createServiceVersion(Connection conn, Map<String, Object> event, List<Map<String, Object>> endpoints) throws SQLException, Exception;
-    void updateServiceVersion(Connection conn, Map<String, Object> event, List<Map<String, Object>> endpoints) throws SQLException, Exception;
+    void createServiceVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void updateServiceVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteServiceVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> queryServiceVersion(String hostId, String apiId);
-    void updateServiceSpec(Connection conn, Map<String, Object> event, List<Map<String, Object>> endpoints) throws SQLException, Exception;
+    void updateServiceSpec(Connection conn, Map<String, Object> event) throws SQLException, Exception;
 
     // ServiceEndpoint
     Result<String> queryServiceEndpoint(int offset, int limit, String hostId, String apiVersionId, String apiId, String apiVersion,
