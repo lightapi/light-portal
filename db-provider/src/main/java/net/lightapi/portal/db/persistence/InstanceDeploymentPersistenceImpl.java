@@ -183,11 +183,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     public void updateInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql =
                 """
-                UPDATE instance_t SET instance_name = ?, product_version_id = ?, service_id = ?,
-                current = ?, readonly = ?, environment = ?, service_desc = ?, instance_desc = ?,
-                zone = ?, region = ?, lob = ?, resource_name = ?, business_name = ?, env_tag = ?,
+                UPDATE instance_t SET instance_name = ?,
+                current = ?, environment = ?, service_desc = ?, instance_desc = ?,
+                zone = ?, region = ?, lob = ?, resource_name = ?, business_name = ?,
                 topic_classification = ?, update_user = ?, update_ts = ?, aggregate_version = ?
-                WHERE host_id = ? and instance_id = ? AND aggregate_version = ?
+                WHERE host_id = ? and instance_id = ? AND aggregate_version = ? and product_version_id = ? and service_id = ? and env_tag = ?
                 """;
         final String sqlUpdateCurrent =
                 """
@@ -206,86 +206,76 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setString(1, (String)map.get("instanceName"));
-            statement.setObject(2, UUID.fromString((String)map.get("productVersionId")));
-            statement.setString(3, serviceId);
             Boolean current = (Boolean)map.get("current");
             if (current != null) {
-                statement.setBoolean(4, current);
+                statement.setBoolean(2, current);
             } else {
-                statement.setNull(4, Types.BOOLEAN);
-            }
-            Boolean readonly = (Boolean)map.get("readonly");
-            if (readonly != null) {
-                statement.setBoolean(5, readonly);
-            } else {
-                statement.setNull(5, Types.BOOLEAN);
+                statement.setNull(2, Types.BOOLEAN);
             }
             String environment = (String)map.get("environment");
             if (environment != null && !environment.isEmpty()) {
-                statement.setString(6, environment);
+                statement.setString(3, environment);
             } else {
-                statement.setNull(6, Types.VARCHAR);
+                statement.setNull(3, Types.VARCHAR);
             }
             String serviceDesc = (String)map.get("serviceDesc");
             if (serviceDesc != null && !serviceDesc.isEmpty()) {
-                statement.setString(7, serviceDesc);
+                statement.setString(4, serviceDesc);
             } else {
-                statement.setNull(7, Types.VARCHAR);
+                statement.setNull(4, Types.VARCHAR);
             }
             String instanceDesc = (String)map.get("instanceDesc");
             if (instanceDesc != null && !instanceDesc.isEmpty()) {
-                statement.setString(8, instanceDesc);
+                statement.setString(5, instanceDesc);
             } else {
-                statement.setNull(8, Types.VARCHAR);
+                statement.setNull(5, Types.VARCHAR);
             }
             String zone = (String)map.get("zone");
             if (zone != null && !zone.isEmpty()) {
-                statement.setString(9, zone);
+                statement.setString(6, zone);
             } else {
-                statement.setNull(9, Types.VARCHAR);
+                statement.setNull(6, Types.VARCHAR);
             }
             String region = (String)map.get("region");
             if (region != null && !region.isEmpty()) {
-                statement.setString(10, region);
+                statement.setString(7, region);
             } else {
-                statement.setNull(10, Types.VARCHAR);
+                statement.setNull(7, Types.VARCHAR);
             }
             String lob = (String)map.get("lob");
             if (lob != null && !lob.isEmpty()) {
-                statement.setString(11, lob);
+                statement.setString(8, lob);
             } else {
-                statement.setNull(11, Types.VARCHAR);
+                statement.setNull(8, Types.VARCHAR);
             }
             String resourceName = (String)map.get("resourceName");
             if (resourceName != null && !resourceName.isEmpty()) {
-                statement.setString(12, resourceName);
+                statement.setString(9, resourceName);
             } else {
-                statement.setNull(12, Types.VARCHAR);
+                statement.setNull(9, Types.VARCHAR);
             }
             String businessName = (String)map.get("businessName");
             if (businessName != null && !businessName.isEmpty()) {
-                statement.setString(13, businessName);
+                statement.setString(10, businessName);
             } else {
-                statement.setNull(13, Types.VARCHAR);
-            }
-            String envTag = (String)map.get("envTag");
-            if (envTag != null && !envTag.isEmpty()) {
-                statement.setString(14, envTag);
-            } else {
-                statement.setNull(14, Types.VARCHAR);
+                statement.setNull(10, Types.VARCHAR);
             }
             String topicClassification = (String)map.get("topicClassification");
             if (topicClassification != null && !topicClassification.isEmpty()) {
-                statement.setString(15, topicClassification);
+                statement.setString(11, topicClassification);
             } else {
-                statement.setNull(15, Types.VARCHAR);
+                statement.setNull(11, Types.VARCHAR);
             }
-            statement.setString(16, (String)event.get(Constants.USER));
-            statement.setObject(17, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(18, newAggregateVersion);
-            statement.setObject(19, UUID.fromString(hostId));
-            statement.setObject(20, UUID.fromString(instanceId));
-            statement.setLong(21, oldAggregateVersion);
+            statement.setString(12, (String)event.get(Constants.USER));
+            statement.setObject(13, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(14, newAggregateVersion);
+            statement.setObject(15, UUID.fromString(hostId));
+            statement.setObject(16, UUID.fromString(instanceId));
+            statement.setLong(17, oldAggregateVersion);
+            statement.setObject(18, UUID.fromString((String) map.get("productVersionId")));
+            statement.setString(19, serviceId);
+            String envTag = (String)map.get("envTag");
+            statement.setString(20, envTag);
 
             int count = statement.executeUpdate();
             if (count == 0) {
