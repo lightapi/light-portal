@@ -520,6 +520,7 @@ public interface PortalDbProvider extends DbProvider {
     void deleteInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void lockInstance(Connection conn, Map<String, Object> event) throws Exception;
     void unlockInstance(Connection conn, Map<String, Object> event) throws Exception;
+    void cloneInstance(Connection conn, Map<String, Object> event) throws Exception;
     Result<String> getInstance(int offset, int limit, String hostId, String instanceId, String instanceName,
                                String productVersionId, String productId, String productVersion, String serviceId, Boolean current,
                                Boolean readonly, String environment, String serviceDesc, String instanceDesc, String zone,
@@ -668,4 +669,5 @@ public interface PortalDbProvider extends DbProvider {
 
     // Aggregations
     Result<String> getAllAggregatedInstanceRuntimeConfigs(String hostId, String instanceId);
+    Result<String> getPromotableInstanceConfigs(String hostId, String instanceId,Set<String> propertyNames,Set<String> apiUids);
 }
