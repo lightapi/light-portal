@@ -700,7 +700,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 """;
         try (PreparedStatement pst = conn.prepareStatement(sql)) {
             pst.setObject(1, UUID.fromString(hostId));
-            pst.setString(2, apiVersionId);
+            pst.setObject(2, UUID.fromString(apiVersionId));
             try (ResultSet rs = pst.executeQuery()) {
                 return rs.next() && rs.getInt(1) > 0;
             }
@@ -944,6 +944,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
 
         Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
         String apiVersionId = (String) map.get("apiVersionId");
+        String hostId = (String) map.get("hostId");
         long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
         try {
@@ -952,7 +953,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 statement.setString(2, (String) event.get(Constants.USER));
                 statement.setObject(3, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
                 statement.setLong(4, newAggregateVersion);
-                statement.setObject(5, UUID.fromString((String) map.get("hostId")));
+                statement.setObject(5, UUID.fromString(hostId));
                 statement.setObject(6, UUID.fromString(apiVersionId));
                 statement.setLong(7, oldAggregateVersion);
 
