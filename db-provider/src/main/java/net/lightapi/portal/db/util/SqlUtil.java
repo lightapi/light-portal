@@ -3,14 +3,17 @@ package net.lightapi.portal.db.util;
 import io.cloudevents.CloudEvent;
 import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.PortalConstants;
+import org.apache.commons.lang3.StringUtils;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class SqlUtil {
 
@@ -123,6 +126,37 @@ public class SqlUtil {
             return 1L; // For creation events, expected version is 1 (no prior state)
         }
         throw new IllegalArgumentException("CloudEvent data missing 'newAggregateVersion' for optimistic concurrency check.");
+    }
+
+    /**
+     * Creates a SQL array literal from a list of strings.
+     * Trims whitespace, removes duplicates and blank entries.
+     * Returns "{}" for null or empty input.
+     *
+     * @param strings Collection of strings to convert to SQL array literal.
+     * @return SQL array literal string (e.g., "{val1,val2}").
+     */
+    public static String createArrayLiteral(Collection<String> strings) {
+        String processedString = strings != null && !strings.isEmpty()
+            ? strings.stream()
+            .filter(StringUtils::isNotBlank)
+            .map(String::trim)
+            .distinct()
+            .collect(Collectors.joining(","))
+            : "";
+
+        return createArrayLiteral(processedString);
+    }
+
+    /**
+     * Creates a SQL array literal from a comma-separated string.
+     * Trims whitespace. Returns "{}" for null or blank input.
+     *
+     * @param csvString Comma-separated string to convert to SQL array literal.
+     * @return SQL array literal string (e.g., "{val1,val2}").
+     */
+    public static String createArrayLiteral(String csvString) {
+        return String.format("{%s}", StringUtils.isNotBlank(csvString) ? csvString.trim() : "");
     }
 
     /**
