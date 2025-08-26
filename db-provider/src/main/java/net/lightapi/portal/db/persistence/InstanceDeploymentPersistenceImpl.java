@@ -470,7 +470,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 FROM instance_property_t ip
                 JOIN config_property_t cp ON cp.property_id = ip.property_id
                 JOIN config_t c ON c.config_id = cp.config_id
-                WHERE CONCAT( c.config_name, '.', c.property_name ) NOT IN ('server.serviceId', 'server.environment')
+                WHERE CONCAT( c.config_name, '.', cp.property_name ) NOT IN ('server.serviceId', 'server.environment')
               )
             ),
             delete_target_instance_files AS (
@@ -565,7 +565,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
               JOIN params p ON ip.host_id = p.host_id AND p.source_instance_id = ip.instance_id
               JOIN config_property_t cp ON cp.property_id = ip.property_id
               JOIN config_t c ON c.config_id = cp.config_id
-              WHERE CONCAT( c.config_name, '.', c.property_name ) NOT IN ('server.serviceId', 'server.environment')
+              WHERE CONCAT( c.config_name, '.', cp.property_name ) NOT IN ('server.serviceId', 'server.environment')
               RETURNING *
             ),
             instance_file_insert AS (
@@ -613,19 +613,19 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             instance_app_api_insert AS MATERIALIZED (
               INSERT INTO instance_app_api_t (host_id, instance_app_id, instance_api_id, active, update_user, update_ts)
               SELECT
-                iaa.host_id,
+                iappapi.host_id,
                 m_app.new_id,
                 m_api.new_id,
-                iaa.active,
-                iaa.update_user,
-                iaa.update_ts
+                iappapi.active,
+                iappapi.update_user,
+                iappapi.update_ts
               FROM instance_app_api_t iappapi
               JOIN instance_app_t iapp ON iapp.host_id = iappapi.host_id AND iapp.instance_app_id = iappapi.instance_app_id
               JOIN instance_api_t iapi ON iapi.host_id = iappapi.host_id AND iapi.instance_api_id = iappapi.instance_api_id
               JOIN params p ON p.host_id = iapp.host_id AND p.host_id = iapi.host_id AND p.host_id = iappapi.host_id
               AND p.source_instance_id = iapp.instance_id AND p.source_instance_id = iapi.instance_id
-              JOIN id_mapping m_app ON iaap.instance_app_id = m_app.old_id
-              JOIN id_mapping m_api ON iaap.instance_api_id = m_api.old_id
+              JOIN id_mapping m_app ON iappapi.instance_app_id = m_app.old_id
+              JOIN id_mapping m_api ON iappapi.instance_api_id = m_api.old_id
               RETURNING *
             ),
             instance_api_path_prefix_insert AS (
@@ -683,7 +683,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 iaap.update_user,
                 iaap.update_ts
               FROM instance_app_api_property_t iaap
-              JOIN instance_app_api_t iappapi ON iappapi.instance_api_id = iaap.instance_api_id\s
+              JOIN instance_app_api_t iappapi ON iappapi.instance_api_id = iaap.instance_api_id
               AND iappapi.instance_app_id = iaap.instance_app_id AND iappapi.host_id = iaap.host_id
               JOIN instance_app_t iapp ON iapp.host_id = iappapi.host_id AND iapp.instance_app_id = iappapi.instance_app_id
               JOIN instance_api_t iapi ON iapi.host_id = iappapi.host_id AND iapi.instance_api_id = iappapi.instance_api_id
