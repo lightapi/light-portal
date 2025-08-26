@@ -219,6 +219,7 @@ public class PortalConstants {
     public static final String INSTANCE_DELETED_EVENT = "InstanceDeletedEvent";
     public static final String INSTANCE_LOCKED_EVENT = "InstanceLockedEvent";
     public static final String INSTANCE_UNLOCKED_EVENT = "InstanceUnlockedEvent";
+    public static final String INSTANCE_CLONED_EVENT = "InstanceClonedEvent";
     public static final String INSTANCE_API_CREATED_EVENT = "InstanceApiCreatedEvent";
     public static final String INSTANCE_API_UPDATED_EVENT = "InstanceApiUpdatedEvent";
     public static final String INSTANCE_API_DELETED_EVENT = "InstanceApiDeletedEvent";
