@@ -6,6 +6,7 @@ import com.networknt.monad.Result;
 import com.networknt.monad.Success;
 import com.networknt.status.Status;
 import com.networknt.utility.Constants;
+import com.networknt.utility.UuidUtil;
 import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.PortalConstants;
 import net.lightapi.portal.db.ConcurrencyException;
@@ -21,9 +22,10 @@ import java.sql.*;
 import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.networknt.db.provider.SqlDbStartupHook.ds;
-import static net.lightapi.portal.db.util.SqlUtil.addCondition;
+import static net.lightapi.portal.db.util.SqlUtil.*;
 
 public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPersistence {
     private static final Logger logger = LoggerFactory.getLogger(InstanceDeploymentPersistenceImpl.class);
@@ -386,6 +388,397 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             logger.error("Exception during unlockInstance for hostId {} instanceId {} aggregateVersion {}: {}", hostId, instanceId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public void cloneInstance(Connection conn, Map<String, Object> event) throws Exception {
+        final Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
+        final String hostId = (String) event.get(Constants.HOST);
+        final String sourceInstanceId = (String) map.get("sourceInstanceId");
+        final String targetInstanceId = (String) map.get("targetInstanceId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+
+        transact(
+            conn,
+            connection -> {
+                try {
+                    // increment the aggregate version of the target instance to lock it during the clone operation
+                    tryIncrementAggregateVersionOfTargetInstance(conn, hostId, targetInstanceId, oldAggregateVersion, SqlUtil.getNewAggregateVersion(event));
+                    Map<UUID, UUID> idMapping = getIdMappingForClone(connection, hostId, sourceInstanceId);
+                    deleteDependentsOfTargetInstance(connection, hostId, targetInstanceId);
+                    cloneFirstLevelDependentsOfTargetInstance(connection, hostId, sourceInstanceId, targetInstanceId, idMapping);
+                    cloneSecondLevelDependentsOfTargetInstance(connection, hostId, sourceInstanceId, targetInstanceId, idMapping);
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        );
+    }
+
+    private static void tryIncrementAggregateVersionOfTargetInstance(Connection conn, String hostId,
+        String targetInstanceId, long oldAggregateVersion, long newAggregateVersion) throws SQLException {
+
+        final String sql = "UPDATE instance_t SET aggregate_version = ? " +
+            "WHERE host_id = ? AND instance_id = ? AND aggregate_version = ?";
+
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setLong(1, newAggregateVersion);
+            pstmt.setObject(2, UUID.fromString(hostId));
+            pstmt.setObject(3, UUID.fromString(targetInstanceId));
+            pstmt.setLong(4, oldAggregateVersion);
+
+            int affectedRows = pstmt.executeUpdate();
+            if (affectedRows == 0) {
+                throw new SQLException("Cloning instance failed, no rows affected.");
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during clone for hostId {} instanceId {} aggregateVersion {}: {}",
+                hostId, targetInstanceId, oldAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during clone for hostId {} instanceId {} aggregateVersion {}: {}",
+                hostId, targetInstanceId, oldAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    private void deleteDependentsOfTargetInstance(Connection connection, String hostId, String targetInstanceId)
+        throws SQLException {
+        final String sql =
+            """
+            WITH params AS (
+              SELECT
+                ?::UUID AS host_id,
+                ?::UUID AS target_instance_id
+            ),
+            delete_target_instance_properties AS (
+              DELETE FROM instance_property_t
+              WHERE (host_id, instance_id, property_id)
+              IN (
+                SELECT ip.host_id, ip.instance_id, ip.property_id
+                FROM instance_property_t ip
+                JOIN config_property_t cp ON cp.property_id = ip.property_id
+                JOIN config_t c ON c.config_id = cp.config_id
+                WHERE CONCAT( c.config_name, '.', cp.property_name ) NOT IN ('server.serviceId', 'server.environment')
+              )
+            ),
+            delete_target_instance_files AS (
+              DELETE FROM instance_file_t
+              WHERE (host_id, instance_id)
+              IN (SELECT host_id, target_instance_id FROM params)
+            ),
+            delete_target_instance_app_api AS (
+              DELETE FROM instance_app_api_t
+              WHERE (host_id, instance_app_id, instance_api_id)
+              IN (
+                SELECT iappapi.host_id, iappapi.instance_app_id, iappapi.instance_api_id
+                FROM instance_app_api_t iappapi
+                JOIN instance_app_t iapp ON iapp.host_id = iappapi.host_id AND iapp.instance_app_id = iappapi.instance_app_id
+                JOIN instance_api_t iapi ON iapi.host_id = iappapi.host_id AND iapi.instance_api_id = iappapi.instance_api_id
+                JOIN params ON params.host_id = iapp.host_id AND params.host_id = iapi.host_id AND params.host_id = iappapi.host_id
+                AND params.target_instance_id = iapp.instance_id AND params.target_instance_id = iapi.instance_id
+              )
+            ),
+            delete_target_instance_app AS (
+              DELETE FROM instance_app_t
+              WHERE (host_id, instance_id)
+              IN (SELECT host_id, target_instance_id FROM params)
+            ),
+            delete_target_instance_api AS (
+              DELETE FROM instance_api_t
+              WHERE (host_id, instance_id)
+              IN (SELECT host_id, target_instance_id FROM params)
+            )
+            SELECT 'Delete from target instance completed' AS result
+            """;
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setObject(1, UUID.fromString(hostId));
+            pstmt.setObject(2, UUID.fromString(targetInstanceId));
+            pstmt.execute();
+        }
+    }
+
+    private void cloneFirstLevelDependentsOfTargetInstance(Connection connection, String hostId,
+        String sourceInstanceId, String targetInstanceId, Map<UUID, UUID> idMapping) throws SQLException {
+
+        final String sql = """
+            WITH params AS (
+              SELECT
+                ?::UUID AS host_id,
+                ?::UUID AS source_instance_id,
+                ?::UUID AS target_instance_id
+            ),
+            id_mapping (old_id, new_id) AS MATERIALIZED ( %s ),
+            instance_api_insert AS (
+              INSERT INTO instance_api_t (host_id, instance_api_id, instance_id, api_version_id, active, update_user, update_ts)
+              SELECT
+                ia.host_id,
+                m.new_id,
+                p.target_instance_id,
+                ia.api_version_id,
+                ia.active,
+                ia.update_user,
+                ia.update_ts
+              FROM instance_api_t ia
+              JOIN params p ON p.host_id = ia.host_id AND p.source_instance_id = ia.instance_id
+              JOIN id_mapping m ON ia.instance_api_id = m.old_id
+              RETURNING *
+            ),
+            instance_app_insert AS (
+              INSERT INTO instance_app_t (host_id, instance_app_id, instance_id, app_id, app_version, active, update_user, update_ts)
+              SELECT
+                iapp.host_id,
+                m.new_id,
+                p.target_instance_id,
+                iapp.app_id,
+                iapp.app_version,
+                iapp.active,
+                iapp.update_user,
+                iapp.update_ts
+              FROM instance_app_t iapp
+              JOIN params p ON p.host_id = iapp.host_id AND p.source_instance_id = iapp.instance_id
+              JOIN id_mapping m ON iapp.instance_app_id = m.old_id
+              RETURNING *
+            ),
+            instance_property_insert AS (
+              INSERT INTO instance_property_t (host_id, instance_id, property_id, property_value, update_user, update_ts)
+              SELECT
+                ip.host_id,
+                p.target_instance_id,
+                ip.property_id,
+                ip.property_value,
+                ip.update_user,
+                ip.update_ts
+              FROM instance_property_t ip
+              JOIN params p ON ip.host_id = p.host_id AND p.source_instance_id = ip.instance_id
+              JOIN config_property_t cp ON cp.property_id = ip.property_id
+              JOIN config_t c ON c.config_id = cp.config_id
+              WHERE CONCAT( c.config_name, '.', cp.property_name ) NOT IN ('server.serviceId', 'server.environment')
+              RETURNING *
+            ),
+            instance_file_insert AS (
+              INSERT INTO instance_file_t (host_id, instance_file_id, instance_id, file_type, file_name, file_value, file_desc, expiration_ts, update_user, update_ts)
+              SELECT
+                ifile.host_id,
+                m.new_id,
+                p.target_instance_id,
+                ifile.file_type,
+                ifile.file_name,
+                ifile.file_value,
+                ifile.file_desc,
+                ifile.expiration_ts,
+                ifile.update_user,
+                ifile.update_ts
+              FROM instance_file_t ifile
+              JOIN params p ON ifile.host_id = p.host_id AND p.source_instance_id = ifile.instance_id
+              JOIN id_mapping m ON ifile.instance_file_id = m.old_id
+              RETURNING *
+            )
+            SELECT 'Insert first level dependents completed' AS result
+            """;
+
+        String idMappingValuesExpression = generateIdMappingValuesExpression(idMapping);
+        String formattedSql = String.format(sql, idMappingValuesExpression);
+
+        try (PreparedStatement pstmt = connection.prepareStatement(formattedSql)) {
+            pstmt.setObject(1, UUID.fromString(hostId));
+            pstmt.setObject(2, UUID.fromString(sourceInstanceId));
+            pstmt.setObject(3, UUID.fromString(targetInstanceId));
+            pstmt.execute();
+        }
+    }
+
+    private void cloneSecondLevelDependentsOfTargetInstance(Connection connection, String hostId,
+        String sourceInstanceId, String targetInstanceId, Map<UUID, UUID> idMapping) throws SQLException {
+        final String sql = """
+            WITH params AS (
+              SELECT
+                ?::UUID AS host_id,
+                ?::UUID AS source_instance_id,
+                ?::UUID AS target_instance_id
+            ),
+            id_mapping (old_id, new_id) AS MATERIALIZED ( %s ),
+            instance_app_api_insert AS MATERIALIZED (
+              INSERT INTO instance_app_api_t (host_id, instance_app_id, instance_api_id, active, update_user, update_ts)
+              SELECT
+                iappapi.host_id,
+                m_app.new_id,
+                m_api.new_id,
+                iappapi.active,
+                iappapi.update_user,
+                iappapi.update_ts
+              FROM instance_app_api_t iappapi
+              JOIN instance_app_t iapp ON iapp.host_id = iappapi.host_id AND iapp.instance_app_id = iappapi.instance_app_id
+              JOIN instance_api_t iapi ON iapi.host_id = iappapi.host_id AND iapi.instance_api_id = iappapi.instance_api_id
+              JOIN params p ON p.host_id = iapp.host_id AND p.host_id = iapi.host_id AND p.host_id = iappapi.host_id
+              AND p.source_instance_id = iapp.instance_id AND p.source_instance_id = iapi.instance_id
+              JOIN id_mapping m_app ON iappapi.instance_app_id = m_app.old_id
+              JOIN id_mapping m_api ON iappapi.instance_api_id = m_api.old_id
+              RETURNING *
+            ),
+            instance_api_path_prefix_insert AS (
+              INSERT INTO instance_api_path_prefix_t (host_id, instance_api_id, path_prefix, update_user, update_ts)
+              SELECT
+                iapipath.host_id,
+                m.new_id,
+                iapipath.path_prefix,
+                iapipath.update_user,
+                iapipath.update_ts
+              FROM instance_api_path_prefix_t iapipath
+              JOIN instance_api_t ia ON ia.host_id = iapipath.host_id AND ia.instance_api_id = iapipath.instance_api_id
+              JOIN params p ON iapipath.host_id = p.host_id AND ia.host_id = p.host_id AND p.source_instance_id = ia.instance_id
+              JOIN id_mapping m ON iapipath.instance_api_id = m.old_id
+              RETURNING *
+            ),
+            instance_api_property_insert AS (
+              INSERT INTO instance_api_property_t (host_id, instance_api_id, property_id, property_value, update_user, update_ts)
+              SELECT
+                iap.host_id,
+                m.new_id,
+                iap.property_id,
+                iap.property_value,
+                iap.update_user,
+                iap.update_ts
+              FROM instance_api_property_t iap
+              JOIN instance_api_t ia ON ia.host_id = iap.host_id AND ia.instance_api_id = iap.instance_api_id
+              JOIN params p ON iap.host_id = p.host_id AND ia.host_id = p.host_id AND p.source_instance_id = ia.instance_id
+              JOIN id_mapping m ON iap.instance_api_id = m.old_id
+              RETURNING *
+            ),
+            instance_app_property_insert AS (
+              INSERT INTO instance_app_property_t (host_id, instance_app_id, property_id, property_value, update_user, update_ts)
+              SELECT
+                iap.host_id,
+                m.new_id,
+                iap.property_id,
+                iap.property_value,
+                iap.update_user,
+                iap.update_ts
+              FROM instance_app_property_t iap
+              JOIN instance_app_t ia ON ia.host_id = iap.host_id AND ia.instance_app_id = iap.instance_app_id
+              JOIN params p ON iap.host_id = p.host_id AND ia.host_id = p.host_id AND p.source_instance_id = ia.instance_id
+              JOIN id_mapping m ON iap.instance_app_id = m.old_id
+              RETURNING *
+            ),
+            instance_app_api_property_insert AS (
+              INSERT INTO instance_app_api_property_t (host_id, instance_app_id, instance_api_id, property_id, property_value, update_user, update_ts)
+              SELECT
+                iaap.host_id,
+                m_app.new_id,
+                m_api.new_id,
+                iaap.property_id,
+                iaap.property_value,
+                iaap.update_user,
+                iaap.update_ts
+              FROM instance_app_api_property_t iaap
+              JOIN instance_app_api_t iappapi ON iappapi.instance_api_id = iaap.instance_api_id
+              AND iappapi.instance_app_id = iaap.instance_app_id AND iappapi.host_id = iaap.host_id
+              JOIN instance_app_t iapp ON iapp.host_id = iappapi.host_id AND iapp.instance_app_id = iappapi.instance_app_id
+              JOIN instance_api_t iapi ON iapi.host_id = iappapi.host_id AND iapi.instance_api_id = iappapi.instance_api_id
+              JOIN params p ON p.host_id = iapp.host_id AND p.host_id = iapi.host_id AND p.host_id = iappapi.host_id
+              AND p.host_id = iaap.host_id AND p.source_instance_id = iapp.instance_id AND p.source_instance_id = iapi.instance_id
+              JOIN id_mapping m_app ON iaap.instance_app_id = m_app.old_id
+              JOIN id_mapping m_api ON iaap.instance_api_id = m_api.old_id
+              RETURNING *
+            )
+            SELECT 'Insert second level dependents completed' AS result
+            """;
+
+        String idMappingValuesExpression = generateIdMappingValuesExpression(idMapping);
+        String formattedSql = String.format(sql, idMappingValuesExpression);
+
+        try (PreparedStatement pstmt = connection.prepareStatement(formattedSql)) {
+            pstmt.setObject(1, UUID.fromString(hostId));
+            pstmt.setObject(2, UUID.fromString(sourceInstanceId));
+            pstmt.setObject(3, UUID.fromString(targetInstanceId));
+            pstmt.execute();
+        }
+    }
+
+    private String generateIdMappingValuesExpression(Map<UUID, UUID> idMapping) {
+        String EMPTY_VALUES_SQL = "SELECT NULL::UUID, NULL::UUID WHERE FALSE";
+        List<String> valuePairs = idMapping.entrySet()
+            .stream()
+            .map(entry -> String.format("('%s'::uuid, '%s'::uuid)", entry.getKey(), entry.getValue()))
+            .toList();
+
+        if (valuePairs.isEmpty()) {
+            return EMPTY_VALUES_SQL;
+        }
+
+        return "VALUES" + " " + String.join(", ", valuePairs);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<UUID, UUID> getIdMappingForClone(Connection connection, String hostId, String instanceId) throws SQLException {
+        Map<String, Object> retrievedIdsMap = retrieveAllIds(connection, hostId, instanceId);
+        Set<UUID> retrievedIds = Stream.of(retrievedIdsMap.get("instanceApiIds"), retrievedIdsMap.get("instanceAppIds"), retrievedIdsMap.get("instanceFileIds"))
+            .filter(Objects::nonNull)
+            .flatMap(list -> ((List<UUID>) list).stream())
+            .filter(Objects::nonNull)
+            .collect(Collectors.toSet());
+
+        return retrievedIds.stream()
+            .collect(Collectors.toMap(
+                id -> id,
+                id -> UuidUtil.getUUID(),
+                (existing, replacement) -> existing
+            ));
+    }
+
+    private Map<String, Object> retrieveAllIds(Connection conn, String hostId, String instanceId) throws SQLException {
+        final String sql =
+            """
+                SELECT
+                  i.host_id, i.instance_id AS source_instance_id,
+                  array_agg(DISTINCT iapi.instance_api_id) AS instance_api_ids,
+                  array_agg(DISTINCT iapp.instance_app_id) AS instance_app_ids,
+                  array_agg(DISTINCT ifile.instance_file_id) AS instance_file_ids
+                FROM instance_t i
+                LEFT JOIN instance_api_t iapi ON i.host_id = iapi.host_id AND i.instance_id = iapi.instance_id
+                LEFT JOIN instance_app_t iapp ON i.host_id = iapp.host_id AND i.instance_id = iapp.instance_id
+                LEFT JOIN instance_file_t ifile ON i.host_id = ifile.host_id AND i.instance_id = ifile.instance_id
+                WHERE i.host_id = ? AND i.instance_id = ?
+                GROUP BY i.host_id, i.instance_id
+                """;
+
+        Map<String, Object> result = new HashMap<>();
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setObject(1, UUID.fromString(hostId));
+            pstmt.setObject(2, UUID.fromString(instanceId));
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    result.put("hostId", rs.getObject("host_id", UUID.class));
+                    result.put("sourceInstanceId", rs.getObject("source_instance_id", UUID.class));
+                    Array instanceApiIdsArray = rs.getArray("instance_api_ids");
+                    if (instanceApiIdsArray != null) {
+                        UUID[] instanceApiIds = (UUID[]) instanceApiIdsArray.getArray();
+                        result.put("instanceApiIds", Arrays.asList(instanceApiIds));
+                    } else {
+                        result.put("instanceApiIds", Collections.emptyList());
+                    }
+                    Array instanceAppIdsArray = rs.getArray("instance_app_ids");
+                    if (instanceAppIdsArray != null) {
+                        UUID[] instanceAppIds = (UUID[]) instanceAppIdsArray.getArray();
+                        result.put("instanceAppIds", Arrays.asList(instanceAppIds));
+                    } else {
+                        result.put("instanceAppIds", Collections.emptyList());
+                    }
+                    Array instanceFileIdsArray = rs.getArray("instance_file_ids");
+                    if (instanceFileIdsArray != null) {
+                        UUID[] instanceFileIds = (UUID[]) instanceFileIdsArray.getArray();
+                        result.put("instanceFileIds", Arrays.asList(instanceFileIds));
+                    } else {
+                        result.put("instanceFileIds", Collections.emptyList());
+                    }
+                }
+            }
+        }
+
+        return result;
     }
 
     @Override
