@@ -4717,9 +4717,9 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             JOIN params p ON p.instance_id = ia.instance_id AND p.host_id = ia.host_id
                 AND (array_length(p.api_uids, 1) IS NULL OR av.api_id || '-' || av.api_version = ANY(p.api_uids))
             LEFT JOIN instance_api_path_prefix iapp ON iapp.instance_api_id = ia.instance_api_id AND iapp.host_id = ia.host_id
-                        
+
             UNION ALL
-                        
+
             SELECT
                 p.host_id,
                 p.instance_id,
@@ -4741,9 +4741,9 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             JOIN configuration_properties cp ON cp.property_id = iap.property_id
             JOIN instance_app_t ia ON ia.instance_app_id = iap.instance_app_id AND ia.host_id = iap.host_id
             JOIN params p ON p.instance_id = ia.instance_id AND p.host_id = ia.host_id
-                        
+
             UNION ALL
-                        
+
             SELECT
                 p.host_id,
                 p.instance_id,
