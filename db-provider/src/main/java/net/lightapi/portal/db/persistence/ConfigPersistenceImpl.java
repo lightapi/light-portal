@@ -4616,7 +4616,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     @Override
     public Result<String> getPromotableInstanceConfigs(String hostId, String instanceId, Set<String> propertyNames, Set<String> apiUids) {
         Result<String> result;
-        String instanceConfigsSql = """
+        final String instanceConfigsSql = """
                 WITH params AS MATERIALIZED (
                     SELECT
                         CAST(v.host_id as UUID) as host_id,
@@ -4629,6 +4629,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 ),
                 instance_properties AS (
                     SELECT
+                        ip.property_id as property_id,
                         CASE
                             WHEN cp.property_type IN ('File', 'Cert') THEN cp.property_name
                             ELSE CONCAT(config.config_name, '.', cp.property_name)
@@ -4647,17 +4648,15 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                             AND params.instance_id = ip.instance_id
                             AND params.host_id = instance.host_id
                 )
-                SELECT p.host_id, p.instance_id, ip.property_name, ip.property_value, ip.property_value_type, ip.property_type, ip.property_source_type
+                SELECT p.host_id, p.instance_id, ip.property_id, ip.property_name, ip.property_value,
+                    ip.property_value_type, ip.property_type, ip.property_source_type
                 FROM instance_properties ip
                     JOIN params p ON
                         array_length(p.property_names, 1) IS NULL
                             OR ip.property_name = ANY(p.property_names)
-                ORDER BY
-                    ip.property_name
                 """;
 
-
-        String subresourceConfigsSql = """
+        final String subresourceConfigsSql = """
             WITH params AS MATERIALIZED (
                 SELECT
                     CAST(v.host_id AS UUID) AS host_id,
@@ -4780,12 +4779,32 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 AND iapp.host_id = iai.host_id
             """;
 
+        final String instanceCustomFilesSql = """
+                WITH params AS MATERIALIZED (
+                    SELECT
+                        CAST(v.host_id as UUID) as host_id,
+                        CAST(v.instance_id as UUID) as instance_id,
+                        v.property_names::VARCHAR[] as property_names
+                    FROM (
+                        values
+                            (?, ?, ?)
+                    ) as v(host_id, instance_id, property_names)
+                )
+                SELECT f.host_id, f.instance_id, f.instance_file_id, f.file_name, f.file_value, f.file_type
+                FROM instance_file_t f
+                JOIN instance_t i ON f.instance_id = i.instance_id AND f.host_id = i.host_id
+                JOIN params p on f.host_id = p.host_id AND f.instance_id = p.instance_id
+                    AND (array_length(p.property_names, 1) IS NULL OR f.file_name = ANY(p.property_names))
+            """;
+
         List<Map<String, Object>> instanceConfigs = new ArrayList<>();
         List<Map<String, Object>> subresourceConfigs = new ArrayList<>();
+        List<Map<String, Object>> instanceCustomFiles = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
              PreparedStatement instanceConfigsPs = connection.prepareStatement(instanceConfigsSql);
              PreparedStatement subresourceConfigsPs = connection.prepareStatement(subresourceConfigsSql);
+             PreparedStatement instanceCustomFilesPs = connection.prepareStatement(instanceCustomFilesSql)
         ) {
             UUID instanceIdUUID = instanceId != null ? UUID.fromString(instanceId) : null;
             UUID hostIdUUID = hostId != null ? UUID.fromString(hostId) : null;
@@ -4800,6 +4819,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     Map<String, Object> map = new HashMap<>();
                     map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
+                    map.put("propertyId", resultSet.getObject("property_id", UUID.class));
                     map.put("propertyName", resultSet.getString("property_name"));
                     map.put("propertyValue", resultSet.getString("property_value"));
                     map.put("propertySourceType", resultSet.getString("property_source_type"));
@@ -4825,7 +4845,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("valueType", resultSet.getString("property_value_type"));
                     map.put("propertyType", resultSet.getString("property_type"));
                     map.put("instanceApiId", resultSet.getObject("instance_api_id", UUID.class));
-                    map.put("apiUId", resultSet.getString("api_uid"));
+                    map.put("apiUid", resultSet.getString("api_uid"));
                     map.put("apiId", resultSet.getString("api_id"));
                     map.put("apiVersion", resultSet.getString("api_version_value"));
                     map.put("apiPathPrefixes", resultSet.getString("api_path_prefixes"));
@@ -4835,9 +4855,27 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 }
             }
 
+            instanceCustomFilesPs.setObject(1, hostIdUUID);
+            instanceCustomFilesPs.setObject(2, instanceIdUUID);
+            instanceCustomFilesPs.setString(3, SqlUtil.createArrayLiteral(propertyNames));
+
+            try (ResultSet resultSet = instanceCustomFilesPs.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
+                    map.put("instanceFileId", resultSet.getObject("instance_file_id", UUID.class));
+                    map.put("fileName", resultSet.getString("file_name"));
+                    map.put("fileValue", resultSet.getString("file_value"));
+                    map.put("fileType", resultSet.getString("file_type"));
+                    instanceCustomFiles.add(map);
+                }
+            }
+
             Map<String, Object> resultMap = new HashMap<>();
             resultMap.put("instanceConfigs", instanceConfigs);
             resultMap.put("subresourceConfigs", subresourceConfigs);
+            resultMap.put("instanceCustomFiles", instanceCustomFiles);
             result = Success.of(JsonMapper.toJson(resultMap));
         } catch (SQLException e) {
             logger.error("SQLException:", e);
