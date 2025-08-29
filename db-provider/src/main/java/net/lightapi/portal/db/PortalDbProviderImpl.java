@@ -251,7 +251,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void createInstance(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.createInstance(connection, event); }
     @Override public void updateInstance(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.updateInstance(connection, event); }
     @Override public void deleteInstance(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.deleteInstance(connection, event); }
-    @Override public Result<String> getInstance(int offset, int limit, String hostId, String instanceId, String instanceName, String productVersionId, String productId, String productVersion, String serviceId, Boolean current, Boolean readonly, String environment, String serviceDesc, String instanceDesc, String zone,  String region, String lob, String resourceName, String businessName, String envTag, String topicClassification) { return instanceDeploymentPersistence.getInstance(offset, limit, hostId, instanceId, instanceName, productVersionId, productId, productVersion, serviceId, current, readonly, environment, serviceDesc, instanceDesc, zone, region, lob, resourceName, businessName, envTag, topicClassification); }
+    @Override public void lockInstance(Connection conn, Map<String, Object> event) throws Exception { instanceDeploymentPersistence.lockInstance(conn, event); }
+    @Override public void unlockInstance(Connection conn, Map<String, Object> event) throws Exception { instanceDeploymentPersistence.unlockInstance(conn, event); }
+    @Override public void cloneInstance(Connection conn, Map<String, Object> event) throws Exception { instanceDeploymentPersistence.cloneInstance(conn, event); }
+    @Override public Result<String> getInstance(int offset, int limit, String hostId, String instanceId, String instanceName, String productVersionId, String productId, String productVersion, String serviceId, Boolean current, Boolean readonly, String environment, String serviceDesc, String instanceDesc, String zone, String region, String lob, String resourceName, String businessName, String envTag, String topicClassification) { return instanceDeploymentPersistence.getInstance(offset, limit, hostId, instanceId, instanceName, productVersionId, productId, productVersion, serviceId, current, readonly, environment, serviceDesc, instanceDesc, zone, region, lob, resourceName, businessName, envTag, topicClassification); }
     @Override public Result<String> getInstanceLabel(String hostId) { return instanceDeploymentPersistence.getInstanceLabel(hostId); }
     @Override public void createInstanceApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.createInstanceApi(connection, event); }
     @Override public void updateInstanceApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.updateInstanceApi(connection, event); }
@@ -466,4 +469,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> getApplicableConfigPropertiesForInstanceAppApi(int offset, int limit, String hostId, String instanceAppId, String instanceApiId) { return configPersistence.getApplicableConfigPropertiesForInstanceAppApi(offset, limit, hostId, instanceAppId, instanceApiId); }
+
+    @Override
+    public Result<String> getAllAggregatedInstanceRuntimeConfigs(String hostId, String instanceId) { return configPersistence.getAllAggregatedInstanceRuntimeConfigs(hostId, instanceId); }
+
+    @Override
+    public Result<String> getPromotableInstanceConfigs(String hostId, String instanceId,Set<String> propertyNames,Set<String> apiUids){return configPersistence.getPromotableInstanceConfigs(hostId,instanceId,propertyNames,apiUids);}
 }

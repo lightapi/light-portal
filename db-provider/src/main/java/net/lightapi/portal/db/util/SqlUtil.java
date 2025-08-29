@@ -3,9 +3,17 @@ package net.lightapi.portal.db.util;
 import io.cloudevents.CloudEvent;
 import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.PortalConstants;
+import org.apache.commons.lang3.StringUtils;
 
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class SqlUtil {
 
@@ -118,5 +126,89 @@ public class SqlUtil {
             return 1L; // For creation events, expected version is 1 (no prior state)
         }
         throw new IllegalArgumentException("CloudEvent data missing 'newAggregateVersion' for optimistic concurrency check.");
+    }
+
+    /**
+     * Creates a SQL array literal from a list of strings.
+     * Trims whitespace, removes duplicates and blank entries.
+     * Returns "{}" for null or empty input.
+     *
+     * @param strings Collection of strings to convert to SQL array literal.
+     * @return SQL array literal string (e.g., "{val1,val2}").
+     */
+    public static String createArrayLiteral(Collection<String> strings) {
+        String processedString = strings != null && !strings.isEmpty()
+            ? strings.stream()
+            .filter(StringUtils::isNotBlank)
+            .map(String::trim)
+            .distinct()
+            .collect(Collectors.joining(","))
+            : "";
+
+        return createArrayLiteral(processedString);
+    }
+
+    /**
+     * Creates a SQL array literal from a comma-separated string.
+     * Trims whitespace. Returns "{}" for null or blank input.
+     *
+     * @param csvString Comma-separated string to convert to SQL array literal.
+     * @return SQL array literal string (e.g., "{val1,val2}").
+     */
+    public static String createArrayLiteral(String csvString) {
+        return String.format("{%s}", StringUtils.isNotBlank(csvString) ? csvString.trim() : "");
+    }
+
+    /**
+     * Executes a series of database operations within a transaction.
+     * Commits if successful, rolls back on exception, and ensures connection is closed.
+     *
+     * @param connection JDBC Connection to use for the transaction.
+     * @param callback Consumer that performs database operations using the provided Connection.
+     * @throws SQLException if a database access error occurs or the callback throws an exception.
+     */
+    public static void transact(
+        final Connection connection,
+        Consumer<Connection> callback
+    ) throws SQLException {
+        Objects.requireNonNull(connection, "Connection must not be null");
+        try {
+            connection.setAutoCommit(false);
+            callback.accept(connection);
+            connection.commit();
+        } catch (Exception e) {
+            connection.rollback();
+            throw e;
+        } finally {
+            connection.close();
+        }
+    }
+
+    /**
+     * Executes a series of database operations within a transaction and returns a result.
+     * Commits if successful, rolls back on exception, and ensures connection is closed.
+     *
+     * @param connection JDBC Connection to use for the transaction.
+     * @param callback Function that performs database operations using the provided Connection and returns a result.
+     * @param <T> The type of the result returned by the callback.
+     * @return The result from the callback function.
+     * @throws SQLException if a database access error occurs or the callback throws an exception.
+     */
+    public static <T> T transactWithResult(
+        final Connection connection,
+        Function<Connection, T> callback
+    ) throws SQLException {
+        Objects.requireNonNull(connection, "Connection must not be null");
+        try {
+            connection.setAutoCommit(false);
+            T result = callback.apply(connection);
+            connection.commit();
+            return result;
+        } catch (Exception e) {
+            connection.rollback();
+            throw e;
+        } finally {
+            connection.close();
+        }
     }
 }

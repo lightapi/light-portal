@@ -14,6 +14,9 @@ public interface InstanceDeploymentPersistence {
     void createInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void lockInstance(Connection conn, Map<String, Object> event) throws Exception;
+    void unlockInstance(Connection conn, Map<String, Object> event) throws Exception;
+    void cloneInstance(Connection conn, Map<String, Object> event) throws Exception;
     Result<String> getInstance(int offset, int limit, String hostId, String instanceId, String instanceName, String productVersionId, String productId, String productVersion, String serviceId, Boolean current, Boolean readonly, String environment, String serviceDesc, String instanceDesc, String zone,  String region, String lob, String resourceName, String businessName, String envTag, String topicClassification);
     Result<String> getInstanceLabel(String hostId);
 
