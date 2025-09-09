@@ -356,7 +356,6 @@ public class PortalConstants {
     public static final String AGGREGATE_INSTANCE_API_PATH_PREFIX = "InstanceApiPathPrefix";
     public static final String AGGREGATE_INSTANCE_APP = "InstanceApp";
     public static final String AGGREGATE_INSTANCE_APP_API = "InstanceAppApi";
-    public static final String AGGREGATE_INSTANCE_PIPELINE = "InstancePipeline";
 
     // -- Ref --
     public static final String AGGREGATE_REF_TABLE = "RefTable";

@@ -651,13 +651,124 @@ public class EventTypeUtil {
                 if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, appId);
                 yield appId;
             }
+            case PortalConstants.AGGREGATE_CLIENT -> {
+                String clientId = (String) dataMap.get("clientId");
+                if (clientId == null) {
+                    logger.warn("clientId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, clientId);
+                yield clientId;
+            }
+            case PortalConstants.AGGREGATE_AUTH_CODE -> {
+                String authCode = (String) dataMap.get("authCode");
+                if (authCode == null) {
+                    logger.warn("authCode is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, authCode);
+                yield authCode;
+            }
+            case PortalConstants.AGGREGATE_PROVIDER -> {
+                String providerId = (String) dataMap.get("providerId");
+                if (providerId == null) {
+                    logger.warn("providerId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, providerId);
+                yield providerId;
+            }
+            case PortalConstants.AGGREGATE_REFRESH_TOKEN -> {
+                String refreshToken = (String) dataMap.get("refreshToken");
+                if (refreshToken == null) {
+                    logger.warn("refreshToken is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, refreshToken);
+                yield refreshToken;
+            }
+            case PortalConstants.AGGREGATE_REF_TOKEN -> {
+                String refToken = (String) dataMap.get("refToken");
+                if (refToken == null) {
+                    logger.warn("refToken is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, refToken);
+                yield refToken;
+            }
+            case PortalConstants.AGGREGATE_CATEGORY -> {
+                String categoryId = (String) dataMap.get("categoryId");
+                if (categoryId == null) {
+                    logger.warn("categoryId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, categoryId);
+                yield categoryId;
+            }
+            case PortalConstants.AGGREGATE_HOST -> {
+                String hostId = (String) dataMap.get("hostId");
+                if (hostId == null) {
+                    logger.warn("hostId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, hostId);
+                yield hostId;
+            }
+            case PortalConstants.AGGREGATE_ORG -> {
+                String domain = (String) dataMap.get("domain");
+                if (domain == null) {
+                    logger.warn("domain is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, domain);
+                yield domain;
+            }
+            case PortalConstants.AGGREGATE_SCHEMA -> {
+                String schemaId = (String) dataMap.get("schemaId");
+                if (schemaId == null) {
+                    logger.warn("schemaId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, schemaId);
+                yield schemaId;
+            }
+            case PortalConstants.AGGREGATE_API -> {
+                String apiId = (String) dataMap.get("apiId");
+                if (apiId == null) {
+                    logger.warn("apiId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, apiId);
+                yield apiId;
+            }
+            case PortalConstants.AGGREGATE_SCHEDULE -> {
+                String scheduleId = (String) dataMap.get("scheduleId");
+                if (scheduleId == null) {
+                    logger.warn("scheduleId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, scheduleId);
+                yield scheduleId;
+            }
+            case PortalConstants.AGGREGATE_TAG -> {
+                String tagId = (String) dataMap.get("tagId");
+                if (tagId == null) {
+                    logger.warn("tagId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, tagId);
+                yield tagId;
+            }
+            case PortalConstants.AGGREGATE_USER -> {
+                String userId = (String) dataMap.get("userId");
+                if (userId == null) {
+                    logger.warn("userId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, userId);
+                yield userId;
 
-            case "Host" -> (String) dataMap.get("hostId");
-            case "User" -> (String) dataMap.get("userId");
-            case "Permission" -> (String) dataMap.get("permissionId");
-            case "AuditLog" -> (String) dataMap.get("auditLogId");
-            case "PasswordReset" -> (String) dataMap.get("resetId");
-            case "Invitation" -> (String) dataMap.get("invitationId");
+            }
             // Add more cases as needed for other aggregate types
             default -> {
                 logger.warn("No aggregate ID mapping defined for aggregate type: {}", aggregateType);
