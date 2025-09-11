@@ -12,7 +12,6 @@ public class PortalConfig {
     public static final String CONFIG_NAME = "portal";
 
     String topic;
-    boolean multitenancy;
     boolean sendEmail;
     String cmdHost;
     String cmdPath;
@@ -31,14 +30,6 @@ public class PortalConfig {
 
     public void setTopic(String topic) {
         this.topic = topic;
-    }
-
-    public boolean isMultitenancy() {
-        return multitenancy;
-    }
-
-    public void setMultitenancy(boolean multitenancy) {
-        this.multitenancy = multitenancy;
     }
 
     public boolean isSendEmail() {
