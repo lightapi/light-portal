@@ -15,10 +15,13 @@ public interface HostOrgPersistence {
     void updateHost(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteHost(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void switchHost(Connection conn, Map<String, Object> event) throws SQLException, Exception; // Treated as an update-like operation
+    void createUserHost(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+
     Result<String> queryHostDomainById(String hostId);
     Result<String> queryHostById(String id);
     Result<Map<String, Object>> queryHostByOwner(String owner);
     Result<String> getHost(int offset, int limit, String hostId, String domain, String subDomain, String hostDesc, String hostOwner);
+    Result<String> getUserHost(int offset, int limit, String hostId, String domain, String subDomain, String userId, String email, String firstName, String lastName, Boolean current);
     Result<String> getHostByDomain(String domain, String subDomain, String hostDesc);
     Result<String> getHostLabel();
 }

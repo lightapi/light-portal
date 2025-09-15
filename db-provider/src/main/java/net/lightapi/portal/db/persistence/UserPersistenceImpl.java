@@ -804,6 +804,80 @@ public class UserPersistenceImpl implements UserPersistence {
         return result;
     }
 
+    @Override
+    public Result<String> getHostsByUserId(String userId) {
+        String sql =
+                """
+                SELECT uh.host_id, h.domain, h.sub_domain,
+                uh.current, uh.user_id, u.email
+                FROM user_host_t uh
+                INNER JOIN host_t h ON uh.host_id = h.host_id
+                INNER JOIN user_t u ON uh.user_id = u.user_id
+                WHERE uh.user_id = ?
+                """;
+        try (Connection conn = ds.getConnection();
+        PreparedStatement statement = conn.prepareStatement(sql)) {
+            List<Map<String, Object>> userHosts = new ArrayList<>();
+            statement.setString(1, userId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while(resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("domain", resultSet.getString("domain"));
+                    map.put("subDomain", resultSet.getString("sub_domain"));
+                    map.put("current", resultSet.getBoolean("current"));
+                    map.put("userId", resultSet.getObject("user_id", UUID.class));
+                    map.put("email", resultSet.getString("email"));
+                    userHosts.add(map);
+                }
+            }
+            if (userHosts.isEmpty()) {
+                return Failure.of(new Status(OBJECT_NOT_FOUND, "user host", userId));
+            }
+            return Success.of(JsonMapper.toJson(userHosts));
+        } catch (SQLException e) {
+            logger.error("SQLException while fetching host_user_t for user: {}", userId, e);
+            return Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Unexpected exception while fetching host_user_t for user: {}", userId, e);
+            return Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+    }
+
+    @Override
+    public Result<String> getHostLabelByUserId(String userId) {
+        String sql =
+                """
+                SELECT uh.host_id, h.domain, h.sub_domain\s
+                FROM user_host_t uh
+                INNER JOIN host_t h ON uh.host_id = h.host_id
+                WHERE uh.user_id = ?
+                """;
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+            List<Map<String, Object>> list = new ArrayList<>();
+            statement.setString(1, userId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while(resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", resultSet.getObject("host_id", UUID.class));
+                    map.put("label", resultSet.getString("sub_domain") + "." + resultSet.getString("domain"));
+                    list.add(map);
+                }
+            }
+            if (list.isEmpty()) {
+                return Failure.of(new Status(OBJECT_NOT_FOUND, "user host", userId));
+            }
+            return Success.of(JsonMapper.toJson(list));
+        } catch (SQLException e) {
+            logger.error("SQLException while fetching host_user_t for user: {}", userId, e);
+            return Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Unexpected exception while fetching host_user_t for user: {}", userId, e);
+            return Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+    }
+
     /**
      * check the input token with the saved token in user_t table to ensure match. If matched, update the verified to true
      * and nonce in the user_t table and a success notification. If not matched, write an error notification.

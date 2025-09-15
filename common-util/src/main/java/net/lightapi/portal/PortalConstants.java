@@ -58,7 +58,7 @@ public class PortalConstants {
     public static final String HOST_UPDATED_EVENT = "HostUpdatedEvent";
     public static final String HOST_DELETED_EVENT = "HostDeletedEvent";
     public static final String HOST_SWITCHED_EVENT = "HostSwitchedEvent";
-
+    public static final String USER_HOST_CREATED_EVENT = "UserHostCreatedEvent";
 
     // --- Reference Table Events ---
     public static final String REF_TABLE_CREATED_EVENT = "RefTableCreatedEvent";
@@ -348,6 +348,7 @@ public class PortalConstants {
 
     // -- Host --
     public static final String AGGREGATE_HOST = "Host";
+    public static final String AGGREGATE_USER_HOST = "UserHost";
     public static final String AGGREGATE_ORG = "Org";
 
     // -- Instance --

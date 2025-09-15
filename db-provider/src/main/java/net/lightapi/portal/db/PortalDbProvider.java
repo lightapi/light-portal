@@ -1,27 +1,23 @@
 package net.lightapi.portal.db;
 
-import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
 import com.networknt.db.provider.DbProvider;
 import com.networknt.monad.Result;
 import com.networknt.utility.Constants;
-import com.networknt.utility.NioUtils;
 import com.networknt.utility.UuidUtil;
 import io.cloudevents.CloudEvent;
 import io.cloudevents.core.builder.CloudEventBuilder;
-import io.cloudevents.jackson.JsonFormat;
 import net.lightapi.portal.PortalConstants;
-import net.lightapi.portal.PortalUtil;
 import net.lightapi.portal.validation.FilterCriterion;
 import net.lightapi.portal.validation.SortCriterion;
 
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
-import java.sql.SQLException; // Explicitly import SQLException
 import java.util.Set;
 
 /**
@@ -87,6 +83,8 @@ public interface PortalDbProvider extends DbProvider {
                                      String address, String postCode, Boolean verified, Boolean locked);
     Result<String> queryNotification(int offset, int limit, String hostId, String userId, Long nonce, String eventClass, Boolean successFlag,
                                      Timestamp processTs, String eventJson, String error);
+    Result<String> getHostsByUserId(String userId);
+    Result<String> getHostLabelByUserId(String userId);
 
     void createUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void onboardUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -202,11 +200,13 @@ public interface PortalDbProvider extends DbProvider {
     void updateHost(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteHost(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void switchHost(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void createUserHost(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> queryHostDomainById(String hostId);
     Result<String> queryHostById(String id);
     Result<Map<String, Object>> queryHostByOwner(String owner);
     Result<String> getOrg(int offset, int limit, String domain, String orgName, String orgDesc, String orgOwner);
     Result<String> getHost(int offset, int limit, String hostId, String domain, String subDomain, String hostDesc, String hostOwner);
+    Result<String> getUserHost(int offset, int limit, String hostId, String domain, String subDomain, String userId, String email, String firstName, String lastName, Boolean current);
     Result<String> getHostByDomain(String domain, String subDomain, String hostDesc);
     Result<String> getHostLabel();
 
