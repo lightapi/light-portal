@@ -109,6 +109,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void resetPassword(Connection connection, Map<String, Object> event) throws SQLException, Exception { userPersistence.resetPassword(connection, event); }
     @Override public void changePassword(Connection connection, Map<String, Object> event) throws SQLException, Exception { userPersistence.changePassword(connection, event); }
     @Override public Result<String> queryUserLabel(String hostId) { return userPersistence.queryUserLabel(hostId); }
+    @Override public Result<String> getUserLabelNotInHost(String hostId) { return userPersistence.getUserLabelNotInHost(hostId); }
     @Override public Result<String> queryEmailByWallet(String cryptoType, String cryptoAddress) { return userPersistence.queryEmailByWallet(cryptoType, cryptoAddress); }
     @Override public void sendPrivateMessage(Connection connection, Map<String, Object> event) throws SQLException, Exception { userPersistence.sendPrivateMessage(connection, event); }
     @Override public void updatePayment(Connection connection, Map<String, Object> event) throws SQLException, Exception { userPersistence.updatePayment(connection, event); }
@@ -188,6 +189,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void deleteHost(Connection connection, Map<String, Object> event) throws SQLException, Exception { hostOrgPersistence.deleteHost(connection, event); }
     @Override public void switchHost(Connection connection, Map<String, Object> event) throws SQLException, Exception { hostOrgPersistence.switchHost(connection, event); }
     @Override public void createUserHost(Connection connection, Map<String, Object> event) throws SQLException, Exception { hostOrgPersistence.createUserHost(connection, event); }
+    @Override public void deleteUserHost(Connection connection, Map<String, Object> event) throws SQLException, Exception { hostOrgPersistence.deleteUserHost(connection, event); }
     @Override public Result<String> queryHostDomainById(String hostId) { return hostOrgPersistence.queryHostDomainById(hostId); }
     @Override public Result<String> queryHostById(String id) { return hostOrgPersistence.queryHostById(id); }
     @Override public Result<Map<String, Object>> queryHostByOwner(String owner) { return hostOrgPersistence.queryHostByOwner(owner); }

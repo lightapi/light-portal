@@ -1481,6 +1481,42 @@ public class UserPersistenceImpl implements UserPersistence {
     }
 
     @Override
+    public Result<String> getUserLabelNotInHost(String hostId) {
+        Result<String> result = null;
+        String sql =
+        """
+            SELECT u.user_id, u.email
+            FROM user_t u
+            WHERE u.user_id NOT IN (
+                SELECT uh.user_id
+                FROM user_host_t uh
+                WHERE uh.host_id = ?
+            )
+        """;
+        List<Map<String, Object>> labels = new ArrayList<>();
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setObject(1, UUID.fromString(hostId));
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", resultSet.getString("user_id"));
+                    map.put("label", resultSet.getString("email"));
+                    labels.add(map);
+                }
+            }
+            result = Success.of(JsonMapper.toJson(labels));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
     public Result<String> queryNotification(int offset, int limit, String hostId, String userId, Long nonce, String eventClass, Boolean successFlag,
                                             Timestamp processTs, String eventJson, String error) {
         Result<String> result = null;

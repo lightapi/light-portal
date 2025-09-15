@@ -104,6 +104,7 @@ public interface PortalDbProvider extends DbProvider {
     void deliverOrder(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void sendPrivateMessage(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> queryUserLabel(String hostId);
+    Result<String> getUserLabelNotInHost(String hostId);
 
     // RefreshToken
     void createRefreshToken(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -201,6 +202,7 @@ public interface PortalDbProvider extends DbProvider {
     void deleteHost(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void switchHost(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void createUserHost(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void deleteUserHost(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> queryHostDomainById(String hostId);
     Result<String> queryHostById(String id);
     Result<Map<String, Object>> queryHostByOwner(String owner);

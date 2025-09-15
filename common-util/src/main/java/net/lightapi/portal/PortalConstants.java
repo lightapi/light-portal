@@ -59,6 +59,7 @@ public class PortalConstants {
     public static final String HOST_DELETED_EVENT = "HostDeletedEvent";
     public static final String HOST_SWITCHED_EVENT = "HostSwitchedEvent";
     public static final String USER_HOST_CREATED_EVENT = "UserHostCreatedEvent";
+    public static final String USER_HOST_DELETED_EVENT = "UserHostDeletedEvent";
 
     // --- Reference Table Events ---
     public static final String REF_TABLE_CREATED_EVENT = "RefTableCreatedEvent";

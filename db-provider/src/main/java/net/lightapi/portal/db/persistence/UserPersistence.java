@@ -31,6 +31,7 @@ public interface UserPersistence {
     void changePassword(Connection conn, Map<String, Object> event) throws SQLException, Exception;
 
     Result<String> queryUserLabel(String hostId);
+    Result<String> getUserLabelNotInHost(String hostId);
     Result<String> queryEmailByWallet(String cryptoType, String cryptoAddress);
 
     void sendPrivateMessage(Connection conn, Map<String, Object> event) throws SQLException, Exception;

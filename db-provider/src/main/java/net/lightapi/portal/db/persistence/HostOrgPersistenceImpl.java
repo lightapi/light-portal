@@ -480,6 +480,21 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
         }
     }
 
+    // detect if there is an entry of host_id and user_id mapping in user_host_t table.
+    private boolean queryUserHostExists(Connection conn, String hostId, String userId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM user_host_t WHERE host_id = ? AND user_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(hostId));
+            pst.setObject(2, UUID.fromString(userId));
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        }
+    }
+
     @Override
     public void createUserHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String insertHost =
@@ -513,6 +528,39 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
             throw e; // Re-throw SQLException
         } catch (Exception e) {
             logger.error("Exception during createUserHost for hostId {} userId {} aggregateVersion {}: {}", hostId, userId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw generic Exception
+        }
+    }
+
+    @Override
+    public void deleteUserHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        final String insertHost =
+                """
+                DELETE FROM user_host_t WHERE host_id = ? AND user_id = ? AND aggregate_version = ?
+                """;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String hostId = (String)map.get("hostId");
+        String userId = (String)map.get("userId");
+        long aggregateVersion = SqlUtil.getOldAggregateVersion(event);
+
+        try (PreparedStatement statement = conn.prepareStatement(insertHost)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(userId));
+            statement.setLong(3, aggregateVersion);
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                if (queryUserHostExists(conn, hostId, userId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteUserHost for hostId " + hostId + " userId " + userId + " aggregateVersion " + aggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deleteUserHost for hostId " + hostId + " userId " + userId + ". It might have been already deleted.");
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during deleteUserHost for hostId {} userId {} aggregateVersion {}: {}", hostId, userId, aggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during deleteUserHost for hostId {} userId {} aggregateVersion {}: {}", hostId, userId, aggregateVersion, e.getMessage(), e);
             throw e; // Re-throw generic Exception
         }
     }
@@ -790,8 +838,9 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
-                uh.host_id, h.domain, h.sub_domain, uh.user_id,\s
-                u.email, u.first_name, u.last_name, uh.current\s
+                uh.host_id, h.domain, h.sub_domain, uh.user_id,
+                u.email, u.first_name, u.last_name, uh.current,
+                uh.update_user, uh.update_ts, uh.aggregate_version
                 FROM user_host_t uh
                 INNER JOIN host_t h ON uh.host_id = h.host_id
                 INNER JOIN user_t u ON uh.user_id = u.user_id
