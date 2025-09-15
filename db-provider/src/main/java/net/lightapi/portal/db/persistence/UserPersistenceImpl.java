@@ -818,7 +818,7 @@ public class UserPersistenceImpl implements UserPersistence {
         try (Connection conn = ds.getConnection();
         PreparedStatement statement = conn.prepareStatement(sql)) {
             List<Map<String, Object>> userHosts = new ArrayList<>();
-            statement.setString(1, userId);
+            statement.setObject(1, UUID.fromString(userId));
             try (ResultSet resultSet = statement.executeQuery()) {
                 while(resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
@@ -856,7 +856,7 @@ public class UserPersistenceImpl implements UserPersistence {
         try (Connection conn = ds.getConnection();
              PreparedStatement statement = conn.prepareStatement(sql)) {
             List<Map<String, Object>> list = new ArrayList<>();
-            statement.setString(1, userId);
+            statement.setObject(1, UUID.fromString(userId));
             try (ResultSet resultSet = statement.executeQuery()) {
                 while(resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();

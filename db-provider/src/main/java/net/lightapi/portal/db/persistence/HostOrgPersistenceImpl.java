@@ -391,7 +391,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
     }
 
     @Override
-    public void switchHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void switchUserHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String deactivateCurrentUserHost =
                 """
                 UPDATE user_host_t

@@ -187,7 +187,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void createHost(Connection connection, Map<String, Object> event) throws SQLException, Exception { hostOrgPersistence.createHost(connection, event); }
     @Override public void updateHost(Connection connection, Map<String, Object> event) throws SQLException, Exception { hostOrgPersistence.updateHost(connection, event); }
     @Override public void deleteHost(Connection connection, Map<String, Object> event) throws SQLException, Exception { hostOrgPersistence.deleteHost(connection, event); }
-    @Override public void switchHost(Connection connection, Map<String, Object> event) throws SQLException, Exception { hostOrgPersistence.switchHost(connection, event); }
+    @Override public void switchUserHost(Connection connection, Map<String, Object> event) throws SQLException, Exception { hostOrgPersistence.switchUserHost(connection, event); }
     @Override public void createUserHost(Connection connection, Map<String, Object> event) throws SQLException, Exception { hostOrgPersistence.createUserHost(connection, event); }
     @Override public void deleteUserHost(Connection connection, Map<String, Object> event) throws SQLException, Exception { hostOrgPersistence.deleteUserHost(connection, event); }
     @Override public Result<String> queryHostDomainById(String hostId) { return hostOrgPersistence.queryHostDomainById(hostId); }

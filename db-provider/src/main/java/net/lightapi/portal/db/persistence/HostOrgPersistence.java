@@ -14,7 +14,7 @@ public interface HostOrgPersistence {
     void createHost(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateHost(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteHost(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void switchHost(Connection conn, Map<String, Object> event) throws SQLException, Exception; // Treated as an update-like operation
+    void switchUserHost(Connection conn, Map<String, Object> event) throws SQLException, Exception; // Treated as an update-like operation
     void createUserHost(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteUserHost(Connection conn, Map<String, Object> event) throws SQLException, Exception;
 

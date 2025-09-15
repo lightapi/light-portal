@@ -200,7 +200,7 @@ public interface PortalDbProvider extends DbProvider {
     void createHost(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateHost(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteHost(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void switchHost(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void switchUserHost(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void createUserHost(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteUserHost(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> queryHostDomainById(String hostId);
