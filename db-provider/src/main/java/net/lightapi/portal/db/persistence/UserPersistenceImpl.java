@@ -56,7 +56,7 @@ public class UserPersistenceImpl implements UserPersistence {
                   (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
         final String insertUserHost = """
-                INSERT INTO user_host_t (user_id, host_id, aggregate_version) VALUES (?, ?, ?)
+                INSERT INTO user_host_t (user_id, host_id, current, aggregate_version) VALUES (?, ?, ?, ?)
                 """;
         final String insertCustomer = """
                 INSERT INTO customer_t (host_id, customer_id, user_id, referral_id, aggregate_version) VALUES (?, ?, ?, ?, ?)
@@ -121,7 +121,8 @@ public class UserPersistenceImpl implements UserPersistence {
             try (PreparedStatement statement = conn.prepareStatement(insertUserHost)) {
                 statement.setObject(1, UUID.fromString(userId));
                 statement.setObject(2, UUID.fromString(hostId));
-                statement.setLong(3, newAggregateVersion);
+                statement.setBoolean(3, true);
+                statement.setLong(4, newAggregateVersion);
                 statement.execute();
             }
             if("E".equals(userType)) {
@@ -372,7 +373,7 @@ public class UserPersistenceImpl implements UserPersistence {
                 SELECT h.host_id, u.user_id, u.email, u.password, u.language,
                 u.first_name, u.last_name, u.user_type, u.phone_number, u.gender,
                 u.birthday, u.country, u.province, u.city, u.address,
-                u.post_code, u.verified, u.token, u.locked, u.nonce, aggregate_version
+                u.post_code, u.verified, u.token, u.locked, u.nonce, u.aggregate_version
                 FROM user_t u, user_host_t h
                 WHERE u.user_id = h.user_id
                 AND email = ?
