@@ -809,7 +809,8 @@ public class UserPersistenceImpl implements UserPersistence {
         String sql =
                 """
                 SELECT uh.host_id, h.domain, h.sub_domain,
-                uh.current, uh.user_id, u.email
+                uh.current, uh.user_id, u.email,
+                uh.aggregate_version, uh.update_user, uh.update_ts
                 FROM user_host_t uh
                 INNER JOIN host_t h ON uh.host_id = h.host_id
                 INNER JOIN user_t u ON uh.user_id = u.user_id
@@ -828,6 +829,9 @@ public class UserPersistenceImpl implements UserPersistence {
                     map.put("current", resultSet.getBoolean("current"));
                     map.put("userId", resultSet.getObject("user_id", UUID.class));
                     map.put("email", resultSet.getString("email"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     userHosts.add(map);
                 }
             }

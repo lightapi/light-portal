@@ -299,20 +299,6 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
         }
     }
 
-    private boolean queryHostUserExists(Connection conn, String hostId, String userId) throws SQLException {
-        final String sql =
-                """
-                SELECT COUNT(*) FROM host_t WHERE host_id = ? AND user_id = ?
-                """;
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
-            pst.setObject(1, UUID.fromString(hostId));
-            pst.setObject(2, UUID.fromString(userId));
-            try (ResultSet rs = pst.executeQuery()) {
-                return rs.next() && rs.getInt(1) > 0;
-            }
-        }
-    }
-
     @Override
     public void updateHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String updateHostSql =
@@ -450,7 +436,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
             int activateCount = activateStmt.executeUpdate();
 
             if (activateCount == 0) {
-                if (queryHostUserExists(conn, hostId, userId)) {
+                if (queryUserHostExists(conn, hostId, userId)) {
                     throw new ConcurrencyException("Optimistic concurrency conflict during switchHost for hostId " + hostId + " userId " + userId + ". Expected version " + oldAggregateVersion + " but found a different version.");
                 } else {
                     throw new SQLException("No record found during switchHost for hostId " + hostId + " userId " + userId + ".");
