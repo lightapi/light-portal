@@ -196,7 +196,10 @@ public abstract class AbstractCommandHandler implements HybridHandler {
         if (enrichedResult.isFailure()) {
             return NioUtils.toByteBuffer(getStatus(exchange, enrichedResult.getError()));
         }
-
+        if(userId == null) {
+            // in case the userId is enriched in the enrichInput() method. i.e. createUser command.
+            userId = (String)map.get(USER_ID);
+        }
         // --- 2. Get Nonce ---
         Number nonce;
         Result<String> result = HybridQueryClient.getNonceByUserId(exchange, userId);
@@ -207,8 +210,9 @@ public abstract class AbstractCommandHandler implements HybridHandler {
                 // this is a brand-new user that is created or onboarded.
                 nonce = 1;
             }
+        } else {
+            nonce = PortalUtil.parseNumber(result.getResult());
         }
-        nonce = PortalUtil.parseNumber(result.getResult());
         if(logger.isTraceEnabled()) logger.trace("nonce = {}", nonce);
 
         // get the new aggregate version and put it in the map.
