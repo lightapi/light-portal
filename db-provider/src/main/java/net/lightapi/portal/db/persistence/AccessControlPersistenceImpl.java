@@ -424,7 +424,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("firstName", resultSet.getString("first_name"));
                     map.put("lastName", resultSet.getString("last_name"));
                     map.put("userType", resultSet.getString("user_type"));
-                    map.put("managerId", resultSet.getObject("manager_id", UUID.class));
+                    map.put("managerId", resultSet.getString("manager_id"));
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     roleUsers.add(map);
                 }

@@ -333,7 +333,7 @@ public class PortalDbProviderImplTest {
         map.put("postCode", "12345");
         map.put("address", "123 Main St");
         map.put("userId", "01964b05-5532-7c79-8cde-191dcbd421b8");
-        map.put("emailToken", UUID.randomUUID().toString());
+        map.put("token", UUID.randomUUID().toString());
         map.put("verified", true);
         map.put("locked", false);
 

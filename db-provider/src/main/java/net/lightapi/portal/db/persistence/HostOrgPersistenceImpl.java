@@ -377,35 +377,177 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
     }
 
     @Override
-    public void switchHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String updateUserHost = "UPDATE user_host_t SET host_id = ?, update_user = ?, update_ts = ?, aggregate_version = ? WHERE user_id = ? AND aggregate_version = ?";
+    public void switchUserHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        final String deactivateCurrentUserHost =
+                """
+                UPDATE user_host_t
+                SET current = false,
+                update_user = ?,
+                update_ts = ?,
+                aggregate_version = ?
+                WHERE user_id = ?
+                AND aggregate_version = ?
+                AND current = true
+                """;
+        final String activateNewHost =
+                """
+                UPDATE user_host_t
+                SET current = true,
+                update_user = ?,
+                update_ts = ?,
+                aggregate_version = ?
+                WHERE user_id = ?
+                AND aggregate_version = ?
+                AND host_id = ?
+                """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)map.get("hostId");
         String userId = (String)event.get(Constants.USER);
         long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+        String updateTs = (String) event.get(CloudEventV1.TIME);
 
-        try (PreparedStatement statement = conn.prepareStatement(updateUserHost)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setString(2, userId);
-            statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(4, newAggregateVersion);
-            statement.setObject(5, UUID.fromString(userId)); // user_id from event itself, not from data map.
-            statement.setLong(6, oldAggregateVersion);
+        try (PreparedStatement statement = conn.prepareStatement(deactivateCurrentUserHost)) {
+            statement.setString(1, userId);
+            statement.setObject(2, OffsetDateTime.parse(updateTs));
+            statement.setLong(3, newAggregateVersion);
+            statement.setObject(4, UUID.fromString(userId));
+            statement.setLong(5, oldAggregateVersion);
             int count = statement.executeUpdate();
-            if (count == 0) {
-                if (queryHostExists(conn, hostId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during switchHost for hostId " + hostId + " userId " + userId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+            if (count > 0) {
+                logger.debug("Deactivated {} current host(s) for user {}", count, userId);
+            }
+            // There is a chance that there is no current host for the user, so there is concurrency check here.
+        } catch (SQLException e) {
+            logger.error("SQLException during switchHost for hostId {} userId {} (old: {}) -> (new: {}): {}", hostId, userId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during switchHost for hoarIs {} userId {} (old: {}) -> (new: {}): {}", hostId, userId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+        try (PreparedStatement activateStmt = conn.prepareStatement(activateNewHost)) {
+            activateStmt.setString(1, userId);
+            activateStmt.setObject(2, OffsetDateTime.parse(updateTs));
+            activateStmt.setLong(3, newAggregateVersion);
+            activateStmt.setObject(4, UUID.fromString(userId));
+            activateStmt.setLong(5, oldAggregateVersion);
+            activateStmt.setObject(6, UUID.fromString(hostId));
+
+            int activateCount = activateStmt.executeUpdate();
+
+            if (activateCount == 0) {
+                if (queryUserHostExists(conn, hostId, userId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during switchHost for hostId " + hostId + " userId " + userId + ". Expected version " + oldAggregateVersion + " but found a different version.");
                 } else {
                     throw new SQLException("No record found during switchHost for hostId " + hostId + " userId " + userId + ".");
                 }
             }
+            logger.debug("Activated host {} for user {}", hostId, userId);
         } catch (SQLException e) {
-            logger.error("SQLException during switchHost for hostId {} (old: {}) -> (new: {}): {}", userId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during switchHost for hostId {} userId {} (old: {}) -> (new: {}): {}", hostId, userId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during switchHost for userId {} (old: {}) -> (new: {}): {}", userId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during switchHost for hostId {} userId {} (old: {}) -> (new: {}): {}", hostId, userId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
+        }
+    }
+
+    // detect if this is the first host for the user. If yes, set the current to true.
+    private boolean queryUserHostExists(Connection conn, String userId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM user_host_t WHERE user_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(userId));
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        }
+    }
+
+    // detect if there is an entry of host_id and user_id mapping in user_host_t table.
+    private boolean queryUserHostExists(Connection conn, String hostId, String userId) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM user_host_t WHERE host_id = ? AND user_id = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setObject(1, UUID.fromString(hostId));
+            pst.setObject(2, UUID.fromString(userId));
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        }
+    }
+
+    @Override
+    public void createUserHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        final String insertHost =
+                """
+                INSERT INTO user_host_t (host_id, user_id, current, update_user, update_ts, aggregate_version)
+                VALUES (?, ?, ?, ?, ?,  ?)
+                """;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String hostId = (String)map.get("hostId");
+        String userId = (String)map.get("userId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        try (PreparedStatement statement = conn.prepareStatement(insertHost)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(userId));
+            if (queryUserHostExists(conn, userId)) {
+                statement.setBoolean(3, false);
+            } else {
+                statement.setBoolean(3, true);
+            }
+            statement.setString(4, (String)event.get(Constants.USER));
+            statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(6, newAggregateVersion);
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException(String.format("Failed during createUserHost for hostId %s userId %s with aggregateVersion %d", hostId, userId, newAggregateVersion));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during createUserHost for hostId {} userId {} aggregateVersion {}: {}", hostId, userId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during createUserHost for hostId {} userId {} aggregateVersion {}: {}", hostId, userId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw generic Exception
+        }
+    }
+
+    @Override
+    public void deleteUserHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        final String insertHost =
+                """
+                DELETE FROM user_host_t WHERE host_id = ? AND user_id = ? AND aggregate_version = ?
+                """;
+        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String hostId = (String)map.get("hostId");
+        String userId = (String)map.get("userId");
+        long aggregateVersion = SqlUtil.getOldAggregateVersion(event);
+
+        try (PreparedStatement statement = conn.prepareStatement(insertHost)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(userId));
+            statement.setLong(3, aggregateVersion);
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                if (queryUserHostExists(conn, hostId, userId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteUserHost for hostId " + hostId + " userId " + userId + " aggregateVersion " + aggregateVersion + " but found a different version or already updated.");
+                } else {
+                    throw new SQLException("No record found during deleteUserHost for hostId " + hostId + " userId " + userId + ". It might have been already deleted.");
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during deleteUserHost for hostId {} userId {} aggregateVersion {}: {}", hostId, userId, aggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during deleteUserHost for hostId {} userId {} aggregateVersion {}: {}", hostId, userId, aggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw generic Exception
         }
     }
 
@@ -664,6 +806,98 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
             Map<String, Object> resultMap = new HashMap<>();
             resultMap.put("total", total);
             resultMap.put("hosts", hosts);
+            if(logger.isTraceEnabled()) logger.trace("resultMap: {}", resultMap);
+            result = Success.of(JsonMapper.toJson(resultMap));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getUserHost(int offset, int limit, String hostId, String domain, String subDomain, String userId, String email, String firstName, String lastName, Boolean current) {
+        Result<String> result = null;
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                uh.host_id, h.domain, h.sub_domain, uh.user_id,
+                u.email, u.first_name, u.last_name, uh.current,
+                uh.update_user, uh.update_ts, uh.aggregate_version
+                FROM user_host_t uh
+                INNER JOIN host_t h ON uh.host_id = h.host_id
+                INNER JOIN user_t u ON uh.user_id = u.user_id
+                WHERE 1=1
+                """;
+        StringBuilder sqlBuilder = new StringBuilder(s);
+
+
+        List<Object> parameters = new ArrayList<>();
+
+        StringBuilder whereClause = new StringBuilder();
+
+        SqlUtil.addCondition(whereClause, parameters, "uh.host_id", hostId != null ? UUID.fromString(hostId) : null);
+        SqlUtil.addCondition(whereClause, parameters, "h.domain", domain);
+        SqlUtil.addCondition(whereClause, parameters, "h.sub_domain", subDomain);
+        SqlUtil.addCondition(whereClause, parameters, "uh.user_id", userId);
+        SqlUtil.addCondition(whereClause, parameters, "u.email", email);
+        SqlUtil.addCondition(whereClause, parameters, "u.first_name", firstName);
+        SqlUtil.addCondition(whereClause, parameters, "u.last_name", lastName);
+        SqlUtil.addCondition(whereClause, parameters, "uh.current", current);
+
+        if (!whereClause.isEmpty()) {
+            sqlBuilder.append("AND ").append(whereClause);
+        }
+
+        sqlBuilder.append(" ORDER BY u.email\n" +
+                "LIMIT ? OFFSET ?");
+
+
+        parameters.add(limit);
+        parameters.add(offset);
+        String sql = sqlBuilder.toString();
+        if(logger.isTraceEnabled()) logger.trace("sql: {}", sql);
+        int total = 0;
+        List<Map<String, Object>> userHosts = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if(logger.isTraceEnabled()) logger.trace("resultSet: {}", resultSet);
+                while (resultSet.next()) {
+                    if(logger.isTraceEnabled()) logger.trace("at least there is 1 row here in the resultSet");
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("domain", resultSet.getString("domain"));
+                    map.put("subDomain", resultSet.getString("sub_domain"));
+                    map.put("userId", resultSet.getObject("user_id", UUID.class));
+                    map.put("email", resultSet.getString("email"));
+                    map.put("firstName", resultSet.getString("first_name"));
+                    map.put("lastName", resultSet.getString("last_name"));
+                    map.put("current", resultSet.getBoolean("current"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    userHosts.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("userHosts", userHosts);
             if(logger.isTraceEnabled()) logger.trace("resultMap: {}", resultMap);
             result = Success.of(JsonMapper.toJson(resultMap));
         } catch (SQLException e) {

@@ -56,7 +56,7 @@ public class UserPersistenceImpl implements UserPersistence {
                   (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
         final String insertUserHost = """
-                INSERT INTO user_host_t (user_id, host_id, aggregate_version) VALUES (?, ?, ?)
+                INSERT INTO user_host_t (user_id, host_id, current, aggregate_version) VALUES (?, ?, ?, ?)
                 """;
         final String insertCustomer = """
                 INSERT INTO customer_t (host_id, customer_id, user_id, referral_id, aggregate_version) VALUES (?, ?, ?, ?, ?)
@@ -121,7 +121,8 @@ public class UserPersistenceImpl implements UserPersistence {
             try (PreparedStatement statement = conn.prepareStatement(insertUserHost)) {
                 statement.setObject(1, UUID.fromString(userId));
                 statement.setObject(2, UUID.fromString(hostId));
-                statement.setLong(3, newAggregateVersion);
+                statement.setBoolean(3, true);
+                statement.setLong(4, newAggregateVersion);
                 statement.execute();
             }
             if("E".equals(userType)) {
@@ -372,7 +373,7 @@ public class UserPersistenceImpl implements UserPersistence {
                 SELECT h.host_id, u.user_id, u.email, u.password, u.language,
                 u.first_name, u.last_name, u.user_type, u.phone_number, u.gender,
                 u.birthday, u.country, u.province, u.city, u.address,
-                u.post_code, u.verified, u.token, u.locked, u.nonce, aggregate_version
+                u.post_code, u.verified, u.token, u.locked, u.nonce, u.aggregate_version
                 FROM user_t u, user_host_t h
                 WHERE u.user_id = h.user_id
                 AND email = ?
@@ -802,6 +803,84 @@ public class UserPersistenceImpl implements UserPersistence {
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
         return result;
+    }
+
+    @Override
+    public Result<String> getHostsByUserId(String userId) {
+        String sql =
+                """
+                SELECT uh.host_id, h.domain, h.sub_domain,
+                uh.current, uh.user_id, u.email,
+                uh.aggregate_version, uh.update_user, uh.update_ts
+                FROM user_host_t uh
+                INNER JOIN host_t h ON uh.host_id = h.host_id
+                INNER JOIN user_t u ON uh.user_id = u.user_id
+                WHERE uh.user_id = ?
+                """;
+        try (Connection conn = ds.getConnection();
+        PreparedStatement statement = conn.prepareStatement(sql)) {
+            List<Map<String, Object>> userHosts = new ArrayList<>();
+            statement.setObject(1, UUID.fromString(userId));
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while(resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("domain", resultSet.getString("domain"));
+                    map.put("subDomain", resultSet.getString("sub_domain"));
+                    map.put("current", resultSet.getBoolean("current"));
+                    map.put("userId", resultSet.getObject("user_id", UUID.class));
+                    map.put("email", resultSet.getString("email"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    userHosts.add(map);
+                }
+            }
+            if (userHosts.isEmpty()) {
+                return Failure.of(new Status(OBJECT_NOT_FOUND, "user host", userId));
+            }
+            return Success.of(JsonMapper.toJson(userHosts));
+        } catch (SQLException e) {
+            logger.error("SQLException while fetching host_user_t for user: {}", userId, e);
+            return Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Unexpected exception while fetching host_user_t for user: {}", userId, e);
+            return Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+    }
+
+    @Override
+    public Result<String> getHostLabelByUserId(String userId) {
+        String sql =
+                """
+                SELECT uh.host_id, h.domain, h.sub_domain\s
+                FROM user_host_t uh
+                INNER JOIN host_t h ON uh.host_id = h.host_id
+                WHERE uh.user_id = ?
+                """;
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+            List<Map<String, Object>> list = new ArrayList<>();
+            statement.setObject(1, UUID.fromString(userId));
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while(resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", resultSet.getObject("host_id", UUID.class));
+                    map.put("label", resultSet.getString("sub_domain") + "." + resultSet.getString("domain"));
+                    list.add(map);
+                }
+            }
+            if (list.isEmpty()) {
+                return Failure.of(new Status(OBJECT_NOT_FOUND, "user host", userId));
+            }
+            return Success.of(JsonMapper.toJson(list));
+        } catch (SQLException e) {
+            logger.error("SQLException while fetching host_user_t for user: {}", userId, e);
+            return Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Unexpected exception while fetching host_user_t for user: {}", userId, e);
+            return Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
     }
 
     /**
@@ -1383,6 +1462,42 @@ public class UserPersistenceImpl implements UserPersistence {
     public Result<String> queryUserLabel(String hostId) {
         Result<String> result = null;
         String sql = "SELECT u.user_id, u.email FROM user_t u, user_host_t h WHERE u.user_id = h.user_id AND h.host_id = ?";
+        List<Map<String, Object>> labels = new ArrayList<>();
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setObject(1, UUID.fromString(hostId));
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", resultSet.getString("user_id"));
+                    map.put("label", resultSet.getString("email"));
+                    labels.add(map);
+                }
+            }
+            result = Success.of(JsonMapper.toJson(labels));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getUserLabelNotInHost(String hostId) {
+        Result<String> result = null;
+        String sql =
+        """
+            SELECT u.user_id, u.email
+            FROM user_t u
+            WHERE u.user_id NOT IN (
+                SELECT uh.user_id
+                FROM user_host_t uh
+                WHERE uh.host_id = ?
+            )
+        """;
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
