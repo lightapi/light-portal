@@ -131,7 +131,7 @@ public abstract class AbstractCommandHandler implements HybridHandler {
     protected Result<Map<String, Object>> populateAggregateVersion(Map<String, Object> map) {
         String eventType = getCloudEventType();
         // for created event, we can derive the new aggregate versions.
-        if (eventType.endsWith("CreatedEvent")) {
+        if (eventType.endsWith("CreatedEvent") || eventType.endsWith("OnboardedEvent")) {
             // For auth code created event, we don't need to increment the aggregate version.
             map.put(PortalConstants.NEW_AGGREGATE_VERSION, 1L);
             map.put(PortalConstants.AGGREGATE_VERSION, 0L);
