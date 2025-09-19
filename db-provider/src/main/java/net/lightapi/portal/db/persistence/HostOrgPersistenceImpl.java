@@ -51,7 +51,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
 
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String domain = (String)map.get("domain");
-        String hostId = (String)event.get(Constants.HOST);
+        String hostId = (String)map.get("hostId"); // enriched in the service.
         String orgOwner = (String)map.get("orgOwner");
         String hostOwner = (String)map.get("hostOwner");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
