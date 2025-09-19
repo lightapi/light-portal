@@ -14,6 +14,8 @@ public interface UserPersistence {
     Result<String> queryUserByTypeEntityId(String userType, String entityId);
     Result<String> queryUserByWallet(String cryptoType, String cryptoAddress);
     Result<String> queryUserByHostId(int offset, int limit, String hostId, String email, String language, String userType, String entityId, String referralId, String managerId, String firstName, String lastName, String phoneNumber, String gender, String birthday, String country, String province, String city, String address, String postCode, Boolean verified, Boolean locked);
+    Result<String> getHostsByUserId(String userId);
+    Result<String> getHostLabelByUserId(String userId);
 
     void createUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void onboardUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -29,6 +31,7 @@ public interface UserPersistence {
     void changePassword(Connection conn, Map<String, Object> event) throws SQLException, Exception;
 
     Result<String> queryUserLabel(String hostId);
+    Result<String> getUserLabelNotInHost(String hostId);
     Result<String> queryEmailByWallet(String cryptoType, String cryptoAddress);
 
     void sendPrivateMessage(Connection conn, Map<String, Object> event) throws SQLException, Exception;

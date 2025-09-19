@@ -3,8 +3,6 @@
 sendEmail: ${portal.sendEmail:false}
 # The event topic for user-command
 topic: ${portal.topic:portal-event}
-# Indicate if the portal is running in multi-tenent mode. Default is false.
-multitenancy: ${portal.multitenancy:false}
 # The host of the server that accepts the email confirmation
 cmdHost: ${portal.cmdHost:https://localhost:8439}
 # The command path of the server that accepts the email confirmation

@@ -1,10 +1,14 @@
 package net.lightapi.portal.db.persistence;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.networknt.config.JsonMapper;
 import com.networknt.monad.Failure;
 import com.networknt.monad.Result;
 import com.networknt.monad.Success;
 import com.networknt.status.Status;
+import com.networknt.utility.CollectionUtils;
 import com.networknt.utility.Constants;
 import com.networknt.utility.UuidUtil;
 import io.cloudevents.core.v1.CloudEventV1;
@@ -55,12 +59,47 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 AND service_id = ?
                 AND instance_id != ?
                 """;
+        // SQL query for fetching property IDs
+        final String sqlFetchPropertyIds =
+                """
+                SELECT DISTINCT cp.property_id, cp.property_name,c.config_name
+                FROM config_property_t cp
+                JOIN config_t c ON cp.config_id = c.config_id
+                WHERE CONCAT(c.config_name, '.', cp.property_name) IN ('serviceId', 'environment')
+                """;
 
+        String[] tableNames = {"environment", "zone", "region", "lob"};
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST);
         String instanceId = (String)map.get("instanceId");
         String serviceId = (String)map.get("serviceId");
+        final String user = (String) event.get(Constants.USER);
+        final String updateTs = (String) event.get(CloudEventV1.TIME);
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        Result<String> refDataResult = fetchReferenceData(hostId, tableNames);
+        Map<String, Set<String>> refData = parseReferenceData(refDataResult.getResult());
+        // Validate input parameters
+        validateParameter("environment", (String)map.get("environment"), refData.get("environment"));
+        validateParameter("zone", (String)map.get("zone"), refData.get("zone"));
+        validateParameter("region", (String)map.get("region"), refData.get("region"));
+        validateParameter("lob", (String)map.get("lob"), refData.get("lob"));
+
+        // Fetch property IDs
+        Map<String, List<Map<String, Object>>> properties = new HashMap<>();
+        try (PreparedStatement stmtFetchPropertyIds = conn.prepareStatement(sqlFetchPropertyIds);
+             ResultSet rs = stmtFetchPropertyIds.executeQuery()) {
+            while (rs.next()) {
+                UUID propertyId = rs.getObject("property_id", UUID.class);
+                String propertyName = rs.getString("property_name");
+                String configName = rs.getString("config_name");
+
+                Map<String, Object> propertyMap = new HashMap<>();
+                propertyMap.put("propertyId", propertyId);
+                propertyMap.put("propertyName", propertyName);
+                properties.computeIfAbsent(configName, k -> new ArrayList<>()).add(propertyMap);
+            }
+        }
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
@@ -163,6 +202,169 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             throw e;
         } catch (Exception e) {
             logger.error("Exception during createInstance for hostId {} instanceId {} aggregateVersion {}: {}", hostId, instanceId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+        upsertPlatformProductInstanceProperties(hostId,instanceId,properties,user);
+    }
+
+    private Result<String> fetchReferenceData(String hostId, String[] tableNames) {
+        Result<String> result = null;
+        String sql = """
+                    WITH params AS MATERIALIZED (
+                        SELECT
+                            ?::UUID as host_id,
+                            ?::VARCHAR[] as table_names
+                    )
+                    SELECT
+                        rt.host_id,
+                        rt.table_id,
+                        rt.table_name,
+                        rv.value_code
+                    FROM
+                        ref_table_t rt
+                    JOIN
+                        ref_value_t rv ON rt.table_id = rv.table_id
+                    JOIN
+                        params p ON rt.host_id = p.host_id
+                    WHERE
+                        (array_length(p.table_names, 1) IS NULL OR rt.table_name = ANY(p.table_names))
+                        AND rt.active = TRUE
+                """;
+        UUID hostIdUUID = hostId != null ? UUID.fromString(hostId) : null;
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setObject(1, hostIdUUID);
+            preparedStatement.setObject(2, SqlUtil.createArrayLiteral(List.of(tableNames)));
+            boolean isFirstRow = true;
+            List<Map<String, Object>> refValues = new ArrayList<>();
+            int total = 0;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("tableId", resultSet.getObject("table_id", UUID.class));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("tableName", resultSet.getString("table_name"));
+                    map.put("value_code", resultSet.getString("value_code"));
+                    refValues.add(map);
+                }
+                Map<String, Object> resultMap = new HashMap<>();
+                resultMap.put("refValues", refValues); // Use a descriptive key for the list
+                result = Success.of(JsonMapper.toJson(resultMap));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    private Map<String, Set<String>> parseReferenceData(String jsonResult) {
+        Map<String, Set<String>> refData = new HashMap<>();
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(jsonResult);
+            JsonNode refValues = root.get("refValues");
+            if (refValues != null && refValues.isArray()) {
+                for (JsonNode node : refValues) {
+                    String tableName = node.get("tableName").asText();
+                    String valueCode = node.get("value_code").asText();
+                    refData.computeIfAbsent(tableName, k -> new HashSet<>()).add(valueCode);
+                }
+            }
+        } catch (JsonProcessingException e) {
+            logger.error("Error parsing reference data JSON: {}", e.getMessage());
+        }
+        return refData;
+    }
+    private void validateParameter(String paramName, String value, Set<String> validValues) throws IllegalArgumentException {
+        if (value != null && !value.isEmpty() && validValues != null && !validValues.contains(value)) {
+            throw new IllegalArgumentException("Invalid " + paramName + ": " + value);
+        }
+    }
+
+    private void upsertPlatformProductInstanceProperties(
+            String hostId,String instanceId,
+            Map<String, List<Map<String, Object>>> properties,String user) throws SQLException {
+        if (CollectionUtils.isEmpty(properties)) {
+            return;
+        }
+
+        final String sqlUpsertInstanceProperty = """
+        WITH params AS MATERIALIZED (
+            SELECT
+                CAST(v.host_id as UUID) as host_id,
+                CAST(v.instance_id as UUID) as instance_id,
+                CAST(v.config_name as VARCHAR) as config_name,
+                CAST(v.property_name as VARCHAR) as property_name,
+                CAST(v.property_value as TEXT) as property_value,
+                CAST(v.update_user as VARCHAR) as update_user,
+                CURRENT_TIMESTAMP as update_ts,
+                CAST(1 as BIGINT) as aggregate_version
+            FROM (
+                values
+                    (?, ?, ?, ?, ?, ?)
+            ) as v(host_id, instance_id, config_name, property_name, property_value, update_user)
+        )
+        INSERT INTO instance_property_t
+            (host_id, instance_id, property_id, property_value, aggregate_version, update_user, update_ts)
+        SELECT
+            params.host_id as host_id,
+            params.instance_id as instance_id,
+            config_property.property_id as property_id,
+            params.property_value as property_value,
+            params.aggregate_version as aggregate_version,
+            params.update_user as update_user,
+            params.update_ts as update_ts
+        FROM
+            params
+            JOIN config_t as config
+                ON config.config_name = params.config_name
+            JOIN config_property_t as config_property
+                ON config_property.property_name = params.property_name
+                    AND config_property.config_id = config.config_id
+        ON CONFLICT
+        ON CONSTRAINT instance_property_pk
+        DO UPDATE
+            SET
+                property_value = excluded.property_value,
+                aggregate_version = instance_property_t.aggregate_version + 1,
+                update_user = excluded.update_user,
+                update_ts = excluded.update_ts
+            WHERE
+                instance_property_t.host_id = excluded.host_id
+                AND instance_property_t.instance_id = excluded.instance_id
+                AND instance_property_t.property_id = excluded.property_id;
+        """;
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sqlUpsertInstanceProperty)) {
+            for (Map.Entry<String, List<Map<String, Object>>> entry : properties.entrySet()) {
+                String configName = entry.getKey();
+                List<Map<String, Object>> propertiesMap = entry.getValue();
+                for (Map<String, Object> propertyMap : propertiesMap) {
+                    preparedStatement.setObject(1, hostId);
+                    preparedStatement.setString(2, instanceId);
+                    preparedStatement.setString(3, configName);
+                    preparedStatement.setString(4, (String) propertyMap.get("propertyName"));
+                    preparedStatement.setObject(5, propertyMap.get("propertyId")); // Assuming we want to store the UUID
+                    preparedStatement.setString(6, user);
+                    preparedStatement.addBatch();
+                }
+            }
+
+            preparedStatement.executeBatch();
+        } catch (SQLException e) {
+            logger.error("SQLException during createInstance for hostId {} instanceId {} : {}", hostId, instanceId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createInstance for hostId {} instanceId {} : {}", hostId, instanceId,  e.getMessage(), e);
             throw e;
         }
     }
