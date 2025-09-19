@@ -908,6 +908,7 @@ public class UserPersistenceImpl implements UserPersistence {
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String userId = (String)event.get(Constants.USER);
         String token = (String)map.get("token");
+        String nonce = (String)event.get(PortalConstants.NONCE);
         long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
@@ -918,7 +919,7 @@ public class UserPersistenceImpl implements UserPersistence {
                 if (resultSet.next()) {
                     // found the token record, update user_t for token, verified flog and nonce, write a success notification.
                     try (PreparedStatement updateStatement = conn.prepareStatement(updateUserByEmail)) {
-                        updateStatement.setLong(1, ((Number)event.get(PortalConstants.NONCE)).longValue() + 1);
+                        updateStatement.setLong(1, Long.parseLong(nonce) + 1);
                         updateStatement.setLong(2, newAggregateVersion);
                         updateStatement.setObject(3, UUID.fromString(userId));
                         updateStatement.setLong(4, oldAggregateVersion);
@@ -929,14 +930,11 @@ public class UserPersistenceImpl implements UserPersistence {
                     throw new SQLException(String.format("token %s is not matched for userId %s.", token, userId));
                 }
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
             logger.error("SQLException during confirmUser for userId {}: {}", userId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         } catch (Exception e) {
             logger.error("Exception during confirmUser for userId {}: {}", userId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
@@ -1300,12 +1298,13 @@ public class UserPersistenceImpl implements UserPersistence {
         """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String email = (String)map.get("email");
+        String nonce = (String)event.get(PortalConstants.NONCE);
         long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(updateForgetPassword)) {
             statement.setString(1, (String)map.get("token"));
-            statement.setLong(2, ((Number)event.get(PortalConstants.NONCE)).longValue() + 1);
+            statement.setLong(2, Long.parseLong(nonce) + 1);
             statement.setLong(3, newAggregateVersion);
             statement.setString(4, email);
             statement.setLong(5, oldAggregateVersion);
@@ -1337,24 +1336,21 @@ public class UserPersistenceImpl implements UserPersistence {
         final String updateResetPassword = "UPDATE user_t SET token = ?, nonce = ? WHERE email = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String email = (String)map.get("email");
-
+        String nonce = (String)event.get(PortalConstants.NONCE);
         try (PreparedStatement statement = conn.prepareStatement(updateResetPassword)) {
             statement.setString(1, (String)map.get("token"));
-            statement.setLong(2, ((Number)event.get(PortalConstants.NONCE)).longValue() + 1);
+            statement.setLong(2, Long.parseLong(nonce) + 1);
             statement.setString(3, email);
             int count = statement.executeUpdate();
             if (count == 0) {
                 // no record is deleted, write an error notification.
                 throw new SQLException(String.format("no token is updated by email %s", email));
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
             logger.error("SQLException during resetPassword for email {}: {}", email, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         } catch (Exception e) {
             logger.error("Exception during resetPassword for email {}: {}", email, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
@@ -1370,10 +1366,10 @@ public class UserPersistenceImpl implements UserPersistence {
         final String updatePasswordByEmail = "UPDATE user_t SET password = ?, nonce = ? WHERE email = ? AND password = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String email = (String)map.get("email");
-
+        String nonce = (String)event.get(PortalConstants.NONCE);
         try (PreparedStatement statement = conn.prepareStatement(updatePasswordByEmail)) {
             statement.setString(1, (String)map.get("password"));
-            statement.setLong(2, ((Number)event.get(PortalConstants.NONCE)).longValue() + 1);
+            statement.setLong(2, Long.parseLong(nonce) + 1);
             statement.setString(3, email);
             statement.setString(4, (String)map.get("oldPassword"));
             int count = statement.executeUpdate();
@@ -1381,14 +1377,11 @@ public class UserPersistenceImpl implements UserPersistence {
                 // no record is updated, write an error notification.
                 throw new SQLException(String.format("no password is updated by email %s", email));
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
             logger.error("SQLException during changePassword for email {}: {}", email, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         } catch (Exception e) {
             logger.error("Exception during changePassword for email {}: {}", email, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
@@ -1403,10 +1396,8 @@ public class UserPersistenceImpl implements UserPersistence {
             logger.info("Simulating updatePayment for event: {}", event);
             // Example: int updatedRows = conn.prepareStatement("UPDATE ...").executeUpdate();
             // if (updatedRows == 0) throw new SQLException("No payment updated for " + paymentId);
-            notificationService.insertNotification(event, true, null);
         } catch (Exception e) {
             logger.error("Exception during updatePayment for paymentId {}: {}", paymentId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
@@ -1419,10 +1410,8 @@ public class UserPersistenceImpl implements UserPersistence {
             logger.info("Simulating deletePayment for event: {}", event);
             // Example: int deletedRows = conn.prepareStatement("DELETE FROM ...").executeUpdate();
             // if (deletedRows == 0) throw new SQLException("No payment deleted for " + paymentId);
-            notificationService.insertNotification(event, true, null);
         } catch (Exception e) {
             logger.error("Exception during deletePayment for paymentId {}: {}", paymentId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
@@ -1435,10 +1424,8 @@ public class UserPersistenceImpl implements UserPersistence {
             logger.info("Simulating createOrder for event: {}", event);
             // Example: int insertedRows = conn.prepareStatement("INSERT INTO ...").executeUpdate();
             // if (insertedRows == 0) throw new SQLException("Order creation failed for " + orderId);
-            notificationService.insertNotification(event, true, null);
         } catch (Exception e) {
             logger.error("Exception during createOrder for orderId {}: {}", orderId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
@@ -1451,10 +1438,8 @@ public class UserPersistenceImpl implements UserPersistence {
             logger.info("Simulating cancelOrder for event: {}", event);
             // Example: int updatedRows = conn.prepareStatement("UPDATE ... SET status='CANCELLED' ...").executeUpdate();
             // if (updatedRows == 0) throw new SQLException("Order cancellation failed for " + orderId);
-            notificationService.insertNotification(event, true, null);
         } catch (Exception e) {
             logger.error("Exception during cancelOrder for orderId {}: {}", orderId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
@@ -1467,10 +1452,8 @@ public class UserPersistenceImpl implements UserPersistence {
             logger.info("Simulating deliverOrder for event: {}", event);
             // Example: int updatedRows = conn.prepareStatement("UPDATE ... SET status='DELIVERED' ...").executeUpdate();
             // if (updatedRows == 0) throw new SQLException("Order delivery failed for " + orderId);
-            notificationService.insertNotification(event, true, null);
         } catch (Exception e) {
             logger.error("Exception during deliverOrder for orderId {}: {}", orderId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
@@ -1487,24 +1470,21 @@ public class UserPersistenceImpl implements UserPersistence {
         final String insertMessage = "INSERT INTO message_t (from_id, nonce, to_email, subject, content, send_time) VALUES (?, ?, ?, ?, ?, ?)";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String fromId = (String)map.get("fromId");
-
+        String nonce = (String)event.get(PortalConstants.NONCE);
         try (PreparedStatement statement = conn.prepareStatement(insertMessage)) {
             statement.setString(1, fromId);
-            statement.setLong(2, ((Number)event.get(PortalConstants.NONCE)).longValue());
+            statement.setLong(2, Long.parseLong(nonce) + 1);
             statement.setString(3, (String)map.get("toEmail"));
             statement.setString(4, (String)map.get("subject"));
             statement.setString(5, (String)map.get("content"));
             statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
             statement.executeUpdate();
 
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
             logger.error("SQLException during sendPrivateMessage for fromId {}: {}", fromId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         } catch (Exception e) {
             logger.error("Exception during sendPrivateMessage for fromId {}: {}", fromId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
