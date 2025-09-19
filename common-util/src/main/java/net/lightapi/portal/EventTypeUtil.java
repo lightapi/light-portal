@@ -714,6 +714,17 @@ public class EventTypeUtil {
                 if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, hostId);
                 yield hostId;
             }
+            case PortalConstants.AGGREGATE_USER_HOST -> {
+                String hostId = (String) dataMap.get("hostId");
+                String userId = (String) dataMap.get("userId");
+                if (hostId == null || userId == null) {
+                    logger.warn("userId or hostId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                String id = userId + "|" + hostId;
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, id);
+                yield id;
+            }
             case PortalConstants.AGGREGATE_ORG -> {
                 String domain = (String) dataMap.get("domain");
                 if (domain == null) {

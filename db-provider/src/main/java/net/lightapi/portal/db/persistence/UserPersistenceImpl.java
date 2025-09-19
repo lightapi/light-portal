@@ -56,7 +56,7 @@ public class UserPersistenceImpl implements UserPersistence {
                   (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
         final String insertUserHost = """
-                INSERT INTO user_host_t (user_id, host_id, aggregate_version) VALUES (?, ?, ?)
+                INSERT INTO user_host_t (user_id, host_id, current, aggregate_version) VALUES (?, ?, ?, ?)
                 """;
         final String insertCustomer = """
                 INSERT INTO customer_t (host_id, customer_id, user_id, referral_id, aggregate_version) VALUES (?, ?, ?, ?, ?)
@@ -121,7 +121,8 @@ public class UserPersistenceImpl implements UserPersistence {
             try (PreparedStatement statement = conn.prepareStatement(insertUserHost)) {
                 statement.setObject(1, UUID.fromString(userId));
                 statement.setObject(2, UUID.fromString(hostId));
-                statement.setLong(3, newAggregateVersion);
+                statement.setBoolean(3, true);
+                statement.setLong(4, newAggregateVersion);
                 statement.execute();
             }
             if("E".equals(userType)) {
@@ -170,14 +171,14 @@ public class UserPersistenceImpl implements UserPersistence {
                 """;
         final String insertUser = """
                 INSERT INTO user_t
-                  (user_id, email, language, first_name, last_name, user_type,
+                  (user_id, email, password, language, first_name, last_name, user_type,
                    phone_number, gender, birthday, country, province, city, address,
                    post_code, verified, token, locked, aggregate_version)
                 VALUES
-                  (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                  (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """;
         final String insertUserHost = """
-                INSERT INTO user_host_t (user_id, host_id, aggregate_version) VALUES (?, ?, ?)
+                INSERT INTO user_host_t (user_id, host_id, current, aggregate_version) VALUES (?, ?, ?, ?)
                 """;
         final String insertCustomer = """
                 INSERT INTO customer_t (host_id, customer_id, user_id, referral_id, aggregate_version) VALUES (?, ?, ?, ?, ?)
@@ -189,6 +190,7 @@ public class UserPersistenceImpl implements UserPersistence {
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String userId = (String)map.get("userId");
         String email = (String)map.get("email");
+        String password = (String)map.get("password");
         String entityId = (String)map.get("entityId");
         String hostId = (String)map.get("hostId");
         String userType = (String)map.get("userType");
@@ -209,39 +211,40 @@ public class UserPersistenceImpl implements UserPersistence {
             try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
                 statement.setObject(1, UUID.fromString(userId));
                 statement.setString(2, email);
-                statement.setString(3, (String)map.get("language"));
-                // ... (rest of the parameter settings for insertUser)
+                if (password != null && !password.isEmpty()) statement.setString(3, password); else statement.setNull(3, Types.VARCHAR);
+                statement.setString(4, (String)map.get("language"));
                 String firstName = (String)map.get("firstName");
-                if (firstName != null && !firstName.isEmpty()) statement.setString(4, firstName); else statement.setNull(4, Types.VARCHAR);
+                if (firstName != null && !firstName.isEmpty()) statement.setString(5, firstName); else statement.setNull(5, Types.VARCHAR);
                 String lastName = (String)map.get("lastName");
-                if (lastName != null && !lastName.isEmpty()) statement.setString(5, lastName); else statement.setNull(5, Types.VARCHAR);
-                statement.setString(6, userType);
+                if (lastName != null && !lastName.isEmpty()) statement.setString(6, lastName); else statement.setNull(6, Types.VARCHAR);
+                statement.setString(7, userType);
                 String phoneNumber = (String)map.get("phoneNumber");
-                if (phoneNumber != null && !phoneNumber.isEmpty()) statement.setString(7, phoneNumber); else statement.setNull(7, Types.VARCHAR);
+                if (phoneNumber != null && !phoneNumber.isEmpty()) statement.setString(8, phoneNumber); else statement.setNull(8, Types.VARCHAR);
                 String gender = (String) map.get("gender");
-                if (gender != null && !gender.isEmpty()) statement.setString(8, gender); else statement.setNull(8, Types.VARCHAR);
+                if (gender != null && !gender.isEmpty()) statement.setString(9, gender); else statement.setNull(9, Types.VARCHAR);
                 java.util.Date birthday = (java.util.Date)map.get("birthday"); // Assuming it's passed as java.util.Date
-                if (birthday != null) statement.setDate(9, new java.sql.Date(birthday.getTime())); else statement.setNull(9, Types.DATE);
+                if (birthday != null) statement.setDate(10, new java.sql.Date(birthday.getTime())); else statement.setNull(10, Types.DATE);
                 String country = (String)map.get("country");
-                if (country != null && !country.isEmpty()) statement.setString(10, country); else statement.setNull(10, Types.VARCHAR);
+                if (country != null && !country.isEmpty()) statement.setString(11, country); else statement.setNull(11, Types.VARCHAR);
                 String province = (String)map.get("province");
-                if (province != null && !province.isEmpty()) statement.setString(11, province); else statement.setNull(11, Types.VARCHAR);
+                if (province != null && !province.isEmpty()) statement.setString(12, province); else statement.setNull(12, Types.VARCHAR);
                 String city = (String)map.get("city");
-                if (city != null && !city.isEmpty()) statement.setString(12, city); else statement.setNull(12, Types.VARCHAR);
+                if (city != null && !city.isEmpty()) statement.setString(13, city); else statement.setNull(13, Types.VARCHAR);
                 String address = (String)map.get("address");
-                if (address != null && !address.isEmpty()) statement.setString(13, address); else statement.setNull(13, Types.VARCHAR);
+                if (address != null && !address.isEmpty()) statement.setString(14, address); else statement.setNull(14, Types.VARCHAR);
                 String postCode = (String)map.get("postCode");
-                if (postCode != null && !postCode.isEmpty()) statement.setString(14, postCode); else statement.setNull(14, Types.VARCHAR);
-                statement.setBoolean(15, (Boolean)map.get("verified"));
-                statement.setString(16, (String)map.get("token"));
-                statement.setBoolean(17, (Boolean)map.get("locked"));
-                statement.setLong(18, newAggregateVersion);
+                if (postCode != null && !postCode.isEmpty()) statement.setString(15, postCode); else statement.setNull(15, Types.VARCHAR);
+                statement.setBoolean(16, (Boolean)map.get("verified"));
+                statement.setString(17, (String)map.get("token"));
+                statement.setBoolean(18, (Boolean)map.get("locked"));
+                statement.setLong(19, newAggregateVersion);
                 statement.execute();
             }
             try (PreparedStatement statement = conn.prepareStatement(insertUserHost)) {
                 statement.setObject(1, UUID.fromString(userId));
                 statement.setObject(2, UUID.fromString(hostId));
-                statement.setLong(3, newAggregateVersion);
+                statement.setBoolean(3, true);
+                statement.setLong(4, newAggregateVersion);
                 statement.execute();
             }
             if("E".equals(userType)) {
@@ -327,6 +330,7 @@ public class UserPersistenceImpl implements UserPersistence {
                     u.email = ?
                     AND u.locked = FALSE
                     AND u.verified = TRUE
+                    AND uh.current = TRUE
                 GROUP BY
                     uh.host_id, u.user_id, u.user_type, e.employee_id, c.customer_id;
                 """;
@@ -372,9 +376,10 @@ public class UserPersistenceImpl implements UserPersistence {
                 SELECT h.host_id, u.user_id, u.email, u.password, u.language,
                 u.first_name, u.last_name, u.user_type, u.phone_number, u.gender,
                 u.birthday, u.country, u.province, u.city, u.address,
-                u.post_code, u.verified, u.token, u.locked, u.nonce, aggregate_version
+                u.post_code, u.verified, u.token, u.locked, u.nonce, u.aggregate_version
                 FROM user_t u, user_host_t h
                 WHERE u.user_id = h.user_id
+                AND h.current = TRUE
                 AND email = ?
                 """;
         try (final Connection conn = ds.getConnection()) {
@@ -435,6 +440,7 @@ public class UserPersistenceImpl implements UserPersistence {
                 u.post_code, u.verified, u.token, u.locked, u.nonce, u.aggregate_version
                 FROM user_t u, user_host_t h
                 WHERE u.user_id = h.user_id
+                AND h.current = TRUE
                 AND u.user_id = ?
                 """;
 
@@ -499,6 +505,7 @@ public class UserPersistenceImpl implements UserPersistence {
                 WHERE u.user_id = h.user_id
                 AND h.host_id = e.host_id
                 AND h.user_id = e.user_id
+                AND h.current = TRUE
                 AND e.employee_id = ?
                 """;
 
@@ -513,6 +520,7 @@ public class UserPersistenceImpl implements UserPersistence {
                 WHERE u.user_id = h.user_id
                 AND h.host_id = c.host_id
                 AND h.user_id = c.user_id
+                AND h.current = TRUE
                 AND c.customer_id = ?
                 """;
 
@@ -804,6 +812,84 @@ public class UserPersistenceImpl implements UserPersistence {
         return result;
     }
 
+    @Override
+    public Result<String> getHostsByUserId(String userId) {
+        String sql =
+                """
+                SELECT uh.host_id, h.domain, h.sub_domain,
+                uh.current, uh.user_id, u.email,
+                uh.aggregate_version, uh.update_user, uh.update_ts
+                FROM user_host_t uh
+                INNER JOIN host_t h ON uh.host_id = h.host_id
+                INNER JOIN user_t u ON uh.user_id = u.user_id
+                WHERE uh.user_id = ?
+                """;
+        try (Connection conn = ds.getConnection();
+        PreparedStatement statement = conn.prepareStatement(sql)) {
+            List<Map<String, Object>> userHosts = new ArrayList<>();
+            statement.setObject(1, UUID.fromString(userId));
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while(resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("domain", resultSet.getString("domain"));
+                    map.put("subDomain", resultSet.getString("sub_domain"));
+                    map.put("current", resultSet.getBoolean("current"));
+                    map.put("userId", resultSet.getObject("user_id", UUID.class));
+                    map.put("email", resultSet.getString("email"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    userHosts.add(map);
+                }
+            }
+            if (userHosts.isEmpty()) {
+                return Failure.of(new Status(OBJECT_NOT_FOUND, "user host", userId));
+            }
+            return Success.of(JsonMapper.toJson(userHosts));
+        } catch (SQLException e) {
+            logger.error("SQLException while fetching host_user_t for user: {}", userId, e);
+            return Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Unexpected exception while fetching host_user_t for user: {}", userId, e);
+            return Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+    }
+
+    @Override
+    public Result<String> getHostLabelByUserId(String userId) {
+        String sql =
+                """
+                SELECT uh.host_id, h.domain, h.sub_domain\s
+                FROM user_host_t uh
+                INNER JOIN host_t h ON uh.host_id = h.host_id
+                WHERE uh.user_id = ?
+                """;
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+            List<Map<String, Object>> list = new ArrayList<>();
+            statement.setObject(1, UUID.fromString(userId));
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while(resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", resultSet.getObject("host_id", UUID.class));
+                    map.put("label", resultSet.getString("sub_domain") + "." + resultSet.getString("domain"));
+                    list.add(map);
+                }
+            }
+            if (list.isEmpty()) {
+                return Failure.of(new Status(OBJECT_NOT_FOUND, "user host", userId));
+            }
+            return Success.of(JsonMapper.toJson(list));
+        } catch (SQLException e) {
+            logger.error("SQLException while fetching host_user_t for user: {}", userId, e);
+            return Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Unexpected exception while fetching host_user_t for user: {}", userId, e);
+            return Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+    }
+
     /**
      * check the input token with the saved token in user_t table to ensure match. If matched, update the verified to true
      * and nonce in the user_t table and a success notification. If not matched, write an error notification.
@@ -813,10 +899,18 @@ public class UserPersistenceImpl implements UserPersistence {
     @Override
     public void confirmUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String queryTokenByEmail = "SELECT token FROM user_t WHERE user_id = ? AND token = ?";
-        final String updateUserByEmail = "UPDATE user_t SET token = null, verified = true, nonce = ? WHERE user_id = ?";
+        final String updateUserByEmail =
+        """
+            UPDATE user_t SET token = null, verified = true, nonce = ?, aggregate_version = ?
+            WHERE user_id = ? AND aggregate_version = ?
+        """;
+
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String userId = (String)event.get(Constants.USER);
         String token = (String)map.get("token");
+        String nonce = (String)event.get(PortalConstants.NONCE);
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(queryTokenByEmail)) {
             statement.setObject(1, UUID.fromString(userId));
@@ -825,8 +919,10 @@ public class UserPersistenceImpl implements UserPersistence {
                 if (resultSet.next()) {
                     // found the token record, update user_t for token, verified flog and nonce, write a success notification.
                     try (PreparedStatement updateStatement = conn.prepareStatement(updateUserByEmail)) {
-                        updateStatement.setLong(1, ((Number)event.get(PortalConstants.NONCE)).longValue() + 1);
-                        updateStatement.setObject(2, UUID.fromString(userId));
+                        updateStatement.setLong(1, Long.parseLong(nonce) + 1);
+                        updateStatement.setLong(2, newAggregateVersion);
+                        updateStatement.setObject(3, UUID.fromString(userId));
+                        updateStatement.setLong(4, oldAggregateVersion);
                         updateStatement.execute();
                     }
                 } else {
@@ -834,14 +930,11 @@ public class UserPersistenceImpl implements UserPersistence {
                     throw new SQLException(String.format("token %s is not matched for userId %s.", token, userId));
                 }
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
             logger.error("SQLException during confirmUser for userId {}: {}", userId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         } catch (Exception e) {
             logger.error("Exception during confirmUser for userId {}: {}", userId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
@@ -850,25 +943,36 @@ public class UserPersistenceImpl implements UserPersistence {
      * Update the verified to true and nonce in the user_t table based on the hostId and userId. Write a success notification.
      *
      * @param event UserVerifiedEvent
-     * @return  Result of userId
      */
     @Override
     public void verifyUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String updateUserByUserId = "UPDATE user_t SET token = null, verified = true WHERE user_id = ?";
+        final String updateUserByUserId =
+        """
+            UPDATE user_t SET token = null, verified = true, aggregate_version = ?
+            WHERE user_id = ? AND aggregate_version = ?
+        """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String userId = (String)map.get("userId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(updateUserByUserId)) {
-            statement.setObject(1, UUID.fromString(userId));
-            statement.execute();
-            notificationService.insertNotification(event, true, null);
+            statement.setLong(1, newAggregateVersion);
+            statement.setObject(2, UUID.fromString(userId));
+            statement.setLong(3, oldAggregateVersion);
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                if (queryUserExists(conn, userId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during verifyUser for userId " + userId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found during updateOrg for userId " + userId + ".");
+                }
+            }
         } catch (SQLException e) {
-            logger.error("SQLException during verifyUser for userId {}: {}", userId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during verifyUser for userId {} (old: {}) -> (new: {}): {}", userId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during verifyUser for userId {}: {}", userId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during verifyUser for userId {} (old: {}) -> (new: {}): {}", userId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -890,6 +994,7 @@ public class UserPersistenceImpl implements UserPersistence {
                 VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?, ?)
                 """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String hostId = (String)map.get("hostId");
         String userId = (String)map.get("userId");
         String email = (String)map.get("email");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
@@ -907,7 +1012,7 @@ public class UserPersistenceImpl implements UserPersistence {
             }
             // no duplicate record, insert the user into database and write a success notification.
             try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
-                statement.setObject(1, UUID.fromString((String)map.get("hostId")));
+                statement.setObject(1, UUID.fromString(hostId));
                 statement.setObject(2, UUID.fromString(userId));
                 String firstName = (String)map.get("firstName");
                 if (firstName != null && !firstName.isEmpty())
@@ -966,13 +1071,17 @@ public class UserPersistenceImpl implements UserPersistence {
                     statement.setNull(14, NULL);
                 }
                 statement.setLong(15, newAggregateVersion);
-                statement.execute();
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    throw new SQLException(String.format("Failed during createSocialUser for hostId %s userId %s with aggregateVersion %d", hostId, userId, newAggregateVersion));
+                }
+
             }
         } catch (SQLException e) {
-            logger.error("SQLException during createSocialUser for userId {} aggregateVersion {}: {}", userId, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during createSocialUser for hostId {} userId {} aggregateVersion {}: {}", hostId, userId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createSocialUser for userId {} aggregateVersion {}: {}", userId, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during createSocialUser for hostId {} userId {} aggregateVersion {}: {}", hostId, userId, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -1163,35 +1272,55 @@ public class UserPersistenceImpl implements UserPersistence {
         }
     }
 
+    private boolean queryEmailExists(Connection conn, String email) throws SQLException {
+        final String sql =
+                """
+                SELECT COUNT(*) FROM user_t WHERE email = ?
+                """;
+        try (PreparedStatement pst = conn.prepareStatement(sql)) {
+            pst.setString(1, email);
+            try (ResultSet rs = pst.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        }
+    }
+
     /**
      * update user_t for the forget password token by email
      *
      * @param event event that is created by user service
-     * @return result of email
      */
     @Override
     public void forgetPassword(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String updateForgetPassword = "UPDATE user_t SET token = ?, nonce = ? WHERE email = ?";
+        final String updateForgetPassword =
+        """
+            UPDATE user_t SET token = ?, nonce = ?, aggregate_version = ? WHERE email = ? AND aggregate_version = ?
+        """;
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String email = (String)map.get("email");
+        String nonce = (String)event.get(PortalConstants.NONCE);
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(updateForgetPassword)) {
             statement.setString(1, (String)map.get("token"));
-            statement.setLong(2, ((Number)event.get(PortalConstants.NONCE)).longValue() + 1);
-            statement.setString(3, email);
+            statement.setLong(2, Long.parseLong(nonce) + 1);
+            statement.setLong(3, newAggregateVersion);
+            statement.setString(4, email);
+            statement.setLong(5, oldAggregateVersion);
             int count = statement.executeUpdate();
             if (count == 0) {
-                // no record is deleted, write an error notification.
-                throw new SQLException(String.format("no token is updated by email %s", email));
+                if (queryEmailExists(conn, email)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during forgetPassword for email " + email + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                } else {
+                    throw new SQLException("No record found during updateOrg for email " + email + ".");
+                }
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during forgetPassword for email {}: {}", email, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during forgetPassword for email {} (old: {}) -> (new: {}): {}", email, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during forgetPassword for email {}: {}", email, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during forgetPassword for email {} (old: {}) -> (new: {}): {}", email, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -1207,24 +1336,21 @@ public class UserPersistenceImpl implements UserPersistence {
         final String updateResetPassword = "UPDATE user_t SET token = ?, nonce = ? WHERE email = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String email = (String)map.get("email");
-
+        String nonce = (String)event.get(PortalConstants.NONCE);
         try (PreparedStatement statement = conn.prepareStatement(updateResetPassword)) {
             statement.setString(1, (String)map.get("token"));
-            statement.setLong(2, ((Number)event.get(PortalConstants.NONCE)).longValue() + 1);
+            statement.setLong(2, Long.parseLong(nonce) + 1);
             statement.setString(3, email);
             int count = statement.executeUpdate();
             if (count == 0) {
                 // no record is deleted, write an error notification.
                 throw new SQLException(String.format("no token is updated by email %s", email));
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
             logger.error("SQLException during resetPassword for email {}: {}", email, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         } catch (Exception e) {
             logger.error("Exception during resetPassword for email {}: {}", email, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
@@ -1240,10 +1366,10 @@ public class UserPersistenceImpl implements UserPersistence {
         final String updatePasswordByEmail = "UPDATE user_t SET password = ?, nonce = ? WHERE email = ? AND password = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String email = (String)map.get("email");
-
+        String nonce = (String)event.get(PortalConstants.NONCE);
         try (PreparedStatement statement = conn.prepareStatement(updatePasswordByEmail)) {
             statement.setString(1, (String)map.get("password"));
-            statement.setLong(2, ((Number)event.get(PortalConstants.NONCE)).longValue() + 1);
+            statement.setLong(2, Long.parseLong(nonce) + 1);
             statement.setString(3, email);
             statement.setString(4, (String)map.get("oldPassword"));
             int count = statement.executeUpdate();
@@ -1251,14 +1377,11 @@ public class UserPersistenceImpl implements UserPersistence {
                 // no record is updated, write an error notification.
                 throw new SQLException(String.format("no password is updated by email %s", email));
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
             logger.error("SQLException during changePassword for email {}: {}", email, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         } catch (Exception e) {
             logger.error("Exception during changePassword for email {}: {}", email, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
@@ -1273,10 +1396,8 @@ public class UserPersistenceImpl implements UserPersistence {
             logger.info("Simulating updatePayment for event: {}", event);
             // Example: int updatedRows = conn.prepareStatement("UPDATE ...").executeUpdate();
             // if (updatedRows == 0) throw new SQLException("No payment updated for " + paymentId);
-            notificationService.insertNotification(event, true, null);
         } catch (Exception e) {
             logger.error("Exception during updatePayment for paymentId {}: {}", paymentId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
@@ -1289,10 +1410,8 @@ public class UserPersistenceImpl implements UserPersistence {
             logger.info("Simulating deletePayment for event: {}", event);
             // Example: int deletedRows = conn.prepareStatement("DELETE FROM ...").executeUpdate();
             // if (deletedRows == 0) throw new SQLException("No payment deleted for " + paymentId);
-            notificationService.insertNotification(event, true, null);
         } catch (Exception e) {
             logger.error("Exception during deletePayment for paymentId {}: {}", paymentId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
@@ -1305,10 +1424,8 @@ public class UserPersistenceImpl implements UserPersistence {
             logger.info("Simulating createOrder for event: {}", event);
             // Example: int insertedRows = conn.prepareStatement("INSERT INTO ...").executeUpdate();
             // if (insertedRows == 0) throw new SQLException("Order creation failed for " + orderId);
-            notificationService.insertNotification(event, true, null);
         } catch (Exception e) {
             logger.error("Exception during createOrder for orderId {}: {}", orderId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
@@ -1321,10 +1438,8 @@ public class UserPersistenceImpl implements UserPersistence {
             logger.info("Simulating cancelOrder for event: {}", event);
             // Example: int updatedRows = conn.prepareStatement("UPDATE ... SET status='CANCELLED' ...").executeUpdate();
             // if (updatedRows == 0) throw new SQLException("Order cancellation failed for " + orderId);
-            notificationService.insertNotification(event, true, null);
         } catch (Exception e) {
             logger.error("Exception during cancelOrder for orderId {}: {}", orderId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
@@ -1337,10 +1452,8 @@ public class UserPersistenceImpl implements UserPersistence {
             logger.info("Simulating deliverOrder for event: {}", event);
             // Example: int updatedRows = conn.prepareStatement("UPDATE ... SET status='DELIVERED' ...").executeUpdate();
             // if (updatedRows == 0) throw new SQLException("Order delivery failed for " + orderId);
-            notificationService.insertNotification(event, true, null);
         } catch (Exception e) {
             logger.error("Exception during deliverOrder for orderId {}: {}", orderId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
@@ -1357,24 +1470,21 @@ public class UserPersistenceImpl implements UserPersistence {
         final String insertMessage = "INSERT INTO message_t (from_id, nonce, to_email, subject, content, send_time) VALUES (?, ?, ?, ?, ?, ?)";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String fromId = (String)map.get("fromId");
-
+        String nonce = (String)event.get(PortalConstants.NONCE);
         try (PreparedStatement statement = conn.prepareStatement(insertMessage)) {
             statement.setString(1, fromId);
-            statement.setLong(2, ((Number)event.get(PortalConstants.NONCE)).longValue());
+            statement.setLong(2, Long.parseLong(nonce) + 1);
             statement.setString(3, (String)map.get("toEmail"));
             statement.setString(4, (String)map.get("subject"));
             statement.setString(5, (String)map.get("content"));
             statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
             statement.executeUpdate();
 
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
             logger.error("SQLException during sendPrivateMessage for fromId {}: {}", fromId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         } catch (Exception e) {
             logger.error("Exception during sendPrivateMessage for fromId {}: {}", fromId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
@@ -1383,6 +1493,42 @@ public class UserPersistenceImpl implements UserPersistence {
     public Result<String> queryUserLabel(String hostId) {
         Result<String> result = null;
         String sql = "SELECT u.user_id, u.email FROM user_t u, user_host_t h WHERE u.user_id = h.user_id AND h.host_id = ?";
+        List<Map<String, Object>> labels = new ArrayList<>();
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setObject(1, UUID.fromString(hostId));
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", resultSet.getString("user_id"));
+                    map.put("label", resultSet.getString("email"));
+                    labels.add(map);
+                }
+            }
+            result = Success.of(JsonMapper.toJson(labels));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getUserLabelNotInHost(String hostId) {
+        Result<String> result = null;
+        String sql =
+        """
+            SELECT u.user_id, u.email
+            FROM user_t u
+            WHERE u.user_id NOT IN (
+                SELECT uh.user_id
+                FROM user_host_t uh
+                WHERE uh.host_id = ?
+            )
+        """;
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
