@@ -12,6 +12,8 @@
 - Sync [\#299](https://github.com/lightapi/light-portal/pull/299) ([stevehu](https://github.com/stevehu))
 - [pre-commit.ci] pre-commit autoupdate [\#298](https://github.com/lightapi/light-portal/pull/298) ([pre-commit-ci](https://github.com/apps/pre-commit-ci))
 - Sync [\#294](https://github.com/lightapi/light-portal/pull/294) ([stevehu](https://github.com/stevehu))
+
+
 ## [2.3.0](https://github.com/networknt/light-portal/tree/2.3.0) (2025-06-25)
 
 
