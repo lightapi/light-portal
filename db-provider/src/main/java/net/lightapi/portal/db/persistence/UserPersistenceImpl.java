@@ -982,7 +982,6 @@ public class UserPersistenceImpl implements UserPersistence {
      * the user into database and write a success notification.
      *
      * @param event event that is created by user service
-     * @return result of email
      */
     @Override
     public void createSocialUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
@@ -1329,7 +1328,6 @@ public class UserPersistenceImpl implements UserPersistence {
      * update user_t to reset the password by email
      *
      * @param event event that is created by user service
-     * @return result of email
      */
     @Override
     public void resetPassword(Connection conn, Map<String, Object> event) throws SQLException, Exception {
@@ -1359,7 +1357,6 @@ public class UserPersistenceImpl implements UserPersistence {
      * update user_t to change the password by email
      *
      * @param event event that is created by user service
-     * @return result of email
      */
     @Override
     public void changePassword(Connection conn, Map<String, Object> event) throws SQLException, Exception {
@@ -1463,7 +1460,6 @@ public class UserPersistenceImpl implements UserPersistence {
      * to message_t table. Send a notification to the from user about the event processing result.
      *
      * @param event event that is created by user service
-     * @return result of email
      */
     @Override
     public void sendPrivateMessage(Connection conn, Map<String, Object> event) throws SQLException, Exception {

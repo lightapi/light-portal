@@ -400,6 +400,23 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                 AND aggregate_version = ?
                 AND host_id = ?
                 """;
+        final String updateEmployeeHost =
+                """
+                UPDATE employee_t
+                SET host_id = ?,
+                update_user = ?,
+                update_ts = ?
+                WHERE user_id = ?
+                """;
+        final String updateCustomerHost =
+                """
+                UPDATE customer_t
+                SET host_id = ?,
+                update_user = ?,
+                update_ts = ?
+                WHERE user_id = ?
+                """;
+
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)map.get("hostId");
         String userId = (String)event.get(Constants.USER);
@@ -440,6 +457,28 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                     throw new ConcurrencyException("Optimistic concurrency conflict during switchHost for hostId " + hostId + " userId " + userId + ". Expected version " + oldAggregateVersion + " but found a different version.");
                 } else {
                     throw new SQLException("No record found during switchHost for hostId " + hostId + " userId " + userId + ".");
+                }
+            } else {
+                // User switched to a new hostId. Update the employee_t and customer_t
+                try (PreparedStatement updateEmployeeHostStmt = conn.prepareStatement(updateEmployeeHost)) {
+                    updateEmployeeHostStmt.setObject(1, UUID.fromString(hostId));
+                    updateEmployeeHostStmt.setString(2, userId);
+                    updateEmployeeHostStmt.setObject(3, OffsetDateTime.parse(updateTs));
+                    updateEmployeeHostStmt.setObject(4, UUID.fromString(userId));
+                    int count = updateEmployeeHostStmt.executeUpdate();
+                    if (count > 0) {
+                        logger.debug("Updated employee_t for to switch user {} to host {}", userId, hostId);
+                    }
+                }
+                try (PreparedStatement updateCustomerHostStmt = conn.prepareStatement(updateCustomerHost)) {
+                    updateCustomerHostStmt.setObject(1, UUID.fromString(hostId));
+                    updateCustomerHostStmt.setString(2, userId);
+                    updateCustomerHostStmt.setObject(3, OffsetDateTime.parse(updateTs));
+                    updateCustomerHostStmt.setObject(4, UUID.fromString(userId));
+                    int count = updateCustomerHostStmt.executeUpdate();
+                    if (count > 0) {
+                        logger.debug("Updated customer_t for to switch user {} to host {}", userId, hostId);
+                    }
                 }
             }
             logger.debug("Activated host {} for user {}", hostId, userId);
