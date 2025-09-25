@@ -169,7 +169,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public Result<String> queryApiVersionLabel(String hostId, String apiId) { return apiServicePersistence.queryApiVersionLabel(hostId, apiId); }
     @Override public void updateServiceSpec(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.updateServiceSpec(connection, event); }
     @Override public Result<String> queryServiceEndpoint(int offset, int limit, String hostId, String apiVersionId, String apiId, String apiVersion, String endpoint, String method, String path, String desc) { return apiServicePersistence.queryServiceEndpoint(offset, limit, hostId, apiVersionId, apiId, apiVersion, endpoint, method, path, desc); }
-    @Override public Result<String> queryEndpointLabel(String hostId, String apiId, String apiVersion) { return apiServicePersistence.queryEndpointLabel(hostId, apiId, apiVersion); }
+    @Override public Result<String> queryEndpointLabel(String hostId, String apiVersionId) { return apiServicePersistence.queryEndpointLabel(hostId, apiVersionId); }
     @Override public Result<String> queryEndpointScope(String hostId, String endpointId) { return apiServicePersistence.queryEndpointScope(hostId, endpointId); }
     @Override public void createEndpointRule(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.createEndpointRule(connection, event); }
     @Override public void deleteEndpointRule(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.deleteEndpointRule(connection, event); }

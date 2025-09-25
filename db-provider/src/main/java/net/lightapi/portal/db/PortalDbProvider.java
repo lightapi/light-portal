@@ -166,7 +166,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> getApiVersionIdLabel(String hostId);
     Result<String> queryApiLabel(String hostId);
     Result<String> queryApiVersionLabel(String hostId, String apiId);
-    Result<String> queryEndpointLabel(String hostId, String apiId, String apiVersion);
+    Result<String> queryEndpointLabel(String hostId, String apiVersionId);
 
     // ServiceVersion
     void createServiceVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception;
