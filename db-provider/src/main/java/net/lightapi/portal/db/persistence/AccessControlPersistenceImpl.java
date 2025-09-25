@@ -355,6 +355,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 """
                 SELECT COUNT(*) OVER () AS total,
                 r.host_id, r.role_id, r.start_ts, r.end_ts,
+                r.aggregate_version, r.update_user, r.update_ts,
                 u.user_id, u.email, u.user_type,
                 CASE
                     WHEN u.user_type = 'C' THEN c.customer_id
@@ -429,6 +430,8 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("userType", resultSet.getString("user_type"));
                     map.put("managerId", resultSet.getString("manager_id"));
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     roleUsers.add(map);
                 }
             }
@@ -594,12 +597,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
         String roleId = (String)map.get("roleId");
-        String userId = (String)event.get(Constants.USER);
+        String userId = (String)map.get("userId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(insertRole)) {
             statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
             statement.setString(2, roleId);
-            statement.setObject(3, UUID.fromString((String)event.get(Constants.USER)));
+            statement.setObject(3, UUID.fromString(userId));
 
             String startTs = (String)map.get("startTs");
             if(startTs != null && !startTs.isEmpty())
@@ -612,7 +615,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             } else {
                 statement.setNull(5, NULL);
             }
-            statement.setString(6, userId);
+            statement.setString(6, (String)event.get(Constants.USER));
             statement.setObject(7,  OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
             statement.setLong(8, newAggregateVersion);
 
@@ -1545,24 +1548,29 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     @Override
     public Result<String> queryGroupUser(int offset, int limit, String hostId, String groupId, String userId, String entityId, String email, String firstName, String lastName, String userType) {
         Result<String> result;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
-                "g.host_id, g.group_id, g.start_ts, g.end_ts, \n" +
-                "u.user_id, u.email, u.user_type, \n" +
-                "CASE\n" +
-                "    WHEN u.user_type = 'C' THEN c.customer_id\n" +
-                "    WHEN u.user_type = 'E' THEN e.employee_id\n" +
-                "    ELSE NULL -- Handle other cases if needed\n" +
-                "END AS entity_id,\n" +
-                "e.manager_id, u.first_name, u.last_name\n" +
-                "FROM user_t u\n" +
-                "LEFT JOIN\n" +
-                "    customer_t c ON u.user_id = c.user_id AND u.user_type = 'C'\n" +
-                "LEFT JOIN\n" +
-                "    employee_t e ON u.user_id = e.user_id AND u.user_type = 'E'\n" +
-                "INNER JOIN\n" +
-                "    group_user_t g ON g.user_id = u.user_id\n" +
-                "AND g.host_id = ?\n");
+        String s =
+            """
+                SELECT COUNT(*) OVER () AS total,
+                g.host_id, g.group_id, g.start_ts, g.end_ts,
+                g.aggregate_version, g.update_user, g.update_ts,
+                u.user_id, u.email, u.user_type,
+                CASE
+                    WHEN u.user_type = 'C' THEN c.customer_id
+                    WHEN u.user_type = 'E' THEN e.employee_id
+                    ELSE NULL -- Handle other cases if needed
+                END AS entity_id,
+                e.manager_id, u.first_name, u.last_name
+                FROM user_t u
+                LEFT JOIN
+                    customer_t c ON u.user_id = c.user_id AND u.user_type = 'C'
+                LEFT JOIN
+                    employee_t e ON u.user_id = e.user_id AND u.user_type = 'E'
+                INNER JOIN
+                    group_user_t g ON g.user_id = u.user_id
+                AND g.host_id = ?
+            """;
+
+        StringBuilder sqlBuilder = new StringBuilder(s);
 
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
@@ -1617,6 +1625,9 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("firstName", resultSet.getString("first_name"));
                     map.put("lastName", resultSet.getString("last_name"));
                     map.put("userType", resultSet.getString("user_type"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     groupUsers.add(map);
                 }
             }
@@ -1732,10 +1743,11 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String groupId = (String)map.get("groupId");
+        String userId = (String)map.get("userId");
         try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
             statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
             statement.setString(2, groupId);
-            statement.setObject(3, UUID.fromString((String)event.get(Constants.USER)));
+            statement.setObject(3, UUID.fromString(userId));
             String startTs = (String)map.get("startTs");
             if(startTs != null && !startTs.isEmpty())
                 statement.setObject(4, OffsetDateTime.parse(startTs));
@@ -2562,7 +2574,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("apiVersion", resultSet.getString("api_version"));
                     map.put("endpointId", resultSet.getString("endpoint_id"));
                     map.put("endpoint", resultSet.getString("endpoint"));
-                    map.put("aggregateVersion", resultSet.getString("aggregate_version"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     positionPermissions.add(map);
@@ -2588,19 +2600,23 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     @Override
     public Result<String> queryPositionUser(int offset, int limit, String hostId, String positionId, String positionType, String inheritToAncestor, String inheritToSibling, String userId, String entityId, String email, String firstName, String lastName, String userType) {
         Result<String> result;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
-                "ep.host_id, ep.position_id, ep.position_type, \n " +
-                "ep.start_ts, ep.end_ts, u.user_id, \n" +
-                "u.email, u.user_type, e.employee_id AS entity_id,\n" +
-                "e.manager_id, u.first_name, u.last_name\n" +
-                "FROM user_t u\n" +
-                "INNER JOIN\n" +
-                "    employee_t e ON u.user_id = e.user_id AND u.user_type = 'E'\n" +
-                "INNER JOIN\n" +
-                "    employee_position_t ep ON ep.employee_id = e.employee_id\n" +
-                "AND ep.host_id = ?\n");
+        String s =
+           """
+                SELECT COUNT(*) OVER () AS total,
+                ep.host_id, ep.position_id, ep.position_type,
+                ep.start_ts, ep.end_ts, u.user_id,
+                ep.aggregate_version, ep.update_user, ep.update_ts,
+                u.email, u.user_type, e.employee_id AS entity_id,
+                e.manager_id, u.first_name, u.last_name
+                FROM user_t u
+                INNER JOIN
+                    employee_t e ON u.user_id = e.user_id AND u.user_type = 'E'
+                INNER JOIN
+                    employee_position_t ep ON ep.employee_id = e.employee_id
+                AND ep.host_id = ?
+            """;
 
+        StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
@@ -2656,6 +2672,9 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("firstName", resultSet.getString("first_name"));
                     map.put("lastName", resultSet.getString("last_name"));
                     map.put("userType", resultSet.getString("user_type"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     positionUsers.add(map);
                 }
             }
@@ -2770,10 +2789,11 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String positionId = (String)map.get("positionId");
+        String userId = (String)map.get("userId");
         try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
             statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
             statement.setString(2, positionId);
-            statement.setObject(3, UUID.fromString((String)event.get(Constants.USER)));
+            statement.setObject(3, UUID.fromString(userId));
             String startTs = (String)map.get("startTs");
             if(startTs != null && !startTs.isEmpty())
                 statement.setObject(4, OffsetDateTime.parse(startTs));
@@ -3585,7 +3605,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("apiVersion", resultSet.getString("api_version"));
                     map.put("endpointId", resultSet.getString("endpoint_id"));
                     map.put("endpoint", resultSet.getString("endpoint"));
-                    map.put("aggregateVersion", resultSet.getString("aggregate_version"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     attributePermissions.add(map);
@@ -3611,28 +3631,32 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     @Override
     public Result<String> queryAttributeUser(int offset, int limit, String hostId, String attributeId, String attributeType, String attributeValue, String userId, String entityId, String email, String firstName, String lastName, String userType) {
         Result<String> result;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
-                "a.host_id, a.attribute_id, at.attribute_type, a.attribute_value, \n" +
-                "a.start_ts, a.end_ts, \n" +
-                "u.user_id, u.email, u.user_type, \n" +
-                "CASE\n" +
-                "    WHEN u.user_type = 'C' THEN c.customer_id\n" +
-                "    WHEN u.user_type = 'E' THEN e.employee_id\n" +
-                "    ELSE NULL -- Handle other cases if needed\n" +
-                "END AS entity_id,\n" +
-                "e.manager_id, u.first_name, u.last_name\n" +
-                "FROM user_t u\n" +
-                "LEFT JOIN\n" +
-                "    customer_t c ON u.user_id = c.user_id AND u.user_type = 'C'\n" +
-                "LEFT JOIN\n" +
-                "    employee_t e ON u.user_id = e.user_id AND u.user_type = 'E'\n" +
-                "INNER JOIN\n" +
-                "    attribute_user_t a ON a.user_id = u.user_id\n" +
-                "INNER JOIN\n" +
-                "    attribute_t at ON at.attribute_id = a.attribute_id\n" +
-                "AND a.host_id = ?\n");
+        String s =
+            """
+                SELECT COUNT(*) OVER () AS total,
+                a.host_id, a.attribute_id, at.attribute_type, a.attribute_value,
+                a.start_ts, a.end_ts,
+                a.aggregate_version, a.update_user, a.update_ts,
+                u.user_id, u.email, u.user_type,
+                CASE
+                    WHEN u.user_type = 'C' THEN c.customer_id
+                    WHEN u.user_type = 'E' THEN e.employee_id
+                    ELSE NULL -- Handle other cases if needed
+                END AS entity_id,
+                e.manager_id, u.first_name, u.last_name
+                FROM user_t u
+                LEFT JOIN
+                    customer_t c ON u.user_id = c.user_id AND u.user_type = 'C'
+                LEFT JOIN
+                    employee_t e ON u.user_id = e.user_id AND u.user_type = 'E'
+                INNER JOIN
+                    attribute_user_t a ON a.user_id = u.user_id
+                INNER JOIN
+                    attribute_t at ON at.attribute_id = a.attribute_id
+                AND a.host_id = ?
+            """;
 
+        StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
@@ -3690,6 +3714,9 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("firstName", resultSet.getString("first_name"));
                     map.put("lastName", resultSet.getString("last_name"));
                     map.put("userType", resultSet.getString("user_type"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     attributeUsers.add(map);
                 }
             }
@@ -3864,23 +3891,25 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String attributeId = (String)map.get("attributeId");
+        String userId = (String)map.get("userId");
         try (PreparedStatement statement = conn.prepareStatement(insertGroup)) {
             statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
             statement.setString(2, attributeId);
             statement.setString(3, (String)map.get("attributeValue"));
+            statement.setObject(4, UUID.fromString(userId));
             String startTs = (String)map.get("startTs");
             if(startTs != null && !startTs.isEmpty())
-                statement.setObject(4, OffsetDateTime.parse(startTs));
+                statement.setObject(5, OffsetDateTime.parse(startTs));
             else
-                statement.setNull(4, NULL);
+                statement.setNull(5, NULL);
             String endTs = (String)map.get("endTs");
             if (endTs != null && !endTs.isEmpty()) {
-                statement.setObject(5, OffsetDateTime.parse(endTs));
+                statement.setObject(6, OffsetDateTime.parse(endTs));
             } else {
-                statement.setNull(5, NULL);
+                statement.setNull(6, NULL);
             }
-            statement.setString(6, (String)event.get(Constants.USER));
-            statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setString(7, (String)event.get(Constants.USER));
+            statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
 
             int count = statement.executeUpdate();
             if (count == 0) {
