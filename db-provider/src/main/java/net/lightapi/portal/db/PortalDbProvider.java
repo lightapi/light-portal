@@ -395,7 +395,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> queryGroupLabel(String hostId);
 
     // GroupPermission
-    Result<String> queryGroupPermission(int offset, int limit, String hostId, String groupId, String apiId, String apiVersion, String endpoint);
+    Result<String> queryGroupPermission(int offset, int limit, String hostId, String groupId, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint);
     void createGroupPermission(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteGroupPermission(Connection conn, Map<String, Object> event) throws SQLException, Exception;
 
@@ -425,7 +425,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> queryPositionLabel(String hostId);
 
     // PositionPermission
-    Result<String> queryPositionPermission(int offset, int limit, String hostId, String positionId, String inheritToAncestor, String inheritToSibling, String apiId, String apiVersion, String endpoint);
+    Result<String> queryPositionPermission(int offset, int limit, String hostId, String positionId, String inheritToAncestor, String inheritToSibling, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint);
     void createPositionPermission(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deletePositionPermission(Connection conn, Map<String, Object> event) throws SQLException, Exception;
 
@@ -455,7 +455,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> queryAttributeLabel(String hostId);
 
     // AttributePermission
-    Result<String> queryAttributePermission(int offset, int limit, String hostId, String attributeId, String attributeType, String attributeValue, String apiId, String apiVersion, String endpoint);
+    Result<String> queryAttributePermission(int offset, int limit, String hostId, String attributeId, String attributeType, String attributeValue, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint);
     void createAttributePermission(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateAttributePermission(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteAttributePermission(Connection conn, Map<String, Object> event) throws SQLException, Exception;

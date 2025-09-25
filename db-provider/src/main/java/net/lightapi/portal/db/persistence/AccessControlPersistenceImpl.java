@@ -270,7 +270,8 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
-                r.host_id, r.role_id, av.api_version_id, av.api_id, av.api_version, rp.endpoint_id, ae.endpoint, rp.aggregate_version
+                r.host_id, r.role_id, av.api_version_id, av.api_id, av.api_version,
+                rp.endpoint_id, ae.endpoint, rp.aggregate_version, rp.update_user, rp.update_ts
                 FROM role_permission_t rp
                 JOIN role_t r ON r.role_id = rp.role_id
                 JOIN api_endpoint_t ae ON rp.host_id = ae.host_id AND rp.endpoint_id = ae.endpoint_id
@@ -327,6 +328,8 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("endpointId", resultSet.getObject("endpoint_id", UUID.class));
                     map.put("endpoint", resultSet.getString("endpoint"));
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     rolePermissions.add(map);
                 }
             }
@@ -1451,15 +1454,21 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryGroupPermission(int offset, int limit, String hostId, String groupId, String apiId, String apiVersion, String endpoint) {
+    public Result<String> queryGroupPermission(int offset, int limit, String hostId, String groupId, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint) {
         Result<String> result;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
-                "g.host_id, g.group_id, p.api_id, p.api_version, p.endpoint\n" +
-                "FROM group_t g, group_permission_t p\n" +
-                "WHERE g.group_id = p.group_id\n" +
-                "AND g.host_id = ?\n");
+        String s =
+            """
+                SELECT COUNT(*) OVER () AS total,
+                gp.host_id, gp.group_id, av.api_id, av.api_version, av.api_version_id, ae.endpoint_id,
+                ae.endpoint, gp.aggregate_version, gp.update_user, gp.update_ts
+                FROM group_permission_t gp
+                JOIN group_t g ON gp.group_id = g.group_id
+                JOIN api_endpoint_t ae ON gp.host_id = ae.host_id AND gp.endpoint_id = ae.endpoint_id
+                JOIN api_version_t av ON ae.host_id = av.host_id AND ae.api_version_id = av.api_version_id
+                AND gp.host_id = ?
+            """;
 
+        StringBuilder sqlBuilder = new StringBuilder(s);
 
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
@@ -1467,16 +1476,18 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
         StringBuilder whereClause = new StringBuilder();
 
-        SqlUtil.addCondition(whereClause, parameters, "g.group_id", groupId);
-        SqlUtil.addCondition(whereClause, parameters, "p.api_id", apiId);
-        SqlUtil.addCondition(whereClause, parameters, "p.api_version", apiVersion);
-        SqlUtil.addCondition(whereClause, parameters, "p.endpoint", endpoint);
+        SqlUtil.addCondition(whereClause, parameters, "gp.group_id", groupId);
+        SqlUtil.addCondition(whereClause, parameters, "av.api_id", apiId);
+        SqlUtil.addCondition(whereClause, parameters, "av.api_version", apiVersion);
+        SqlUtil.addCondition(whereClause, parameters, "av.api_version_id", apiVersionId);
+        SqlUtil.addCondition(whereClause, parameters, "ae.endpoint", endpoint);
+        SqlUtil.addCondition(whereClause, parameters, "ae.endpoint_id", endpointId);
 
         if (!whereClause.isEmpty()) {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append(" ORDER BY g.group_id, p.api_id, p.api_version, p.endpoint\n" +
+        sqlBuilder.append(" ORDER BY gp.group_id, av.api_id, av.api_version, ae.endpoint\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -1505,7 +1516,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("groupId", resultSet.getString("group_id"));
                     map.put("apiId", resultSet.getString("api_id"));
                     map.put("apiVersion", resultSet.getString("api_version"));
+                    map.put("apiVersionId", resultSet.getObject("api_version_id", UUID.class));
                     map.put("endpoint", resultSet.getString("endpoint"));
+                    map.put("endpointId", resultSet.getObject("endpoint_id", UUID.class));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     groupPermissions.add(map);
                 }
             }
@@ -2476,16 +2492,22 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryPositionPermission(int offset, int limit, String hostId, String positionId, String inheritToAncestor, String inheritToSibling, String apiId, String apiVersion, String endpoint) {
+    public Result<String> queryPositionPermission(int offset, int limit, String hostId, String positionId, String inheritToAncestor, String inheritToSibling, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint) {
         Result<String> result;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
-                "o.host_id, o.position_id, o.inherit_to_ancestor, o.inherit_to_sibling, " +
-                "p.api_id, p.api_version, p.endpoint\n" +
-                "FROM position_t o, position_permission_t p\n" +
-                "WHERE o.position_id = p.position_id\n" +
-                "AND o.host_id = ?\n");
+        String s =
+            """
+                SELECT COUNT(*) OVER () AS total,
+                pp.host_id, pp.position_id, p.inherit_to_ancestor, p.inherit_to_sibling,
+                av.api_version_id, av.api_id, av.api_version, ae.endpoint_id, ae.endpoint,
+                pp.aggregate_version, pp.update_user, pp.update_ts
+                FROM position_permission_t pp
+                JOIN position_t p ON pp.position_id = p.position_id
+                JOIN api_endpoint_t ae ON pp.host_id = ae.host_id AND pp.endpoint_id = ae.endpoint_id
+                JOIN api_version_t av ON ae.host_id = av.host_id AND ae.api_version_id = av.api_version_id
+                AND pp.host_id = ?
+            """;
 
+        StringBuilder sqlBuilder = new StringBuilder(s);
 
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
@@ -2493,18 +2515,20 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
         StringBuilder whereClause = new StringBuilder();
 
-        SqlUtil.addCondition(whereClause, parameters, "o.position_id", positionId);
-        SqlUtil.addCondition(whereClause, parameters, "o.inherit_to_ancestor", inheritToAncestor);
-        SqlUtil.addCondition(whereClause, parameters, "o.inherit_to_sibling", inheritToSibling);
-        SqlUtil.addCondition(whereClause, parameters, "p.api_id", apiId);
-        SqlUtil.addCondition(whereClause, parameters, "p.api_version", apiVersion);
-        SqlUtil.addCondition(whereClause, parameters, "p.endpoint", endpoint);
+        SqlUtil.addCondition(whereClause, parameters, "pp.position_id", positionId);
+        SqlUtil.addCondition(whereClause, parameters, "p.inherit_to_ancestor", inheritToAncestor);
+        SqlUtil.addCondition(whereClause, parameters, "p.inherit_to_sibling", inheritToSibling);
+        SqlUtil.addCondition(whereClause, parameters, "av.api_version_id", apiVersionId);
+        SqlUtil.addCondition(whereClause, parameters, "av.api_id", apiId);
+        SqlUtil.addCondition(whereClause, parameters, "av.api_version", apiVersion);
+        SqlUtil.addCondition(whereClause, parameters, "ae.endpoint_id", endpointId);
+        SqlUtil.addCondition(whereClause, parameters, "ae.endpoint", endpoint);
 
         if (whereClause.length() > 0) {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append(" ORDER BY o.position_id, p.api_id, p.api_version, p.endpoint\n" +
+        sqlBuilder.append(" ORDER BY pp.position_id, av.api_id, av.api_version, ae.endpoint\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -2533,9 +2557,14 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("positionId", resultSet.getString("position_id"));
                     map.put("inheritToAncestor", resultSet.getString("inherit_to_ancestor"));
                     map.put("inheritToSibling", resultSet.getString("inherit_to_sibling"));
+                    map.put("apiVersionId", resultSet.getString("api_version_id"));
                     map.put("apiId", resultSet.getString("api_id"));
                     map.put("apiVersion", resultSet.getString("api_version"));
+                    map.put("endpointId", resultSet.getString("endpoint_id"));
                     map.put("endpoint", resultSet.getString("endpoint"));
+                    map.put("aggregateVersion", resultSet.getString("aggregate_version"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     positionPermissions.add(map);
                 }
             }
@@ -3486,16 +3515,22 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryAttributePermission(int offset, int limit, String hostId, String attributeId, String attributeType, String attributeValue, String apiId, String apiVersion, String endpoint) {
+    public Result<String> queryAttributePermission(int offset, int limit, String hostId, String attributeId, String attributeType, String attributeValue, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint) {
         Result<String> result;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, \n" +
-                "a.host_id, a.attribute_id, a.attribute_type, p.attribute_value, " +
-                "p.api_id, p.api_version, p.endpoint\n" +
-                "FROM attribute_t a, attribute_permission_t p\n" +
-                "WHERE a.attribute_id = p.attribute_id\n" +
-                "AND a.host_id = ?\n");
+        String s =
+            """
+                SELECT COUNT(*) OVER () AS total,
+                ap.host_id, ap.attribute_id, a.attribute_type, ap.attribute_value,
+                av.api_version_id, av.api_id, av.api_version, ap.endpoint_id, ae.endpoint,
+                ap.aggregate_version, ap.update_user, ap.update_ts
+                FROM attribute_permission_t ap
+                JOIN attribute_t a ON ap.attribute_id = a.attribute_id
+                JOIN api_endpoint_t ae ON ap.host_id = ae.host_id AND ap.endpoint_id = ae.endpoint_id
+                JOIN api_version_t av ON ae.host_id = av.host_id AND ae.api_version_id = av.api_version_id
+                AND ap.host_id = ?
+            """;
 
+        StringBuilder sqlBuilder = new StringBuilder(s);
 
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
@@ -3503,18 +3538,20 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
         StringBuilder whereClause = new StringBuilder();
 
-        SqlUtil.addCondition(whereClause, parameters, "a.attribute_id", attributeId);
+        SqlUtil.addCondition(whereClause, parameters, "ap.attribute_id", attributeId);
         SqlUtil.addCondition(whereClause, parameters, "a.attribute_type", attributeType);
-        SqlUtil.addCondition(whereClause, parameters, "a.attribute_value", attributeValue);
-        SqlUtil.addCondition(whereClause, parameters, "p.api_id", apiId);
-        SqlUtil.addCondition(whereClause, parameters, "p.api_version", apiVersion);
-        SqlUtil.addCondition(whereClause, parameters, "p.endpoint", endpoint);
+        SqlUtil.addCondition(whereClause, parameters, "ap.attribute_value", attributeValue);
+        SqlUtil.addCondition(whereClause, parameters, "av.api_version_id", apiVersionId);
+        SqlUtil.addCondition(whereClause, parameters, "av.api_id", apiId);
+        SqlUtil.addCondition(whereClause, parameters, "av.api_version", apiVersion);
+        SqlUtil.addCondition(whereClause, parameters, "ap.endpoint_id", endpointId);
+        SqlUtil.addCondition(whereClause, parameters, "ae.endpoint", endpoint);
 
         if (!whereClause.isEmpty()) {
             sqlBuilder.append("AND ").append(whereClause);
         }
 
-        sqlBuilder.append(" ORDER BY a.attribute_id, p.api_id, p.api_version, p.endpoint\n" +
+        sqlBuilder.append(" ORDER BY ap.attribute_id, av.api_id, av.api_version, ae.endpoint\n" +
                 "LIMIT ? OFFSET ?");
 
         parameters.add(limit);
@@ -3543,9 +3580,14 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("attributeId", resultSet.getString("attribute_id"));
                     map.put("attributeType", resultSet.getString("attribute_type"));
                     map.put("attributeValue", resultSet.getString("attribute_value"));
+                    map.put("apiVersionId", resultSet.getString("api_version_id"));
                     map.put("apiId", resultSet.getString("api_id"));
                     map.put("apiVersion", resultSet.getString("api_version"));
+                    map.put("endpointId", resultSet.getString("endpoint_id"));
                     map.put("endpoint", resultSet.getString("endpoint"));
+                    map.put("aggregateVersion", resultSet.getString("aggregate_version"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     attributePermissions.add(map);
                 }
             }

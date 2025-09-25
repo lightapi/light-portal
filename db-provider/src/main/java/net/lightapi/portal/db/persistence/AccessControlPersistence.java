@@ -47,7 +47,7 @@ public interface AccessControlPersistence {
     // GroupPermission
     void createGroupPermission(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteGroupPermission(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> queryGroupPermission(int offset, int limit, String hostId, String groupId, String apiId, String apiVersion, String endpoint);
+    Result<String> queryGroupPermission(int offset, int limit, String hostId, String groupId, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint);
 
     // GroupUser
     void createGroupUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -77,7 +77,7 @@ public interface AccessControlPersistence {
     // PositionPermission
     void createPositionPermission(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deletePositionPermission(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> queryPositionPermission(int offset, int limit, String hostId, String positionId, String inheritToAncestor, String inheritToSibling, String apiId, String apiVersion, String endpoint);
+    Result<String> queryPositionPermission(int offset, int limit, String hostId, String positionId, String inheritToAncestor, String inheritToSibling, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint);
 
     // PositionUser
     void createPositionUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -108,7 +108,7 @@ public interface AccessControlPersistence {
     void createAttributePermission(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateAttributePermission(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteAttributePermission(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> queryAttributePermission(int offset, int limit, String hostId, String attributeId, String attributeType, String attributeValue, String apiId, String apiVersion, String endpoint);
+    Result<String> queryAttributePermission(int offset, int limit, String hostId, String attributeId, String attributeType, String attributeValue, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint);
 
     // AttributeUser
     void createAttributeUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;
