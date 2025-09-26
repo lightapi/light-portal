@@ -126,34 +126,25 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         final String deleteRole = "DELETE from role_t WHERE host_id = ? AND role_id = ? AND aggregate_version = ?";
         Map<String, Object> map = SqlUtil.extractEventData(event);
         String roleId = (String)map.get("roleId");
+        String hostId = (String)map.get("hostId");
         long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(deleteRole)) {
-            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setObject(1, UUID.fromString(hostId));
             statement.setString(2, roleId);
             statement.setLong(3, oldAggregateVersion);
             int count = statement.executeUpdate();
             if (count == 0) {
-                // If 0 rows were affected, it means either:
-                // 1. The record did not exist (it was already deleted, or never existed).
-                // 2. The record existed, but its aggregate_version did not match the expectedVersion (concurrency conflict).
-
-                // To differentiate, we can perform a quick existence check:
-                if (queryRoleExists(conn, (String)event.get(Constants.HOST), roleId)) {
-                    // Record exists but version didn't match -> CONCURRENCY CONFLICT
-                    logger.warn("Optimistic concurrency conflict during deleteRole for id {}. aggregate version {} but found a different version.", roleId, oldAggregateVersion);
-                    throw new ConcurrencyException("Optimistic concurrency conflict for role " + roleId + ". aggregate version " + oldAggregateVersion + " but found a different version or already updated.");
+                if (queryRoleExists(conn, hostId, roleId)) {
+                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteRole for hostId " + hostId  + " role " + roleId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
                 } else {
-                    // Record does not exist -> Already deleted or never existed. This is often an acceptable state.
-                    logger.warn("No record found to delete for role {} with aggregate version {}. It might have been already deleted.", roleId, oldAggregateVersion);
-                    // You might choose to throw a more specific "NotFoundException" here if necessary for logic.
-                    throw new SQLException("No record found to delete for role " + roleId + ". It might have been already deleted.");
+                    throw new SQLException("No record found during deleteRole for hostId " + hostId + " roleId " + roleId + ". It might have been already deleted.");
                 }
             }
         } catch (SQLException e) {
-            logger.error("SQLException during deleteRole for id {} aggregateVersion {}: {}", roleId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during deleteRole for hostId {} roleId {} aggregateVersion {}: {}", hostId, roleId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteRole for id {} aggregateVersion {}: {}", roleId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during deleteRole for hostId {} roleId {} aggregateVersion {}: {}", hostId, roleId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -161,12 +152,16 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     @Override
     public Result<String> queryRole(int offset, int limit, String hostId, String roleId, String roleDesc) {
         Result<String> result;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT COUNT(*) OVER () AS total, host_id, role_id, role_desc, update_user, update_ts, aggregate_version " +
-                "FROM role_t " +
-                "WHERE host_id = ?\n");
+        String s =
+            """
+                SELECT COUNT(*) OVER () AS total,
+                host_id, role_id, role_desc, update_user,
+                update_ts, aggregate_version
+                FROM role_t
+                WHERE host_id = ?
+            """;
 
-
+        StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
@@ -457,76 +452,47 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         final String insertRole =
                 """
                     INSERT INTO role_permission_t (host_id, role_id, endpoint_id, update_user, update_ts, aggregate_version)
-                    VALUES (
-                        ?,
-                        ?,
-                        (SELECT e.endpoint_id
-                         FROM api_endpoint_t e
-                         JOIN api_version_t v ON e.host_id = v.host_id
-                                             AND e.api_version_id = v.api_version_id
-                         WHERE e.host_id = ?
-                           AND v.api_id = ?
-                           AND v.api_version = ?
-                           AND e.endpoint = ?
-                        ),
-                        ?,
-                        ?,
-                        ?
-                    )
+                    VALUES (?, ?, ?, ?, ?, ?)
                 """;
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String)map.get("hostId");
         String roleId = (String)map.get("roleId");
+        String endpointId = (String)map.get("endpointId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(insertRole)) {
-            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setObject(1, UUID.fromString(hostId));
             statement.setString(2, roleId);
-            statement.setObject(3, UUID.fromString((String)event.get(Constants.HOST)));
-            statement.setString(4, (String)map.get("apiId"));
-            statement.setString(5, (String)map.get("apiVersion"));
-            statement.setString(6, (String)map.get("endpoint"));
+            statement.setObject(3, UUID.fromString(endpointId));
             statement.setString(7, (String)event.get(Constants.USER));
             statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
             statement.setLong(9, newAggregateVersion);
-
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert role permission " + roleId + " with aggregate version " + newAggregateVersion +  " for endpoint " + map.get("endpoint") + ". It might already exist.");
+                throw new SQLException(String.format("Failed during createRolePermission for hostId %s roleId %s endpointId %s with aggregateVersion %d", hostId, roleId, endpointId, newAggregateVersion));
             }
         } catch (SQLException e) {
-            logger.error("SQLException during createRolePermission for id {} aggregateVersion {}: {}", roleId, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during createRolePermission for hostId {} roleId {} endpointId {} aggregateVersion {}: {}", hostId, roleId, endpointId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createRolePermission for id {} aggregateVersion {}: {}", roleId, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during createRolePermission for hostId {} roleId {} endpointId {} aggregateVersion {}: {}", hostId, roleId, endpointId, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
     // Helper to check if a role exists (to differentiate 'not found' from 'conflict')
-    private boolean queryRolePermissionExists(Connection conn, String hostId, String roleId, String apiId, String apiVersion, String endpoint) throws SQLException {
+    private boolean queryRolePermissionExists(Connection conn, String hostId, String roleId, String endpointId) throws SQLException {
         final String sql =
                 """
                     SELECT COUNT(*) FROM role_permission_t rp
                     WHERE rp.host_id = ?
                     AND rp.role_id = ?
-                    AND rp.endpoint_id IN (
-                        SELECT e.endpoint_id
-                        FROM api_endpoint_t e
-                        JOIN api_version_t v ON e.host_id = v.host_id
-                                            AND e.api_version_id = v.api_version_id
-                        WHERE e.host_id = ?
-                        AND v.api_id = ?
-                        AND v.api_version = ?
-                        AND e.endpoint = ?
-                    )
+                    AND rp.endpoint_id = ?
                 """;
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
             statement.setString(2, roleId);
-            statement.setObject(3, UUID.fromString(hostId));
-            statement.setString(4, apiId);
-            statement.setString(5, apiVersion);
-            statement.setString(6, endpoint);
+            statement.setObject(3, UUID.fromString(endpointId));
 
             try (ResultSet rs = statement.executeQuery()) {
                 return rs.next() && rs.getInt(1) > 0;
@@ -539,52 +505,36 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     public void deleteRolePermission(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String deleteRole =
                 """
-                    DELETE FROM role_permission_t rp
-                    WHERE rp.host_id = ?
-                      AND rp.role_id = ?
-                      AND rp.aggregate_version = ?
-                      AND rp.endpoint_id IN (
-                        SELECT e.endpoint_id
-                        FROM api_endpoint_t e
-                        JOIN api_version_t v ON e.host_id = v.host_id
-                                            AND e.api_version_id = v.api_version_id
-                        WHERE e.host_id = ?
-                          AND v.api_id = ?
-                          AND v.api_version = ?
-                          AND e.endpoint = ?
-                      )
+                    DELETE FROM role_permission_t
+                    WHERE host_id = ?
+                    AND role_id = ?
+                    AND endpoint_id = ?
+                    AND aggregate_version = ?
                 """;
         Result<String> result;
         Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String)map.get("hostId");
         String roleId = (String)map.get("roleId");
+        String endpointId = (String)map.get("endpointId");
         long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(deleteRole)) {
-            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setObject(1, UUID.fromString(hostId));
             statement.setString(2, roleId);
-            statement.setLong(3, oldAggregateVersion);
-            statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
-            statement.setString(5, (String)map.get("apiId"));
-            statement.setString(6, (String)map.get("apiVersion"));
-            statement.setString(7, (String)map.get("endpoint"));
-
+            statement.setObject(3, UUID.fromString(endpointId));
+            statement.setLong(4, oldAggregateVersion);
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryRolePermissionExists(conn, (String)event.get(Constants.HOST), roleId, (String)map.get("apiId"), (String)map.get("apiVersion"), (String)map.get("endpoint"))) {
-                    // Record exists but version didn't match -> CONCURRENCY CONFLICT
-                    logger.warn("Optimistic concurrency conflict during deleteRolePermission for id {}. aggregate version {} but found a different version.", roleId, oldAggregateVersion);
-                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteRolePermission for role " + roleId + ". aggregate version " + oldAggregateVersion + " but found a different version or already updated.");
+                if (queryRolePermissionExists(conn, hostId, roleId, endpointId)) {
+                    throw new ConcurrencyException(String.format("Failed during deleteRolePermission for hostId %s roleId %s endpointId %s with aggregateVersion %d but found a different version or already updated.", hostId, roleId, endpointId, oldAggregateVersion));
                 } else {
-                    // Record does not exist -> Already deleted or never existed. This is often an acceptable state.
-                    logger.warn("No record found during deleteRolePermission for role {} with aggregate version {}. It might have been already deleted.", roleId, oldAggregateVersion);
-                    // You might choose to throw a more specific "NotFoundException" here if necessary for logic.
-                    throw new SQLException("No record found during deleteRolePermission for role " + roleId + ". It might have been already deleted.");
+                    throw new SQLException(String.format("No record found during deleteRolePermission for hostId %s roleId %s endpointId %s. It might have been already deleted.", hostId, roleId, endpointId));
                 }
             }
         } catch (SQLException e) {
-            logger.error("SQLException during deleteRolePermission for id {} aggregateVersion {}: {}", roleId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during deleteRolePermission for hostId {} roleId {} endpointId {} aggregateVersion {}: {}", hostId, roleId, endpointId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteRolePermission for id {} aggregateVersion {}: {}", roleId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during deleteRolePermission for hostId {} roleId {} endpointId {} aggregateVersion {}: {}", hostId, roleId, endpointId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -596,11 +546,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 "VALUES (?, ?, ?, ?, ?,  ?, ?, ?)";
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String)map.get("hostId");
         String roleId = (String)map.get("roleId");
         String userId = (String)map.get("userId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(insertRole)) {
-            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setObject(1, UUID.fromString(hostId));
             statement.setString(2, roleId);
             statement.setObject(3, UUID.fromString(userId));
 
@@ -621,13 +572,13 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert role " + roleId + " for user " + userId + " with aggregate version " + newAggregateVersion + ".");
+                throw new SQLException(String.format("Failed during createRoleUser for hostId %s roleId %s userId %s with aggregateVersion %d", hostId, roleId, userId, newAggregateVersion));
             }
         } catch (SQLException e) {
-            logger.error("SQLException during createRoleUser for roleId {} userId {} and aggregateVersion {}: {}", roleId, userId, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during createRoleUser for hostId {} roleId {} userId {} and aggregateVersion {}: {}", hostId, roleId, userId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createRoleUser for roleId {} userId {} and aggregateVersion {}: {}", roleId, userId, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during createRoleUser for hostId {} roleId {} userId {} and aggregateVersion {}: {}", hostId, roleId, userId, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -651,14 +602,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     @Override
     public void updateRoleUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String updateRole =
-                """
-                UPDATE role_user_t SET start_ts = ?, end_ts = ?, update_user = ?, update_ts = ?, aggregate_version = ?
-                WHERE host_id = ? AND role_id = ? AND user_id = ? AND aggregate_version = ?
-                """;
+            """
+            UPDATE role_user_t SET start_ts = ?, end_ts = ?, update_user = ?, update_ts = ?, aggregate_version = ?
+            WHERE host_id = ? AND role_id = ? AND user_id = ? AND aggregate_version = ?
+            """;
 
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String hostId = (String)map.get("hostId");
         String roleId = (String)map.get("roleId");
-        String userId = (String)event.get(Constants.USER);
+        String userId = (String)map.get("userId");
         long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
@@ -677,24 +629,24 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             statement.setString(3, (String)event.get(Constants.USER));
             statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
             statement.setLong(5, newAggregateVersion);
-            statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setObject(6, UUID.fromString(hostId));
             statement.setString(7, roleId);
             statement.setObject(8, UUID.fromString(userId));
             statement.setLong(9, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryRoleUserExists(conn, (String)event.get(Constants.HOST), roleId, userId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict for role " + roleId + " user " + userId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
+                if (queryRoleUserExists(conn, hostId, roleId, userId)) {
+                    throw new ConcurrencyException(String.format("Optimistic concurrency conflict during updateRoleUser for hostId %s roleId %s userId %s. Expected version %d but found a different version %d.", hostId, roleId, userId, oldAggregateVersion, newAggregateVersion));
                 } else {
-                    throw new SQLException("No record found to update for role " + roleId + " user " + userId + ".");
+                    throw new SQLException(String.format("No record found during updateRoleUser for hostId %s roleId %s userId %s.", hostId, roleId, userId));
                 }
             }
         } catch (SQLException e) {
-            logger.error("SQLException during updateRoleUser for roleId {} userId {} (old: {}) -> (new: {}): {}", roleId, userId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during updateRoleUser for hostId {} roleId {} userId {} (old: {}) -> (new: {}): {}", hostId, roleId, userId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateRoleUser for roleId {} userId {} (old: {}) -> (new: {}): {}", roleId, userId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during updateRoleUser for hostId {} roleId {} userId {} (old: {}) -> (new: {}): {}", hostId, roleId, userId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -702,36 +654,34 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     @Override
     public void deleteRoleUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String deleteRole =
-                """
-                DELETE from role_user_t
-                WHERE host_id = ? AND role_id = ? AND user_id = ? AND aggregate_version = ?
-                """;
+            """
+            DELETE from role_user_t
+            WHERE host_id = ? AND role_id = ? AND user_id = ? AND aggregate_version = ?
+            """;
         Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String)map.get("hostId");
         String roleId = (String)map.get("roleId");
-        String userId = (String)event.get(Constants.USER);
+        String userId = (String)map.get("userId");
         long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(deleteRole)) {
-            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setObject(1, UUID.fromString(hostId));
             statement.setString(2, roleId);
             statement.setObject(3, UUID.fromString(userId));
             statement.setLong(4, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryRoleUserExists(conn, (String)event.get(Constants.HOST), roleId, userId)) {
-                    logger.warn("Optimistic concurrency conflict during deleteRoleUser for roleId {} userId {} aggregateVersion {} but found a different version.", roleId, userId, oldAggregateVersion);
-                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteRoleUser for roleId " + roleId + " userId " + userId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
+                if (queryRoleUserExists(conn, hostId, roleId, userId)) {
+                    throw new ConcurrencyException(String.format("Optimistic concurrency conflict during deleteRoleUser for hostId %s roleId %s userId %s aggregateVersion %d but found a different version or already updated. ", hostId, roleId, userId, oldAggregateVersion));
                 } else {
-                    // Record does not exist -> Already deleted or never existed. This is often an acceptable state.
-                    logger.warn("No record found during deleteRoleUser for roleId {} userId {} with aggregate version {}. It might have been already deleted.", roleId, userId, oldAggregateVersion);
-                    throw new SQLException("No record found during deleteRoleUser for roleId " + roleId + " userId " + userId + ". It might have been already deleted.");
+                    throw new SQLException(String.format("No record found during deleteRoleUser for hostId %s roleId %s userId %s. It might have been already deleted.", hostId, roleId, userId));
                 }
             }
         } catch (SQLException e) {
-            logger.error("SQLException during deleteRoleUser for roleId {} userId {} aggregateVersion {}: {}", roleId, userId, oldAggregateVersion,  e.getMessage(), e);
+            logger.error("SQLException during deleteRoleUser for hostId {} roleId {} userId {} aggregateVersion {}: {}", hostId, roleId, userId, oldAggregateVersion,  e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteRoleUser for roleId {} userId {} aggregateVersion {}: {}", roleId, userId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during deleteRoleUser for hostId {} roleId {} userId {} aggregateVersion {}: {}", hostId, roleId, userId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -852,12 +802,13 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 """;
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String)map.get("hostId");
         String roleId = (String)map.get("roleId");
         String endpointId = (String)map.get("endpointId");
         String colName = (String)map.get("colName");
         long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(deleteRole)) {
-            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setObject(1, UUID.fromString(hostId));
             statement.setString(2, roleId);
             statement.setObject(3, UUID.fromString(endpointId));
             statement.setString(4, colName);
@@ -865,21 +816,17 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryRoleRowFilterExists(conn, (String)event.get(Constants.HOST), roleId, endpointId, colName)) {
-                    String s = String.format("Optimistic concurrency conflict during deleteRoleRowFilter for roleId %s endpointId %s colName %s aggregateVersion %d but found a different version.", roleId, endpointId, colName, oldAggregateVersion);
-                    logger.warn(s);
-                    throw new ConcurrencyException(s);
+                if (queryRoleRowFilterExists(conn, hostId, roleId, endpointId, colName)) {
+                    throw new ConcurrencyException(String.format("Optimistic concurrency conflict during deleteRoleRowFilter for hostId %s roleId %s endpointId %s colName %s aggregateVersion %d but found a different version.", hostId, roleId, endpointId, colName, oldAggregateVersion));
                 } else {
-                    String s = String.format("No record found during deleteRoleRowFilter for roleId %s endpointId %s colName %s with aggregateVersion %d. It might have been already deleted.", roleId, endpointId, colName, oldAggregateVersion);
-                    logger.warn(s);
-                    throw new SQLException(s);
+                    throw new SQLException(String.format("No record found during deleteRoleRowFilter for hostId %s roleId %s endpointId %s colName %s with aggregateVersion %d. It might have been already deleted.", hostId, roleId, endpointId, colName, oldAggregateVersion));
                 }
             }
         } catch (SQLException e) {
-            logger.error("SQLException during deleteRoleRowFilter for roleId {} endpointId {} colName {} aggregateVersion {}: {}", roleId, endpointId, colName, oldAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during deleteRoleRowFilter for hostId {} roleId {} endpointId {} colName {} aggregateVersion {}: {}", hostId, roleId, endpointId, colName, oldAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteRoleRowFilter for roleId {} endpointId {} colName {} aggregateVersion {}: {}", roleId, endpointId, colName, oldAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during deleteRoleRowFilter for hostId {} roleId {} endpointId {} colName {} aggregateVersion {}: {}", hostId, roleId, endpointId, colName, oldAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -890,64 +837,44 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 INSERT INTO role_row_filter_t (
                     host_id,
                     role_id,
-                    endpoint_id,  -- Now using the resolved endpoint_id
+                    endpoint_id,
                     col_name,
                     operator,
                     col_value,
                     update_user,
                     update_ts,
                     aggregate_version
-                )
-                SELECT
-                    ?,              -- host_id parameter
-                    ?,              -- role_id parameter
-                    e.endpoint_id,  -- Resolved from the join
-                    ?,              -- col_name parameter
-                    ?,              -- operator parameter
-                    ?,              -- col_value parameter
-                    ?,              -- update_user parameter
-                    ?,              -- update_ts parameter (or use DEFAULT for CURRENT_TIMESTAMP)
-                    ?               -- aggregate_version parameter
-                FROM
-                    api_endpoint_t e
-                JOIN
-                    api_version_t v ON e.host_id = v.host_id
-                                   AND e.api_version_id = v.api_version_id
-                WHERE
-                    e.host_id = ?                  -- Same as the first host_id parameter
-                    AND v.api_id = ?               -- api_id parameter
-                    AND v.api_version = ?          -- api_version parameter
-                    AND e.endpoint = ?;            -- endpoint parameter
+                ) VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?)
                 """;
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String)map.get("hostId");
         String roleId = (String)map.get("roleId");
-        String endpoint = (String)map.get("endpoint");
+        String endpointId = (String)map.get("endpointId");
+        String colName = (String)map.get("colName");
+
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(insertRole)) {
-            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setObject(1, UUID.fromString(hostId));
             statement.setString(2, roleId);
-            statement.setString(3, (String)map.get("colName"));
-            statement.setString(4, (String)map.get("operator"));
-            statement.setString(5, (String)map.get("colValue"));
-            statement.setString(6, (String)event.get(Constants.USER));
-            statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(8, newAggregateVersion);
-            statement.setObject(9, UUID.fromString((String)event.get(Constants.HOST)));
-            statement.setString(10, (String)map.get("apiId"));
-            statement.setString(11, (String)map.get("apiVersion"));
-            statement.setString(12, endpoint);
+            statement.setObject(3, UUID.fromString(endpointId));
+            statement.setString(4, colName);
+            statement.setString(5, (String)map.get("operator"));
+            statement.setString(6, (String)map.get("colValue"));
+            statement.setString(7, (String)event.get(Constants.USER));
+            statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(9, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                String s = String.format("Failed to insert roleId %s row filter for endpoint %s with aggregate version %d. It might already exist.", roleId, endpoint, newAggregateVersion);
+                String s = String.format("Failed during createRoleRowFilter for hostId %s roleId %s endpointId %s colName %s with aggregate version %d. It might already exist.", hostId, roleId, endpointId, colName, newAggregateVersion);
                 throw new SQLException(s);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during createRoleRowFilter for roleId {} endpoint {} aggregateVersion {}: {}", roleId, endpoint, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during createRoleRowFilter for hostId {} roleId {} endpointId {} colName {} aggregateVersion {}: {}", hostId, roleId, endpointId, colName, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createRoleRowFilter for roleId {} endpoint {} aggregateVersion {}: {}", roleId, endpoint, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during createRoleRowFilter for hostId {} roleId {} endpointId {} colName {} aggregateVersion {}: {}", hostId, roleId, endpointId, colName, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -956,32 +883,26 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     public void updateRoleRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String updateRole =
                 """
-                        UPDATE role_row_filter_t
-                        SET
-                            operator = ?,
-                            col_value = ?,
-                            update_user = ?,
-                            update_ts = ?
-                            aggregate_version = ?
-                        WHERE
-                            host_id = ?
-                            AND role_id = ?
-                            AND col_name = ?
-                            AND aggregate_version = ?
-                            AND endpoint_id IN (
-                                SELECT e.endpoint_id
-                                FROM api_endpoint_t e
-                                JOIN api_version_t v ON e.host_id = v.host_id
-                                                    AND e.api_version_id = v.api_version_id
-                                WHERE e.host_id = ?
-                                  AND v.api_id = ?
-                                  AND v.api_version = ?
-                                  AND e.endpoint = ?
-                            )
+                    UPDATE role_row_filter_t
+                    SET
+                        operator = ?,
+                        col_value = ?,
+                        update_user = ?,
+                        update_ts = ?,
+                        aggregate_version = ?
+                    WHERE
+                        host_id = ?
+                        AND role_id = ?
+                        AND endpoint_id ?
+                        AND col_name = ?
+                        AND aggregate_version = ?
                 """;
 
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String hostId = (String)map.get("hostId");
         String roleId = (String)map.get("roleId");
+        String endpointId = (String)map.get("endpointId");
+        String colName = (String)map.get("colName");
         long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
@@ -991,24 +912,24 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             statement.setString(3, (String)event.get(Constants.USER));
             statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
             statement.setLong(5, newAggregateVersion);
-            statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setObject(6, UUID.fromString(hostId));
             statement.setString(7, roleId);
-            statement.setString(8, (String)map.get("colName"));
-            statement.setLong(9, oldAggregateVersion);
-            statement.setObject(10, UUID.fromString((String)event.get(Constants.HOST)));
-            statement.setString(11, (String)map.get("apiId"));
-            statement.setString(12, (String)map.get("apiVersion"));
-            statement.setString(13, (String)map.get("endpoint"));
-
+            statement.setObject(8, UUID.fromString(endpointId));
+            statement.setString(9, colName);
+            statement.setLong(10, oldAggregateVersion);
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("no record is updated for role row filter " + roleId + " with colName " + map.get("colName") + " and aggregate version " + oldAggregateVersion + ". It might not exist or the version might have changed.");
+                if (queryRoleRowFilterExists(conn, hostId, roleId, endpointId, colName)) {
+                    throw new ConcurrencyException(String.format("Optimistic concurrency conflict during updateRoleRowFilter for hostId %s roleId %s endpointId %s colName %s. Expected aggregateVersion %d but found a different version %d.", hostId, roleId, endpointId, colName, oldAggregateVersion, newAggregateVersion));
+                } else {
+                    throw new SQLException(String.format("No record found during updateRoleRowFilter for hostId %s roleId %s endpointId %s colName %s.", hostId, roleId, endpointId, colName));
+                }
             }
         } catch (SQLException e) {
-            logger.error("SQLException during updateRoleRowFilter for id {} (old: {}) -> (new: {}): {}", roleId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during updateRoleRowFilter for hostId {} roleId {} endpointId {} colName {} (old: {}) -> (new: {}): {}", hostId, roleId, endpointId, colName, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateRoleRowFilter for id {} (old: {}) -> (new: {}): {}", roleId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during updateRoleRowFilter for hostId {} roleId {} endpointId {} colName {} (old: {}) -> (new: {}): {}", hostId, roleId, endpointId, colName, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -1109,57 +1030,38 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     INSERT INTO role_col_filter_t (
                         host_id,
                         role_id,
-                        endpoint_id,  -- Using resolved endpoint_id instead of api_id/api_version/endpoint
+                        endpoint_id,
                         columns,
                         update_user,
                         update_ts,
                         aggregate_version
-                    )
-                    SELECT
-                        ?,              -- host_id parameter
-                        ?,              -- role_id parameter
-                        e.endpoint_id,  -- Resolved from the join
-                        ?,              -- columns parameter
-                        ?,              -- update_user parameter
-                        ?,              -- update_ts parameter (or use DEFAULT for CURRENT_TIMESTAMP)
-                        ?               -- aggregate_version parameter
-                    FROM
-                        api_endpoint_t e
-                    JOIN
-                        api_version_t v ON e.host_id = v.host_id
-                                       AND e.api_version_id = v.api_version_id
-                    WHERE
-                        e.host_id = ?                  -- Same as the first host_id parameter
-                        AND v.api_id = ?               -- api_id parameter
-                        AND v.api_version = ?          -- api_version parameter
-                        AND e.endpoint = ?;            -- endpoint parameter
+                    ) VALUES (?, ?, ?, ?, ?,  ?, ?)
                 """;
 
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String hostId = (String)map.get("hostId");
         String roleId = (String)map.get("roleId");
-        String endpoint = (String)map.get("endpoint");
+        String endpointId = (String)map.get("endpointId");
+
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(insertRole)) {
-            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
+            statement.setObject(1, UUID.fromString(hostId));
             statement.setString(2, roleId);
-            statement.setString(3, (String)map.get("columns"));
-            statement.setString(4, (String)event.get(Constants.USER));
-            statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(6, newAggregateVersion);
-            statement.setObject(7, UUID.fromString((String)event.get(Constants.HOST)));
-            statement.setString(8, (String)map.get("apiId"));
-            statement.setString(9, (String)map.get("apiVersion"));
-            statement.setString(10, endpoint);
+            statement.setObject(3, UUID.fromString(endpointId));
+            statement.setString(4, (String)map.get("columns"));
+            statement.setString(5, (String)event.get(Constants.USER));
+            statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(7, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("Failed to insert roleId %s col filter for endpoint %s with aggregate version %d. It might already exist.", roleId, endpoint, newAggregateVersion));
+                throw new SQLException(String.format("Failed during createRoleColFilter for hostId %s roleId %s endpointId %s with aggregate version %d. It might already exist.", hostId, roleId, endpointId, newAggregateVersion));
             }
         } catch (SQLException e) {
-            logger.error("SQLException during createRoleColFilter for roleId {} endpoint {} aggregateVersion {}: {}", roleId, endpoint, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during createRoleColFilter for hostId {} roleId {} endpointId {} aggregateVersion {}: {}", hostId, roleId, endpointId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createRoleColFilter for roleId {} endpoint {} aggregateVersion {}: {}", roleId, endpoint, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during createRoleColFilter for hostId {} roleId {} endpointId {} aggregateVersion {}: {}", hostId, roleId, endpointId, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -1182,43 +1084,38 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     @Override
     public void deleteRoleColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String deleteRole =
-                """
-                    DELETE FROM role_col_filter_t rcf
-                    WHERE rcf.host_id = ?
-                      AND rcf.role_id = ?
-                      AND rcf.endpoint_id IN (
-                        SELECT e.endpoint_id
-                        FROM api_endpoint_t e
-                        JOIN api_version_t v ON e.host_id = v.host_id
-                                            AND e.api_version_id = v.api_version_id
-                        WHERE e.host_id = ?          -- Same host_id as above
-                          AND v.api_id = ?           -- Your api_id parameter
-                          AND v.api_version = ?      -- Your api_version parameter
-                          AND e.endpoint = ?         -- Your endpoint parameter
-                      );
-
-                DELETE from role_col_filter_t WHERE host_id = ? AND role_id = ? AND api_id = ? AND api_version = ? AND endpoint = ?
-                """;
+            """
+                DELETE FROM role_col_filter_t
+                WHERE host_id = ?
+                AND role_id = ?
+                AND endpoint_id = ?
+                AND aggregate_version = ?
+            """;
 
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String hostId = (String)map.get("hostId");
         String roleId = (String)map.get("roleId");
-        try (PreparedStatement statement = conn.prepareStatement(deleteRole)) {
-            statement.setObject(1, UUID.fromString((String)event.get(Constants.HOST)));
-            statement.setString(2, roleId);
-            statement.setObject(3, UUID.fromString((String)event.get(Constants.HOST)));
-            statement.setString(4, (String)map.get("apiId"));
-            statement.setString(5, (String)map.get("apiVersion"));
-            statement.setString(6, (String)map.get("endpoint"));
+        String endpointId = (String)map.get("endpointId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
+        try (PreparedStatement statement = conn.prepareStatement(deleteRole)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setString(2, roleId);
+            statement.setObject(3, UUID.fromString(endpointId));
+            statement.setLong(4, oldAggregateVersion);
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("no record is deleted for role col filter " + roleId);
+                if (queryRoleColFilterExists(conn, hostId, roleId, endpointId)) {
+                    throw new ConcurrencyException(String.format("Optimistic concurrency conflict during deleteRoleColFilter for hostId %s roleId %s endpointId %s aggregateVersion %d but found a different version or already updated.", hostId, roleId, endpointId, oldAggregateVersion));
+                } else {
+                    throw new SQLException(String.format("No record found during deleteRoleColFilter for hostId %s roleId %s endpointId %s. It might have been already deleted.", hostId, roleId, endpointId));
+                }
             }
         } catch (SQLException e) {
-            logger.error("SQLException during deleteRoleColFilter for id {}: {}", roleId, e.getMessage(), e);
+            logger.error("SQLException during deleteRoleColFilter for hostId {} roleId {} endpointId {} aggregateVersion {}: {}", hostId, roleId, endpointId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteRoleColFilter for id {}: {}", roleId, e.getMessage(), e);
+            logger.error("Exception during deleteRoleColFilter for hostId {} roleId {} endpointId {} aggregateVersion {}: {}", hostId, roleId, endpointId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -1226,29 +1123,24 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     @Override
     public void updateRoleColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String updateRole =
-                """
-                        UPDATE role_col_filter_t
-                        SET
-                            columns = ?,
-                            update_user = ?,
-                            update_ts = ?
-                        WHERE
-                            host_id = ?
-                            AND role_id = ?
-                            AND endpoint_id IN (
-                                SELECT e.endpoint_id
-                                FROM api_endpoint_t e
-                                JOIN api_version_t v ON e.host_id = v.host_id
-                                                    AND e.api_version_id = v.api_version_id
-                                WHERE e.host_id = ?
-                                  AND v.api_id = ?
-                                  AND v.api_version = ?
-                                  AND e.endpoint = ?
-                            )
-                """;
+            """
+                UPDATE role_col_filter_t
+                SET
+                    columns = ?,
+                    update_user = ?,
+                    update_ts = ?
+                    aggregate_version = ?
+                WHERE
+                    host_id = ?
+                    AND role_id = ?
+                    AND endpoint_id ?
+                    AND aggregate_version = ?
+            """;
 
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        String hostId = (String)map.get("hostId");
         String roleId = (String)map.get("roleId");
+        String endpointId = (String)map.get("endpointId");
         long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
@@ -1256,22 +1148,25 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             statement.setString(1, (String)map.get("columns"));
             statement.setString(2, (String)event.get(Constants.USER));
             statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setObject(4, UUID.fromString((String)event.get(Constants.HOST)));
-            statement.setString(5, roleId);
-            statement.setObject(6, UUID.fromString((String)event.get(Constants.HOST)));
-            statement.setString(7, (String)map.get("apiId"));
-            statement.setString(8, (String)map.get("apiVersion"));
-            statement.setString(9, (String)map.get("endpoint"));
+            statement.setLong(4, newAggregateVersion);
+            statement.setObject(5, UUID.fromString(hostId));
+            statement.setString(6, roleId);
+            statement.setObject(7, UUID.fromString(endpointId));
+            statement.setLong(8, oldAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("no record is updated for role col filter " + roleId);
+                if (queryRoleColFilterExists(conn, hostId, roleId, endpointId)) {
+                    throw new ConcurrencyException(String.format("Optimistic concurrency conflict during updateRoleColFilter for hostId %s roleId %s endpointId %s. Expected version %d but found a different version %d.", hostId, roleId, endpointId, oldAggregateVersion, newAggregateVersion));
+                } else {
+                    throw new SQLException(String.format("No record found during updateRoleColFilter for hostId %s roleId %s endpointId %s.", hostId, roleId, endpointId));
+                }
             }
         } catch (SQLException e) {
-            logger.error("SQLException during updateRoleColFilter for id {}: {}", roleId, e.getMessage(), e);
+            logger.error("SQLException during updateRoleColFilter for hostId {} roleId {} endpointId {} (old: {}) -> (new: {}): {}", hostId, roleId, endpointId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateRoleColFilter for id {}: {}", roleId, e.getMessage(), e);
+            logger.error("Exception during updateRoleColFilter for hostId {} roleId {} endpointId {} (old: {}) -> (new: {}): {}", hostId, roleId, endpointId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
