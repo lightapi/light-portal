@@ -35,7 +35,7 @@ public interface AccessControlPersistence {
     void createRoleColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateRoleColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteRoleColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> queryRoleColFilter(int offset, int limit, String hostId, String roleId, String apiId, String apiVersion, String endpoint);
+    Result<String> queryRoleColFilter(int offset, int limit, String hostId, String roleId, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint);
 
     // Group
     void createGroup(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -59,13 +59,13 @@ public interface AccessControlPersistence {
     void createGroupRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateGroupRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteGroupRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> queryGroupRowFilter(int offset, int limit, String hostId, String GroupId, String apiId, String apiVersion, String endpoint);
+    Result<String> queryGroupRowFilter(int offset, int limit, String hostId, String GroupId, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint);
 
     // GroupColFilter
     void createGroupColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateGroupColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteGroupColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> queryGroupColFilter(int offset, int limit, String hostId, String GroupId, String apiId, String apiVersion, String endpoint);
+    Result<String> queryGroupColFilter(int offset, int limit, String hostId, String GroupId, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint);
 
     // Position
     void createPosition(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -89,13 +89,13 @@ public interface AccessControlPersistence {
     void createPositionRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updatePositionRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deletePositionRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> queryPositionRowFilter(int offset, int limit, String hostId, String PositionId, String apiId, String apiVersion, String endpoint);
+    Result<String> queryPositionRowFilter(int offset, int limit, String hostId, String PositionId, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint);
 
     // PositionColFilter
     void createPositionColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updatePositionColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deletePositionColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> queryPositionColFilter(int offset, int limit, String hostId, String PositionId, String apiId, String apiVersion, String endpoint);
+    Result<String> queryPositionColFilter(int offset, int limit, String hostId, String PositionId, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint);
 
     // Attribute
     void createAttribute(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -120,11 +120,11 @@ public interface AccessControlPersistence {
     void createAttributeRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateAttributeRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteAttributeRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> queryAttributeRowFilter(int offset, int limit, String hostId, String attributeId, String attributeValue, String apiId, String apiVersion, String endpoint);
+    Result<String> queryAttributeRowFilter(int offset, int limit, String hostId, String attributeId, String attributeValue, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint);
 
     // AttributeColFilter
     void createAttributeColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateAttributeColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteAttributeColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> queryAttributeColFilter(int offset, int limit, String hostId, String attributeId, String attributeValue, String apiId, String apiVersion, String endpoint);
+    Result<String> queryAttributeColFilter(int offset, int limit, String hostId, String attributeId, String attributeValue, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint);
 }
