@@ -166,7 +166,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> getApiVersionIdLabel(String hostId);
     Result<String> queryApiLabel(String hostId);
     Result<String> queryApiVersionLabel(String hostId, String apiId);
-    Result<String> queryEndpointLabel(String hostId, String apiId, String apiVersion);
+    Result<String> queryEndpointLabel(String hostId, String apiVersionId);
 
     // ServiceVersion
     void createServiceVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -382,7 +382,7 @@ public interface PortalDbProvider extends DbProvider {
     void deleteRoleRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
 
     // RoleColFilter
-    Result<String> queryRoleColFilter(int offset, int limit, String hostId, String roleId, String apiId, String apiVersion, String endpoint);
+    Result<String> queryRoleColFilter(int offset, int limit, String hostId, String roleId, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint);
     void createRoleColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateRoleColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteRoleColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -395,7 +395,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> queryGroupLabel(String hostId);
 
     // GroupPermission
-    Result<String> queryGroupPermission(int offset, int limit, String hostId, String groupId, String apiId, String apiVersion, String endpoint);
+    Result<String> queryGroupPermission(int offset, int limit, String hostId, String groupId, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint);
     void createGroupPermission(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteGroupPermission(Connection conn, Map<String, Object> event) throws SQLException, Exception;
 
@@ -406,13 +406,13 @@ public interface PortalDbProvider extends DbProvider {
     void deleteGroupUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;
 
     // GroupRowFilter
-    Result<String> queryGroupRowFilter(int offset, int limit, String hostId, String groupId, String apiId, String apiVersion, String endpoint);
+    Result<String> queryGroupRowFilter(int offset, int limit, String hostId, String groupId, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint);
     void createGroupRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateGroupRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteGroupRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
 
     // GroupColFilter
-    Result<String> queryGroupColFilter(int offset, int limit, String hostId, String groupId, String apiId, String apiVersion, String endpoint);
+    Result<String> queryGroupColFilter(int offset, int limit, String hostId, String groupId, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint);
     void createGroupColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateGroupColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteGroupColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -425,7 +425,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> queryPositionLabel(String hostId);
 
     // PositionPermission
-    Result<String> queryPositionPermission(int offset, int limit, String hostId, String positionId, String inheritToAncestor, String inheritToSibling, String apiId, String apiVersion, String endpoint);
+    Result<String> queryPositionPermission(int offset, int limit, String hostId, String positionId, String inheritToAncestor, String inheritToSibling, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint);
     void createPositionPermission(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deletePositionPermission(Connection conn, Map<String, Object> event) throws SQLException, Exception;
 
@@ -436,13 +436,13 @@ public interface PortalDbProvider extends DbProvider {
     void deletePositionUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;
 
     // PositionRowFilter
-    Result<String> queryPositionRowFilter(int offset, int limit, String hostId, String positionId, String apiId, String apiVersion, String endpoint);
+    Result<String> queryPositionRowFilter(int offset, int limit, String hostId, String positionId, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint);
     void createPositionRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updatePositionRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deletePositionRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
 
     // PositionColFilter
-    Result<String> queryPositionColFilter(int offset, int limit, String hostId, String positionId, String apiId, String apiVersion, String endpoint);
+    Result<String> queryPositionColFilter(int offset, int limit, String hostId, String positionId, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint);
     void createPositionColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updatePositionColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deletePositionColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -455,7 +455,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> queryAttributeLabel(String hostId);
 
     // AttributePermission
-    Result<String> queryAttributePermission(int offset, int limit, String hostId, String attributeId, String attributeType, String attributeValue, String apiId, String apiVersion, String endpoint);
+    Result<String> queryAttributePermission(int offset, int limit, String hostId, String attributeId, String attributeType, String attributeValue, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint);
     void createAttributePermission(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateAttributePermission(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteAttributePermission(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -467,13 +467,13 @@ public interface PortalDbProvider extends DbProvider {
     void deleteAttributeUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;
 
     // AttributeRowFilter
-    Result<String> queryAttributeRowFilter(int offset, int limit, String hostId, String attributeId, String attributeValue, String apiId, String apiVersion, String endpoint);
+    Result<String> queryAttributeRowFilter(int offset, int limit, String hostId, String attributeId, String attributeValue, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint);
     void createAttributeRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateAttributeRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteAttributeRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
 
     // AttributeColFilter
-    Result<String> queryAttributeColFilter(int offset, int limit, String hostId, String attributeId, String attributeValue, String apiId, String apiVersion, String endpoint);
+    Result<String> queryAttributeColFilter(int offset, int limit, String hostId, String attributeId, String attributeValue, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint);
     void createAttributeColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateAttributeColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteAttributeColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;

@@ -535,24 +535,21 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     }
 
     @Override
-    public Result<String> queryEndpointLabel(String hostId, String apiId, String apiVersion) {
+    public Result<String> queryEndpointLabel(String hostId, String apiVersionId) {
         Result<String> result = null;
-        // The original implementation used apiId as apiVersionId. Adjusting to reflect that, assuming it's intentional.
-        // If not, a lookup for apiVersionId based on apiId and apiVersion would be needed.
-        // Based on the interface, it expects apiVersionId, but the impl used apiId directly. Sticking to original impl's logic here.
-        // Assuming apiId here actually refers to apiVersionId as per the method parameter comment.
-        String sql = "SELECT endpoint_id FROM api_endpoint_t WHERE host_id = ? AND api_version_id = ?";
+        String sql = "SELECT endpoint_id, endpoint FROM api_endpoint_t WHERE host_id = ? AND api_version_id = ?";
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
             preparedStatement.setObject(1, UUID.fromString(hostId));
-            preparedStatement.setObject(2, UUID.fromString(apiId)); // This might be an error in original logic if apiId != apiVersionId
+            preparedStatement.setObject(2, UUID.fromString(apiVersionId));
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
                     String id = resultSet.getString("endpoint_id");
+                    String endpoint = resultSet.getString("endpoint");
                     map.put("id", id);
-                    map.put("label", id);
+                    map.put("label", endpoint);
                     labels.add(map);
                 }
             }
