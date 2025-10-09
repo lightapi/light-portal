@@ -830,6 +830,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                         isFirstRow = false;
                     }
                     map.put("currentHostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("domain", resultSet.getString("domain"));
                     map.put("subDomain", resultSet.getString("sub_domain"));
                     map.put("hostDesc", resultSet.getString("host_desc"));
