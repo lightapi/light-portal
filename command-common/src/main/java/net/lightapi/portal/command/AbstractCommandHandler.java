@@ -292,6 +292,11 @@ public abstract class AbstractCommandHandler implements HybridHandler {
                 .build()};
     }
 
+    protected CloudEvent[] handle(HttpServerExchange exchange, Map<String, Object> map, String userId, String host) {
+        return new CloudEvent[0];
+    }
+
+
     /**
      * Gets the specific logger instance for the concrete subclass.
      * Must be implemented by subclasses.
