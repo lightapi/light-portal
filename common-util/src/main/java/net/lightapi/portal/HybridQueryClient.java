@@ -1547,11 +1547,7 @@ public class HybridQueryClient {
 
     /**
      * Get app information based on provided parameters.
-     *
-     * @param url URL of the target server
      * @param hostId Host ID
-     * @param offset Pagination offset
-     * @param limit Pagination limit
      * @param appId App ID (optional)
      * @param appName App Name (optional)
      * @param appDesc App Description (optional)
@@ -1560,11 +1556,11 @@ public class HybridQueryClient {
      * @param deliveryOwner Delivery Owner (optional)
      * @return Result<String> containing app information in JSON format
      */
-    public static Result<String> queryApp(HttpServerExchange exchange, int offset, int limit,String hostId, String appId,
+    public static Result<String> queryApp(HttpServerExchange exchange, String hostId, String appId,
                                         String appName, String appDesc, Boolean isKafkaApp, String operationOwner, String deliveryOwner) {
 
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"client\",\"action\":\"getApp\",\"version\":\"0.1.0\",\"data\":{\"hostId\":\"%s\",\"offset\":%d,\"limit\":%d,\"appId\":\"%s\",\"appName\":\"%s\",\"appDesc\":\"%s\",\"isKafkaApp\":%b,\"operationOwner\":\"%s\",\"deliveryOwner\":\"%s\"}}",
-                hostId, offset, limit, appId, appName, appDesc, isKafkaApp, operationOwner, deliveryOwner);
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"client\",\"action\":\"getApp\",\"version\":\"0.1.0\",\"data\":{\"hostId\":\"%s\",\"appId\":\"%s\",\"appName\":\"%s\",\"appDesc\":\"%s\",\"isKafkaApp\":%b,\"operationOwner\":\"%s\",\"deliveryOwner\":\"%s\"}}",
+                hostId, appId, appName, appDesc, isKafkaApp, operationOwner, deliveryOwner);
         return callQueryExchange(s, exchange);
     }
 
