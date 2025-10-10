@@ -1,21 +1,23 @@
 package net.lightapi.portal.db.util;
 
+import com.networknt.config.JsonMapper;
 import io.cloudevents.CloudEvent;
 import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.PortalConstants;
+import net.lightapi.portal.db.persistence.ReferenceDataPersistenceImpl;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class SqlUtil {
+    private static final Logger logger = LoggerFactory.getLogger(SqlUtil.class);
 
     private SqlUtil() {
         // Private constructor for utility class
@@ -210,5 +212,32 @@ public class SqlUtil {
         } finally {
             connection.close();
         }
+    }
+
+    public static List<Map<String, Object>> parseJsonList(String json) {
+        if (json == null || json.isEmpty() || "[]".equals(json.trim())) {
+            return Collections.emptyList();
+        }
+        return JsonMapper.string2List(json);
+    }
+
+    // Utility to convert simple CamelCase to snake_case
+    public static String camelToSnake(String camelCase) {
+        if (camelCase == null || camelCase.isEmpty()) {
+            return camelCase;
+        }
+        // Simple regex: insert underscore before every capital letter and lowercase the whole string
+        return camelCase.replaceAll("([a-z])([A-Z]+)", "$1_$2").toLowerCase(Locale.ROOT);
+    }
+
+    public static String mapToDbColumn(Map<String, String> columnMap, String camelCaseName) {
+        String dbName = columnMap.get(camelCaseName);
+        if (dbName == null) {
+            // Log warning or throw error if an unknown column name is used
+            logger.warn("Attempted to map unknown column name: {}", camelCaseName);
+            // Defaulting to the original name can be dangerous, but we'll stick to a strict lookup
+            return camelCaseName;
+        }
+        return dbName;
     }
 }
