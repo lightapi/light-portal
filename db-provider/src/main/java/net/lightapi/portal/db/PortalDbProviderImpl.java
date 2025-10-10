@@ -65,27 +65,27 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void createRefTable(Connection connection, Map<String, Object> event) throws SQLException, Exception { referenceDataPersistence.createRefTable(connection, event); }
     @Override public void updateRefTable(Connection connection, Map<String, Object> event) throws SQLException, Exception { referenceDataPersistence.updateRefTable(connection, event); }
     @Override public void deleteRefTable(Connection connection, Map<String, Object> event) throws SQLException, Exception { referenceDataPersistence.deleteRefTable(connection, event); }
-    @Override public Result<String> getRefTable(int offset, int limit, String hostId, String tableId, String tableName, String tableDesc, Boolean active, Boolean editable) { return referenceDataPersistence.getRefTable(offset, limit, hostId, tableId, tableName, tableDesc, active, editable); }
+    @Override public Result<String> getRefTable(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return referenceDataPersistence.getRefTable(offset, limit, filters, globalFilter, sorting, hostId); }
     @Override public Result<String> getRefTableById(String tableId) { return referenceDataPersistence.getRefTableById(tableId); }
     @Override public Result<String> getRefTableLabel(String hostId) { return referenceDataPersistence.getRefTableLabel(hostId); }
     @Override public void createRefValue(Connection connection, Map<String, Object> event) throws SQLException, Exception { referenceDataPersistence.createRefValue(connection, event); }
     @Override public void updateRefValue(Connection connection, Map<String, Object> event) throws SQLException, Exception { referenceDataPersistence.updateRefValue(connection, event); }
     @Override public void deleteRefValue(Connection connection, Map<String, Object> event) throws SQLException, Exception { referenceDataPersistence.deleteRefValue(connection, event); }
-    @Override public Result<String> getRefValue(int offset, int limit, String valueId, String tableId, String valueCode, String valueDesc, Integer displayOrder, Boolean active) { return referenceDataPersistence.getRefValue(offset, limit, valueId, tableId, valueCode, valueDesc, displayOrder, active); }
+    @Override public Result<String> getRefValue(int offset, int limit, String filters, String globalFilter, String sorting) { return referenceDataPersistence.getRefValue(offset, limit, filters, globalFilter, sorting); }
     @Override public Result<String> getRefValueById(String valueId) { return referenceDataPersistence.getRefValueById(valueId); }
     @Override public Result<String> getRefValueLabel(String tableId) { return referenceDataPersistence.getRefValueLabel(tableId); }
     @Override public void createRefLocale(Connection connection, Map<String, Object> event) throws SQLException, Exception { referenceDataPersistence.createRefLocale(connection, event); }
     @Override public void updateRefLocale(Connection connection, Map<String, Object> event) throws SQLException, Exception { referenceDataPersistence.updateRefLocale(connection, event); }
     @Override public void deleteRefLocale(Connection connection, Map<String, Object> event) throws SQLException, Exception { referenceDataPersistence.deleteRefLocale(connection, event); }
-    @Override public Result<String> getRefLocale(int offset, int limit, String valueId, String valueCode, String valueDesc, String language, String valueLabel) { return referenceDataPersistence.getRefLocale(offset, limit, valueId, valueCode, valueDesc, language, valueLabel); }
+    @Override public Result<String> getRefLocale(int offset, int limit, String filters, String globalFilter, String sorting) { return referenceDataPersistence.getRefLocale(offset, limit, filters, globalFilter, sorting); }
     @Override public void createRefRelationType(Connection connection, Map<String, Object> event) throws SQLException, Exception { referenceDataPersistence.createRefRelationType(connection, event); }
     @Override public void updateRefRelationType(Connection connection, Map<String, Object> event) throws SQLException, Exception { referenceDataPersistence.updateRefRelationType(connection, event); }
     @Override public void deleteRefRelationType(Connection connection, Map<String, Object> event) throws SQLException, Exception { referenceDataPersistence.deleteRefRelationType(connection, event); }
-    @Override public Result<String> getRefRelationType(int offset, int limit, String relationId, String relationName, String relationDesc) { return referenceDataPersistence.getRefRelationType(offset, limit, relationId, relationName, relationDesc); }
+    @Override public Result<String> getRefRelationType(int offset, int limit, String filters, String globalFilter, String sorting) { return referenceDataPersistence.getRefRelationType(offset, limit, filters, globalFilter, sorting); }
     @Override public void createRefRelation(Connection connection, Map<String, Object> event) throws SQLException, Exception { referenceDataPersistence.createRefRelation(connection, event); }
     @Override public void updateRefRelation(Connection connection, Map<String, Object> event) throws SQLException, Exception { referenceDataPersistence.updateRefRelation(connection, event); }
     @Override public void deleteRefRelation(Connection connection, Map<String, Object> event) throws SQLException, Exception { referenceDataPersistence.deleteRefRelation(connection, event); }
-    @Override public Result<String> getRefRelation(int offset, int limit, String relationId, String relationName, String valueIdFrom, String valueCodeFrom, String valueIdTo, String valueCodeTo, Boolean active) { return referenceDataPersistence.getRefRelation(offset, limit, relationId, relationName, valueIdFrom, valueCodeFrom, valueIdTo, valueCodeTo, active); }
+    @Override public Result<String> getRefRelation(int offset, int limit, String filters, String globalFilter, String sorting) { return referenceDataPersistence.getRefRelation(offset, limit, filters, globalFilter, sorting); }
 
 
     // --- User ---

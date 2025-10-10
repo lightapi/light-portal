@@ -41,7 +41,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testGetRefTableNoHost() {
-        Result<String> result = dbProvider.getRefTable(0, 100, null, null, null, null, null, null);
+        Result<String> result = dbProvider.getRefTable(0, 100, null, null, null, null);
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
@@ -50,8 +50,38 @@ public class PortalDbProviderImplTest {
     }
 
     @Test
-    void testGetRefTableWithHost() {
-        Result<String> result = dbProvider.getRefTable(0, 100, "01964b05-552a-7c4b-9184-6857e7f3dc5f", null, null, null, null, null);
+    void testGetRefTableWithFilters() {
+        Result<String> result = dbProvider.getRefTable(0, 100,"[{\"id\":\"tableName\",\"value\":\"env\"}]", null, null, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
+        if(result.isFailure()) {
+            System.out.println(result.getError());
+        } else {
+            System.out.println(result.getResult());
+        }
+    }
+
+    @Test
+    void testGetRefTableWithGlobalFilter() {
+        Result<String> result = dbProvider.getRefTable(0, 100,null, "env", null, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
+        if(result.isFailure()) {
+            System.out.println(result.getError());
+        } else {
+            System.out.println(result.getResult());
+        }
+    }
+
+    @Test
+    void testGetRefTableWithSorting() {
+        Result<String> result = dbProvider.getRefTable(0, 100,null, null, "[{\"id\":\"tableId\",\"desc\":false}]", "01964b05-552a-7c4b-9184-6857e7f3dc5f");
+        if(result.isFailure()) {
+            System.out.println(result.getError());
+        } else {
+            System.out.println(result.getResult());
+        }
+    }
+
+    @Test
+    void testGetRefValueWithFilters() {
+        Result<String> result = dbProvider.getRefValue(0, 100,"[{\"id\":\"tableId\",\"value\":\"01964b05-552e-705a-a193-7a859347a9d5\"}]", null, null);
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
