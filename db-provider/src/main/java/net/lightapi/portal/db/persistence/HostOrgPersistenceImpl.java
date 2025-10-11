@@ -49,7 +49,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                 "VALUES (?, ?, ?, ?, ?,  ?)";
         final String updateUserHost = "UPDATE user_host_t SET host_id = ?, update_user = ?, update_ts = ? WHERE user_id = ?";
 
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        Map<String, Object> map = SqlUtil.extractEventData(event);
         String domain = (String)map.get("domain");
         String hostId = (String)map.get("hostId"); // enriched in the service.
         String orgOwner = (String)map.get("orgOwner");
@@ -146,14 +146,11 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
 
                 userHostStatement.executeUpdate();
             }
-            notificationService.insertNotification(event, true, null);
         } catch (SQLException e) {
-            logger.error("SQLException during createOrg for domain {}: {}", domain, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during createOrg for domain {} aggregateVersion {}: {}", domain, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createOrg for domain {}: {}", domain, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during createOrg for domain {} aggregateVersion {}: {}", domain, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }

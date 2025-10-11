@@ -404,4 +404,14 @@ public class PortalDbProviderImplTest {
         }
     }
 
+    @Test
+    void testGetToValueCodeNull() throws Exception {
+        Result<String> result = dbProvider.getToValueCode("service_aggregate", null);
+        if(result.isFailure()) {
+            System.out.println(result.getError());
+        } else {
+            System.out.println(result.getResult());
+        }
+    }
+
 }
