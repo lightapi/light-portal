@@ -65,6 +65,7 @@ public interface PortalDbProvider extends DbProvider {
     void updateRefRelation(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteRefRelation(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getRefRelation(int offset, int limit, String filters, String globalFilter, String sorting);
+    Result<String> getToValueCode(String relationName, String fromValueCode);
 
     // User
     Result<String> loginUserByEmail(String email);
