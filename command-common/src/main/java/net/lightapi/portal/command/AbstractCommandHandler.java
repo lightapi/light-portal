@@ -133,8 +133,8 @@ public abstract class AbstractCommandHandler implements HybridHandler {
         // for created event, we can derive the new aggregate versions.
         if (eventType.endsWith("CreatedEvent") || eventType.endsWith("OnboardedEvent")) {
             // For auth code created event, we don't need to increment the aggregate version.
-            map.put(PortalConstants.NEW_AGGREGATE_VERSION, 1L);
-            map.put(PortalConstants.AGGREGATE_VERSION, 0L);
+            map.put(PortalConstants.NEW_AGGREGATE_VERSION, 1);
+            map.put(PortalConstants.AGGREGATE_VERSION, 0);
             return Success.of(map);
         }
         // For other events, we need to increment the aggregate version.
@@ -142,9 +142,9 @@ public abstract class AbstractCommandHandler implements HybridHandler {
             getLogger().error("The input map does not contain the aggregate version for event type {}.", eventType);
             return Failure.of(new Status(OBJECT_NOT_FOUND, "aggregateVersion", eventType));
         }
-        long oldAggregateVersion = ((Number) Objects.requireNonNull(map.get(PortalConstants.AGGREGATE_VERSION))).longValue();
+        int oldAggregateVersion = ((Number) Objects.requireNonNull(map.get(PortalConstants.AGGREGATE_VERSION))).intValue();
         // Increment the aggregate version by 1 for the new event.
-        long newAggregateVersion = oldAggregateVersion + 1;
+        int newAggregateVersion = oldAggregateVersion + 1;
         map.put(PortalConstants.NEW_AGGREGATE_VERSION, newAggregateVersion);
         return Success.of(map);
     }
