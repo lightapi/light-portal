@@ -7,7 +7,7 @@ import java.util.stream.Collectors;
 
 public class EventMatcher {
     private final Set<String> exactEventTypes;
-    private final Set<String> normalizedAggregateTypes; // Already lowercase
+    private final Set<String> normalizedAggregateTypes;
     private final boolean matchAll;
 
     public EventMatcher(String eventTypesInput, String aggregateTypesInput) {
@@ -29,12 +29,10 @@ public class EventMatcher {
                     .collect(Collectors.toSet())
                     : Collections.emptySet();
 
-            // Process aggregateTypesInput (normalize to lowercase for DB comparison)
             this.normalizedAggregateTypes = aggregateTypesInput != null && !aggregateTypesInput.isEmpty()
                     ? Arrays.stream(aggregateTypesInput.split(","))
                     .map(String::trim)
                     .filter(s -> !s.isEmpty())
-                    .map(String::toLowerCase) // Store lowercase
                     .collect(Collectors.toSet())
                     : Collections.emptySet();
         }
