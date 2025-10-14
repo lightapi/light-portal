@@ -908,7 +908,7 @@ public class UserPersistenceImpl implements UserPersistence {
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String userId = (String)event.get(Constants.USER);
         String token = (String)map.get("token");
-        String nonce = (String)event.get(PortalConstants.NONCE);
+        Integer nonce = (Integer)event.get(PortalConstants.NONCE);
         long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
@@ -919,7 +919,7 @@ public class UserPersistenceImpl implements UserPersistence {
                 if (resultSet.next()) {
                     // found the token record, update user_t for token, verified flog and nonce, write a success notification.
                     try (PreparedStatement updateStatement = conn.prepareStatement(updateUserByEmail)) {
-                        updateStatement.setLong(1, Long.parseLong(nonce) + 1);
+                        updateStatement.setLong(1, nonce + 1);
                         updateStatement.setLong(2, newAggregateVersion);
                         updateStatement.setObject(3, UUID.fromString(userId));
                         updateStatement.setLong(4, oldAggregateVersion);
