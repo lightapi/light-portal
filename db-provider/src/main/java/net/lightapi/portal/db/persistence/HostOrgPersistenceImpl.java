@@ -24,6 +24,7 @@ import java.util.*;
 
 import static com.networknt.db.provider.SqlDbStartupHook.ds;
 import static java.sql.Types.NULL;
+import static net.lightapi.portal.db.util.SqlUtil.*;
 
 public class HostOrgPersistenceImpl implements HostOrgPersistence {
     private static final Logger logger = LoggerFactory.getLogger(HostOrgPersistenceImpl.class);
@@ -693,8 +694,11 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
     }
 
     @Override
-    public Result<String> getOrg(int offset, int limit, String domain, String orgName, String orgDesc, String orgOwner) {
+    public Result<String> getOrg(int offset, int limit, String filtersJson, String globalFilter, String sortingJson) {
         Result<String> result = null;
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
@@ -708,22 +712,67 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
 
         StringBuilder whereClause = new StringBuilder();
 
-        SqlUtil.addCondition(whereClause, parameters, "domain", domain);
-        SqlUtil.addCondition(whereClause, parameters, "org_name", orgName);
-        SqlUtil.addCondition(whereClause, parameters, "org_desc", orgDesc);
-        SqlUtil.addCondition(whereClause, parameters, "org_owner", orgOwner);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
+        // Material React Table Filters (Dynamic Filters)
+        for (Map<String, Object> filter : filters) {
+            String filterId = (String) filter.get("id");
+            String dbColumnName = camelToSnake(filterId);
+            Object filterValue = filter.get("value");
+            if (filterId != null && filterValue != null && !filterValue.toString().isEmpty()) {
+                whereClause.append(" AND ").append(dbColumnName).append(" ILIKE ?");
+                parameters.add("%" + filterValue + "%");
+            }
         }
 
-        sqlBuilder.append(" ORDER BY domain\n" +
-                "LIMIT ? OFFSET ?");
+        // Global Filter (Search across multiple columns)
+        if (globalFilter != null && !globalFilter.isEmpty()) {
+            whereClause.append(" AND (");
+            // Define columns to search for global filter (e.g., org_name, org_desc, etc.)
+            String[] globalSearchColumns = {"domain", "org_name", "org_desc"};
+            List<String> globalConditions = new ArrayList<>();
+            for (String col : globalSearchColumns) {
+                globalConditions.add(col + " ILIKE ?");
+                parameters.add("%" + globalFilter + "%");
+            }
+            whereClause.append(String.join(" OR ", globalConditions));
+            whereClause.append(")");
+        }
+
+        // Append the constructed WHERE clause
+        sqlBuilder.append(whereClause);
+
+
+        // Dynamic Sorting
+        StringBuilder orderByClause = new StringBuilder();
+        if (sorting.isEmpty()) {
+            // Default sort if none provided
+            orderByClause.append(" ORDER BY domain");
+        } else {
+            orderByClause.append(" ORDER BY ");
+            List<String> sortExpressions = new ArrayList<>();
+            for (Map<String, Object> sort : sorting) {
+                String sortId = (String) sort.get("id");
+                String dbColumnName = camelToSnake(sortId);
+                Boolean isDesc = (Boolean) sort.get("desc"); // 'desc' is typically a boolean or "true"/"false" string
+                if (sortId != null && !sortId.isEmpty()) {
+                    String direction = (isDesc != null && isDesc) ? "DESC" : "ASC";
+                    // Quote column name to handle SQL keywords or mixed case
+                    sortExpressions.add(dbColumnName + " " + direction);
+                }
+            }
+            // Use default if dynamic sort failed to produce anything
+            orderByClause.append(sortExpressions.isEmpty() ? "domain" : String.join(", ", sortExpressions));
+        }
+        sqlBuilder.append(orderByClause);
+
+        // Pagination
+        sqlBuilder.append("\nLIMIT ? OFFSET ?");
 
         parameters.add(limit);
         parameters.add(offset);
 
         String sql = sqlBuilder.toString();
+        if(logger.isTraceEnabled()) logger.trace("sql = {}", sql);
+
         int total = 0;
         List<Map<String, Object>> orgs = new ArrayList<>();
 
@@ -731,9 +780,15 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
 
             for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
+                // Ensure proper type setting (especially for UUIDs, Booleans, etc.)
+                if (parameters.get(i) instanceof UUID) {
+                    preparedStatement.setObject(i + 1, parameters.get(i));
+                } else if (parameters.get(i) instanceof Boolean) {
+                    preparedStatement.setBoolean(i + 1, (Boolean) parameters.get(i));
+                } else {
+                    preparedStatement.setObject(i + 1, parameters.get(i));
+                }
             }
-
 
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -772,8 +827,11 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
     }
 
     @Override
-    public Result<String> getHost(int offset, int limit, String hostId, String domain, String subDomain, String hostDesc, String hostOwner) {
+    public Result<String> getHost(int offset, int limit, String filtersJson, String globalFilter, String sortingJson) {
         Result<String> result = null;
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
@@ -788,22 +846,65 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
 
         StringBuilder whereClause = new StringBuilder();
 
-        SqlUtil.addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "domain", domain);
-        SqlUtil.addCondition(whereClause, parameters, "sub_domain", subDomain);
-        SqlUtil.addCondition(whereClause, parameters, "host_desc", hostDesc);
-        SqlUtil.addCondition(whereClause, parameters, "host_owner", hostOwner);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
+        // Material React Table Filters (Dynamic Filters)
+        for (Map<String, Object> filter : filters) {
+            String filterId = (String) filter.get("id"); // Column name
+            String dbColumnName = camelToSnake(filterId);
+            Object filterValue = filter.get("value");    // Value to filter by
+            if (filterId != null && filterValue != null && !filterValue.toString().isEmpty()) {
+                // Using LIKE for flexible filtering, assuming string/text columns
+                whereClause.append(" AND ").append(dbColumnName).append(" ILIKE ?"); // ILIKE is case-insensitive LIKE in Postgres
+                parameters.add("%" + filterValue + "%");
+            }
         }
 
-        sqlBuilder.append(" ORDER BY domain\n" +
-                "LIMIT ? OFFSET ?");
+        // Global Filter (Search across multiple columns)
+        if (globalFilter != null && !globalFilter.isEmpty()) {
+            whereClause.append(" AND (");
+            // Define columns to search for global filter (e.g., table_name, table_desc)
+            String[] globalSearchColumns = {"domain, sub_domain, host_desc"};
+            List<String> globalConditions = new ArrayList<>();
+            for (String col : globalSearchColumns) {
+                globalConditions.add(col + " ILIKE ?");
+                parameters.add("%" + globalFilter + "%");
+            }
+            whereClause.append(String.join(" OR ", globalConditions));
+            whereClause.append(")");
+        }
 
+        // Append the constructed WHERE clause
+        sqlBuilder.append(whereClause);
+
+
+        // Dynamic Sorting
+        StringBuilder orderByClause = new StringBuilder();
+        if (sorting.isEmpty()) {
+            // Default sort if none provided
+            orderByClause.append(" ORDER BY domain");
+        } else {
+            orderByClause.append(" ORDER BY ");
+            List<String> sortExpressions = new ArrayList<>();
+            for (Map<String, Object> sort : sorting) {
+                String sortId = (String) sort.get("id");
+                String dbColumnName = camelToSnake(sortId);
+                Boolean isDesc = (Boolean) sort.get("desc"); // 'desc' is typically a boolean or "true"/"false" string
+                if (sortId != null && !sortId.isEmpty()) {
+                    String direction = (isDesc != null && isDesc) ? "DESC" : "ASC";
+                    // Quote column name to handle SQL keywords or mixed case
+                    sortExpressions.add(dbColumnName + " " + direction);
+                }
+            }
+            // Use default if dynamic sort failed to produce anything
+            orderByClause.append(sortExpressions.isEmpty() ? "domain" : String.join(", ", sortExpressions));
+        }
+        sqlBuilder.append(orderByClause);
+
+        // Pagination
+        sqlBuilder.append("\nLIMIT ? OFFSET ?");
 
         parameters.add(limit);
         parameters.add(offset);
+
         String sql = sqlBuilder.toString();
         if(logger.isTraceEnabled()) logger.trace("sql: {}", sql);
         int total = 0;
@@ -813,14 +914,19 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
 
             for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
+                // Ensure proper type setting (especially for UUIDs, Booleans, etc.)
+                if (parameters.get(i) instanceof UUID) {
+                    preparedStatement.setObject(i + 1, parameters.get(i));
+                } else if (parameters.get(i) instanceof Boolean) {
+                    preparedStatement.setBoolean(i + 1, (Boolean) parameters.get(i));
+                } else {
+                    preparedStatement.setObject(i + 1, parameters.get(i));
+                }
             }
 
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                if(logger.isTraceEnabled()) logger.trace("resultSet: {}", resultSet);
                 while (resultSet.next()) {
-                    if(logger.isTraceEnabled()) logger.trace("at least there is 1 row here in the resultSet");
                     Map<String, Object> map = new HashMap<>();
                     if (isFirstRow) {
                         total = resultSet.getInt("total");
@@ -833,7 +939,6 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                     map.put("hostDesc", resultSet.getString("host_desc"));
                     map.put("hostOwner", resultSet.getObject("host_owner", UUID.class));
                     map.put("updateUser", resultSet.getString("update_user"));
-                    // handling date properly
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     hosts.add(map);
@@ -856,8 +961,22 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
     }
 
     @Override
-    public Result<String> getUserHost(int offset, int limit, String hostId, String domain, String subDomain, String userId, String email, String firstName, String lastName, Boolean current) {
+    public Result<String> getUserHost(int offset, int limit, String filtersJson, String globalFilter, String sortingJson) {
         Result<String> result = null;
+        final Map<String, String> columnMap = Map.of(
+                "hostId", "uh.host_id",
+                "domain", "h.domain",
+                "subDomain", "h.sub_domain",
+                "userId", "uh.user_id",
+                "email", "u.email",
+                "firstName", "u.first_name",
+                "lastName", "u.last_name",
+                "current", "uh.current"
+        );
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
+
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
@@ -876,27 +995,72 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
 
         StringBuilder whereClause = new StringBuilder();
 
-        SqlUtil.addCondition(whereClause, parameters, "uh.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "h.domain", domain);
-        SqlUtil.addCondition(whereClause, parameters, "h.sub_domain", subDomain);
-        SqlUtil.addCondition(whereClause, parameters, "uh.user_id", userId);
-        SqlUtil.addCondition(whereClause, parameters, "u.email", email);
-        SqlUtil.addCondition(whereClause, parameters, "u.first_name", firstName);
-        SqlUtil.addCondition(whereClause, parameters, "u.last_name", lastName);
-        SqlUtil.addCondition(whereClause, parameters, "uh.current", current);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
+        // Material React Table Filters (Dynamic Filters) ---
+        for (Map<String, Object> filter : filters) {
+            String filterId = (String) filter.get("id"); // Column name
+            String dbColumnName = mapToDbColumn(columnMap, filterId);
+            Object filterValue = filter.get("value");    // Value to filter by
+            if (filterId != null && filterValue != null && !filterValue.toString().isEmpty()) {
+                if(dbColumnName.equals("uh.user_id") || dbColumnName.equals("uh.host_id")) {
+                    whereClause.append(" AND ").append(dbColumnName).append(" = ?");
+                    parameters.add(UUID.fromString(filterValue.toString()));
+                } else {
+                    whereClause.append(" AND ").append(dbColumnName).append(" ILIKE ?");
+                    parameters.add("%" + filterValue + "%");
+                }
+            }
         }
 
-        sqlBuilder.append(" ORDER BY u.email\n" +
-                "LIMIT ? OFFSET ?");
+        // Global Filter (Search across multiple columns)
+        if (globalFilter != null && !globalFilter.isEmpty()) {
+            whereClause.append(" AND (");
+            // Define columns to search for global filter (e.g., table_name, table_desc)
+            String[] globalSearchColumns = {"h.domain", "h.sub_domain", "u.email", "u.first_name", "u.last_name"};
+            List<String> globalConditions = new ArrayList<>();
+            for (String col : globalSearchColumns) {
+                globalConditions.add(col + " ILIKE ?");
+                parameters.add("%" + globalFilter + "%");
+            }
+            whereClause.append(String.join(" OR ", globalConditions));
+            whereClause.append(")");
+        }
 
+        // Append the constructed WHERE clause
+        sqlBuilder.append(whereClause);
+
+
+        // Dynamic Sorting
+        StringBuilder orderByClause = new StringBuilder();
+        if (sorting.isEmpty()) {
+            // Default sort if none provided
+            orderByClause.append(" ORDER BY u.email");
+        } else {
+            orderByClause.append(" ORDER BY ");
+            List<String> sortExpressions = new ArrayList<>();
+            for (Map<String, Object> sort : sorting) {
+                String sortId = (String) sort.get("id");
+                String dbColumnName = mapToDbColumn(columnMap, sortId);
+                Boolean isDesc = (Boolean) sort.get("desc"); // 'desc' is typically a boolean or "true"/"false" string
+                if (sortId != null && !sortId.isEmpty()) {
+                    String direction = (isDesc != null && isDesc) ? "DESC" : "ASC";
+                    // Quote column name to handle SQL keywords or mixed case
+                    sortExpressions.add(dbColumnName + " " + direction);
+                }
+            }
+            // Use default if dynamic sort failed to produce anything
+            orderByClause.append(sortExpressions.isEmpty() ? "u.email" : String.join(", ", sortExpressions));
+        }
+        sqlBuilder.append(orderByClause);
+
+        // Pagination
+        sqlBuilder.append("\nLIMIT ? OFFSET ?");
 
         parameters.add(limit);
         parameters.add(offset);
+
         String sql = sqlBuilder.toString();
         if(logger.isTraceEnabled()) logger.trace("sql: {}", sql);
+
         int total = 0;
         List<Map<String, Object>> userHosts = new ArrayList<>();
 
@@ -904,7 +1068,14 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
 
             for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
+                // Ensure proper type setting (especially for UUIDs, Booleans, etc.)
+                if (parameters.get(i) instanceof UUID) {
+                    preparedStatement.setObject(i + 1, parameters.get(i));
+                } else if (parameters.get(i) instanceof Boolean) {
+                    preparedStatement.setBoolean(i + 1, (Boolean) parameters.get(i));
+                } else {
+                    preparedStatement.setObject(i + 1, parameters.get(i));
+                }
             }
 
             boolean isFirstRow = true;
