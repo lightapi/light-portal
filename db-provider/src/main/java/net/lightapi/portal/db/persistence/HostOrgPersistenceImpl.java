@@ -350,7 +350,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
     public void deleteHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String deleteHostSql = "DELETE from host_t WHERE host_id = ? AND aggregate_version = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)map.get("hostId");
+        String hostId = (String)map.get("currentHostId");
         long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(deleteHostSql)) {
