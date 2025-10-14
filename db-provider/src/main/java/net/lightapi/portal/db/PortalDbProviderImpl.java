@@ -86,7 +86,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void updateRefRelation(Connection connection, Map<String, Object> event) throws SQLException, Exception { referenceDataPersistence.updateRefRelation(connection, event); }
     @Override public void deleteRefRelation(Connection connection, Map<String, Object> event) throws SQLException, Exception { referenceDataPersistence.deleteRefRelation(connection, event); }
     @Override public Result<String> getRefRelation(int offset, int limit, String filters, String globalFilter, String sorting) { return referenceDataPersistence.getRefRelation(offset, limit, filters, globalFilter, sorting); }
-
+    @Override public Result<String> getToValueCode(String relationName, String fromValueCode) { return referenceDataPersistence.getToValueCode(relationName, fromValueCode); };
 
     // --- User ---
     @Override public Result<String> loginUserByEmail(String email) { return userPersistence.loginUserByEmail(email); }

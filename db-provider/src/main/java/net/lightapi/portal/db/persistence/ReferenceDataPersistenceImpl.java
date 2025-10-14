@@ -1767,10 +1767,75 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
         return result;
     }
 
-    private List<Map<String, Object>> parseJsonList(String json) {
-        if (json == null || json.isEmpty() || "[]".equals(json.trim())) {
-            return Collections.emptyList();
+    @Override
+    public Result<String> getToValueCode(String relationName, String fromValueCode) {
+        Result<String> result;
+        try {
+            // Build the base SQL query
+            StringBuilder sqlBuilder = new StringBuilder(
+                    """
+                    SELECT STRING_AGG(v2.value_code, ', ') AS value_code_to
+                    FROM relation_t r
+                    INNER JOIN relation_type_t t ON r.relation_id = t.relation_id
+                    INNER JOIN ref_value_t v1 ON v1.value_id = r.value_id_from
+                    INNER JOIN ref_value_t v2 ON v2.value_id = r.value_id_to
+                    WHERE t.relation_name = ?
+                    AND r.active = true
+                    """
+            );
+
+            // Handle fromValueCode - could be single value or comma-separated list
+            List<String> valueCodes = new ArrayList<>();
+
+            if (fromValueCode != null && !fromValueCode.trim().isEmpty()) {
+                // Split by comma and trim each value
+                String[] codes = fromValueCode.split(",");
+                for (String code : codes) {
+                    String trimmedCode = code.trim();
+                    if (!trimmedCode.isEmpty()) {
+                        valueCodes.add(trimmedCode);
+                    }
+                }
+            }
+
+            // Add the IN clause if we have value codes
+            if (!valueCodes.isEmpty()) {
+                sqlBuilder.append(" AND v1.value_code IN (");
+                // Create placeholders for each value
+                String placeholders = String.join(",", Collections.nCopies(valueCodes.size(), "?"));
+                sqlBuilder.append(placeholders).append(")");
+            }
+
+            String sql = sqlBuilder.toString();
+            if(logger.isTraceEnabled()) logger.trace("sql = {}", sql);
+
+
+            // Execute the query
+            try (final Connection conn = ds.getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+                // Set parameters
+                int paramIndex = 1;
+                stmt.setString(paramIndex++, relationName);
+
+                // Set value codes for IN clause
+                for (String code : valueCodes) {
+                    stmt.setString(paramIndex++, code);
+                }
+
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        String aggregatedValues = rs.getString("value_code_to");
+                        result = Success.of(aggregatedValues);
+                    } else {
+                        result = Failure.of(new Status(OBJECT_NOT_FOUND, "relationName", relationName));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
-        return JsonMapper.string2List(json);
+        return result;
     }
+
 }

@@ -48,7 +48,7 @@ public class EventMatcherTest {
         EventMatcher matcher = new EventMatcher(null, aggregateTypesInput);
         assertFalse(matcher.isMatchAll());
         assertTrue(matcher.getExactEventTypes().isEmpty());
-        assertEquals(new HashSet<>(Arrays.asList("user", "configproperty")), matcher.getNormalizedAggregateTypes());
+        assertEquals(new HashSet<>(Arrays.asList("User", "ConfigProperty")), matcher.getNormalizedAggregateTypes());
     }
 
     @Test
@@ -58,7 +58,7 @@ public class EventMatcherTest {
         EventMatcher matcher = new EventMatcher(eventTypesInput, aggregateTypesInput);
         assertFalse(matcher.isMatchAll());
         assertEquals(new HashSet<>(Arrays.asList("UserCreatedEvent", "HostDeletedEvent")), matcher.getExactEventTypes());
-        assertEquals(new HashSet<>(Arrays.asList("user", "service")), matcher.getNormalizedAggregateTypes());
+        assertEquals(new HashSet<>(Arrays.asList("User", "Service")), matcher.getNormalizedAggregateTypes());
     }
 
     @Test
