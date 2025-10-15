@@ -21,7 +21,7 @@ import java.util.*;
 
 import static com.networknt.db.provider.SqlDbStartupHook.ds;
 import static java.sql.Types.NULL;
-import static net.lightapi.portal.db.util.SqlUtil.addCondition;
+import static net.lightapi.portal.db.util.SqlUtil.*;
 
 public class UserPersistenceImpl implements UserPersistence {
     private static final Logger logger = LoggerFactory.getLogger(UserPersistenceImpl.class);
@@ -633,11 +633,24 @@ public class UserPersistenceImpl implements UserPersistence {
     }
 
     @Override
-    public Result<String> queryUserByHostId(int offset, int limit, String hostId, String email, String language, String userType,
-                                            String entityId, String referralId, String managerId, String firstName, String lastName,
-                                            String phoneNumber, String gender, String birthday, String country, String province, String city,
-                                            String address, String postCode, Boolean verified, Boolean locked) {
+    public Result<String> queryUserByHostId(int offset, int limit, String filtersJson, String globalFilter, String sortingJson) {
         Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "uh.host_id",
+                "userId", "u.user_id",
+                "email", "u.email",
+                "language", "u.language",
+                "firstName", "u.first_name",
+                "lastName", "u.last_name",
+                "userType", "u.user_type",
+                "verified", "u.verified",
+                "locked", "u.locked"
+        ));
+        columnMap.put("entityId", "COALESCE(c.customer_id, e.employee_id)");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
@@ -648,40 +661,71 @@ public class UserPersistenceImpl implements UserPersistence {
                 LEFT JOIN user_host_t uh ON u.user_id = uh.user_id
                 LEFT JOIN customer_t c ON uh.host_id = c.host_id AND u.user_id = c.user_id
                 LEFT JOIN employee_t e ON uh.host_id = e.host_id AND u.user_id = e.user_id
-                WHERE uh.host_id = ?
+                WHERE 1 = 1
                 """;
         StringBuilder sqlBuilder = new StringBuilder(s);
-
         List<Object> parameters = new ArrayList<>();
-        parameters.add(UUID.fromString(hostId));
-
         StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "u.email", email);
-        addCondition(whereClause, parameters, "u.language", language);
-        addCondition(whereClause, parameters, "u.user_type", userType);
-        addCondition(whereClause, parameters, "COALESCE(c.customer_id, e.employee_id)", entityId); // Using COALESCE here
-        addCondition(whereClause, parameters, "c.referral_id", referralId);
-        addCondition(whereClause, parameters, "e.manager_id", managerId);
-        addCondition(whereClause, parameters, "u.first_name", firstName);
-        addCondition(whereClause, parameters, "u.last_name", lastName);
-        addCondition(whereClause, parameters, "u.phone_number", phoneNumber);
-        addCondition(whereClause, parameters, "u.gender", gender);
-        addCondition(whereClause, parameters, "u.birthday", birthday);
-        addCondition(whereClause, parameters, "u.country", country);
-        addCondition(whereClause, parameters, "u.province", province);
-        addCondition(whereClause, parameters, "u.city", city);
-        addCondition(whereClause, parameters, "u.address", address);
-        addCondition(whereClause, parameters, "u.post_code", postCode);
-        addCondition(whereClause, parameters, "u.verified", verified);
-        addCondition(whereClause, parameters, "u.locked", locked);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
+        // Material React Table Filters (Dynamic Filters) ---
+        for (Map<String, Object> filter : filters) {
+            String filterId = (String) filter.get("id"); // Column name
+            String dbColumnName = mapToDbColumn(columnMap, filterId);
+            Object filterValue = filter.get("value");    // Value to filter by
+            if (filterId != null && filterValue != null && !filterValue.toString().isEmpty()) {
+                if(dbColumnName.equals("uh.host_id") || dbColumnName.equals("u.user_id")) {
+                    whereClause.append(" AND ").append(dbColumnName).append(" = ?");
+                    parameters.add(UUID.fromString(filterValue.toString()));
+                } else {
+                    whereClause.append(" AND ").append(dbColumnName).append(" ILIKE ?");
+                    parameters.add("%" + filterValue + "%");
+                }
+            }
         }
 
-        sqlBuilder.append(" ORDER BY u.last_name\n" +
-                "LIMIT ? OFFSET ?");
+        // Global Filter (Search across multiple columns)
+        if (globalFilter != null && !globalFilter.isEmpty()) {
+            whereClause.append(" AND (");
+            // Define columns to search for global filter (e.g., table_name, table_desc)
+            String[] globalSearchColumns = {"u.email", "u.first_name", "u.last_name", "COALESCE(c.customer_id, e.employee_id)"};
+            List<String> globalConditions = new ArrayList<>();
+            for (String col : globalSearchColumns) {
+                globalConditions.add(col + " ILIKE ?");
+                parameters.add("%" + globalFilter + "%");
+            }
+            whereClause.append(String.join(" OR ", globalConditions));
+            whereClause.append(")");
+        }
+
+        // Append the constructed WHERE clause
+        sqlBuilder.append(whereClause);
+
+
+        // Dynamic Sorting
+        StringBuilder orderByClause = new StringBuilder();
+        if (sorting.isEmpty()) {
+            // Default sort if none provided
+            orderByClause.append(" ORDER BY u.last_name");
+        } else {
+            orderByClause.append(" ORDER BY ");
+            List<String> sortExpressions = new ArrayList<>();
+            for (Map<String, Object> sort : sorting) {
+                String sortId = (String) sort.get("id");
+                String dbColumnName = mapToDbColumn(columnMap, sortId);
+                Boolean isDesc = (Boolean) sort.get("desc"); // 'desc' is typically a boolean or "true"/"false" string
+                if (sortId != null && !sortId.isEmpty()) {
+                    String direction = (isDesc != null && isDesc) ? "DESC" : "ASC";
+                    // Quote column name to handle SQL keywords or mixed case
+                    sortExpressions.add(dbColumnName + " " + direction);
+                }
+            }
+            // Use default if dynamic sort failed to produce anything
+            orderByClause.append(sortExpressions.isEmpty() ? "u.last_name" : String.join(", ", sortExpressions));
+        }
+        sqlBuilder.append(orderByClause);
+
+        // Pagination
+        sqlBuilder.append("\nLIMIT ? OFFSET ?");
 
         parameters.add(limit);
         parameters.add(offset);

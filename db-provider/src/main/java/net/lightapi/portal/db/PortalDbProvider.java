@@ -74,10 +74,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> queryUserByTypeEntityId(String userType, String entityId);
     Result<String> queryUserByWallet(String cryptoType, String cryptoAddress);
     Result<String> queryEmailByWallet(String cryptoType, String cryptoAddress);
-    Result<String> queryUserByHostId(int offset, int limit, String hostId, String email, String language, String userType,
-                                     String entityId, String referralId, String managerId, String firstName, String lastName,
-                                     String phoneNumber, String gender, String birthday, String country, String province, String city,
-                                     String address, String postCode, Boolean verified, Boolean locked);
+    Result<String> queryUserByHostId(int offset, int limit, String filters, String globalFilter, String sorting);
     Result<String> queryNotification(int offset, int limit, String hostId, String userId, Long nonce, String eventClass, Boolean successFlag,
                                      Timestamp processTs, String eventJson, String error);
     Result<String> getHostsByUserId(String userId);
