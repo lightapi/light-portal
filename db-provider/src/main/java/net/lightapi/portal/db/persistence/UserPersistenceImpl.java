@@ -663,69 +663,13 @@ public class UserPersistenceImpl implements UserPersistence {
                 LEFT JOIN employee_t e ON uh.host_id = e.host_id AND u.user_id = e.user_id
                 WHERE 1 = 1
                 """;
-        StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
-        StringBuilder whereClause = new StringBuilder();
 
-        // Material React Table Filters (Dynamic Filters) ---
-        for (Map<String, Object> filter : filters) {
-            String filterId = (String) filter.get("id"); // Column name
-            String dbColumnName = mapToDbColumn(columnMap, filterId);
-            Object filterValue = filter.get("value");    // Value to filter by
-            if (filterId != null && filterValue != null && !filterValue.toString().isEmpty()) {
-                if(dbColumnName.equals("uh.host_id") || dbColumnName.equals("u.user_id")) {
-                    whereClause.append(" AND ").append(dbColumnName).append(" = ?");
-                    parameters.add(UUID.fromString(filterValue.toString()));
-                } else {
-                    whereClause.append(" AND ").append(dbColumnName).append(" ILIKE ?");
-                    parameters.add("%" + filterValue + "%");
-                }
-            }
-        }
-
-        // Global Filter (Search across multiple columns)
-        if (globalFilter != null && !globalFilter.isEmpty()) {
-            whereClause.append(" AND (");
-            // Define columns to search for global filter (e.g., table_name, table_desc)
-            String[] globalSearchColumns = {"u.email", "u.first_name", "u.last_name", "COALESCE(c.customer_id, e.employee_id)"};
-            List<String> globalConditions = new ArrayList<>();
-            for (String col : globalSearchColumns) {
-                globalConditions.add(col + " ILIKE ?");
-                parameters.add("%" + globalFilter + "%");
-            }
-            whereClause.append(String.join(" OR ", globalConditions));
-            whereClause.append(")");
-        }
-
-        // Append the constructed WHERE clause
-        sqlBuilder.append(whereClause);
-
-
-        // Dynamic Sorting
-        StringBuilder orderByClause = new StringBuilder();
-        if (sorting.isEmpty()) {
-            // Default sort if none provided
-            orderByClause.append(" ORDER BY u.last_name");
-        } else {
-            orderByClause.append(" ORDER BY ");
-            List<String> sortExpressions = new ArrayList<>();
-            for (Map<String, Object> sort : sorting) {
-                String sortId = (String) sort.get("id");
-                String dbColumnName = mapToDbColumn(columnMap, sortId);
-                Boolean isDesc = (Boolean) sort.get("desc"); // 'desc' is typically a boolean or "true"/"false" string
-                if (sortId != null && !sortId.isEmpty()) {
-                    String direction = (isDesc != null && isDesc) ? "DESC" : "ASC";
-                    // Quote column name to handle SQL keywords or mixed case
-                    sortExpressions.add(dbColumnName + " " + direction);
-                }
-            }
-            // Use default if dynamic sort failed to produce anything
-            orderByClause.append(sortExpressions.isEmpty() ? "u.last_name" : String.join(", ", sortExpressions));
-        }
-        sqlBuilder.append(orderByClause);
-
-        // Pagination
-        sqlBuilder.append("\nLIMIT ? OFFSET ?");
+        String[] searchColumns = {"u.email", "u.first_name", "u.last_name", "COALESCE(c.customer_id, e.employee_id)"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("uh.host_id", "u.user_id"), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("u.last_name", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
@@ -736,11 +680,9 @@ public class UserPersistenceImpl implements UserPersistence {
         List<Map<String, Object>> users = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+            PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
 
+            populateParameters(preparedStatement, parameters);
 
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
