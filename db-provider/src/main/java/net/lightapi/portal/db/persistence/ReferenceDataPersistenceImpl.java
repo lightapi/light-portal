@@ -227,7 +227,7 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
             whereClause.append(" WHERE host_id IS NULL");
         }
 
-        // --- 5. Material React Table Filters (Dynamic Filters) ---
+        // Material React Table Filters (Dynamic Filters)
         for (Map<String, Object> filter : filters) {
             String filterId = (String) filter.get("id"); // Column name
             String dbColumnName = camelToSnake(filterId);

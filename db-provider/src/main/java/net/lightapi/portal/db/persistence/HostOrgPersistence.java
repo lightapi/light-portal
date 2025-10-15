@@ -9,7 +9,7 @@ public interface HostOrgPersistence {
     void createOrg(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateOrg(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteOrg(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> getOrg(int offset, int limit, String domain, String orgName, String orgDesc, String orgOwner);
+    Result<String> getOrg(int offset, int limit, String filters, String globalFilter, String sorting);
 
     void createHost(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateHost(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -21,8 +21,8 @@ public interface HostOrgPersistence {
     Result<String> queryHostDomainById(String hostId);
     Result<String> queryHostById(String id);
     Result<Map<String, Object>> queryHostByOwner(String owner);
-    Result<String> getHost(int offset, int limit, String hostId, String domain, String subDomain, String hostDesc, String hostOwner);
-    Result<String> getUserHost(int offset, int limit, String hostId, String domain, String subDomain, String userId, String email, String firstName, String lastName, Boolean current);
+    Result<String> getHost(int offset, int limit, String filters, String globalFilter, String sorting);
+    Result<String> getUserHost(int offset, int limit, String filters, String globalFilter, String sorting);
     Result<String> getHostByDomain(String domain, String subDomain, String hostDesc);
     Result<String> getHostLabel();
 }
