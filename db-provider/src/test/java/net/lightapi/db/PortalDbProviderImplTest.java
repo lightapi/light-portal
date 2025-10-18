@@ -135,7 +135,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     public void testQueryRole()  {
-        Result<String> result = dbProvider.queryRole(0, 4, "01964b05-552a-7c4b-9184-6857e7f3dc5f", null, null);
+        Result<String> result = dbProvider.queryRole(0, 4, null, null, null, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
         if(result.isFailure()) {
             System.out.println(result.getError());
             fail();

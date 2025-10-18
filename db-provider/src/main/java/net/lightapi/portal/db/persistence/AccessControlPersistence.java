@@ -11,31 +11,31 @@ public interface AccessControlPersistence {
     void createRole(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateRole(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteRole(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> queryRole(int offset, int limit, String hostId, String roleId, String roleDesc);
+    Result<String> queryRole(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> queryRoleLabel(String hostId);
 
     // RolePermission
     void createRolePermission(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteRolePermission(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> queryRolePermission(int offset, int limit, String hostId, String roleId, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint);
+    Result<String> queryRolePermission(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
 
     // RoleUser
     void createRoleUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateRoleUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteRoleUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> queryRoleUser(int offset, int limit, String hostId, String roleId, String userId, String entityId, String email, String firstName, String lastName, String userType);
+    Result<String> queryRoleUser(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
 
     // RoleRowFilter
     void createRoleRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateRoleRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteRoleRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> queryRoleRowFilter(int offset, int limit, String hostId, String roleId, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint);
+    Result<String> queryRoleRowFilter(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
 
     // RoleColFilter
     void createRoleColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateRoleColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteRoleColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> queryRoleColFilter(int offset, int limit, String hostId, String roleId, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint);
+    Result<String> queryRoleColFilter(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
 
     // Group
     void createGroup(Connection conn, Map<String, Object> event) throws SQLException, Exception;

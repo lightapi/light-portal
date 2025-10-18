@@ -247,7 +247,7 @@ public class SqlUtil {
         // Material React Table Filters (Dynamic Filters) ---
         for (Map<String, Object> filter : filters) {
             String filterId = (String) filter.get("id"); // Column name
-            String dbColumnName = mapToDbColumn(columnMap, filterId);
+            String dbColumnName = columnMap == null ? camelToSnake(filterId) : mapToDbColumn(columnMap, filterId);
             Object filterValue = filter.get("value");    // Value to filter by
             if (filterId != null && filterValue != null && !filterValue.toString().isEmpty()) {
                 if(uuidColumnNames.contains(dbColumnName)) {
@@ -289,7 +289,7 @@ public class SqlUtil {
             List<String> sortExpressions = new ArrayList<>();
             for (Map<String, Object> sort : sorting) {
                 String sortId = (String) sort.get("id");
-                String dbColumnName = mapToDbColumn(columnMap, sortId);
+                String dbColumnName = columnMap == null ? camelToSnake(sortId) : mapToDbColumn(columnMap, sortId);
                 Boolean isDesc = (Boolean) sort.get("desc"); // 'desc' is typically a boolean or "true"/"false" string
                 if (sortId != null && !sortId.isEmpty()) {
                     String direction = (isDesc != null && isDesc) ? "DESC" : "ASC";
