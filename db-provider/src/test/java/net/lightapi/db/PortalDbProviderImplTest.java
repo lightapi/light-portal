@@ -150,7 +150,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     public void testQueryGroup() {
-        Result<String> result = dbProvider.queryGroup(0, 2, "01964b05-552a-7c4b-9184-6857e7f3dc5f", "le", null);
+        Result<String> result = dbProvider.queryGroup(0, 2, null, null, null,"01964b05-552a-7c4b-9184-6857e7f3dc5f");
         if(result.isFailure()) {
             System.out.println(result.getError());
             fail();
@@ -164,7 +164,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     public void testQueryPosition() {
-        Result<String> result = dbProvider.queryPosition(0, 2, "01964b05-552a-7c4b-9184-6857e7f3dc5f", null, null, "Y", null);
+        Result<String> result = dbProvider.queryPosition(0, 2, null, null, null, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
         if(result.isFailure()) {
             System.out.println(result.getError());
             fail();
@@ -178,7 +178,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     public void testQueryAttribute() {
-        Result<String> result = dbProvider.queryAttribute(0, 2, "01964b05-552a-7c4b-9184-6857e7f3dc5f", "ou", null, null);
+        Result<String> result = dbProvider.queryAttribute(0, 2, null, null, null,"01964b05-552a-7c4b-9184-6857e7f3dc5f");
         if(result.isFailure()) {
             System.out.println(result.getError());
             fail();
