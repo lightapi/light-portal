@@ -381,10 +381,8 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                 UPDATE user_host_t
                 SET current = false,
                 update_user = ?,
-                update_ts = ?,
-                aggregate_version = ?
+                update_ts = ?
                 WHERE user_id = ?
-                AND aggregate_version = ?
                 AND current = true
                 """;
         final String activateNewHost =
@@ -425,9 +423,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
         try (PreparedStatement statement = conn.prepareStatement(deactivateCurrentUserHost)) {
             statement.setString(1, userId);
             statement.setObject(2, OffsetDateTime.parse(updateTs));
-            statement.setLong(3, newAggregateVersion);
-            statement.setObject(4, UUID.fromString(userId));
-            statement.setLong(5, oldAggregateVersion);
+            statement.setObject(3, UUID.fromString(userId));
             int count = statement.executeUpdate();
             if (count > 0) {
                 logger.debug("Deactivated {} current host(s) for user {}", count, userId);

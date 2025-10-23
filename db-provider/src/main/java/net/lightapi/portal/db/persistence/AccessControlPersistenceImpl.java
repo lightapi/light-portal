@@ -20,6 +20,7 @@ import java.util.*;
 
 import static com.networknt.db.provider.SqlDbStartupHook.ds;
 import static java.sql.Types.NULL;
+import static net.lightapi.portal.db.util.SqlUtil.*;
 
 public class AccessControlPersistenceImpl implements AccessControlPersistence {
     private static final Logger logger = LoggerFactory.getLogger(AccessControlPersistenceImpl.class);
@@ -152,8 +153,11 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryRole(int offset, int limit, String hostId, String roleId, String roleDesc) {
+    public Result<String> queryRole(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result;
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
             """
                 SELECT COUNT(*) OVER () AS total,
@@ -163,37 +167,29 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 WHERE host_id = ?
             """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
 
-        StringBuilder whereClause = new StringBuilder();
-
-        SqlUtil.addCondition(whereClause, parameters, "role_id", roleId);
-        SqlUtil.addCondition(whereClause, parameters, "role_desc", roleDesc);
-
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY role_id\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"role_id", "role_desc"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("host_id"), filters, null, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("role_id", sorting, null) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
-        if(logger.isTraceEnabled()) logger.trace("queryRole sql: {}", sql);
+        if(logger.isTraceEnabled()) logger.trace("queryRole sql: {}", sqlBuilder);
+
         int total = 0;
         List<Map<String, Object>> roles = new ArrayList<>();
 
 
-        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sqlBuilder)) {
+
+            populateParameters(preparedStatement, parameters);
+
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -262,8 +258,24 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryRolePermission(int offset, int limit, String hostId, String roleId, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint) {
+    public Result<String> queryRolePermission(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "r.host_id",
+                "roleId", "r.role_id",
+                "apiVersionId", "av.api_version_id",
+                "apiId", "av.api_id",
+                "apiVersion", "av.api_version",
+                "endpointId", "rp.endpoint_id",
+                "endpoint", "ae.endpoint",
+                "aggregateVersion", "rp.aggregate_version",
+                "updateUser", "rp.update_user",
+                "updateTs", "rp.update_ts"
+        ));
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
@@ -275,39 +287,27 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 JOIN api_version_t av ON ae.host_id = av.host_id AND ae.api_version_id = av.api_version_id
                 AND r.host_id = ?
                 """;
-        StringBuilder sqlBuilder = new StringBuilder(s);
 
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-
-        SqlUtil.addCondition(whereClause, parameters, "r.role_id", roleId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_version_id", apiVersionId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_id", apiId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_version", apiVersion);
-        SqlUtil.addCondition(whereClause, parameters, "rp.endpoint_id", endpointId);
-        SqlUtil.addCondition(whereClause, parameters, "ae.endpoint", endpoint);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY r.role_id, av.api_id, av.api_version, ae.endpoint\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"r.role_id", "ae.endpoint"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("r.host_id", "av.api_version_id", "rp.endpoint_id"), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("r.role_id, av.api_id, av.api_version, ae.endpoint", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
-        if(logger.isTraceEnabled()) logger.trace("queryRolePermission sql: {}", sql);
+        if(logger.isTraceEnabled()) logger.trace("queryRolePermission sql: {}", sqlBuilder);
         int total = 0;
         List<Map<String, Object>> rolePermissions = new ArrayList<>();
 
-        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sqlBuilder)) {
+
+            populateParameters(preparedStatement, parameters);
+
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -346,8 +346,28 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryRoleUser(int offset, int limit, String hostId, String roleId, String userId, String entityId, String email, String firstName, String lastName, String userType) {
+    public Result<String> queryRoleUser(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "r.host_id",
+                "roleId", "r.role_id",
+                "startTs", "r.start_ts",
+                "endTs", "r.end_ts",
+                "aggregateVersion", "r.aggregate_version",
+                "updateUser", "r.update_user",
+                "updateTs", "r.update_ts",
+                "userId", "u.user_id",
+                "email", "u.email",
+                "userType", "u.user_type"
+        ));
+        columnMap.put("entityId", "CASE WHEN u.user_type = 'C' THEN c.customer_id WHEN u.user_type = 'E' THEN e.employee_id ELSE NULL -- Handle other cases if needed END");
+        columnMap.put("firstName", "u.first_name");
+        columnMap.put("lastName", "u.last_name");
+        columnMap.put("managerId", "e.manager_id");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
@@ -370,42 +390,28 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 AND r.host_id = ?
                 """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
-
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
 
-        StringBuilder whereClause = new StringBuilder();
-
-        SqlUtil.addCondition(whereClause, parameters, "r.role_id", roleId);
-        SqlUtil.addCondition(whereClause, parameters, "u.user_id", userId != null ? UUID.fromString(userId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "entity_id", entityId);
-        SqlUtil.addCondition(whereClause, parameters, "u.email", email);
-        SqlUtil.addCondition(whereClause, parameters, "u.first_name", firstName);
-        SqlUtil.addCondition(whereClause, parameters, "u.last_name", lastName);
-        SqlUtil.addCondition(whereClause, parameters, "u.user_type", userType);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY r.role_id, u.user_id\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"r.role_id", "u.email", "u.first_name", "u.last_name"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("r.host_id", "u.user_id"), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("r.role_id, u.user_id", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
-        if(logger.isTraceEnabled()) logger.trace("queryRoleUser sql: {}", sql);
+        if(logger.isTraceEnabled()) logger.trace("queryRoleUser sql: {}", sqlBuilder);
         int total = 0;
         List<Map<String, Object>> roleUsers = new ArrayList<>();
 
 
-        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sqlBuilder)) {
+
+            populateParameters(preparedStatement, parameters);
+
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -689,8 +695,27 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryRoleRowFilter(int offset, int limit, String hostId, String roleId, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint) {
+    public Result<String> queryRoleRowFilter(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "r.host_id",
+                "roleId", "r.role_id",
+                "endpointId", "p.endpoint_id",
+                "endpoint", "ae.endpoint",
+                "apiVersionId", "av.api_version_id",
+                "apiId", "av.api_id",
+                "apiVersion", "av.api_version",
+                "colName", "p.col_name",
+                "operator", "p.operator",
+                "colValue", "p.col_value"
+        ));
+        columnMap.put("updateUser", "p.update_user");
+        columnMap.put("updateTs", "p.update_ts");
+        columnMap.put("aggregateVersion", "p.aggregate_version");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total, r.host_id, r.role_id, p.endpoint_id, ae.endpoint,
@@ -703,39 +728,27 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 WHERE p.host_id = ?
                 """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
-
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-
-        SqlUtil.addCondition(whereClause, parameters, "p.role_id", roleId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_version_id", apiVersionId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_id", apiId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_version", apiVersion);
-        SqlUtil.addCondition(whereClause, parameters, "p.endpoint_id", endpointId);
-        SqlUtil.addCondition(whereClause, parameters, "ae.endpoint", endpoint);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY p.role_id, av.api_id, av.api_version, ae.endpoint, p.col_name\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"r.role_id", "ae.endpoint", "p.col_name", "p.col_value"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("r.host_id", "p.endpoint_id", "av.api_version_id"), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("p.role_id, av.api_id, av.api_version, ae.endpoint, p.col_name", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
-        if(logger.isTraceEnabled()) logger.trace("queryRoleRowFilter sql: {}", sql);
+
+        if(logger.isTraceEnabled()) logger.trace("queryRoleRowFilter sql: {}", sqlBuilder);
         int total = 0;
         List<Map<String, Object>> roleRowFilters = new ArrayList<>();
 
-        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sqlBuilder)) {
+
+            populateParameters(preparedStatement, parameters);
+
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -937,8 +950,25 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryRoleColFilter(int offset, int limit, String hostId, String roleId, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint) {
+    public Result<String> queryRoleColFilter(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "r.host_id",
+                "roleId", "r.role_id",
+                "endpointId", "ae.endpoint_id",
+                "endpoint", "ae.endpoint",
+                "apiVersionId", "av.api_version_id",
+                "apiId", "av.api_id",
+                "apiVersion", "av.api_version",
+                "columns", "rcf.columns",
+                "updateUser", "rcf.update_user",
+                "updateTs", "rcf.update_ts"
+        ));
+        columnMap.put("aggregateVersion", "rcf.aggregate_version");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
@@ -952,40 +982,24 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 AND r.host_id = ?
                 """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
-
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-
-        SqlUtil.addCondition(whereClause, parameters, "r.role_id", roleId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_version_id", apiVersionId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_id", apiId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_version", apiVersion);
-        SqlUtil.addCondition(whereClause, parameters, "ae.endpoint_id", endpointId);
-        SqlUtil.addCondition(whereClause, parameters, "ae.endpoint", endpoint);
-
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY r.role_id, av.api_id, av.api_version, ae.endpoint\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"r.role_id", "ae.endpoint", "rcf.columns"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("r.host_id", "av.api_version_id", "ae.endpoint_id"), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("r.role_id, av.api_id, av.api_version, ae.endpoint", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
-        if(logger.isTraceEnabled()) logger.trace("queryRoleColFilter sql: {}", sql);
+        if(logger.isTraceEnabled()) logger.trace("queryRoleColFilter sql: {}", sqlBuilder);
         int total = 0;
         List<Map<String, Object>> roleColFilters = new ArrayList<>();
 
-        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -1298,8 +1312,10 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryGroup(int offset, int limit, String hostId, String groupId, String groupDesc) {
+    public Result<String> queryGroup(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result;
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
         String s =
             """
             SELECT COUNT(*) OVER () AS total,
@@ -1309,32 +1325,23 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             WHERE host_id = ?
             """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-        SqlUtil.addCondition(whereClause, parameters, "group_id", groupId);
-        SqlUtil.addCondition(whereClause, parameters, "group_desc", groupDesc);
+        String[] searchColumns = {"group_id", "group_desc"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("host_id"), filters, null, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("group_id", sorting, null) +
+                "\nLIMIT ? OFFSET ?";
 
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY group_id\n" +
-                "LIMIT ? OFFSET ?");
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> groups = new ArrayList<>();
 
-        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -1400,8 +1407,24 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryGroupPermission(int offset, int limit, String hostId, String groupId, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint) {
+    public Result<String> queryGroupPermission(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "gp.host_id",
+                "groupId", "gp.group_id",
+                "apiId", "av.api_id",
+                "apiVersion", "av.api_version",
+                "apiVersionId", "av.api_version_id",
+                "endpoint", "ae.endpoint",
+                "endpointId", "ae.endpoint_id",
+                "aggregateVersion", "gp.aggregate_version",
+                "updateUser", "gp.update_user",
+                "updateTs", "gp.update_ts"
+        ));
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
             """
                 SELECT COUNT(*) OVER () AS total,
@@ -1414,41 +1437,26 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 WHERE gp.host_id = ?
             """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
-
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-
-        StringBuilder whereClause = new StringBuilder();
-
-        SqlUtil.addCondition(whereClause, parameters, "gp.group_id", groupId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_id", apiId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_version", apiVersion);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_version_id", apiVersionId);
-        SqlUtil.addCondition(whereClause, parameters, "ae.endpoint", endpoint);
-        SqlUtil.addCondition(whereClause, parameters, "ae.endpoint_id", endpointId);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY gp.group_id, av.api_id, av.api_version, ae.endpoint\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"gp.group_id", "ae.endpoint"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("gp.host_id", "av.api_version_id", "ae.endpoint_id"), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("gp.group_id, av.api_id, av.api_version, ae.endpoint", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
-        if(logger.isTraceEnabled()) logger.trace("queryGroupPermission sql: {}", sql);
+
+        if(logger.isTraceEnabled()) logger.trace("queryGroupPermission sql: {}", sqlBuilder);
         int total = 0;
         List<Map<String, Object>> groupPermissions = new ArrayList<>();
 
 
-        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -1489,8 +1497,29 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryGroupUser(int offset, int limit, String hostId, String groupId, String userId, String entityId, String email, String firstName, String lastName, String userType) {
+    public Result<String> queryGroupUser(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result;
+
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "g.host_id",
+                "groupId", "g.group_id",
+                "startTs", "g.start_ts",
+                "endTs", "g.end_ts",
+                "userId", "u.user_id",
+                "email", "u.email",
+                "userType", "u.user_type",
+                "updateUser", "g.update_user",
+                "updateTs", "g.update_ts",
+                "aggregateVersion", "g.aggregate_version"
+        ));
+        columnMap.put("entityId", "CASE WHEN u.user_type = 'C' THEN c.customer_id WHEN u.user_type = 'E' THEN e.employee_id ELSE NULL -- Handle other cases if needed END");
+        columnMap.put("firstName", "u.first_name");
+        columnMap.put("lastName", "u.last_name");
+        columnMap.put("managerId", "e.manager_id");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
             """
                 SELECT COUNT(*) OVER () AS total,
@@ -1513,42 +1542,26 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 WHERE g.host_id = ?
             """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
-
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
 
-        StringBuilder whereClause = new StringBuilder();
-
-        SqlUtil.addCondition(whereClause, parameters, "g.group_id", groupId);
-        SqlUtil.addCondition(whereClause, parameters, "u.user_id", userId != null ? UUID.fromString(userId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "entity_id", entityId);
-        SqlUtil.addCondition(whereClause, parameters, "u.email", email);
-        SqlUtil.addCondition(whereClause, parameters, "u.first_name", firstName);
-        SqlUtil.addCondition(whereClause, parameters, "u.last_name", lastName);
-        SqlUtil.addCondition(whereClause, parameters, "u.user_type", userType);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY g.group_id, u.user_id\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"g.group_id", "u.email", "u.first_name", "u.last_name"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("g.host_id", "u.user_id"), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("g.group_id, u.user_id", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
-        if(logger.isTraceEnabled()) logger.trace("queryGroupUser sql: {}", sql);
+        if(logger.isTraceEnabled()) logger.trace("queryGroupUser sql: {}", sqlBuilder);
         int total = 0;
         List<Map<String, Object>> groupUsers = new ArrayList<>();
 
 
-        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -1835,8 +1848,27 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryGroupRowFilter(int offset, int limit, String hostId, String GroupId, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint) {
+    public Result<String> queryGroupRowFilter(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "g.host_id",
+                "groupId", "g.group_id",
+                "endpointId", "p.endpoint_id",
+                "endpoint", "ae.endpoint",
+                "apiVersionId", "av.api_version_id",
+                "apiId", "av.api_id",
+                "apiVersion", "av.api_version",
+                "colName", "p.col_name",
+                "operator", "p.operator",
+                "colValue", "p.col_value"
+        ));
+        columnMap.put("updateUser", "p.update_user");
+        columnMap.put("updateTs", "p.update_ts");
+        columnMap.put("aggregateVersion", "p.aggregate_version");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
             """
             SELECT COUNT(*) OVER () AS total, g.host_id, g.group_id, p.endpoint_id, ae.endpoint,
@@ -1849,38 +1881,24 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             WHERE p.host_id = ?
             """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-
-        SqlUtil.addCondition(whereClause, parameters, "g.group_id", GroupId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_version_id", apiVersionId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_id", apiId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_version", apiVersion);
-        SqlUtil.addCondition(whereClause, parameters, "p.endpoint_id", endpointId);
-        SqlUtil.addCondition(whereClause, parameters, "ae.endpoint", endpoint);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY g.group_id, av.api_id, av.api_version, ae.endpoint, p.col_name, p.operator\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"g.group_id", "ae.endpoint", "p.col_name", "p.col_value"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("g.host_id", "p.endpoint_id", "av.api_version_id"), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("g.group_id, av.api_id, av.api_version, ae.endpoint, p.col_name, p.operator", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
-        if(logger.isTraceEnabled()) logger.trace("queryGroupRowFilter sql: {}", sql);
+        if(logger.isTraceEnabled()) logger.trace("queryGroupRowFilter sql: {}", sqlBuilder);
         int total = 0;
         List<Map<String, Object>> groupRowFilters = new ArrayList<>();
 
-        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -2084,8 +2102,25 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryGroupColFilter(int offset, int limit, String hostId, String GroupId, String apiVersionId,String apiId, String apiVersion, String endpointId, String endpoint) {
+    public Result<String> queryGroupColFilter(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "g.host_id",
+                "groupId", "g.group_id",
+                "endpointId", "ae.endpoint_id",
+                "endpoint", "ae.endpoint",
+                "apiVersionId", "av.api_version_id",
+                "apiId", "av.api_id",
+                "apiVersion", "av.api_version",
+                "columns", "cf.columns",
+                "updateUser", "cf.update_user",
+                "updateTs", "cf.update_ts"
+        ));
+        columnMap.put("aggregateVersion", "cf.aggregate_version");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
             """
             SELECT COUNT(*) OVER () AS total,
@@ -2099,38 +2134,24 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             WHERE cf.host_id = ?
             """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-
-        SqlUtil.addCondition(whereClause, parameters, "g.group_id", GroupId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_version_id", apiVersionId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_id", apiId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_version", apiVersion);
-        SqlUtil.addCondition(whereClause, parameters, "ae.endpoint_id", endpointId);
-        SqlUtil.addCondition(whereClause, parameters, "ae.endpoint", endpoint);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY g.group_id, av.api_id, av.api_version, ae.endpoint\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"g.group_id", "ae.endpoint", "cf.columns"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("g.host_id", "av.api_version_id", "ae.endpoint_id"), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("g.group_id, av.api_id, av.api_version, ae.endpoint", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
-        if(logger.isTraceEnabled()) logger.trace("queryGroupColFilter sql: {}", sql);
+        if(logger.isTraceEnabled()) logger.trace("queryGroupColFilter sql: {}", sqlBuilder);
         int total = 0;
         List<Map<String, Object>> groupColFilters = new ArrayList<>();
 
-        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -2470,8 +2491,11 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
 
     @Override
-    public Result<String> queryPosition(int offset, int limit, String hostId, String positionId, String positionDesc, String inheritToAncestor, String inheritToSibling) {
+    public Result<String> queryPosition(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result;
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
             """
             SELECT COUNT(*) OVER () AS total,
@@ -2480,35 +2504,24 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             FROM position_t
             WHERE host_id = ?
             """;
-        StringBuilder sqlBuilder = new StringBuilder(s);
+
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-        SqlUtil.addCondition(whereClause, parameters, "position_id", positionId);
-        SqlUtil.addCondition(whereClause, parameters, "position_desc", positionDesc);
-        SqlUtil.addCondition(whereClause, parameters, "inherit_to_ancestor", inheritToAncestor);
-        SqlUtil.addCondition(whereClause, parameters, "inherit_to_sibling", inheritToSibling);
+        String[] searchColumns = {"position_id", "position_desc"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("host_id"), filters, null, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("position_id", sorting, null) +
+                "\nLIMIT ? OFFSET ?";
 
-        if (whereClause.length() > 0) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-        sqlBuilder.append(" ORDER BY position_id\n" +
-                "LIMIT ? OFFSET ?");
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
-
         int total = 0;
         List<Map<String, Object>> positions = new ArrayList<>();
-
-        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
-
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
@@ -2575,8 +2588,26 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryPositionPermission(int offset, int limit, String hostId, String positionId, String inheritToAncestor, String inheritToSibling, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint) {
+    public Result<String> queryPositionPermission(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "pp.host_id",
+                "positionId", "pp.position_id",
+                "apiVersionId", "av.api_version_id",
+                "apiId", "av.api_id",
+                "apiVersion", "av.api_version",
+                "endpointId", "ae.endpoint_id",
+                "endpoint", "ae.endpoint",
+                "aggregateVersion", "pp.aggregate_version",
+                "updateUser", "pp.update_user",
+                "updateTs", "pp.update_ts"
+        ));
+        columnMap.put("inheritToAncestor", "p.inherit_to_ancestor");
+        columnMap.put("inheritToSibling", "p.inherit_to_sibling");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
             """
                 SELECT COUNT(*) OVER () AS total,
@@ -2590,43 +2621,25 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 WHERE pp.host_id = ?
             """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
-
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-
-        StringBuilder whereClause = new StringBuilder();
-
-        SqlUtil.addCondition(whereClause, parameters, "pp.position_id", positionId);
-        SqlUtil.addCondition(whereClause, parameters, "p.inherit_to_ancestor", inheritToAncestor);
-        SqlUtil.addCondition(whereClause, parameters, "p.inherit_to_sibling", inheritToSibling);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_version_id", apiVersionId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_id", apiId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_version", apiVersion);
-        SqlUtil.addCondition(whereClause, parameters, "ae.endpoint_id", endpointId);
-        SqlUtil.addCondition(whereClause, parameters, "ae.endpoint", endpoint);
-
-        if (whereClause.length() > 0) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY pp.position_id, av.api_id, av.api_version, ae.endpoint\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"pp.position_id", "ae.endpoint"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("pp.host_id", "av.api_version_id", "ae.endpoint_id"), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("pp.position_id, av.api_id, av.api_version, ae.endpoint", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
-        if(logger.isTraceEnabled()) logger.trace("queryPositionPermission sql: {}", sql);
+        if(logger.isTraceEnabled()) logger.trace("queryPositionPermission sql: {}", sqlBuilder);
         int total = 0;
         List<Map<String, Object>> positionPermissions = new ArrayList<>();
 
 
-        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -2669,8 +2682,29 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryPositionUser(int offset, int limit, String hostId, String positionId, String positionType, String inheritToAncestor, String inheritToSibling, String userId, String entityId, String email, String firstName, String lastName, String userType) {
+    public Result<String> queryPositionUser(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "ep.host_id",
+                "positionId", "ep.position_id",
+                "startTs", "ep.start_ts",
+                "endTs", "ep.end_ts",
+                "aggregateVersion", "ep.aggregate_version",
+                "updateUser", "ep.update_user",
+                "updateTs", "ep.update_ts",
+                "userId", "u.user_id",
+                "email", "u.email",
+                "userType", "u.user_type"
+        ));
+        columnMap.put("entityId", "e.employee_id");
+        columnMap.put("firstName", "u.first_name");
+        columnMap.put("lastName", "u.last_name");
+        columnMap.put("managerId", "e.manager_id");
+        columnMap.put("positionType", "ep.position_type");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
            """
                 SELECT COUNT(*) OVER () AS total,
@@ -2687,42 +2721,22 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 WHERE ep.host_id = ?
             """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String[] searchColumns = {"ep.position_id", "u.email", "u.first_name", "u.last_name"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("ep.host_id", "u.user_id"), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("ep.position_id, u.user_id", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
-        StringBuilder whereClause = new StringBuilder();
-
-        SqlUtil.addCondition(whereClause, parameters, "ep.position_id", positionId);
-        SqlUtil.addCondition(whereClause, parameters, "ep.position_type", positionType);
-        SqlUtil.addCondition(whereClause, parameters, "u.user_id", userId != null ? UUID.fromString(userId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "entity_id", entityId);
-        SqlUtil.addCondition(whereClause, parameters, "u.email", email);
-        SqlUtil.addCondition(whereClause, parameters, "u.first_name", firstName);
-        SqlUtil.addCondition(whereClause, parameters, "u.last_name", lastName);
-        SqlUtil.addCondition(whereClause, parameters, "u.user_type", userType);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY ep.position_id, u.user_id\n" +
-                "LIMIT ? OFFSET ?");
-
-        parameters.add(limit);
-        parameters.add(offset);
-
-        String sql = sqlBuilder.toString();
-        if(logger.isTraceEnabled()) logger.trace("queryPositionUser sql: {}", sql);
+        if(logger.isTraceEnabled()) logger.trace("queryPositionUser sql: {}", sqlBuilder);
         int total = 0;
         List<Map<String, Object>> positionUsers = new ArrayList<>();
 
 
-        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -3006,8 +3020,27 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryPositionRowFilter(int offset, int limit, String hostId, String positionId, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint) {
+    public Result<String> queryPositionRowFilter(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "o.host_id",
+                "positionId", "o.position_id",
+                "endpointId", "p.endpoint_id",
+                "endpoint", "ae.endpoint",
+                "apiVersionId", "av.api_version_id",
+                "apiId", "av.api_id",
+                "apiVersion", "av.api_version",
+                "colName", "p.col_name",
+                "operator", "p.operator",
+                "colValue", "p.col_value"
+        ));
+        columnMap.put("updateUser", "p.update_user");
+        columnMap.put("updateTs", "p.update_ts");
+        columnMap.put("aggregateVersion", "p.aggregate_version");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
             """
             SELECT COUNT(*) OVER () AS total, o.host_id, o.position_id, p.endpoint_id, ae.endpoint,
@@ -3020,38 +3053,24 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             WHERE p.host_id = ?
             """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-
-        SqlUtil.addCondition(whereClause, parameters, "o.position_id", positionId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_version_id", apiVersionId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_id", apiId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_version", apiVersion);
-        SqlUtil.addCondition(whereClause, parameters, "p.endpoint_id", endpointId);
-        SqlUtil.addCondition(whereClause, parameters, "ae.endpoint", endpoint);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY o.position_id, av.api_id, av.api_version, ae.endpoint, p.col_name, p.operator\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"o.position_id", "ae.endpoint", "p.col_name", "p.col_value"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("o.host_id", "p.endpoint_id", "av.api_version_id"), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("o.position_id, av.api_id, av.api_version, ae.endpoint, p.col_name, p.operator", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
-        if(logger.isTraceEnabled()) logger.trace("queryPositionRowFilter sql: {}", sql);
+        if(logger.isTraceEnabled()) logger.trace("queryPositionRowFilter sql: {}", sqlBuilder);
         int total = 0;
         List<Map<String, Object>> positionRowFilters = new ArrayList<>();
 
-        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -3253,8 +3272,25 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryPositionColFilter(int offset, int limit, String hostId, String positionId, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint) {
+    public Result<String> queryPositionColFilter(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "o.host_id",
+                "positionId", "o.position_id",
+                "endpointId", "ae.endpoint_id",
+                "endpoint", "ae.endpoint",
+                "apiVersionId", "av.api_version_id",
+                "apiId", "av.api_id",
+                "apiVersion", "av.api_version",
+                "columns", "cf.columns",
+                "updateUser", "cf.update_user",
+                "updateTs", "cf.update_ts"
+        ));
+        columnMap.put("aggregateVersion", "cf.aggregate_version");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
             """
             SELECT COUNT(*) OVER () AS total,
@@ -3267,39 +3303,25 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             JOIN api_version_t av ON ae.host_id = av.host_id AND ae.api_version_id = av.api_version_id
             WHERE cf.host_id = ?
             """;
-        StringBuilder sqlBuilder = new StringBuilder(s);
 
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-
-        SqlUtil.addCondition(whereClause, parameters, "o.position_id", positionId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_version_id", apiVersionId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_id", apiId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_version", apiVersion);
-        SqlUtil.addCondition(whereClause, parameters, "ae.endpoint_id", endpointId);
-        SqlUtil.addCondition(whereClause, parameters, "ae.endpoint", endpoint);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY o.position_id, av.api_id, av.api_version, ae.endpoint\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"o.position_id", "ae.endpoint", "cf.columns"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("o.host_id", "av.api_version_id", "ae.endpoint_id"), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("o.position_id, av.api_id, av.api_version, ae.endpoint", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
-        if(logger.isTraceEnabled()) logger.trace("queryPositionColFilter sql: {}", sql);
+        if(logger.isTraceEnabled()) logger.trace("queryPositionColFilter sql: {}", sqlBuilder);
         int total = 0;
         List<Map<String, Object>> positionColFilters = new ArrayList<>();
 
-        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -3619,8 +3641,11 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryAttribute(int offset, int limit, String hostId, String attributeId, String attributeType, String attributeDesc) {
+    public Result<String> queryAttribute(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result;
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
             """
             SELECT COUNT(*) OVER () AS total,
@@ -3630,32 +3655,21 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             WHERE host_id = ?
             """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
-
-        StringBuilder whereClause = new StringBuilder();
-        SqlUtil.addCondition(whereClause, parameters, "attribute_id", attributeId);
-        SqlUtil.addCondition(whereClause, parameters, "attribute_type", attributeType);
-        SqlUtil.addCondition(whereClause, parameters, "attribute_desc", attributeDesc);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-        sqlBuilder.append(" ORDER BY attribute_id\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"attribute_id", "attribute_desc"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("host_id"), filters, null, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("attribute_id", sorting, null) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
-
         int total = 0;
         List<Map<String, Object>> attributes = new ArrayList<>();
-        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -3723,8 +3737,26 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryAttributePermission(int offset, int limit, String hostId, String attributeId, String attributeType, String attributeValue, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint) {
+    public Result<String> queryAttributePermission(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "ap.host_id",
+                "attributeId", "ap.attribute_id",
+                "attributeType", "a.attribute_type",
+                "attributeValue", "ap.attribute_value",
+                "apiVersionId", "av.api_version_id",
+                "apiId", "av.api_id",
+                "apiVersion", "av.api_version",
+                "endpointId", "ae.endpoint_id",
+                "endpoint", "ae.endpoint",
+                "updateUser", "ap.update_user"
+        ));
+        columnMap.put("aggregateVersion", "ap.aggregate_version");
+        columnMap.put("updateTs", "ap.update_ts");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
             """
                 SELECT COUNT(*) OVER () AS total,
@@ -3738,43 +3770,25 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 AND ap.host_id = ?
             """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
-
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-
-        StringBuilder whereClause = new StringBuilder();
-
-        SqlUtil.addCondition(whereClause, parameters, "ap.attribute_id", attributeId);
-        SqlUtil.addCondition(whereClause, parameters, "a.attribute_type", attributeType);
-        SqlUtil.addCondition(whereClause, parameters, "ap.attribute_value", attributeValue);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_version_id", apiVersionId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_id", apiId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_version", apiVersion);
-        SqlUtil.addCondition(whereClause, parameters, "ap.endpoint_id", endpointId);
-        SqlUtil.addCondition(whereClause, parameters, "ae.endpoint", endpoint);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY ap.attribute_id, av.api_id, av.api_version, ae.endpoint\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"ap.attribute_id", "ap.attribute_value", "ae.endpoint"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("ap.host_id", "av.api_version_id", "ap.endpoint_id"), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("ap.attribute_id, av.api_id, av.api_version, ae.endpoint", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
-        if(logger.isTraceEnabled()) logger.trace("queryAttributePermission sql: {}", sql);
+        if(logger.isTraceEnabled()) logger.trace("queryAttributePermission sql: {}", sqlBuilder);
         int total = 0;
         List<Map<String, Object>> attributePermissions = new ArrayList<>();
 
 
-        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -3817,8 +3831,32 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryAttributeUser(int offset, int limit, String hostId, String attributeId, String attributeType, String attributeValue, String userId, String entityId, String email, String firstName, String lastName, String userType) {
+    public Result<String> queryAttributeUser(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "a.host_id",
+                "attributeId", "a.attribute_id",
+                "startTs", "a.start_ts",
+                "endTs", "a.end_ts",
+                "aggregateVersion", "a.aggregate_version",
+                "updateUser", "a.update_user",
+                "updateTs", "a.update_ts",
+                "userId", "u.user_id",
+                "email", "u.email",
+                "userType", "u.user_type"
+        ));
+        columnMap.put("entityId", "CASE WHEN u.user_type = 'C' THEN c.customer_id WHEN u.user_type = 'E' THEN e.employee_id ELSE NULL -- Handle other cases if needed END");
+        columnMap.put("firstName", "u.first_name");
+        columnMap.put("lastName", "u.last_name");
+        columnMap.put("managerId", "e.manager_id");
+        columnMap.put("attributeType", "at.attribute_type");
+        columnMap.put("attributeValue", "a.attribute_value");
+
+
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
             """
                 SELECT COUNT(*) OVER () AS total,
@@ -3844,43 +3882,25 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 AND a.host_id = ?
             """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-
-        StringBuilder whereClause = new StringBuilder();
-
-        SqlUtil.addCondition(whereClause, parameters, "a.attribute_id", attributeId);
-        SqlUtil.addCondition(whereClause, parameters, "a.attribute_type", attributeType);
-        SqlUtil.addCondition(whereClause, parameters, "a.attribute_value", attributeValue);
-        SqlUtil.addCondition(whereClause, parameters, "u.user_id", userId != null ? UUID.fromString(userId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "entity_id", entityId);
-        SqlUtil.addCondition(whereClause, parameters, "u.email", email);
-        SqlUtil.addCondition(whereClause, parameters, "u.first_name", firstName);
-        SqlUtil.addCondition(whereClause, parameters, "u.last_name", lastName);
-        SqlUtil.addCondition(whereClause, parameters, "u.user_type", userType);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY a.attribute_id, u.user_id\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"a.attribute_id", "a.attribute_value", "u.email", "u.first_name", "u.last_name"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("a.host_id", "u.user_id"), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("a.attribute_id, u.user_id", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
-        if(logger.isTraceEnabled()) logger.trace("queryGroupUser sql: {}", sql);
+        if(logger.isTraceEnabled()) logger.trace("queryGroupUser sql: {}", sqlBuilder);
         int total = 0;
         List<Map<String, Object>> attributeUsers = new ArrayList<>();
 
 
-        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -4211,8 +4231,29 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryAttributeRowFilter(int offset, int limit, String hostId, String attributeId, String attributeValue, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint) {
+    public Result<String> queryAttributeRowFilter(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "a.host_id",
+                "attributeId", "a.attribute_id",
+                "attributeType", "a.attribute_type",
+                "attributeValue", "a.attribute_value",
+                "endpointId", "p.endpoint_id",
+                "endpoint", "ae.endpoint",
+                "apiVersionId", "av.api_version_id",
+                "apiId", "av.api_id",
+                "apiVersion", "av.api_version",
+                "colName", "p.col_name"
+        ));
+        columnMap.put("operator", "p.operator");
+        columnMap.put("colValue", "p.col_value");
+        columnMap.put("updateUser", "p.update_user");
+        columnMap.put("updateTs", "p.update_ts");
+        columnMap.put("aggregateVersion", "p.aggregate_version");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
             """
                 SELECT COUNT(*) OVER () AS total, a.host_id, a.attribute_id, a.attribute_type,\s
@@ -4226,40 +4267,24 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 WHERE p.host_id = ?
             """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
-
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-
-        SqlUtil.addCondition(whereClause, parameters, "a.attribute_id", attributeId);
-        SqlUtil.addCondition(whereClause, parameters, "p.attribute_value", attributeValue);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_version_id", apiVersionId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_id", apiId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_version", apiVersion);
-        SqlUtil.addCondition(whereClause, parameters, "p.endpoint_id", endpointId);
-        SqlUtil.addCondition(whereClause, parameters, "ae.endpoint", endpoint);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY a.attribute_id, av.api_id, av.api_version, ae.endpoint, p.col_name, p.operator\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"a.attribute_id", "p.attribute_value", "ae.endpoint", "p.col_name", "p.col_value"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("a.host_id", "p.endpoint_id", "av.api_version_id"), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("a.attribute_id, av.api_id, av.api_version, ae.endpoint, p.col_name, p.operator", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
-        if(logger.isTraceEnabled()) logger.trace("queryAttributeRowFilter sql: {}", sql);
+        if(logger.isTraceEnabled()) logger.trace("queryAttributeRowFilter sql: {}", sqlBuilder);
         int total = 0;
         List<Map<String, Object>> attributeRowFilters = new ArrayList<>();
 
-        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -4470,13 +4495,32 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryAttributeColFilter(int offset, int limit, String hostId, String attributeId, String attributeValue, String apiVersionId, String apiId, String apiVersion, String endpointId, String endpoint) {
+    public Result<String> queryAttributeColFilter(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "a.host_id",
+                "attributeId", "a.attribute_id",
+                "attributeType", "a.attribute_type",
+                "attributeValue", "cf.attribute_value",
+                "endpointId", "ae.endpoint_id",
+                "endpoint", "ae.endpoint",
+                "apiVersionId", "av.api_version_id",
+                "apiId", "av.api_id",
+                "apiVersion", "av.api_version",
+                "columns", "cf.columns"
+        ));
+        columnMap.put("updateUser", "cf.update_user");
+        columnMap.put("updateTs", "cf.update_ts");
+        columnMap.put("aggregateVersion", "rcf.aggregate_version");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
             """
             SELECT COUNT(*) OVER () AS total,
             a.host_id, a.attribute_id, a.attribute_type, cf.attribute_value,
-            av.api_version_id, av.api_id, av.api_version, ae.endpoint, cf.columns, cf.aggregate_version,
+            av.api_version_id, av.api_id, av.api_version, ae.endpoint_id, ae.endpoint, cf.columns, cf.aggregate_version,
             cf.update_user, cf.update_ts
             FROM attribute_col_filter_t cf
             JOIN attribute_t a ON a.attribute_id = cf.attribute_id
@@ -4485,39 +4529,24 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             WHERE cf.host_id = ?
             """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-
-        SqlUtil.addCondition(whereClause, parameters, "a.attribute_id", attributeId);
-        SqlUtil.addCondition(whereClause, parameters, "cf.attribute_value", attributeValue);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_version_id", apiVersionId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_id", apiId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_version", apiVersion);
-        SqlUtil.addCondition(whereClause, parameters, "ae.endpoint_id", endpointId);
-        SqlUtil.addCondition(whereClause, parameters, "ae.endpoint", endpoint);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY a.attribute_id, av.api_id, av.api_version, ae.endpoint\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"a.attribute_id", "cf.attribute_value", "ae.endpoint", "cf.columns"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("a.host_id", "av.api_version_id", "ae.endpoint_id"), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("a.attribute_id, av.api_id, av.api_version, ae.endpoint", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
-        if(logger.isTraceEnabled()) logger.trace("queryAttributeColFilter sql: {}", sql);
+        if(logger.isTraceEnabled()) logger.trace("queryAttributeColFilter sql: {}", sqlBuilder);
         int total = 0;
         List<Map<String, Object>> attributeColFilters = new ArrayList<>();
 
-        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {

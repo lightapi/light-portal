@@ -50,15 +50,24 @@ public class EventMutator {
      * @param json The original CloudEvent in json.
      */
     public String mutate(String json) {
-        if(replacementRules.isEmpty() && enrichmentRules.isEmpty()) {
+        boolean hasReplacements = replacementRules != null && !replacementRules.isEmpty();
+        boolean hasEnrichments = enrichmentRules != null && !enrichmentRules.isEmpty();
+
+        if (!hasReplacements && !hasEnrichments) {
             return json;
         } else {
             Map<String, Object> map = JsonMapper.string2Map(json);
-            // 1. Apply Replacements
-            applyReplacements(map);
 
-            // 2. Apply Enrichments
-            applyEnrichments(map);
+            // 1. Apply Replacements only if replacementRules is not null and not empty
+            if (hasReplacements) {
+                applyReplacements(map);
+            }
+
+            // 2. Apply Enrichments only if enrichmentRules is not null and not empty
+            if (hasEnrichments) {
+                applyEnrichments(map);
+            }
+
             return JsonMapper.toJson(map);
         }
     }
