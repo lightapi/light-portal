@@ -227,7 +227,7 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
             whereClause.append(" WHERE host_id IS NULL");
         }
 
-        // --- 5. Material React Table Filters (Dynamic Filters) ---
+        // Material React Table Filters (Dynamic Filters)
         for (Map<String, Object> filter : filters) {
             String filterId = (String) filter.get("id"); // Column name
             String dbColumnName = camelToSnake(filterId);
@@ -696,71 +696,14 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
                 INNER JOIN ref_table_t t ON t.table_id = v.table_id
                 WHERE 1=1
             """;
-        StringBuilder sqlBuilder = new StringBuilder(s);
 
         List<Object> parameters = new ArrayList<>();
-        StringBuilder whereClause = new StringBuilder();
 
-        // Material React Table Filters (Dynamic Filters) ---
-        for (Map<String, Object> filter : filters) {
-            String filterId = (String) filter.get("id"); // Column name
-            String dbColumnName = mapToDbColumn(columnMap, filterId);
-            Object filterValue = filter.get("value");    // Value to filter by
-            if (filterId != null && filterValue != null && !filterValue.toString().isEmpty()) {
-                if(dbColumnName.equals("v.table_id") || dbColumnName.equals("v.value_id")) {
-                    whereClause.append(" AND ").append(dbColumnName).append(" = ?");
-                    parameters.add(UUID.fromString(filterValue.toString()));
-                } else {
-                    // Using LIKE for flexible filtering, assuming string/text columns
-                    whereClause.append(" AND ").append(dbColumnName).append(" ILIKE ?"); // ILIKE is case-insensitive LIKE in Postgres
-                    parameters.add("%" + filterValue + "%");
-                }
-            }
-        }
-
-        // Global Filter (Search across multiple columns)
-        if (globalFilter != null && !globalFilter.isEmpty()) {
-            whereClause.append(" AND (");
-            // Define columns to search for global filter (e.g., table_name, table_desc)
-            String[] globalSearchColumns = {"t.table_name", "v.value_code", "v.value_desc"};
-            List<String> globalConditions = new ArrayList<>();
-            for (String col : globalSearchColumns) {
-                globalConditions.add(col + " ILIKE ?");
-                parameters.add("%" + globalFilter + "%");
-            }
-            whereClause.append(String.join(" OR ", globalConditions));
-            whereClause.append(")");
-        }
-
-        // Append the constructed WHERE clause
-        sqlBuilder.append(whereClause);
-
-
-        // Dynamic Sorting
-        StringBuilder orderByClause = new StringBuilder();
-        if (sorting.isEmpty()) {
-            // Default sort if none provided
-            orderByClause.append(" ORDER BY v.display_order, v.value_code");
-        } else {
-            orderByClause.append(" ORDER BY ");
-            List<String> sortExpressions = new ArrayList<>();
-            for (Map<String, Object> sort : sorting) {
-                String sortId = (String) sort.get("id");
-                String dbColumnName = mapToDbColumn(columnMap, sortId);
-                Boolean isDesc = (Boolean) sort.get("desc"); // 'desc' is typically a boolean or "true"/"false" string
-                if (sortId != null && !sortId.isEmpty()) {
-                    String direction = (isDesc != null && isDesc) ? "DESC" : "ASC";
-                    // Quote column name to handle SQL keywords or mixed case
-                    sortExpressions.add(dbColumnName + " " + direction);
-                }
-            }
-            // Use default if dynamic sort failed to produce anything
-            orderByClause.append(sortExpressions.isEmpty() ? "v.display_order, v.table_name" : String.join(", ", sortExpressions));
-        }
-        sqlBuilder.append(orderByClause);
-
-        // Pagination
-        sqlBuilder.append("\nLIMIT ? OFFSET ?");
+        String[] searchColumns = {"t.table_name", "v.value_code", "v.value_desc"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("v.table_id", "v.value_id"), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("v.display_order, v.value_code", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
@@ -771,12 +714,9 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
         List<Map<String, Object>> refValues = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
 
-            // Bind parameters
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+            populateParameters(preparedStatement, parameters);
 
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -1077,70 +1017,14 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
                     INNER JOIN ref_value_t v ON v.value_id = l.value_id
                     WHERE 1=1
                 """;
-        StringBuilder sqlBuilder = new StringBuilder(s);
 
         List<Object> parameters = new ArrayList<>();
-        StringBuilder whereClause = new StringBuilder();
 
-        // --- 5. Material React Table Filters (Dynamic Filters) ---
-        for (Map<String, Object> filter : filters) {
-            String filterId = (String) filter.get("id"); // Column name
-            String dbColumnName = mapToDbColumn(columnMap, filterId);
-            Object filterValue = filter.get("value");    // Value to filter by
-            if (filterId != null && filterValue != null && !filterValue.toString().isEmpty()) {
-                if(dbColumnName.equals("l.value_id")) {
-                    whereClause.append(" AND ").append(dbColumnName).append(" = ?");
-                    parameters.add(UUID.fromString(filterValue.toString()));
-                } else {
-                    // Using LIKE for flexible filtering, assuming string/text columns
-                    whereClause.append(" AND ").append(dbColumnName).append(" ILIKE ?");
-                    parameters.add("%" + filterValue + "%");
-                }
-            }
-        }
-
-        // Global Filter (Search across multiple columns)
-        if (globalFilter != null && !globalFilter.isEmpty()) {
-            whereClause.append(" AND (");
-            // Define columns to search for global filter (e.g., table_name, table_desc)
-            String[] globalSearchColumns = {"v.value_code", "v.value_desc", "l.value_label"};
-            List<String> globalConditions = new ArrayList<>();
-            for (String col : globalSearchColumns) {
-                globalConditions.add(col + " ILIKE ?");
-                parameters.add("%" + globalFilter + "%");
-            }
-            whereClause.append(String.join(" OR ", globalConditions));
-            whereClause.append(")");
-        }
-
-        // Append the constructed WHERE clause
-        sqlBuilder.append(whereClause);
-
-        // Dynamic Sorting
-        StringBuilder orderByClause = new StringBuilder();
-        if (sorting.isEmpty()) {
-            // Default sort if none provided
-            orderByClause.append(" ORDER BY l.value_id, l.language");
-        } else {
-            orderByClause.append(" ORDER BY ");
-            List<String> sortExpressions = new ArrayList<>();
-            for (Map<String, Object> sort : sorting) {
-                String sortId = (String) sort.get("id");
-                String dbColumnName = mapToDbColumn(columnMap, sortId);
-                Boolean isDesc = (Boolean) sort.get("desc"); // 'desc' is typically a boolean or "true"/"false" string
-                if (sortId != null && !sortId.isEmpty()) {
-                    String direction = (isDesc != null && isDesc) ? "DESC" : "ASC";
-                    // Quote column name to handle SQL keywords or mixed case
-                    sortExpressions.add(dbColumnName + " " + direction);
-                }
-            }
-            // Use default if dynamic sort failed to produce anything
-            orderByClause.append(sortExpressions.isEmpty() ? "l.value_id, l.language" : String.join(", ", sortExpressions));
-        }
-        sqlBuilder.append(orderByClause);
-
-        // Pagination
-        sqlBuilder.append("\nLIMIT ? OFFSET ?");
+        String[] searchColumns = {"v.value_code", "v.value_desc", "l.value_label"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("l.value_id"), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("l.value_id, l.language", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
@@ -1150,12 +1034,9 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
         List<Map<String, Object>> locales = new ArrayList<>(); // List to hold results
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
 
-            // Bind all collected parameters
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+            populateParameters(preparedStatement, parameters);
 
             boolean isFirstRow = true; // Flag to get total count only once
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -1645,71 +1526,12 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
                 INNER JOIN ref_value_t v2 ON v2.value_id = r.value_id_to
                 WHERE 1=1
             """;
-        StringBuilder sqlBuilder = new StringBuilder(s);
-
         List<Object> parameters = new ArrayList<>();
-        StringBuilder whereClause = new StringBuilder();
-
-        // Material React Table Filters (Dynamic Filters) ---
-        for (Map<String, Object> filter : filters) {
-            String filterId = (String) filter.get("id"); // Column name
-            String dbColumnName = mapToDbColumn(columnMap, filterId);
-            Object filterValue = filter.get("value");    // Value to filter by
-            if (filterId != null && filterValue != null && !filterValue.toString().isEmpty()) {
-                if(dbColumnName.equals("r.relation_id") || dbColumnName.equals("value_id_from") || dbColumnName.equals("value_id_to")) {
-                    whereClause.append(" AND ").append(dbColumnName).append(" = ?");
-                    parameters.add(UUID.fromString(filterValue.toString()));
-                } else {
-                    // Using LIKE for flexible filtering, assuming string/text columns
-                    whereClause.append(" AND ").append(dbColumnName).append(" ILIKE ?"); // ILIKE is case-insensitive LIKE in Postgres
-                    parameters.add("%" + filterValue + "%");
-                }
-            }
-        }
-
-        // Global Filter (Search across multiple columns)
-        if (globalFilter != null && !globalFilter.isEmpty()) {
-            whereClause.append(" AND (");
-            // Define columns to search for global filter (e.g., table_name, table_desc)
-            String[] globalSearchColumns = {"t.relation_name", "v1.value_code", "v2.value_code"};
-            List<String> globalConditions = new ArrayList<>();
-            for (String col : globalSearchColumns) {
-                globalConditions.add(col + " ILIKE ?");
-                parameters.add("%" + globalFilter + "%");
-            }
-            whereClause.append(String.join(" OR ", globalConditions));
-            whereClause.append(")");
-        }
-
-        // Append the constructed WHERE clause
-        sqlBuilder.append(whereClause);
-
-
-        // Dynamic Sorting
-        StringBuilder orderByClause = new StringBuilder();
-        if (sorting.isEmpty()) {
-            // Default sort if none provided
-            orderByClause.append(" ORDER BY r.relation_id, r.value_id_from, r.value_id_to");
-        } else {
-            orderByClause.append(" ORDER BY ");
-            List<String> sortExpressions = new ArrayList<>();
-            for (Map<String, Object> sort : sorting) {
-                String sortId = (String) sort.get("id");
-                String dbColumnName = mapToDbColumn(columnMap, sortId);
-                Boolean isDesc = (Boolean) sort.get("desc"); // 'desc' is typically a boolean or "true"/"false" string
-                if (sortId != null && !sortId.isEmpty()) {
-                    String direction = (isDesc != null && isDesc) ? "DESC" : "ASC";
-                    // Quote column name to handle SQL keywords or mixed case
-                    sortExpressions.add(dbColumnName + " " + direction);
-                }
-            }
-            // Use default if dynamic sort failed to produce anything
-            orderByClause.append(sortExpressions.isEmpty() ? "r.relation_id, r.value_id_from, r.value_id_to" : String.join(", ", sortExpressions));
-        }
-        sqlBuilder.append(orderByClause);
-
-        // Pagination
-        sqlBuilder.append("\nLIMIT ? OFFSET ?");
+        String[] searchColumns = {"t.relation_name", "v1.value_code", "v2.value_code"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("r.relation_id", "value_id_from", "value_id_to"), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("r.relation_id, r.value_id_from, r.value_id_to", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
@@ -1767,10 +1589,75 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
         return result;
     }
 
-    private List<Map<String, Object>> parseJsonList(String json) {
-        if (json == null || json.isEmpty() || "[]".equals(json.trim())) {
-            return Collections.emptyList();
+    @Override
+    public Result<String> getToValueCode(String relationName, String fromValueCode) {
+        Result<String> result;
+        try {
+            // Build the base SQL query
+            StringBuilder sqlBuilder = new StringBuilder(
+                    """
+                    SELECT STRING_AGG(v2.value_code, ', ') AS value_code_to
+                    FROM relation_t r
+                    INNER JOIN relation_type_t t ON r.relation_id = t.relation_id
+                    INNER JOIN ref_value_t v1 ON v1.value_id = r.value_id_from
+                    INNER JOIN ref_value_t v2 ON v2.value_id = r.value_id_to
+                    WHERE t.relation_name = ?
+                    AND r.active = true
+                    """
+            );
+
+            // Handle fromValueCode - could be single value or comma-separated list
+            List<String> valueCodes = new ArrayList<>();
+
+            if (fromValueCode != null && !fromValueCode.trim().isEmpty()) {
+                // Split by comma and trim each value
+                String[] codes = fromValueCode.split(",");
+                for (String code : codes) {
+                    String trimmedCode = code.trim();
+                    if (!trimmedCode.isEmpty()) {
+                        valueCodes.add(trimmedCode);
+                    }
+                }
+            }
+
+            // Add the IN clause if we have value codes
+            if (!valueCodes.isEmpty()) {
+                sqlBuilder.append(" AND v1.value_code IN (");
+                // Create placeholders for each value
+                String placeholders = String.join(",", Collections.nCopies(valueCodes.size(), "?"));
+                sqlBuilder.append(placeholders).append(")");
+            }
+
+            String sql = sqlBuilder.toString();
+            if(logger.isTraceEnabled()) logger.trace("sql = {}", sql);
+
+
+            // Execute the query
+            try (final Connection conn = ds.getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+                // Set parameters
+                int paramIndex = 1;
+                stmt.setString(paramIndex++, relationName);
+
+                // Set value codes for IN clause
+                for (String code : valueCodes) {
+                    stmt.setString(paramIndex++, code);
+                }
+
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        String aggregatedValues = rs.getString("value_code_to");
+                        result = Success.of(aggregatedValues);
+                    } else {
+                        result = Failure.of(new Status(OBJECT_NOT_FOUND, "relationName", relationName));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
-        return JsonMapper.string2List(json);
+        return result;
     }
+
 }

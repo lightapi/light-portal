@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.function.Consumer;
@@ -239,5 +240,80 @@ public class SqlUtil {
             return camelCaseName;
         }
         return dbName;
+    }
+
+    public static StringBuilder dynamicFilter(List<String> uuidColumnNames, List<Map<String, Object>> filters, Map<String, String> columnMap, List<Object> parameters) {
+        StringBuilder sb = new StringBuilder();
+        // Material React Table Filters (Dynamic Filters) ---
+        for (Map<String, Object> filter : filters) {
+            String filterId = (String) filter.get("id"); // Column name
+            String dbColumnName = columnMap == null ? camelToSnake(filterId) : mapToDbColumn(columnMap, filterId);
+            Object filterValue = filter.get("value");    // Value to filter by
+            if (filterId != null && filterValue != null && !filterValue.toString().isEmpty()) {
+                if(uuidColumnNames.contains(dbColumnName)) {
+                    sb.append(" AND ").append(dbColumnName).append(" = ?");
+                    parameters.add(UUID.fromString(filterValue.toString()));
+                } else {
+                    sb.append(" AND ").append(dbColumnName).append(" ILIKE ?");
+                    parameters.add("%" + filterValue + "%");
+                }
+            }
+        }
+        return sb;
+    }
+
+    public static StringBuilder globalFilter(String globalFilter, String[] searchColumns, List<Object> parameters) {
+        StringBuilder sb = new StringBuilder();
+        // Global Filter (Search across multiple columns)
+        if (globalFilter != null && !globalFilter.isEmpty()) {
+            sb.append(" AND (");
+            // Define columns to search for global filter (e.g., table_name, table_desc)
+            List<String> globalConditions = new ArrayList<>();
+            for (String col : searchColumns) {
+                globalConditions.add(col + " ILIKE ?");
+                parameters.add("%" + globalFilter + "%");
+            }
+            sb.append(String.join(" OR ", globalConditions));
+            sb.append(")");
+        }
+        return sb;
+    }
+
+    public static StringBuilder dynamicSorting(String defaultSorting, List<Map<String, Object>> sorting, Map<String, String> columnMap) {
+        StringBuilder orderByClause = new StringBuilder();
+        if (sorting.isEmpty()) {
+            // Default sort if none provided
+            orderByClause.append(" ORDER BY ").append(defaultSorting);
+        } else {
+            orderByClause.append(" ORDER BY ");
+            List<String> sortExpressions = new ArrayList<>();
+            for (Map<String, Object> sort : sorting) {
+                String sortId = (String) sort.get("id");
+                String dbColumnName = columnMap == null ? camelToSnake(sortId) : mapToDbColumn(columnMap, sortId);
+                Boolean isDesc = (Boolean) sort.get("desc"); // 'desc' is typically a boolean or "true"/"false" string
+                if (sortId != null && !sortId.isEmpty()) {
+                    String direction = (isDesc != null && isDesc) ? "DESC" : "ASC";
+                    // Quote column name to handle SQL keywords or mixed case
+                    sortExpressions.add(dbColumnName + " " + direction);
+                }
+            }
+            // Use default if dynamic sort failed to produce anything
+            orderByClause.append(sortExpressions.isEmpty() ? defaultSorting : String.join(", ", sortExpressions));
+        }
+        return orderByClause;
+    }
+
+    public static void populateParameters(PreparedStatement preparedStatement, List<Object> parameters) throws SQLException {
+        for (int i = 0; i < parameters.size(); i++) {
+            // Ensure proper type setting (especially for UUIDs, Booleans, etc.)
+            if (parameters.get(i) instanceof UUID) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            } else if (parameters.get(i) instanceof Boolean) {
+                preparedStatement.setBoolean(i + 1, (Boolean) parameters.get(i));
+            } else {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+        }
+
     }
 }

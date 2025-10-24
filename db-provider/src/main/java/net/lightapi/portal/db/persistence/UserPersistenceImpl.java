@@ -21,7 +21,7 @@ import java.util.*;
 
 import static com.networknt.db.provider.SqlDbStartupHook.ds;
 import static java.sql.Types.NULL;
-import static net.lightapi.portal.db.util.SqlUtil.addCondition;
+import static net.lightapi.portal.db.util.SqlUtil.*;
 
 public class UserPersistenceImpl implements UserPersistence {
     private static final Logger logger = LoggerFactory.getLogger(UserPersistenceImpl.class);
@@ -633,11 +633,24 @@ public class UserPersistenceImpl implements UserPersistence {
     }
 
     @Override
-    public Result<String> queryUserByHostId(int offset, int limit, String hostId, String email, String language, String userType,
-                                            String entityId, String referralId, String managerId, String firstName, String lastName,
-                                            String phoneNumber, String gender, String birthday, String country, String province, String city,
-                                            String address, String postCode, Boolean verified, Boolean locked) {
+    public Result<String> queryUserByHostId(int offset, int limit, String filtersJson, String globalFilter, String sortingJson) {
         Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "uh.host_id",
+                "userId", "u.user_id",
+                "email", "u.email",
+                "language", "u.language",
+                "firstName", "u.first_name",
+                "lastName", "u.last_name",
+                "userType", "u.user_type",
+                "verified", "u.verified",
+                "locked", "u.locked"
+        ));
+        columnMap.put("entityId", "COALESCE(c.customer_id, e.employee_id)");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
@@ -648,40 +661,15 @@ public class UserPersistenceImpl implements UserPersistence {
                 LEFT JOIN user_host_t uh ON u.user_id = uh.user_id
                 LEFT JOIN customer_t c ON uh.host_id = c.host_id AND u.user_id = c.user_id
                 LEFT JOIN employee_t e ON uh.host_id = e.host_id AND u.user_id = e.user_id
-                WHERE uh.host_id = ?
+                WHERE 1 = 1
                 """;
-        StringBuilder sqlBuilder = new StringBuilder(s);
-
         List<Object> parameters = new ArrayList<>();
-        parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-
-        addCondition(whereClause, parameters, "u.email", email);
-        addCondition(whereClause, parameters, "u.language", language);
-        addCondition(whereClause, parameters, "u.user_type", userType);
-        addCondition(whereClause, parameters, "COALESCE(c.customer_id, e.employee_id)", entityId); // Using COALESCE here
-        addCondition(whereClause, parameters, "c.referral_id", referralId);
-        addCondition(whereClause, parameters, "e.manager_id", managerId);
-        addCondition(whereClause, parameters, "u.first_name", firstName);
-        addCondition(whereClause, parameters, "u.last_name", lastName);
-        addCondition(whereClause, parameters, "u.phone_number", phoneNumber);
-        addCondition(whereClause, parameters, "u.gender", gender);
-        addCondition(whereClause, parameters, "u.birthday", birthday);
-        addCondition(whereClause, parameters, "u.country", country);
-        addCondition(whereClause, parameters, "u.province", province);
-        addCondition(whereClause, parameters, "u.city", city);
-        addCondition(whereClause, parameters, "u.address", address);
-        addCondition(whereClause, parameters, "u.post_code", postCode);
-        addCondition(whereClause, parameters, "u.verified", verified);
-        addCondition(whereClause, parameters, "u.locked", locked);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY u.last_name\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"u.email", "u.first_name", "u.last_name", "COALESCE(c.customer_id, e.employee_id)"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("uh.host_id", "u.user_id"), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("u.last_name", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
@@ -692,11 +680,9 @@ public class UserPersistenceImpl implements UserPersistence {
         List<Map<String, Object>> users = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+            PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
 
+            populateParameters(preparedStatement, parameters);
 
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -908,7 +894,7 @@ public class UserPersistenceImpl implements UserPersistence {
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String userId = (String)event.get(Constants.USER);
         String token = (String)map.get("token");
-        String nonce = (String)event.get(PortalConstants.NONCE);
+        Integer nonce = (Integer)event.get(PortalConstants.NONCE);
         long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
@@ -919,7 +905,7 @@ public class UserPersistenceImpl implements UserPersistence {
                 if (resultSet.next()) {
                     // found the token record, update user_t for token, verified flog and nonce, write a success notification.
                     try (PreparedStatement updateStatement = conn.prepareStatement(updateUserByEmail)) {
-                        updateStatement.setLong(1, Long.parseLong(nonce) + 1);
+                        updateStatement.setLong(1, nonce + 1);
                         updateStatement.setLong(2, newAggregateVersion);
                         updateStatement.setObject(3, UUID.fromString(userId));
                         updateStatement.setLong(4, oldAggregateVersion);

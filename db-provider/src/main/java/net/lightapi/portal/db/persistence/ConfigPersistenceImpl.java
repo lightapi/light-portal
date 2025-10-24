@@ -26,6 +26,7 @@ import java.time.OffsetDateTime;
 import java.util.*;
 
 import static com.networknt.db.provider.SqlDbStartupHook.ds;
+import static net.lightapi.portal.db.util.SqlUtil.*;
 
 public class ConfigPersistenceImpl implements ConfigPersistence {
     private static final Logger logger = LoggerFactory.getLogger(ConfigPersistenceImpl.class);
@@ -190,9 +191,10 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     }
 
     @Override
-    public Result<String> getConfig(int offset, int limit, String configId, String configName, String configPhase,
-                                    String configType, String light4jVersion, String classPath, String configDesc) {
+    public Result<String> getConfig(int offset, int limit, String filtersJson, String globalFilter, String sortingJson) {
         Result<String> result = null;
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
@@ -204,22 +206,62 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
         StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
-
         StringBuilder whereClause = new StringBuilder();
-        SqlUtil.addCondition(whereClause, parameters, "config_id", configId != null ? UUID.fromString(configId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "config_name", configName);
-        SqlUtil.addCondition(whereClause, parameters, "config_phase", configPhase);
-        SqlUtil.addCondition(whereClause, parameters, "config_type", configType);
-        SqlUtil.addCondition(whereClause, parameters, "light4j_version", light4jVersion);
-        SqlUtil.addCondition(whereClause, parameters, "class_path", classPath);
-        SqlUtil.addCondition(whereClause, parameters, "config_desc", configDesc);
 
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
+        // Material React Table Filters (Dynamic Filters)
+        for (Map<String, Object> filter : filters) {
+            String filterId = (String) filter.get("id");
+            String dbColumnName = camelToSnake(filterId);
+            Object filterValue = filter.get("value");
+            if (filterId != null && filterValue != null && !filterValue.toString().isEmpty()) {
+                whereClause.append(" AND ").append(dbColumnName).append(" ILIKE ?");
+                parameters.add("%" + filterValue + "%");
+            }
         }
 
-        sqlBuilder.append(" ORDER BY config_id\n" +
-                "LIMIT ? OFFSET ?");
+        // Global Filter (Search across multiple columns)
+        if (globalFilter != null && !globalFilter.isEmpty()) {
+            whereClause.append(" AND (");
+            // Define columns to search for global filter (e.g., org_name, org_desc, etc.)
+            String[] globalSearchColumns = {"config_name", "config_desc"};
+            List<String> globalConditions = new ArrayList<>();
+            for (String col : globalSearchColumns) {
+                globalConditions.add(col + " ILIKE ?");
+                parameters.add("%" + globalFilter + "%");
+            }
+            whereClause.append(String.join(" OR ", globalConditions));
+            whereClause.append(")");
+        }
+
+        // Append the constructed WHERE clause
+        sqlBuilder.append(whereClause);
+
+
+        // Dynamic Sorting
+        StringBuilder orderByClause = new StringBuilder();
+        if (sorting.isEmpty()) {
+            // Default sort if none provided
+            orderByClause.append(" ORDER BY config_id");
+        } else {
+            orderByClause.append(" ORDER BY ");
+            List<String> sortExpressions = new ArrayList<>();
+            for (Map<String, Object> sort : sorting) {
+                String sortId = (String) sort.get("id");
+                String dbColumnName = camelToSnake(sortId);
+                Boolean isDesc = (Boolean) sort.get("desc");
+                if (sortId != null && !sortId.isEmpty()) {
+                    String direction = (isDesc != null && isDesc) ? "DESC" : "ASC";
+                    // Quote column name to handle SQL keywords or mixed case
+                    sortExpressions.add(dbColumnName + " " + direction);
+                }
+            }
+            // Use default if dynamic sort failed to produce anything
+            orderByClause.append(sortExpressions.isEmpty() ? "config_id" : String.join(", ", sortExpressions));
+        }
+        sqlBuilder.append(orderByClause);
+
+        // Pagination
+        sqlBuilder.append("\nLIMIT ? OFFSET ?");
 
         parameters.add(limit);
         parameters.add(offset);
@@ -685,11 +727,28 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     }
 
     @Override
-    public Result<String> getConfigProperty(int offset, int limit, String configId, String configName, String propertyId,
-                                            String propertyName, String propertyType, String light4jVersion, Integer displayOrder,
-                                            Boolean required, String propertyDesc, String propertyValue, String valueType,
-                                            String resourceType) {
+    public Result<String> getConfigProperty(int offset, int limit, String filtersJson, String globalFilter, String sortingJson) {
         Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "configId", "cp.config_id",
+                "propertyId", "cp.property_id",
+                "propertyName", "cp.property_name",
+                "propertyType", "cp.property_type",
+                "light4jVersion", "cp.light4j_version",
+                "displayOrder", "cp.display_order",
+                "required", "cp.required",
+                "propertyDesc", "cp.property_desc",
+                "propertyValue", "cp.property_value"
+        ));
+        columnMap.put("valueType", "cp.value_type");
+        columnMap.put("resourceType", "cp.resource_type");
+        columnMap.put("updateUser", "cp.update_user");
+        columnMap.put("updateTs", "cp.update_ts");
+        columnMap.put("aggregateVersion", "cp.aggregate_version");
+        columnMap.put("configName", "c.config_name");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
 
         String s =
                 """
@@ -706,26 +765,65 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         List<Object> parameters = new ArrayList<>();
 
         StringBuilder whereClause = new StringBuilder();
-        SqlUtil.addCondition(whereClause, parameters, "cp.config_id", configId != null ? UUID.fromString(configId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "c.config_name", configName);
-        SqlUtil.addCondition(whereClause, parameters, "cp.property_id", propertyId != null ? UUID.fromString(propertyId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "cp.property_name", propertyName);
-        SqlUtil.addCondition(whereClause, parameters, "cp.property_type", propertyType);
-        SqlUtil.addCondition(whereClause, parameters, "cp.light4j_version", light4jVersion);
-        SqlUtil.addCondition(whereClause, parameters, "cp.display_order", displayOrder);
-        SqlUtil.addCondition(whereClause, parameters, "cp.required", required);
-        SqlUtil.addCondition(whereClause, parameters, "cp.property_desc", propertyDesc);
-        SqlUtil.addCondition(whereClause, parameters, "cp.property_value", propertyValue);
-        SqlUtil.addCondition(whereClause, parameters, "cp.value_type", valueType);
-        SqlUtil.addCondition(whereClause, parameters, "cp.resource_type", resourceType);
-
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
+        // Material React Table Filters (Dynamic Filters) ---
+        for (Map<String, Object> filter : filters) {
+            String filterId = (String) filter.get("id"); // Column name
+            String dbColumnName = mapToDbColumn(columnMap, filterId);
+            Object filterValue = filter.get("value");    // Value to filter by
+            if (filterId != null && filterValue != null && !filterValue.toString().isEmpty()) {
+                if(dbColumnName.equals("cp.config_id") || dbColumnName.equals("cp.property_id")) {
+                    whereClause.append(" AND ").append(dbColumnName).append(" = ?");
+                    parameters.add(UUID.fromString(filterValue.toString()));
+                } else {
+                    whereClause.append(" AND ").append(dbColumnName).append(" ILIKE ?");
+                    parameters.add("%" + filterValue + "%");
+                }
+            }
         }
 
-        sqlBuilder.append(" ORDER BY cp.config_id, cp.display_order\n" +
-                "LIMIT ? OFFSET ?");
+        // Global Filter (Search across multiple columns)
+        if (globalFilter != null && !globalFilter.isEmpty()) {
+            whereClause.append(" AND (");
+            // Define columns to search for global filter (e.g., table_name, table_desc)
+            String[] globalSearchColumns = {"cp.property_name", "cp.property_desc", "c.config_name"};
+            List<String> globalConditions = new ArrayList<>();
+            for (String col : globalSearchColumns) {
+                globalConditions.add(col + " ILIKE ?");
+                parameters.add("%" + globalFilter + "%");
+            }
+            whereClause.append(String.join(" OR ", globalConditions));
+            whereClause.append(")");
+        }
+
+        // Append the constructed WHERE clause
+        sqlBuilder.append(whereClause);
+
+
+        // Dynamic Sorting
+        StringBuilder orderByClause = new StringBuilder();
+        if (sorting.isEmpty()) {
+            // Default sort if none provided
+            orderByClause.append(" ORDER BY cp.config_id, cp.display_order");
+        } else {
+            orderByClause.append(" ORDER BY ");
+            List<String> sortExpressions = new ArrayList<>();
+            for (Map<String, Object> sort : sorting) {
+                String sortId = (String) sort.get("id");
+                String dbColumnName = mapToDbColumn(columnMap, sortId);
+                Boolean isDesc = (Boolean) sort.get("desc"); // 'desc' is typically a boolean or "true"/"false" string
+                if (sortId != null && !sortId.isEmpty()) {
+                    String direction = (isDesc != null && isDesc) ? "DESC" : "ASC";
+                    // Quote column name to handle SQL keywords or mixed case
+                    sortExpressions.add(dbColumnName + " " + direction);
+                }
+            }
+            // Use default if dynamic sort failed to produce anything
+            orderByClause.append(sortExpressions.isEmpty() ? "cp.config_id, cp.display_order" : String.join(", ", sortExpressions));
+        }
+        sqlBuilder.append(orderByClause);
+
+        // Pagination
+        sqlBuilder.append("\nLIMIT ? OFFSET ?");
 
         parameters.add(limit);
         parameters.add(offset);
@@ -738,7 +836,14 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
 
             for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
+                // Ensure proper type setting (especially for UUIDs, Booleans, etc.)
+                if (parameters.get(i) instanceof UUID) {
+                    preparedStatement.setObject(i + 1, parameters.get(i));
+                } else if (parameters.get(i) instanceof Boolean) {
+                    preparedStatement.setBoolean(i + 1, (Boolean) parameters.get(i));
+                } else {
+                    preparedStatement.setObject(i + 1, parameters.get(i));
+                }
             }
 
             boolean isFirstRow = true;
@@ -1036,9 +1141,22 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     }
 
     @Override
-    public Result<String> getConfigEnvironment(int offset, int limit, String hostId, String environment, String configId, String configName,
-                                               String propertyId, String propertyName, String propertyValue) {
+    public Result<String> getConfigEnvironment(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
+        final Map<String, String> columnMap = Map.of(
+                "hostId", "ep.host_id",
+                "environment", "ep.environment",
+                "configId", "c.config_id",
+                "configName", "c.config_name",
+                "propertyId", "ep.property_id",
+                "propertyName", "p.property_name",
+                "propertyValue", "ep.property_value",
+                "updateUser", "ep.update_user",
+                "updateTs", "ep.update_ts"
+        );
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s = """
                 SELECT COUNT(*) OVER () AS total,
                 ep.host_id, ep.environment, c.config_id, c.config_name,
@@ -1047,44 +1165,28 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 FROM environment_property_t ep
                 JOIN config_property_t p ON ep.property_id = p.property_id
                 JOIN config_t c ON p.config_id = c.config_id
-                WHERE 1=1
+                WHERE ep.host_id = ?
                 """;
 
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append(s).append("\n");
-
         List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-        SqlUtil.addCondition(whereClause, parameters, "ep.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "ep.environment", environment);
-        SqlUtil.addCondition(whereClause, parameters, "ep.property_id", propertyId != null ? UUID.fromString(propertyId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "c.config_id", configId != null ? UUID.fromString(configId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "c.config_name", configName);
-        SqlUtil.addCondition(whereClause, parameters, "p.property_name", propertyName);
-        SqlUtil.addCondition(whereClause, parameters, "ep.property_value", propertyValue);
-
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY ep.environment, c.config_id, p.display_order\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"c.config_name", "p.property_name"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("ep.host_id", "c.config_id", "ep.property_id"), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("ep.environment, c.config_id, p.display_order", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> configEnvironments = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
 
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+            populateParameters(preparedStatement, parameters);
 
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -1262,11 +1364,37 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     }
 
     @Override
-    public Result<String> getConfigInstanceApi(int offset, int limit, String hostId, String instanceApiId, String instanceId,
-                                               String instanceName, String apiVersionId, String apiId, String apiVersion,
-                                               String configId, String configName, String propertyId, String propertyName,
-                                               String propertyValue) {
+    public Result<String> getConfigInstanceApi(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "iap.host_id",
+                "instanceApiId", "iap.instance_api_id",
+                "instanceId", "ia.instance_id",
+                "instanceName", "i.instance_name",
+                "apiVersionId", "ia.api_version_id",
+                "apiId", "av.api_id",
+                "apiVersion", "av.api_version",
+                "active", "ia.active",
+                "updateUser", "ia.update_user"
+        ));
+        columnMap.put("updateTs", "ia.update_ts");
+        columnMap.put("configId", "p.config_id");
+        columnMap.put("configName", "c.config_name");
+        columnMap.put("propertyId", "iap.property_id");
+        columnMap.put("propertyName", "p.property_name");
+        columnMap.put("propertyValue", "iap.property_value");
+        columnMap.put("required", "p.required");
+        columnMap.put("propertyDesc", "p.property_desc");
+        columnMap.put("propertyType", "p.property_type");
+        columnMap.put("resourceType", "p.resource_type");
+        columnMap.put("valueType", "p.value_type");
+        columnMap.put("configType", "c.config_type");
+        columnMap.put("configDesc", "c.config_desc");
+        columnMap.put("classPath", "c.class_path");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
@@ -1279,48 +1407,28 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 INNER JOIN instance_api_property_t iap ON ia.host_id = iap.host_id AND ia.instance_api_id = iap.instance_api_id
                 INNER JOIN config_property_t p ON iap.property_id = p.property_id
                 INNER JOIN config_t c ON p.config_id = c.config_id
-                WHERE 1=1
+                WHERE iap.host_id = ?
                 """;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append(s).append("\n");
-
         List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-        SqlUtil.addCondition(whereClause, parameters, "iap.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "iap.instance_api_id", instanceApiId != null ? UUID.fromString(instanceApiId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "ia.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "i.instance_name", instanceName);
-        SqlUtil.addCondition(whereClause, parameters, "ia.api_version_id", apiVersionId != null ? UUID.fromString(apiVersionId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_id", apiId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_version", apiVersion);
-        SqlUtil.addCondition(whereClause, parameters, "p.config_id", configId != null ? UUID.fromString(configId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "c.config_name", configName);
-        SqlUtil.addCondition(whereClause, parameters, "iap.property_id", propertyId != null ? UUID.fromString(propertyId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "p.property_name", propertyName);
-        SqlUtil.addCondition(whereClause, parameters, "iap.property_value", propertyValue);
-
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY iap.host_id, ia.instance_id, av.api_id, av.api_version, p.config_id, p.display_order\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"i.instance_name", "c.config_name", "p.property_name", "p.property_desc", "c.config_desc"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("iap.host_id", "iap.instance_api_id", "ia.instance_id", "ia.api_version_id", "p.config_id", "iap.property_id"), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("iap.host_id, ia.instance_id, av.api_id, av.api_version, p.config_id, p.display_order", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
+        if(logger.isTraceEnabled()) logger.trace("sql = {}", sqlBuilder);
         int total = 0;
         List<Map<String, Object>> instanceApis = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+             PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
 
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+            populateParameters(preparedStatement, parameters);
 
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -1509,10 +1617,36 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     }
 
     @Override
-    public Result<String> getConfigInstanceApp(int offset, int limit, String hostId, String instanceAppId, String instanceId,
-                                               String instanceName, String appId, String appVersion, String configId, String configName,
-                                               String propertyId, String propertyName, String propertyValue) {
+    public Result<String> getConfigInstanceApp(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "iap.host_id",
+                "instanceAppId", "iap.instance_app_id",
+                "instanceId", "ia.instance_id",
+                "instanceName", "i.instance_name",
+                "appId", "ia.app_id",
+                "appVersion", "ia.app_version",
+                "configId", "p.config_id",
+                "configName", "c.config_name",
+                "propertyId", "iap.property_id",
+                "propertyName", "p.property_name"
+                ));
+        columnMap.put("propertyValue", "iap.property_value");
+        columnMap.put("required", "p.required");
+        columnMap.put("propertyDesc", "p.property_desc");
+        columnMap.put("propertyType", "p.property_type");
+        columnMap.put("resourceType", "p.resource_type");
+        columnMap.put("valueType", "p.value_type");
+        columnMap.put("configType", "c.config_type");
+        columnMap.put("configDesc", "c.config_desc");
+        columnMap.put("classPath", "c.class_path");
+        columnMap.put("updateUser", "ia.update_user");
+        columnMap.put("updateTs", "ia.update_ts");
+        columnMap.put("aggregateVersion", "iap.aggregate_version");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
@@ -1525,48 +1659,29 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 INNER JOIN instance_app_property_t iap ON ia.host_id = iap.host_id AND ia.instance_app_id = iap.instance_app_id
                 INNER JOIN config_property_t p ON p.property_id = iap.property_id
                 INNER JOIN config_t c ON p.config_id = c.config_id
-                WHERE 1=1
+                WHERE iap.host_id = ?
                 """;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append(s).append("\n");
 
         List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-        SqlUtil.addCondition(whereClause, parameters, "iap.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "iap.instance_app_id", instanceAppId != null ? UUID.fromString(instanceAppId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "ia.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "i.instance_name", instanceName);
-        SqlUtil.addCondition(whereClause, parameters, "ia.app_id", appId);
-        SqlUtil.addCondition(whereClause, parameters, "ia.app_version", appVersion);
-        SqlUtil.addCondition(whereClause, parameters, "p.config_id", configId != null ? UUID.fromString(configId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "c.config_name", configName);
-        SqlUtil.addCondition(whereClause, parameters, "iap.property_id", propertyId != null ? UUID.fromString(propertyId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "p.property_name", propertyName);
-        SqlUtil.addCondition(whereClause, parameters, "iap.property_value", propertyValue);
-
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY iap.host_id, ia.instance_id, ia.app_id, ia.app_version, p.config_id, p.property_name\n" +
-                "LIMIT ? OFFSET ?");
-
+        String[] searchColumns = {"i.instance_name", "c.config_name", "p.property_name", "p.property_desc", "c.config_desc"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("iap.host_id", "iap.instance_app_id", "ia.instance_id", "p.config_id", "iap.property_id"), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("iap.host_id, ia.instance_id, ia.app_id, ia.app_version, p.config_id, p.property_name", sorting, columnMap) +
+                // Pagination
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> instanceApps = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+             PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
 
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+            populateParameters(preparedStatement, parameters);
 
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -1762,10 +1877,40 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     }
 
     @Override
-    public Result<String> getConfigInstanceAppApi(int offset, int limit, String hostId, String instanceAppId, String instanceApiId, String instanceId,
-                                                  String instanceName, String appId, String appVersion, String apiVersionId, String apiId, String apiVersion,
-                                                  String configId, String configName, String propertyId, String propertyName, String propertyValue) {
+    public Result<String> getConfigInstanceAppApi(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "iap.host_id",
+                "instanceAppId", "iap.instance_app_id",
+                "instanceApiId", "iaap.instance_api_id",
+                "instanceId", "i.instance_id",
+                "instanceName", "i.instance_name",
+                "appId", "ia.app_id",
+                "appVersion", "ia.app_version",
+                "apiVersionId", "iai.api_version_id",
+                "apiId", "av.api_id",
+                "apiVersion", "av.api_version"
+                ));
+        columnMap.put("configId", "p.config_id");
+        columnMap.put("configName", "c.config_name");
+        columnMap.put("propertyId", "iap.property_id");
+        columnMap.put("propertyName", "p.property_name");
+        columnMap.put("propertyValue", "iap.property_value");
+        columnMap.put("required", "p.required");
+        columnMap.put("propertyDesc", "p.property_desc");
+        columnMap.put("propertyType", "p.property_type");
+        columnMap.put("resourceType", "p.resource_type");
+        columnMap.put("valueType", "p.value_type");
+        columnMap.put("configType", "c.config_type");
+        columnMap.put("configDesc", "c.config_desc");
+        columnMap.put("classPath", "c.class_path");
+        columnMap.put("updateUser", "ia.update_user");
+        columnMap.put("updateTs", "ia.update_ts");
+        columnMap.put("aggregateVersion", "iap.aggregate_version");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
@@ -1781,51 +1926,29 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 INNER JOIN api_version_t av ON av.host_id = iai.host_id AND av.api_version_id = iai.api_version_id
                 INNER JOIN config_property_t p ON p.property_id = iaap.property_id
                 INNER JOIN config_t c ON p.config_id = c.config_id
-                WHERE 1=1
+                WHERE iaap.host_id = ?
                 """;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append(s).append("\n");
 
         List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-        SqlUtil.addCondition(whereClause, parameters, "iaap.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "iaap.instance_app_id", instanceAppId != null ? UUID.fromString(instanceAppId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "iaap.instance_api_id", instanceApiId != null ? UUID.fromString(instanceApiId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "i.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "i.instance_name", instanceName);
-        SqlUtil.addCondition(whereClause, parameters, "iap.app_id", appId);
-        SqlUtil.addCondition(whereClause, parameters, "iap.app_version", appVersion);
-        SqlUtil.addCondition(whereClause, parameters, "iai.api_version_id", apiVersionId != null ? UUID.fromString(apiVersionId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_id", apiId);
-        SqlUtil.addCondition(whereClause, parameters, "av.api_version", apiVersion);
-        SqlUtil.addCondition(whereClause, parameters, "p.config_id", configId != null ? UUID.fromString(configId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "c.config_name", configName);
-        SqlUtil.addCondition(whereClause, parameters, "iaap.property_id", propertyId != null ? UUID.fromString(propertyId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "p.property_name", propertyName);
-        SqlUtil.addCondition(whereClause, parameters, "iaap.property_value", propertyValue);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY iaap.host_id, i.instance_id, iap.app_id, iap.app_version, av.api_id, av.api_version, p.config_id, p.property_name\n" +
-                "LIMIT ? OFFSET ?");
-
+        String[] searchColumns = {"i.instance_name", "c.config_name", "p.property_name", "p.property_desc", "c.config_desc"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("iaap.host_id", "iaap.instance_app_id", "iaap.instance_api_id", "ia.instance_id", "iai.api_version_id", "p.config_id", "iaap.property_id"), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("iaap.host_id, i.instance_id, iap.app_id, iap.app_version, av.api_id, av.api_version, p.config_id, p.property_name", sorting, columnMap) +
+                // Pagination
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> instanceAppApis = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+             PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
 
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+            populateParameters(preparedStatement, parameters);
 
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -2870,10 +2993,33 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     }
 
     @Override
-    public Result<String> getConfigInstance(int offset, int limit, String hostId, String instanceId,
-                                            String instanceName, String configId, String configName,
-                                            String propertyId, String propertyName, String propertyValue) {
+    public Result<String> getConfigInstance(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "ip.host_id",
+                "instanceId", "ip.instance_id",
+                "instanceName", "i.instance_name",
+                "configId", "p.config_id",
+                "configName", "c.config_name",
+                "propertyId", "ip.property_id",
+                "propertyName", "ip.property_name",
+                "propertyValue", "ip.property_value",
+                "required", "p.required",
+                "propertyDesc", "p.property_desc"
+        ));
+        columnMap.put("propertyType", "p.property_type");
+        columnMap.put("resourceType", "p.resource_type");
+        columnMap.put("valueType", "p.value_type");
+        columnMap.put("configType", "c.config_type");
+        columnMap.put("configDesc", "c.config_desc");
+        columnMap.put("classPath", "c.class_path");
+        columnMap.put("updateUser", "ip.update_user");
+        columnMap.put("updateTs", "ip.update_ts");
+        columnMap.put("aggregateVersion", "ip.aggregate_version");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
@@ -2884,43 +3030,28 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 INNER JOIN config_property_t p ON p.property_id = ip.property_id
                 INNER JOIN instance_t i ON i.instance_id = ip.instance_id
                 INNER JOIN config_t c ON p.config_id = c.config_id
-                WHERE 1=1
+                WHERE ip.host_id = ?
                 """;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append(s).append("\n");
-
         List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-        SqlUtil.addCondition(whereClause, parameters, "ip.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "ip.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "i.instance_name", instanceName);
-        SqlUtil.addCondition(whereClause, parameters, "p.config_id", configId != null ? UUID.fromString(configId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "c.config_name", configName); // Filter by config_name
-        SqlUtil.addCondition(whereClause, parameters, "p.property_id", propertyId != null ? UUID.fromString(propertyId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "ip.property_name", propertyName);
-        SqlUtil.addCondition(whereClause, parameters, "ip.property_value", propertyValue);
 
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY ip.host_id, ip.instance_id, p.config_id, p.display_order\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"i.instance_name", "c.config_name", "p.property_name", "p.property_desc", "c.config_desc"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("ip.host_id", "ip.instance_id", "p.config_id", "ip.property_id"), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("ip.host_id, ip.instance_id, p.config_id, p.display_order", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> instanceProperties = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
 
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+            populateParameters(preparedStatement, parameters);
 
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -3127,10 +3258,26 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     }
 
     @Override
-    public Result<String> getConfigInstanceFile(int offset, int limit, String hostId, String instanceFileId, String instanceId,
-                                                String instanceName, String fileType, String fileName, String fileValue, String fileDesc,
-                                                String expirationTs) {
+    public Result<String> getConfigInstanceFile(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "ift.host_id",
+                "instanceFileId", "ift.instance_file_id",
+                "instanceId", "ift.instance_id",
+                "instanceName", "i.instance_name",
+                "fileType", "ift.file_type",
+                "fileName", "ift.file_name",
+                "fileValue", "ift.file_value",
+                "fileDesc", "ift.file_desc",
+                "expirationTs", "ift.expiration_ts",
+                "updateUser", "ift.update_user"
+        ));
+        columnMap.put("updateTs", "ift.update_ts");
+        columnMap.put("aggregateVersion", "ift.aggregate_version");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
@@ -3139,45 +3286,28 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 ift.expiration_ts, ift.update_user, ift.update_ts, ift.aggregate_version
                 FROM instance_file_t ift
                 INNER JOIN instance_t i ON i.instance_id = ift.instance_id
-                WHERE 1=1
+                WHERE ift.host_id = ?
                 """;
 
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append(s).append("\n");
-
         List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-        SqlUtil.addCondition(whereClause, parameters, "ift.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "ift.instance_file_id", instanceFileId != null ? UUID.fromString(instanceFileId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "ift.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "i.instance_name", instanceName);
-        SqlUtil.addCondition(whereClause, parameters, "ift.file_type", fileType);
-        SqlUtil.addCondition(whereClause, parameters, "ift.file_name", fileName);
-        SqlUtil.addCondition(whereClause, parameters, "ift.file_value", fileValue);
-        SqlUtil.addCondition(whereClause, parameters, "ift.file_desc", fileDesc);
-        SqlUtil.addCondition(whereClause, parameters, "ift.expiration_ts", expirationTs);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY ift.host_id, ift.instance_file_id, ift.instance_id\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"i.instance_name", "ift.file_name", "ift.file_desc"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("ift.host_id", "ift.instance_file_id", "ift.instance_id"), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("ift.host_id, ift.instance_file_id, ift.instance_id", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> instanceFiles = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+             PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
 
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+            populateParameters(preparedStatement, parameters);
 
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -3360,10 +3490,29 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     }
 
     @Override
-    public Result<String> getConfigDeploymentInstance(int offset, int limit, String hostId, String deploymentInstanceId, String instanceId,
-                                                      String instanceName, String serviceId, String ipAddress, Integer portNumber, String configId,
-                                                      String configName, String propertyId, String propertyName, String propertyValue) {
+    public Result<String> getConfigDeploymentInstance(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "dip.host_id",
+                "deploymentInstanceId", "dip.deployment_instance_id",
+                "instanceId", "di.instance_id",
+                "instanceName", "i.instance_name",
+                "serviceId", "di.service_id",
+                "ipAddress", "di.ip_address",
+                "portNumber", "di.port_number",
+                "configId", "cp.config_id",
+                "configName", "c.config_name",
+                "propertyId", "dip.property_id"
+        ));
+        columnMap.put("propertyName", "cp.property_name");
+        columnMap.put("propertyValue", "dip.property_value");
+        columnMap.put("updateUser", "dip.update_user");
+        columnMap.put("updateTs", "dip.update_ts");
+        columnMap.put("aggregateVersion", "dip.aggregate_version");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
@@ -3377,48 +3526,28 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 AND i.instance_id = di.instance_id
                 INNER JOIN config_property_t cp ON dip.property_id = cp.property_id
                 INNER JOIN config_t c ON c.config_id = cp.config_id
-                WHERE 1=1
+                WHERE dip.host_id = ?
                 """;
 
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append(s).append("\n");
-
         List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-        SqlUtil.addCondition(whereClause, parameters, "dip.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "dip.deployment_instance_id", deploymentInstanceId != null ? UUID.fromString(deploymentInstanceId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "di.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "i.instance_name", instanceName);
-        SqlUtil.addCondition(whereClause, parameters, "di.service_id", serviceId);
-        SqlUtil.addCondition(whereClause, parameters, "di.ip_address", ipAddress);
-        SqlUtil.addCondition(whereClause, parameters, "di.port_number", portNumber);
-        SqlUtil.addCondition(whereClause, parameters, "cp.config_id", configId != null ? UUID.fromString(configId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "c.config_name", configName);
-        SqlUtil.addCondition(whereClause, parameters, "dip.property_id", propertyId != null ? UUID.fromString(propertyId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "cp.property_name", propertyName);
-        SqlUtil.addCondition(whereClause, parameters, "dip.property_value", propertyValue);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY dip.host_id, di.service_id\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"i.instance_name", "c.config_name", "cp.property_name"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("dip.host_id", "dip.deployment_instance_id", "di.instance_id", "cp.config_id", "dip.property_id"), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("dip.host_id, di.service_id", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> deploymentInstances = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
 
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+            populateParameters(preparedStatement, parameters);
 
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -3596,53 +3725,52 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     }
 
     @Override
-    public Result<String> getConfigProduct(int offset, int limit, String productId,
-                                           String configId, String configName, String propertyId,
-                                           String propertyName, String propertyValue) {
+    public Result<String> getConfigProduct(int offset, int limit, String filtersJson, String globalFilter, String sortingJson) {
         Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "productId", "pp.product_id",
+                "configId", "p.configId",
+                "propertyId", "pp.property_id",
+                "propertyName", "p.property_name",
+                "propertyValue", "pp.property_value",
+                "updateUser", "pp.update_user",
+                "updateTs", "pp.update_ts",
+                "configName", "c.config_name",
+                "aggregateVersion", "pp.aggregate_version"
+        ));
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
+
         String s =
-                """
-                        SELECT COUNT(*) OVER () AS total,
-                        pp.product_id, p.config_id, pp.property_id, p.property_name, pp.property_value,
-                        pp.update_user, pp.update_ts, c.config_name, pp.aggregate_version
-                        FROM product_property_t pp
-                        INNER JOIN config_property_t p ON p.property_id = pp.property_id
-                        INNER JOIN config_t c ON p.config_id = c.config_id
-                        WHERE 1=1
-                """;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append(s).append("\n");
+            """
+                SELECT COUNT(*) OVER () AS total,
+                pp.product_id, p.config_id, pp.property_id, p.property_name, pp.property_value,
+                pp.update_user, pp.update_ts, c.config_name, pp.aggregate_version
+                FROM product_property_t pp
+                INNER JOIN config_property_t p ON p.property_id = pp.property_id
+                INNER JOIN config_t c ON p.config_id = c.config_id
+                WHERE 1=1
+            """;
 
         List<Object> parameters = new ArrayList<>();
 
-        StringBuilder whereClause = new StringBuilder();
-        SqlUtil.addCondition(whereClause, parameters, "pp.product_id", productId);
-        SqlUtil.addCondition(whereClause, parameters, "p.config_id", configId != null ? UUID.fromString(configId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "c.config_name", configName);
-        SqlUtil.addCondition(whereClause, parameters, "pp.property_id", propertyId != null ? UUID.fromString(propertyId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "p.property_name", propertyName);
-        SqlUtil.addCondition(whereClause, parameters, "pp.property_value", propertyValue);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY pp.product_id, p.config_id, p.property_name\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"p.property_name", "c.config_name"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("p.config_id", "pp.property_id"), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("pp.product_id, p.config_id, p.property_name", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> productProperties = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+             PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
 
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+            populateParameters(preparedStatement, parameters);
 
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -3824,10 +3952,27 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     }
 
     @Override
-    public Result<String> getConfigProductVersion(int offset, int limit, String hostId, String productId, String productVersion,
-                                                  String configId, String configName, String propertyId,
-                                                  String propertyName, String propertyValue) {
+    public Result<String> getConfigProductVersion(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "pvp.host_id",
+                "productVersionId", "pvp.product_version_id",
+                "productId", "pv.product_id",
+                "productVersion", "pv.product_version",
+                "configId", "p.config_id",
+                "configName", "c.config_name",
+                "propertyId", "pvp.property_id",
+                "propertyName", "p.property_name"
+        ));
+        columnMap.put("propertyValue", "pvp.property_value");
+        columnMap.put("updateUser", "pvp.update_user");
+        columnMap.put("updateTs", "pvp.update_ts");
+        columnMap.put("configName", "c.config_name");
+        columnMap.put("aggregateVersion", "pvp.aggregate_version");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
@@ -3837,45 +3982,28 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 INNER JOIN product_version_t pv ON pv.product_version_id = pvp.product_version_id
                 INNER JOIN config_property_t p ON p.property_id = pvp.property_id
                 INNER JOIN config_t c ON p.config_id = c.config_id
-                WHERE 1=1
+                WHERE pvp.host_id = ?
                 """;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append(s).append("\n");
 
         List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-        SqlUtil.addCondition(whereClause, parameters, "pvp.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "pv.product_version_id", productVersion != null ? UUID.fromString(productVersion) : null); // Assuming productVersion can map to product_version_id
-        SqlUtil.addCondition(whereClause, parameters, "pv.product_id", productId);
-        SqlUtil.addCondition(whereClause, parameters, "pv.product_version", productVersion);
-        SqlUtil.addCondition(whereClause, parameters, "p.config_id", configId != null ? UUID.fromString(configId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "c.config_name", configName);
-        SqlUtil.addCondition(whereClause, parameters, "pvp.property_id", propertyId != null ? UUID.fromString(propertyId) : null);
-        SqlUtil.addCondition(whereClause, parameters, "p.property_name", propertyName);
-        SqlUtil.addCondition(whereClause, parameters, "pvp.property_value", propertyValue);
-
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY pvp.host_id, pv.product_id, pv.product_version, p.config_id, p.display_order\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"p.property_name", "c.config_name"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("pvp.host_id", "pvp.product_version_id", "p.config_id", "pvp.property_id"), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("pvp.host_id, pv.product_id, pv.product_version, p.config_id, p.display_order", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> productVersionProperties = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
 
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+            populateParameters(preparedStatement, parameters);
 
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
