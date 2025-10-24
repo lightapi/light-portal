@@ -1556,12 +1556,17 @@ public class HybridQueryClient {
      * @param deliveryOwner Delivery Owner (optional)
      * @return Result<String> containing app information in JSON format
      */
-    public static Result<String> queryApp(HttpServerExchange exchange, String hostId, String appId,
-                                        String appName, String appDesc, Boolean isKafkaApp, String operationOwner, String deliveryOwner) {
+    public static Result<String> queryAppUsingToken(
+            String authorizationToken, String hostId, String appId, String appName, String appDesc, Boolean isKafkaApp,
+            String operationOwner, String deliveryOwner) {
 
         final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"client\",\"action\":\"getApp\",\"version\":\"0.1.0\",\"data\":{\"hostId\":\"%s\",\"appId\":\"%s\",\"appName\":\"%s\",\"appDesc\":\"%s\",\"isKafkaApp\":%b,\"operationOwner\":\"%s\",\"deliveryOwner\":\"%s\"}}",
                 hostId, appId, appName, appDesc, isKafkaApp, operationOwner, deliveryOwner);
-        return callQueryExchange(s, exchange);
+        if (config.isPortalByServiceUrl()) {
+            return callQueryTokenUrl(s, authorizationToken, config.getPortalQueryServiceUrl());
+        } else {
+            return callQueryWithToken(s, authorizationToken);
+        }
     }
 
 }
