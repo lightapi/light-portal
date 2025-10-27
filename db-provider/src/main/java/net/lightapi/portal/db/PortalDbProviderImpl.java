@@ -123,7 +123,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void createApp(Connection connection, Map<String, Object> event) throws SQLException, Exception { authPersistence.createApp(connection, event); }
     @Override public void updateApp(Connection connection, Map<String, Object> event) throws SQLException, Exception { authPersistence.updateApp(connection, event); }
     @Override public void deleteApp(Connection connection, Map<String, Object> event) throws SQLException, Exception { authPersistence.deleteApp(connection, event); }
-    @Override public Result<String> queryApp(int offset, int limit, String hostId, String appId, String appName, String appDesc, Boolean isKafkaApp, String operationOwner, String deliveryOwner) { return authPersistence.queryApp(offset, limit, hostId, appId, appName, appDesc, isKafkaApp, operationOwner, deliveryOwner); }
+    @Override public Result<String> queryApp(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return authPersistence.queryApp(offset, limit, filters, globalFilter, sorting, hostId); }
     @Override public Result<String> getAppIdLabel(String hostId) { return authPersistence.getAppIdLabel(hostId); }
     @Override public void createClient(Connection connection, Map<String, Object> event) throws SQLException, Exception { authPersistence.createClient(connection, event); }
     @Override public void updateClient(Connection connection, Map<String, Object> event) throws SQLException, Exception { authPersistence.updateClient(connection, event); }

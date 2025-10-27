@@ -135,7 +135,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<Map<String, Object>> queryLongLiveProviderKey(String providerId);
 
     // App
-    Result<String> queryApp(int offset, int limit, String hostId, String appId, String appName, String appDesc, Boolean isKafkaApp, String operationOwner, String deliveryOwner);
+    Result<String> queryApp(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> queryClient(int offset, int limit, String hostId, String appId, String apiId, String clientId, String clientName, String clientType, String clientProfile, String clientScope, String customClaim, String redirectUri, String authenticateClass, String deRefClientId);
     void createApp(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateApp(Connection conn, Map<String, Object> event) throws SQLException, Exception;
