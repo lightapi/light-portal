@@ -1545,4 +1545,28 @@ public class HybridQueryClient {
         }
     }
 
+    /**
+     * Get app information based on provided parameters.
+     * @param hostId Host ID
+     * @param appId App ID (optional)
+     * @param appName App Name (optional)
+     * @param appDesc App Description (optional)
+     * @param isKafkaApp Whether it's a Kafka app (optional)
+     * @param operationOwner Operation Owner (optional)
+     * @param deliveryOwner Delivery Owner (optional)
+     * @return Result<String> containing app information in JSON format
+     */
+    public static Result<String> queryAppUsingToken(
+            String authorizationToken, String hostId, String appId, String appName, String appDesc, Boolean isKafkaApp,
+            String operationOwner, String deliveryOwner) {
+
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"client\",\"action\":\"getApp\",\"version\":\"0.1.0\",\"data\":{\"hostId\":\"%s\",\"appId\":\"%s\",\"appName\":\"%s\",\"appDesc\":\"%s\",\"isKafkaApp\":%b,\"operationOwner\":\"%s\",\"deliveryOwner\":\"%s\"}}",
+                hostId, appId, appName, appDesc, isKafkaApp, operationOwner, deliveryOwner);
+        if (config.isPortalByServiceUrl()) {
+            return callQueryTokenUrl(s, authorizationToken, config.getPortalQueryServiceUrl());
+        } else {
+            return callQueryWithToken(s, authorizationToken);
+        }
+    }
+
 }

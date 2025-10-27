@@ -24,7 +24,7 @@ public class CloudEventTest {
         CloudEventBuilder eventTemplate = CloudEventBuilder.v1()
                 .withSource(URI.create("https://github.com/lightapi/light-portal"))
                 .withType(PortalConstants.AUTH_CODE_CREATED_EVENT);
-
+        int l = 1;
         String data = "{\"redirectUri\":\"https://localhost:3000/authorization\",\"authCode\":\"dTT0hjYBS7aZwF0gipqxnA\",\"roles\":\"admin user\",\"hostId\":\"N2CMw0HGQXeLvC1wBfln2A\",\"groups\":\"delete insert select update\",\"entityId\":\"sh35\",\"positions\":\"APIPlatformDelivery\",\"userId\":\"utgdG50vRVOX3mL1Kf83aA\",\"remember\":\"Y\",\"providerId\":\"EF3wqhfWQti2DUVrvYNM7g\",\"attributes\":\"country^=^CAN~peranent_employee^=^true~security_clearance_level^=^2\",\"userType\":\"E\",\"email\":\"steve.hu@lightapi.net\"}";
         CloudEvent event = eventTemplate.newBuilder()
                 .withId(UuidUtil.getUUID().toString())
@@ -32,6 +32,7 @@ public class CloudEventTest {
                 .withExtension(Constants.USER, "user123")
                 .withExtension(PortalConstants.NONCE, 1)
                 .withExtension(Constants.HOST, "host123")
+                .withExtension(PortalConstants.EVENT_AGGREGATE_VERSION, (Number)l)
                 .withData("application/json", data.getBytes(StandardCharsets.UTF_8))
                 .build();
 

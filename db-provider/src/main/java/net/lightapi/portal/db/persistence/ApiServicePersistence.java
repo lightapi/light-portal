@@ -26,7 +26,7 @@ public interface ApiServicePersistence {
 
     // Service Endpoint
     Result<String> queryServiceEndpoint(int offset, int limit, String hostId, String apiVersionId, String apiId, String apiVersion, String endpoint, String method, String path, String desc);
-    Result<String> queryEndpointLabel(String hostId, String apiId, String apiVersion); // This seems to take apiId, not apiVersionId
+    Result<String> queryEndpointLabel(String hostId, String apiVersionId);
     Result<String> queryEndpointScope(String hostId, String endpointId);
 
     // Endpoint Rule

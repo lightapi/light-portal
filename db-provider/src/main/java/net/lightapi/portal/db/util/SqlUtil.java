@@ -1,21 +1,24 @@
 package net.lightapi.portal.db.util;
 
+import com.networknt.config.JsonMapper;
 import io.cloudevents.CloudEvent;
 import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.PortalConstants;
+import net.lightapi.portal.db.persistence.ReferenceDataPersistenceImpl;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class SqlUtil {
+    private static final Logger logger = LoggerFactory.getLogger(SqlUtil.class);
 
     private SqlUtil() {
         // Private constructor for utility class
@@ -210,5 +213,107 @@ public class SqlUtil {
         } finally {
             connection.close();
         }
+    }
+
+    public static List<Map<String, Object>> parseJsonList(String json) {
+        if (json == null || json.isEmpty() || "[]".equals(json.trim())) {
+            return Collections.emptyList();
+        }
+        return JsonMapper.string2List(json);
+    }
+
+    // Utility to convert simple CamelCase to snake_case
+    public static String camelToSnake(String camelCase) {
+        if (camelCase == null || camelCase.isEmpty()) {
+            return camelCase;
+        }
+        // Simple regex: insert underscore before every capital letter and lowercase the whole string
+        return camelCase.replaceAll("([a-z])([A-Z]+)", "$1_$2").toLowerCase(Locale.ROOT);
+    }
+
+    public static String mapToDbColumn(Map<String, String> columnMap, String camelCaseName) {
+        String dbName = columnMap.get(camelCaseName);
+        if (dbName == null) {
+            // Log warning or throw error if an unknown column name is used
+            logger.warn("Attempted to map unknown column name: {}", camelCaseName);
+            // Defaulting to the original name can be dangerous, but we'll stick to a strict lookup
+            return camelCaseName;
+        }
+        return dbName;
+    }
+
+    public static StringBuilder dynamicFilter(List<String> uuidColumnNames, List<Map<String, Object>> filters, Map<String, String> columnMap, List<Object> parameters) {
+        StringBuilder sb = new StringBuilder();
+        // Material React Table Filters (Dynamic Filters) ---
+        for (Map<String, Object> filter : filters) {
+            String filterId = (String) filter.get("id"); // Column name
+            String dbColumnName = columnMap == null ? camelToSnake(filterId) : mapToDbColumn(columnMap, filterId);
+            Object filterValue = filter.get("value");    // Value to filter by
+            if (filterId != null && filterValue != null && !filterValue.toString().isEmpty()) {
+                if(uuidColumnNames.contains(dbColumnName)) {
+                    sb.append(" AND ").append(dbColumnName).append(" = ?");
+                    parameters.add(UUID.fromString(filterValue.toString()));
+                } else {
+                    sb.append(" AND ").append(dbColumnName).append(" ILIKE ?");
+                    parameters.add("%" + filterValue + "%");
+                }
+            }
+        }
+        return sb;
+    }
+
+    public static StringBuilder globalFilter(String globalFilter, String[] searchColumns, List<Object> parameters) {
+        StringBuilder sb = new StringBuilder();
+        // Global Filter (Search across multiple columns)
+        if (globalFilter != null && !globalFilter.isEmpty()) {
+            sb.append(" AND (");
+            // Define columns to search for global filter (e.g., table_name, table_desc)
+            List<String> globalConditions = new ArrayList<>();
+            for (String col : searchColumns) {
+                globalConditions.add(col + " ILIKE ?");
+                parameters.add("%" + globalFilter + "%");
+            }
+            sb.append(String.join(" OR ", globalConditions));
+            sb.append(")");
+        }
+        return sb;
+    }
+
+    public static StringBuilder dynamicSorting(String defaultSorting, List<Map<String, Object>> sorting, Map<String, String> columnMap) {
+        StringBuilder orderByClause = new StringBuilder();
+        if (sorting.isEmpty()) {
+            // Default sort if none provided
+            orderByClause.append(" ORDER BY ").append(defaultSorting);
+        } else {
+            orderByClause.append(" ORDER BY ");
+            List<String> sortExpressions = new ArrayList<>();
+            for (Map<String, Object> sort : sorting) {
+                String sortId = (String) sort.get("id");
+                String dbColumnName = columnMap == null ? camelToSnake(sortId) : mapToDbColumn(columnMap, sortId);
+                Boolean isDesc = (Boolean) sort.get("desc"); // 'desc' is typically a boolean or "true"/"false" string
+                if (sortId != null && !sortId.isEmpty()) {
+                    String direction = (isDesc != null && isDesc) ? "DESC" : "ASC";
+                    // Quote column name to handle SQL keywords or mixed case
+                    sortExpressions.add(dbColumnName + " " + direction);
+                }
+            }
+            // Use default if dynamic sort failed to produce anything
+            orderByClause.append(sortExpressions.isEmpty() ? defaultSorting : String.join(", ", sortExpressions));
+        }
+        return orderByClause;
+    }
+
+    public static void populateParameters(PreparedStatement preparedStatement, List<Object> parameters) throws SQLException {
+        for (int i = 0; i < parameters.size(); i++) {
+            // Ensure proper type setting (especially for UUIDs, Booleans, etc.)
+            if (parameters.get(i) instanceof UUID) {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            } else if (parameters.get(i) instanceof Boolean) {
+                preparedStatement.setBoolean(i + 1, (Boolean) parameters.get(i));
+            } else {
+                preparedStatement.setObject(i + 1, parameters.get(i));
+            }
+        }
+
     }
 }

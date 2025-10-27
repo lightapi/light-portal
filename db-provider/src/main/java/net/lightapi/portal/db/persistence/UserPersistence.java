@@ -13,7 +13,7 @@ public interface UserPersistence {
     Result<String> queryUserById(String userId);
     Result<String> queryUserByTypeEntityId(String userType, String entityId);
     Result<String> queryUserByWallet(String cryptoType, String cryptoAddress);
-    Result<String> queryUserByHostId(int offset, int limit, String hostId, String email, String language, String userType, String entityId, String referralId, String managerId, String firstName, String lastName, String phoneNumber, String gender, String birthday, String country, String province, String city, String address, String postCode, Boolean verified, Boolean locked);
+    Result<String> queryUserByHostId(int offset, int limit, String filters, String globalFilter, String sorting);
     Result<String> getHostsByUserId(String userId);
     Result<String> getHostLabelByUserId(String userId);
 
