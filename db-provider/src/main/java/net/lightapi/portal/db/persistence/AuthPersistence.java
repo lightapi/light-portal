@@ -13,6 +13,7 @@ public interface AuthPersistence {
     void updateApp(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteApp(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> queryApp(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
+    Result<String> queryAppById(String hostId, String appId);
     Result<String> getAppIdLabel(String hostId);
 
 

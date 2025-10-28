@@ -39,6 +39,7 @@ public class EventTypeUtil {
      * @return The derived aggregate type (e.g., "Config", "ServiceVersion"), or null if it cannot be derived consistently.
      */
     public static String deriveAggregateTypeFromEventType(String eventType) {
+        if(logger.isTraceEnabled()) logger.trace("eventType = {}", eventType);
         if (eventType == null || eventType.isEmpty()) {
             logger.warn("Attempted to derive aggregate type from null or empty eventType.");
             return null;
@@ -49,6 +50,7 @@ public class EventTypeUtil {
                 String aggregateType = eventType.substring(0, eventType.length() - suffix.length());
                 // Basic validation: ensure it's not empty after removing suffix
                 if (!aggregateType.isEmpty()) {
+                    if(logger.isTraceEnabled()) logger.trace("aggregateType = {}", aggregateType);
                     return aggregateType;
                 }
             }
@@ -643,13 +645,15 @@ public class EventTypeUtil {
                 yield id;
             }
             case PortalConstants.AGGREGATE_APP -> {
+                String hostId = (String) dataMap.get("hostId");
                 String appId = (String) dataMap.get("appId");
-                if (appId == null) {
-                    logger.warn("appId is null in data map for aggregate type: {}", aggregateType);
+                if (appId == null || hostId == null) {
+                    logger.warn("hostId or appId is null in data map for aggregate type: {}", aggregateType);
                     yield null;
                 }
-                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, appId);
-                yield appId;
+                String id = hostId + "|" + appId;
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, id);
+                yield id;
             }
             case PortalConstants.AGGREGATE_CLIENT -> {
                 String clientId = (String) dataMap.get("clientId");

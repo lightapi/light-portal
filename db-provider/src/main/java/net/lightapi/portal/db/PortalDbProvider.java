@@ -136,6 +136,7 @@ public interface PortalDbProvider extends DbProvider {
 
     // App
     Result<String> queryApp(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
+    Result<String> queryAppById(String hostId, String appId);
     Result<String> queryClient(int offset, int limit, String hostId, String appId, String apiId, String clientId, String clientName, String clientType, String clientProfile, String clientScope, String customClaim, String redirectUri, String authenticateClass, String deRefClientId);
     void createApp(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateApp(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -594,6 +595,7 @@ public interface PortalDbProvider extends DbProvider {
 
     // Event Store
     Result<String> insertEventStore(CloudEvent[] events);
+    int getMaxAggregateVersion(String aggregateId);
 
     /**
      * Builds the CloudEvent object array from the provided map, eventType, aggregateId,
