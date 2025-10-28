@@ -227,6 +227,16 @@ public class PortalDbProviderImplTest {
     }
 
     @Test
+    void testQueryApp() {
+        Result<String> result = dbProvider.queryApp(0, 2, "[{\"id\":\"active\",\"value\":false}]", null, null, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
+        if(result.isFailure()) {
+            System.out.println(result.getError());
+        } else {
+            System.out.println(result.getResult());
+        }
+    }
+
+    @Test
     void testQueryProviderKey() {
         Result<String> result = dbProvider.queryProviderKey("01964b05-552a-7c4b-9184-6857e7f3dc5f");
         if(result.isFailure()) {

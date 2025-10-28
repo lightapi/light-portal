@@ -15,14 +15,13 @@ import net.lightapi.portal.db.util.SqlUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.validation.Valid;
 import java.sql.*;
 import java.time.OffsetDateTime;
 import java.util.*;
 
 import static com.networknt.db.provider.SqlDbStartupHook.ds;
 import static java.sql.Types.NULL;
-import static net.lightapi.portal.db.util.SqlUtil.addCondition;
+import static net.lightapi.portal.db.util.SqlUtil.*;
 
 public class AuthPersistenceImpl implements AuthPersistence {
     private static final Logger logger = LoggerFactory.getLogger(AuthPersistenceImpl.class);
@@ -38,13 +37,34 @@ public class AuthPersistenceImpl implements AuthPersistence {
 
     @Override
     public void createApp(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "INSERT INTO app_t(host_id, app_id, app_name, app_desc, is_kafka_app, operation_owner, delivery_owner, update_user, update_ts, aggregate_version) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        // Use UPSERT: INSERT ON CONFLICT DO UPDATE
+        // This handles:
+        // 1. First time insert (no conflict).
+        // 2. Re-creation (conflict on host_id, app_id) -> UPDATE the existing row (setting active=TRUE and new version).
+
+        final String sql =
+                """
+                INSERT INTO app_t(host_id, app_id, app_name, app_desc, is_kafka_app, operation_owner, delivery_owner, update_user, update_ts, aggregate_version, active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (host_id, app_id) DO UPDATE
+                SET app_name = EXCLUDED.app_name,
+                    app_desc = EXCLUDED.app_desc,
+                    is_kafka_app = EXCLUDED.is_kafka_app,
+                    operation_owner = EXCLUDED.operation_owner,
+                    delivery_owner = EXCLUDED.delivery_owner,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                WHERE app_t.aggregate_version < EXCLUDED.aggregate_version
+                """; // <<< CRITICAL: Added WHERE to ensure we only update if the incoming event is newer
+
         Map<String, Object> map = SqlUtil.extractEventData(event);
-        String appId = (String) map.get("appId");
+        String hostId = (String)map.get("hostId");
+        String appId = (String)map.get("appId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString((String) event.get(Constants.HOST)));
+            statement.setObject(1, UUID.fromString(hostId));
             statement.setString(2, appId);
             statement.setString(3, (String) map.get("appName"));
             if (map.containsKey("appDesc")) {
@@ -69,45 +89,35 @@ public class AuthPersistenceImpl implements AuthPersistence {
             }
             statement.setString(8, (String) event.get(Constants.USER));
             statement.setObject(9, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            statement.setLong(10, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert the app with appId " + appId + " with aggregate version " + newAggregateVersion);
-            }
+                // count=0 means the ON CONFLICT clause was hit, BUT the WHERE clause (aggregate_version < EXCLUDED.aggregate_version) failed.
+                // This is the desired idempotent/out-of-order protection behavior. Log and ignore.
+                logger.warn("Creation/Reactivation skipped for hostId {} appId {} aggregateVersion {}. A newer or same version already exists.", hostId, appId, newAggregateVersion);            }
         } catch (SQLException e) {
-            logger.error("SQLException during createApp for appId {} aggregateVersion {}: {}", appId, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during createApp for hostId {} appId {} aggregateVersion {}: {}", hostId, appId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createApp for appId {} aggregateVersion {}: {}", appId, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during createApp for hostId {} appId {} aggregateVersion {}: {}", hostId, appId, newAggregateVersion, e.getMessage(), e);
             throw e;
-        }
-    }
-
-    private boolean queryAppExists(Connection conn, String hostId, String appId) throws SQLException {
-        final String sql =
-                """
-                SELECT COUNT(*) FROM app_t WHERE host_id = ? AND app_id = ?
-                """;
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
-            pst.setObject(1, UUID.fromString(hostId));
-            pst.setString(2, appId);
-            try (ResultSet rs = pst.executeQuery()) {
-                return rs.next() && rs.getInt(1) > 0;
-            }
         }
     }
 
     @Override
     public void updateApp(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // We will attempt to update the record IF the incoming event is newer than the current projection version.
+        // We also explicitly set active = TRUE if the record exists, as an UPDATE event implies the app is active.
         final String sql =
                 """
                 UPDATE app_t SET app_name = ?, app_desc = ?, is_kafka_app = ?, operation_owner = ?,
-                delivery_owner = ?, update_user = ?, update_ts = ?, aggregate_version = ?
-                WHERE host_id = ? AND app_id = ? AND aggregate_version = ?
-                """;
+                delivery_owner = ?, update_user = ?, update_ts = ?, aggregate_version = ?, active = TRUE
+                WHERE host_id = ? AND app_id = ? AND aggregate_version < ?
+                """; // <<< CRITICAL: Added aggregate_version < ? to enforce monotonicity
         Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String) map.get("hostId");
         String appId = (String) map.get("appId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
@@ -138,60 +148,59 @@ public class AuthPersistenceImpl implements AuthPersistence {
             statement.setString(6, (String) event.get(Constants.USER));
             statement.setObject(7, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
             statement.setLong(8, newAggregateVersion);
-            statement.setObject(9, UUID.fromString((String) map.get("hostId")));
+            statement.setObject(9, UUID.fromString(hostId));
             statement.setString(10, appId);
-            statement.setLong(11, oldAggregateVersion);
+            statement.setLong(11, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryAppExists(conn, (String)event.get(Constants.HOST), appId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict for appId " + appId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
-                } else {
-                    throw new SQLException("No record found to update for appId " + appId + ".");
-                }
+                // If 0 rows updated, it means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Update skipped for hostId {} appId {} aggregateVersion {}. Record not found or a newer version already exists.", hostId, appId, newAggregateVersion);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during updateApp for appId {} (old: {}) -> (new: {}): {}", appId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during updateApp for hostId {} appId {} aggregateVersion {}: {}", hostId, appId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateApp for appId {} (old: {}) -> (new: {}): {}", appId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during updateApp for hostId {} appId {} aggregateVersion {}: {}", hostId, appId, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
     public void deleteApp(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // The delete event's sequence number is the NEW version for the soft-deleted state.
+        // We UPDATE to set active=false IF the incoming event is newer than the current projection version.
         final String sql =
                 """
-                DELETE FROM app_t WHERE host_id = ? AND app_id = ? AND aggregate_version = ?
-                """;
+                UPDATE app_t SET active = false, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? AND app_id = ? AND aggregate_version < ?
+                """; // <<< CRITICAL: Added aggregate_version < ? to enforce monotonicity
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String)map.get("hostId");
         String appId = (String) map.get("appId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString((String) map.get("hostId")));
-            statement.setString(2, appId);
-            statement.setLong(3, oldAggregateVersion);
+            statement.setString(1, (String) event.get(Constants.USER));
+            statement.setObject(2, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            statement.setLong(3, newAggregateVersion );
+            statement.setObject(4, UUID.fromString(hostId));
+            statement.setString(5, appId);
+            // WHERE monotonicity check: use the new version as the check value
+            statement.setLong(6, newAggregateVersion); // Condition is WHERE aggregate_version < newAggregateVersion
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryAppExists(conn, (String)event.get(Constants.HOST), appId)) {
-                    String s = String.format("Optimistic concurrency conflict during deleteApp for appId %s aggregateVersion %d but found a different version.", appId, oldAggregateVersion);
-                    logger.warn(s);
-                    throw new ConcurrencyException(s);
-                } else {
-                    String s = String.format("No record found during deleteApp for appId %s. It might have been already deleted.", appId);
-                    logger.warn(s);
-                    throw new SQLException(s);
-                }
-            }
+                // If 0 rows updated, it means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Deletion skipped for hostId {} appId {} aggregateVersion {}. Record not found or a newer version already exists.", hostId, appId, newAggregateVersion);            }
         } catch (SQLException e) {
-            logger.error("SQLException during deleteApp for appId {} aggregateVersion {}: {}", appId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during deleteApp for appId {} aggregateVersion {}: {}", appId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteApp for appId {} aggregateVersion {}: {}", appId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during deleteApp for appId {} aggregateVersion {}: {}", appId, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -920,52 +929,38 @@ public class AuthPersistenceImpl implements AuthPersistence {
     }
 
     @Override
-    public Result<String> queryApp(int offset, int limit, String hostId, String appId, String appName, String appDesc,
-                                   Boolean isKafkaApp, String operationOwner, String deliveryOwner) {
+    public Result<String> queryApp(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
-                host_id, app_id, app_name, app_desc, is_kafka_app, operation_owner, delivery_owner, aggregate_version
+                host_id, app_id, app_name, app_desc, is_kafka_app, operation_owner,
+                delivery_owner, update_user, update_ts, active, aggregate_version
                 FROM app_t
                 WHERE host_id = ?
                 """;
-        StringBuilder sqlBuilder = new StringBuilder(s);
-
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-
-        addCondition(whereClause, parameters, "app_id", appId);
-        addCondition(whereClause, parameters, "app_name", appName);
-        addCondition(whereClause, parameters, "app_desc", appDesc);
-        addCondition(whereClause, parameters, "is_kafka_app", isKafkaApp);
-        addCondition(whereClause, parameters, "operation_owner", operationOwner != null ? UUID.fromString(operationOwner) : null);
-        addCondition(whereClause, parameters, "delivery_owner", deliveryOwner != null ? UUID.fromString(deliveryOwner) : null);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY app_id\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"app_id", "app_name", "app_desc"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("app_id", sorting, null) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> apps = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -981,6 +976,9 @@ public class AuthPersistenceImpl implements AuthPersistence {
                     map.put("isKafkaApp", resultSet.getBoolean("is_kafka_app"));
                     map.put("operationOwner", resultSet.getObject("operation_owner", UUID.class));
                     map.put("deliveryOwner", resultSet.getObject("delivery_owner", UUID.class));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("active", resultSet.getBoolean("active"));
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     apps.add(map);
                 }

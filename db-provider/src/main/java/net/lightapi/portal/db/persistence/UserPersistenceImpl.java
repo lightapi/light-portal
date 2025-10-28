@@ -666,7 +666,7 @@ public class UserPersistenceImpl implements UserPersistence {
         List<Object> parameters = new ArrayList<>();
 
         String[] searchColumns = {"u.email", "u.first_name", "u.last_name", "COALESCE(c.customer_id, e.employee_id)"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("uh.host_id", "u.user_id"), filters, columnMap, parameters) +
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("uh.host_id", "u.user_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("u.last_name", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";

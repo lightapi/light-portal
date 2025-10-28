@@ -700,7 +700,7 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
         List<Object> parameters = new ArrayList<>();
 
         String[] searchColumns = {"t.table_name", "v.value_code", "v.value_desc"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("v.table_id", "v.value_id"), filters, columnMap, parameters) +
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("v.table_id", "v.value_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("v.display_order, v.value_code", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -1021,7 +1021,7 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
         List<Object> parameters = new ArrayList<>();
 
         String[] searchColumns = {"v.value_code", "v.value_desc", "l.value_label"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("l.value_id"), filters, columnMap, parameters) +
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("l.value_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("l.value_id, l.language", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -1528,7 +1528,7 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
             """;
         List<Object> parameters = new ArrayList<>();
         String[] searchColumns = {"t.relation_name", "v1.value_code", "v2.value_code"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("r.relation_id", "value_id_from", "value_id_to"), filters, columnMap, parameters) +
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("r.relation_id", "value_id_from", "value_id_to"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("r.relation_id, r.value_id_from, r.value_id_to", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";

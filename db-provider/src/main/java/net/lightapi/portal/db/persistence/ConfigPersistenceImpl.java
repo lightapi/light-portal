@@ -1172,7 +1172,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         parameters.add(UUID.fromString(hostId));
 
         String[] searchColumns = {"c.config_name", "p.property_name"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("ep.host_id", "c.config_id", "ep.property_id"), filters, columnMap, parameters) +
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("ep.host_id", "c.config_id", "ep.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("ep.environment, c.config_id, p.display_order", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -1413,7 +1413,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         parameters.add(UUID.fromString(hostId));
 
         String[] searchColumns = {"i.instance_name", "c.config_name", "p.property_name", "p.property_desc", "c.config_desc"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("iap.host_id", "iap.instance_api_id", "ia.instance_id", "ia.api_version_id", "p.config_id", "iap.property_id"), filters, columnMap, parameters) +
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("iap.host_id", "iap.instance_api_id", "ia.instance_id", "ia.api_version_id", "p.config_id", "iap.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("iap.host_id, ia.instance_id, av.api_id, av.api_version, p.config_id, p.display_order", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -1666,7 +1666,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         parameters.add(UUID.fromString(hostId));
 
         String[] searchColumns = {"i.instance_name", "c.config_name", "p.property_name", "p.property_desc", "c.config_desc"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("iap.host_id", "iap.instance_app_id", "ia.instance_id", "p.config_id", "iap.property_id"), filters, columnMap, parameters) +
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("iap.host_id", "iap.instance_app_id", "ia.instance_id", "p.config_id", "iap.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("iap.host_id, ia.instance_id, ia.app_id, ia.app_version, p.config_id, p.property_name", sorting, columnMap) +
                 // Pagination
@@ -1933,7 +1933,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         parameters.add(UUID.fromString(hostId));
 
         String[] searchColumns = {"i.instance_name", "c.config_name", "p.property_name", "p.property_desc", "c.config_desc"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("iaap.host_id", "iaap.instance_app_id", "iaap.instance_api_id", "ia.instance_id", "iai.api_version_id", "p.config_id", "iaap.property_id"), filters, columnMap, parameters) +
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("iaap.host_id", "iaap.instance_app_id", "iaap.instance_api_id", "ia.instance_id", "iai.api_version_id", "p.config_id", "iaap.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("iaap.host_id, i.instance_id, iap.app_id, iap.app_version, av.api_id, av.api_version, p.config_id, p.property_name", sorting, columnMap) +
                 // Pagination
@@ -3037,7 +3037,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
 
         String[] searchColumns = {"i.instance_name", "c.config_name", "p.property_name", "p.property_desc", "c.config_desc"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("ip.host_id", "ip.instance_id", "p.config_id", "ip.property_id"), filters, columnMap, parameters) +
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("ip.host_id", "ip.instance_id", "p.config_id", "ip.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("ip.host_id, ip.instance_id, p.config_id, p.display_order", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -3293,7 +3293,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         parameters.add(UUID.fromString(hostId));
 
         String[] searchColumns = {"i.instance_name", "ift.file_name", "ift.file_desc"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("ift.host_id", "ift.instance_file_id", "ift.instance_id"), filters, columnMap, parameters) +
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("ift.host_id", "ift.instance_file_id", "ift.instance_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("ift.host_id, ift.instance_file_id, ift.instance_id", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -3533,7 +3533,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         parameters.add(UUID.fromString(hostId));
 
         String[] searchColumns = {"i.instance_name", "c.config_name", "cp.property_name"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("dip.host_id", "dip.deployment_instance_id", "di.instance_id", "cp.config_id", "dip.property_id"), filters, columnMap, parameters) +
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("dip.host_id", "dip.deployment_instance_id", "di.instance_id", "cp.config_id", "dip.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("dip.host_id, di.service_id", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -3756,7 +3756,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         List<Object> parameters = new ArrayList<>();
 
         String[] searchColumns = {"p.property_name", "c.config_name"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("p.config_id", "pp.property_id"), filters, columnMap, parameters) +
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("p.config_id", "pp.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("pp.product_id, p.config_id, p.property_name", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -3989,7 +3989,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         parameters.add(UUID.fromString(hostId));
 
         String[] searchColumns = {"p.property_name", "c.config_name"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("pvp.host_id", "pvp.product_version_id", "p.config_id", "pvp.property_id"), filters, columnMap, parameters) +
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("pvp.host_id", "pvp.product_version_id", "p.config_id", "pvp.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("pvp.host_id, pv.product_id, pv.product_version, p.config_id, p.display_order", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
