@@ -12,8 +12,9 @@ public interface AuthPersistence {
     void createApp(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateApp(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteApp(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> queryApp(int offset, int limit, String hostId, String appId, String appName, String appDesc, Boolean isKafkaApp, String operationOwner, String deliveryOwner);
+    Result<String> queryApp(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> getAppIdLabel(String hostId);
+
 
     // Client
     void createClient(Connection conn, Map<String, Object> event) throws SQLException, Exception;

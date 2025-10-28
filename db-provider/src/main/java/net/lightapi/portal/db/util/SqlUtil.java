@@ -242,7 +242,7 @@ public class SqlUtil {
         return dbName;
     }
 
-    public static StringBuilder dynamicFilter(List<String> uuidColumnNames, List<Map<String, Object>> filters, Map<String, String> columnMap, List<Object> parameters) {
+    public static StringBuilder dynamicFilter(List<String> uuidColumnNames, List<String> likeColumnNames, List<Map<String, Object>> filters, Map<String, String> columnMap, List<Object> parameters) {
         StringBuilder sb = new StringBuilder();
         // Material React Table Filters (Dynamic Filters) ---
         for (Map<String, Object> filter : filters) {
@@ -253,9 +253,12 @@ public class SqlUtil {
                 if(uuidColumnNames.contains(dbColumnName)) {
                     sb.append(" AND ").append(dbColumnName).append(" = ?");
                     parameters.add(UUID.fromString(filterValue.toString()));
-                } else {
+                } else if(likeColumnNames.contains(dbColumnName)) {
                     sb.append(" AND ").append(dbColumnName).append(" ILIKE ?");
                     parameters.add("%" + filterValue + "%");
+                } else {
+                    sb.append(" AND ").append(dbColumnName).append(" = ?");
+                    parameters.add(filterValue);
                 }
             }
         }
