@@ -599,7 +599,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
             if (domain == null)
                 result = Failure.of(new Status(OBJECT_NOT_FOUND, "host domain", hostId));
             else
-                result = Success.of(domain);
+                result = Success.of(JsonMapper.toJson(Collections.singletonMap("domain",domain)));
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
