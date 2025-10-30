@@ -221,6 +221,7 @@ public class PortalConstants {
     public static final String INSTANCE_LOCKED_EVENT = "InstanceLockedEvent";
     public static final String INSTANCE_UNLOCKED_EVENT = "InstanceUnlockedEvent";
     public static final String INSTANCE_CLONED_EVENT = "InstanceClonedEvent";
+    public static final String INSTANCE_PROMOTED_EVENT = "InstancePromotedEvent";
     public static final String INSTANCE_API_CREATED_EVENT = "InstanceApiCreatedEvent";
     public static final String INSTANCE_API_UPDATED_EVENT = "InstanceApiUpdatedEvent";
     public static final String INSTANCE_API_DELETED_EVENT = "InstanceApiDeletedEvent";
@@ -237,6 +238,7 @@ public class PortalConstants {
     public static final String INSTANCE_API_PATH_PREFIX_CREATED_EVENT = "InstanceApiPathPrefixCreatedEvent";
     public static final String INSTANCE_API_PATH_PREFIX_UPDATED_EVENT = "InstanceApiPathPrefixUpdatedEvent";
     public static final String INSTANCE_API_PATH_PREFIX_DELETED_EVENT = "InstanceApiPathPrefixDeletedEvent";
+    public static final String COMPOSITE_INSTANCE_APP_CREATED_EVENT = "CompositeInstanceAppCreatedEvent";
 
 
     // --- Deployment Events ---

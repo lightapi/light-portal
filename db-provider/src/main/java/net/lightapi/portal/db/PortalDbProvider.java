@@ -491,6 +491,7 @@ public interface PortalDbProvider extends DbProvider {
     void lockInstance(Connection conn, Map<String, Object> event) throws Exception;
     void unlockInstance(Connection conn, Map<String, Object> event) throws Exception;
     void cloneInstance(Connection conn, Map<String, Object> event) throws Exception;
+    void promoteInstance(Connection conn, Map<String, Object> event) throws Exception;
     Result<String> getInstance(int offset, int limit, String hostId, String instanceId, String instanceName,
                                String productVersionId, String productId, String productVersion, String serviceId, Boolean current,
                                Boolean readonly, String environment, String serviceDesc, String instanceDesc, String zone,

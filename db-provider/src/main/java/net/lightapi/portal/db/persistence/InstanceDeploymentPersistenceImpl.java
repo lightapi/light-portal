@@ -1,16 +1,21 @@
 package net.lightapi.portal.db.persistence;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.networknt.config.JsonMapper;
 import com.networknt.monad.Failure;
 import com.networknt.monad.Result;
 import com.networknt.monad.Success;
 import com.networknt.status.Status;
+import com.networknt.utility.CollectionUtils;
 import com.networknt.utility.Constants;
 import com.networknt.utility.UuidUtil;
 import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.PortalConstants;
 import net.lightapi.portal.db.ConcurrencyException;
 import net.lightapi.portal.db.PortalDbProvider;
+import net.lightapi.portal.db.model.DbConsumablePromotableInstance;
 import net.lightapi.portal.db.util.NotificationService;
 import net.lightapi.portal.db.util.SqlUtil;
 import net.lightapi.portal.validation.FilterCriterion;
@@ -55,12 +60,47 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 AND service_id = ?
                 AND instance_id != ?
                 """;
+        // SQL query for fetching property IDs
+        final String sqlFetchPropertyIds =
+                """
+                SELECT DISTINCT cp.property_id, cp.property_name,c.config_name
+                FROM config_property_t cp
+                JOIN config_t c ON cp.config_id = c.config_id
+                WHERE CONCAT(c.config_name, '.', cp.property_name) IN ('serviceId', 'environment')
+                """;
 
+        String[] tableNames = {"environment", "zone", "region", "lob"};
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST);
         String instanceId = (String)map.get("instanceId");
         String serviceId = (String)map.get("serviceId");
+        final String user = (String) event.get(Constants.USER);
+        final String updateTs = (String) event.get(CloudEventV1.TIME);
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        Result<String> refDataResult = fetchReferenceData(hostId, tableNames);
+        Map<String, Set<String>> refData = parseReferenceData(refDataResult.getResult());
+        // Validate input parameters
+        validateParameter("environment", (String)map.get("environment"), refData.get("environment"));
+        validateParameter("zone", (String)map.get("zone"), refData.get("zone"));
+        validateParameter("region", (String)map.get("region"), refData.get("region"));
+        validateParameter("lob", (String)map.get("lob"), refData.get("lob"));
+
+        // Fetch property IDs
+        Map<String, List<Map<String, Object>>> properties = new HashMap<>();
+        try (PreparedStatement stmtFetchPropertyIds = conn.prepareStatement(sqlFetchPropertyIds);
+             ResultSet rs = stmtFetchPropertyIds.executeQuery()) {
+            while (rs.next()) {
+                UUID propertyId = rs.getObject("property_id", UUID.class);
+                String propertyName = rs.getString("property_name");
+                String configName = rs.getString("config_name");
+
+                Map<String, Object> propertyMap = new HashMap<>();
+                propertyMap.put("propertyId", propertyId);
+                propertyMap.put("propertyName", propertyName);
+                properties.computeIfAbsent(configName, k -> new ArrayList<>()).add(propertyMap);
+            }
+        }
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
@@ -163,6 +203,169 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             throw e;
         } catch (Exception e) {
             logger.error("Exception during createInstance for hostId {} instanceId {} aggregateVersion {}: {}", hostId, instanceId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+        upsertPlatformProductInstanceProperties(hostId,instanceId,properties,user);
+    }
+
+    private Result<String> fetchReferenceData(String hostId, String[] tableNames) {
+        Result<String> result = null;
+        String sql = """
+                    WITH params AS MATERIALIZED (
+                        SELECT
+                            ?::UUID as host_id,
+                            ?::VARCHAR[] as table_names
+                    )
+                    SELECT
+                        rt.host_id,
+                        rt.table_id,
+                        rt.table_name,
+                        rv.value_code
+                    FROM
+                        ref_table_t rt
+                    JOIN
+                        ref_value_t rv ON rt.table_id = rv.table_id
+                    JOIN
+                        params p ON rt.host_id = p.host_id
+                    WHERE
+                        (array_length(p.table_names, 1) IS NULL OR rt.table_name = ANY(p.table_names))
+                        AND rt.active = TRUE
+                """;
+        UUID hostIdUUID = hostId != null ? UUID.fromString(hostId) : null;
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setObject(1, hostIdUUID);
+            preparedStatement.setObject(2, SqlUtil.createArrayLiteral(List.of(tableNames)));
+            boolean isFirstRow = true;
+            List<Map<String, Object>> refValues = new ArrayList<>();
+            int total = 0;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("tableId", resultSet.getObject("table_id", UUID.class));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("tableName", resultSet.getString("table_name"));
+                    map.put("value_code", resultSet.getString("value_code"));
+                    refValues.add(map);
+                }
+                Map<String, Object> resultMap = new HashMap<>();
+                resultMap.put("refValues", refValues); // Use a descriptive key for the list
+                result = Success.of(JsonMapper.toJson(resultMap));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    private Map<String, Set<String>> parseReferenceData(String jsonResult) {
+        Map<String, Set<String>> refData = new HashMap<>();
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(jsonResult);
+            JsonNode refValues = root.get("refValues");
+            if (refValues != null && refValues.isArray()) {
+                for (JsonNode node : refValues) {
+                    String tableName = node.get("tableName").asText();
+                    String valueCode = node.get("value_code").asText();
+                    refData.computeIfAbsent(tableName, k -> new HashSet<>()).add(valueCode);
+                }
+            }
+        } catch (JsonProcessingException e) {
+            logger.error("Error parsing reference data JSON: {}", e.getMessage());
+        }
+        return refData;
+    }
+    private void validateParameter(String paramName, String value, Set<String> validValues) throws IllegalArgumentException {
+        if (value != null && !value.isEmpty() && validValues != null && !validValues.contains(value)) {
+            throw new IllegalArgumentException("Invalid " + paramName + ": " + value);
+        }
+    }
+
+    private void upsertPlatformProductInstanceProperties(
+            String hostId,String instanceId,
+            Map<String, List<Map<String, Object>>> properties,String user) throws SQLException {
+        if (CollectionUtils.isEmpty(properties)) {
+            return;
+        }
+
+        final String sqlUpsertInstanceProperty = """
+        WITH params AS MATERIALIZED (
+            SELECT
+                CAST(v.host_id as UUID) as host_id,
+                CAST(v.instance_id as UUID) as instance_id,
+                CAST(v.config_name as VARCHAR) as config_name,
+                CAST(v.property_name as VARCHAR) as property_name,
+                CAST(v.property_value as TEXT) as property_value,
+                CAST(v.update_user as VARCHAR) as update_user,
+                CURRENT_TIMESTAMP as update_ts,
+                CAST(1 as BIGINT) as aggregate_version
+            FROM (
+                values
+                    (?, ?, ?, ?, ?, ?)
+            ) as v(host_id, instance_id, config_name, property_name, property_value, update_user)
+        )
+        INSERT INTO instance_property_t
+            (host_id, instance_id, property_id, property_value, aggregate_version, update_user, update_ts)
+        SELECT
+            params.host_id as host_id,
+            params.instance_id as instance_id,
+            config_property.property_id as property_id,
+            params.property_value as property_value,
+            params.aggregate_version as aggregate_version,
+            params.update_user as update_user,
+            params.update_ts as update_ts
+        FROM
+            params
+            JOIN config_t as config
+                ON config.config_name = params.config_name
+            JOIN config_property_t as config_property
+                ON config_property.property_name = params.property_name
+                    AND config_property.config_id = config.config_id
+        ON CONFLICT
+        ON CONSTRAINT instance_property_pk
+        DO UPDATE
+            SET
+                property_value = excluded.property_value,
+                aggregate_version = instance_property_t.aggregate_version + 1,
+                update_user = excluded.update_user,
+                update_ts = excluded.update_ts
+            WHERE
+                instance_property_t.host_id = excluded.host_id
+                AND instance_property_t.instance_id = excluded.instance_id
+                AND instance_property_t.property_id = excluded.property_id;
+        """;
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sqlUpsertInstanceProperty)) {
+            for (Map.Entry<String, List<Map<String, Object>>> entry : properties.entrySet()) {
+                String configName = entry.getKey();
+                List<Map<String, Object>> propertiesMap = entry.getValue();
+                for (Map<String, Object> propertyMap : propertiesMap) {
+                    preparedStatement.setObject(1, hostId);
+                    preparedStatement.setString(2, instanceId);
+                    preparedStatement.setString(3, configName);
+                    preparedStatement.setString(4, (String) propertyMap.get("propertyName"));
+                    preparedStatement.setObject(5, propertyMap.get("propertyId")); // Assuming we want to store the UUID
+                    preparedStatement.setString(6, user);
+                    preparedStatement.addBatch();
+                }
+            }
+
+            preparedStatement.executeBatch();
+        } catch (SQLException e) {
+            logger.error("SQLException during createInstance for hostId {} instanceId {} : {}", hostId, instanceId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createInstance for hostId {} instanceId {} : {}", hostId, instanceId,  e.getMessage(), e);
             throw e;
         }
     }
@@ -404,20 +607,45 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             connection -> {
                 try {
                     // increment the aggregate version of the target instance to lock it during the clone operation
-                    tryIncrementAggregateVersionOfTargetInstance(conn, hostId, targetInstanceId, oldAggregateVersion, SqlUtil.getNewAggregateVersion(event));
+                    tryIncrementAggregateVersionOfInstance(conn, hostId, targetInstanceId, oldAggregateVersion, SqlUtil.getNewAggregateVersion(event));
                     Map<UUID, UUID> idMapping = getIdMappingForClone(connection, hostId, sourceInstanceId);
                     deleteDependentsOfTargetInstance(connection, hostId, targetInstanceId);
                     cloneFirstLevelDependentsOfTargetInstance(connection, hostId, sourceInstanceId, targetInstanceId, idMapping);
                     cloneSecondLevelDependentsOfTargetInstance(connection, hostId, sourceInstanceId, targetInstanceId, idMapping);
-                } catch (SQLException e) {
+                } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
             }
         );
     }
 
-    private static void tryIncrementAggregateVersionOfTargetInstance(Connection conn, String hostId,
-        String targetInstanceId, long oldAggregateVersion, long newAggregateVersion) throws SQLException {
+    @SuppressWarnings("unchecked")
+    @Override
+    public void promoteInstance(Connection conn, Map<String, Object> event) throws Exception {
+        final Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
+
+        final String hostId = (String) event.get(Constants.HOST);
+        final String instanceId = (String) map.get("instanceId");
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        final String user = (String) event.get(Constants.USER);
+        final String updateTs = (String) event.get(CloudEventV1.TIME);
+        final Map<String, Object> promotableConfigs = (Map<String, Object>) map.get("promotableConfigs");
+
+        transact(
+            conn,
+            connection -> {
+                try {
+                    tryIncrementAggregateVersionOfInstance(conn, hostId, instanceId, oldAggregateVersion, SqlUtil.getNewAggregateVersion(event));
+                    promoteConfigs(conn, new DbConsumablePromotableInstance(hostId, instanceId, promotableConfigs, user, updateTs));
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        );
+    }
+
+    private void tryIncrementAggregateVersionOfInstance(Connection conn, String hostId,
+        String instanceId, long oldAggregateVersion, long newAggregateVersion) throws SQLException {
 
         final String sql = "UPDATE instance_t SET aggregate_version = ? " +
             "WHERE host_id = ? AND instance_id = ? AND aggregate_version = ?";
@@ -425,20 +653,20 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setLong(1, newAggregateVersion);
             pstmt.setObject(2, UUID.fromString(hostId));
-            pstmt.setObject(3, UUID.fromString(targetInstanceId));
+            pstmt.setObject(3, UUID.fromString(instanceId));
             pstmt.setLong(4, oldAggregateVersion);
 
             int affectedRows = pstmt.executeUpdate();
             if (affectedRows == 0) {
-                throw new SQLException("Cloning instance failed, no rows affected.");
+                throw new SQLException("Incrementing aggregate version of instance failed, no rows affected.");
             }
         } catch (SQLException e) {
-            logger.error("SQLException during clone for hostId {} instanceId {} aggregateVersion {}: {}",
-                hostId, targetInstanceId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException on increment of aggregate version for hostId {} instanceId {} aggregateVersion {}: {}",
+                hostId, instanceId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during clone for hostId {} instanceId {} aggregateVersion {}: {}",
-                hostId, targetInstanceId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("Exception on increment of aggregate version for hostId {} instanceId {} aggregateVersion {}: {}",
+                hostId, instanceId, oldAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -779,6 +1007,542 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         }
 
         return result;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void promoteConfigs(Connection conn, DbConsumablePromotableInstance promotableInstance) throws SQLException {
+        var instanceConfigs = promotableInstance.getInstanceConfigs();
+        if (Objects.nonNull(instanceConfigs) && !instanceConfigs.isEmpty()) {
+            final String sql =
+                """
+                WITH params AS MATERIALIZED (
+                    SELECT
+                        v.host_id::uuid as host_id,
+                        v.instance_id::uuid as instance_id,
+                        v.property_name::VARCHAR as property_name,
+                        v.property_value::VARCHAR as property_value,
+                        v.update_user::VARCHAR as update_user,
+                        v.update_ts::TIMESTAMP as update_ts
+                    FROM (
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    ) as v(host_id, instance_id, property_name, property_value, update_user, update_ts)
+                ),
+                property_info AS (
+                  SELECT DISTINCT cp.property_id, p.property_name
+                  FROM config_property_t cp
+                  JOIN config_t c ON cp.config_id = c.config_id
+                  JOIN params p ON CONCAT(c.config_name, '.', cp.property_name) = p.property_name
+                )
+                INSERT INTO instance_property_t (host_id, instance_id, property_id, property_value, aggregate_version, update_user, update_ts)
+                SELECT p.host_id, p.instance_id, pi.property_id, p.property_value, 1 AS aggregate_version, p.update_user, p.update_ts
+                FROM params p
+                JOIN property_info pi ON pi.property_name = p.property_name
+                ON CONFLICT (host_id, instance_id, property_id)
+                DO UPDATE SET
+                  property_value = EXCLUDED.property_value,
+                  aggregate_version = instance_property_t.aggregate_version + 1,
+                  update_user = EXCLUDED.update_user,
+                  update_ts = EXCLUDED.update_ts
+                """;
+
+            try (PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+                for (Map<String, String> entry : instanceConfigs) {
+                    preparedStatement.setObject(1, promotableInstance.getHostId());
+                    preparedStatement.setObject(2, promotableInstance.getInstanceId());
+                    preparedStatement.setString(3, entry.get(DbConsumablePromotableInstance.PROPERTY_NAME_KEY));
+                    preparedStatement.setString(4, entry.get(DbConsumablePromotableInstance.PROPERTY_VALUE_KEY));
+                    preparedStatement.setString(5, promotableInstance.getUpdateUser());
+                    preparedStatement.setObject(6, promotableInstance.getUpdateTimestamp());
+                    preparedStatement.addBatch();
+                }
+                preparedStatement.executeBatch();
+            }
+        }
+
+        var apis = promotableInstance.getApis();
+        if (Objects.nonNull(apis) && !apis.isEmpty()) {
+            final String sql =
+                """
+                WITH params AS MATERIALIZED (
+                    SELECT
+                        v.host_id::uuid as host_id,
+                        v.api_id::VARCHAR as api_id,
+                        v.api_version::VARCHAR as api_version,
+                        v.api_name::VARCHAR as api_name,
+                        v.api_status::VARCHAR as api_status,
+                        v.api_type::VARCHAR as api_type,
+                        v.api_service_id::VARCHAR as api_service_id,
+                        v.new_api_version_id::uuid as new_api_version_id,
+                        v.update_user::VARCHAR as update_user,
+                        v.update_ts::TIMESTAMP as update_ts
+                    FROM (
+                        values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) as v(host_id, api_id, api_version, api_name, api_status, api_type, api_service_id, new_api_version_id, update_user, update_ts)
+                ),
+                inserted_apis AS (
+                    INSERT INTO api_t (host_id, api_id, api_name, api_status, update_user, update_ts)
+                    SELECT host_id, api_id, api_name, api_status, update_user, update_ts FROM params
+                    ON CONFLICT (host_id, api_id) DO NOTHING
+                    RETURNING host_id, api_id
+                )
+                INSERT INTO api_version_t (host_id, api_version_id, api_id, api_version, api_type, service_id, update_user, update_ts)
+                SELECT p.host_id, p.new_api_version_id, p.api_id, p.api_version, p.api_type, p.api_service_id, p.update_user, p.update_ts
+                FROM params p
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM api_version_t av WHERE av.host_id = p.host_id AND av.api_id = p.api_id AND av.api_version = p.api_version
+                )
+                ON CONFLICT (host_id, api_id, api_version) DO NOTHING
+                """;
+
+            try (PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+                for (Map<String, String> entry : apis) {
+                    preparedStatement.setObject(1, promotableInstance.getHostId());
+                    preparedStatement.setString(2, entry.get(DbConsumablePromotableInstance.API_ID_KEY));
+                    preparedStatement.setString(3, entry.get(DbConsumablePromotableInstance.API_VERSION_KEY));
+                    preparedStatement.setString(4, entry.get(DbConsumablePromotableInstance.API_NAME_KEY));
+                    preparedStatement.setString(5, entry.get(DbConsumablePromotableInstance.API_STATUS_KEY));
+                    preparedStatement.setString(6, entry.get(DbConsumablePromotableInstance.API_TYPE_KEY));
+                    preparedStatement.setString(7, entry.get(DbConsumablePromotableInstance.API_SERVICE_ID_KEY));
+                    preparedStatement.setObject(8, UUID.fromString(entry.get(DbConsumablePromotableInstance.GENERATED_ID_KEY)));
+                    preparedStatement.setString(9, promotableInstance.getUpdateUser());
+                    preparedStatement.setObject(10, promotableInstance.getUpdateTimestamp());
+                    preparedStatement.addBatch();
+                }
+                preparedStatement.executeBatch();
+            }
+        }
+
+        var instanceApis = promotableInstance.getInstanceApis();
+        if (Objects.nonNull(instanceApis) && !instanceApis.isEmpty()) {
+            final String sql = """
+                WITH params AS MATERIALIZED (
+                    SELECT
+                        v.host_id::uuid as host_id,
+                        v.instance_id::uuid as instance_id,
+                        v.new_instance_api_id::uuid as new_instance_api_id,
+                        v.api_id::VARCHAR as api_id,
+                        v.api_version::VARCHAR as api_version,
+                        v.path_prefix::VARCHAR[] as path_prefix,
+                        v.update_user::VARCHAR as update_user,
+                        v.update_ts::TIMESTAMP as update_ts
+                    FROM (
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    ) as v(host_id, instance_id, new_instance_api_id, api_id, api_version, path_prefix, update_user, update_ts)
+                ),
+                api_version_lookup AS (
+                    SELECT av.host_id, av.api_version_id
+                    FROM api_version_t av
+                    JOIN params p ON p.host_id = av.host_id AND p.api_id = av.api_id AND p.api_version = av.api_version
+                ),
+                inserted_instance_api AS (
+                    INSERT INTO instance_api_t (host_id, instance_api_id, instance_id, api_version_id, active, update_user, update_ts)
+                    SELECT p.host_id, p.new_instance_api_id, p.instance_id, av.api_version_id, TRUE, p.update_user, p.update_ts
+                    FROM params p
+                    JOIN api_version_lookup av ON av.host_id = p.host_id
+                    WHERE NOT EXISTS (
+                        SELECT 1 FROM instance_api_t ia JOIN api_version_t av ON ia.api_version_id = av.api_version_id
+                        WHERE ia.host_id = p.host_id AND ia.instance_id = p.instance_id AND av.api_id = p.api_id AND av.api_version = p.api_version
+                    )
+                    ON CONFLICT (host_id, instance_id, api_version_id)
+                    DO NOTHING
+                    RETURNING host_id, instance_id, instance_api_id
+                )
+                INSERT INTO instance_api_path_prefix_t (host_id, instance_api_id, path_prefix, update_user, update_ts)
+                SELECT i.host_id, i.instance_api_id, unnest(p.path_prefix), p.update_user, p.update_ts
+                FROM inserted_instance_api i
+                JOIN params p ON p.host_id = i.host_id AND p.instance_id = i.instance_id
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM instance_api_path_prefix_t iapp
+                    JOIN instance_api_t ia ON iapp.instance_api_id = ia.instance_api_id
+                    JOIN api_version_t av ON ia.api_version_id = av.api_version_id
+                    WHERE iapp.host_id = i.host_id
+                      AND av.api_id = p.api_id
+                      AND av.api_version = p.api_version
+                      AND iapp.path_prefix = ANY(p.path_prefix)
+                )
+                ON CONFLICT (host_id, instance_api_id, path_prefix) DO NOTHING
+                """;
+
+            try (PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+                for (Map<String, Object> entry : instanceApis) {
+                    preparedStatement.setObject(1, promotableInstance.getHostId());
+                    preparedStatement.setObject(2, promotableInstance.getInstanceId());
+                    preparedStatement.setObject(3, UUID.fromString((String) entry.get(DbConsumablePromotableInstance.GENERATED_ID_KEY)));
+                    preparedStatement.setString(4, (String) entry.get(DbConsumablePromotableInstance.API_ID_KEY));
+                    preparedStatement.setString(5, (String) entry.get(DbConsumablePromotableInstance.API_VERSION_KEY));
+                    preparedStatement.setString(6, SqlUtil.createArrayLiteral((List<String>) entry.get(DbConsumablePromotableInstance.API_PATH_PREFIXES_KEY)));
+                    preparedStatement.setString(7, promotableInstance.getUpdateUser());
+                    preparedStatement.setObject(8, promotableInstance.getUpdateTimestamp());
+                    preparedStatement.addBatch();
+                }
+                preparedStatement.executeBatch();
+            }
+        }
+
+        var instanceApps = promotableInstance.getInstanceApps();
+        if (!instanceApps.isEmpty()) {
+            final String sql = """
+                WITH params AS MATERIALIZED (
+                    SELECT
+                        v.host_id::uuid as host_id,
+                        v.instance_id::uuid as instance_id,
+                        v.new_instance_app_id::uuid as new_instance_app_id,
+                        v.app_id::VARCHAR as app_id,
+                        v.app_name::VARCHAR as app_name,
+                        v.app_version::VARCHAR as app_version,
+                        v.update_user::VARCHAR as update_user,
+                        v.update_ts::TIMESTAMP as update_ts
+                    FROM (
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    ) as v(host_id, instance_id, new_instance_app_id, app_id, app_name, app_version, update_user, update_ts)
+                ),
+                inserted_app AS (
+                    INSERT INTO app_t (host_id, app_id, app_name, update_user, update_ts)
+                    SELECT p.host_id, p.app_id, p.app_name, p.update_user, p.update_ts
+                    FROM params p
+                    WHERE NOT EXISTS (
+                        SELECT 1 FROM app_t a WHERE a.host_id = p.host_id AND a.app_id = p.app_id
+                    )
+                    ON CONFLICT (host_id, app_id)
+                    DO NOTHING
+                    RETURNING host_id, app_id
+                )
+                INSERT INTO instance_app_t (host_id, instance_app_id, instance_id, app_id, app_version, active, update_user, update_ts)
+                SELECT p.host_id, p.new_instance_app_id, p.instance_id, p.app_id, p.app_version, TRUE, p.update_user, p.update_ts
+                FROM params p
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM instance_app_t ia
+                    WHERE ia.host_id = p.host_id AND ia.instance_id = p.instance_id AND ia.app_id = p.app_id AND ia.app_version = p.app_version
+                )
+                ON CONFLICT (host_id, instance_id, app_id, app_version)
+                DO NOTHING
+                """;
+
+            try (PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+                for (Map<String, String> entry : instanceApps) {
+                    preparedStatement.setObject(1, promotableInstance.getHostId());
+                    preparedStatement.setObject(2, promotableInstance.getInstanceId());
+                    preparedStatement.setObject(3, UUID.fromString(entry.get(DbConsumablePromotableInstance.GENERATED_ID_KEY)));
+                    preparedStatement.setString(4, entry.get(DbConsumablePromotableInstance.APP_ID_KEY));
+                    preparedStatement.setString(5, entry.get(DbConsumablePromotableInstance.APP_NAME_KEY));
+                    preparedStatement.setString(6, entry.get(DbConsumablePromotableInstance.APP_VERSION_KEY));
+                    preparedStatement.setString(7, promotableInstance.getUpdateUser());
+                    preparedStatement.setObject(8, promotableInstance.getUpdateTimestamp());
+                    preparedStatement.addBatch();
+                }
+                preparedStatement.executeBatch();
+            }
+        }
+
+        var instanceAppApis = promotableInstance.getInstanceAppApis();
+        if (!instanceAppApis.isEmpty()) {
+            final String sql = """
+                WITH params AS MATERIALIZED (
+                    SELECT
+                        v.host_id::uuid as host_id,
+                        v.instance_id::uuid as instance_id,
+                        v.api_id::VARCHAR as api_id,
+                        v.api_version::VARCHAR as api_version,
+                        v.app_id::VARCHAR as app_id,
+                        v.update_user::VARCHAR as update_user,
+                        v.update_ts::TIMESTAMP as update_ts
+                    FROM (
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ) as v(host_id, instance_id, api_id, api_version, app_id, update_user, update_ts)
+                ),
+                instance_api_lookup AS (
+                    SELECT DISTINCT ia.host_id, ia.instance_id, ia.instance_api_id
+                    FROM instance_api_t ia
+                    JOIN api_version_t av ON ia.api_version_id = av.api_version_id
+                    JOIN params p ON ia.host_id = p.host_id
+                      AND ia.instance_id = p.instance_id
+                      AND av.api_id = p.api_id
+                      AND av.api_version = p.api_version
+                ),
+                instance_app_lookup AS (
+                    SELECT DISTINCT ia.host_id, ia.instance_id, ia.instance_app_id
+                    FROM instance_app_t ia
+                    JOIN params p ON ia.host_id = p.host_id
+                      AND ia.instance_id = p.instance_id
+                      AND ia.app_id = p.app_id
+                )
+                INSERT INTO instance_app_api_t (host_id, instance_app_id, instance_api_id, active, update_user, update_ts)
+                SELECT p.host_id, iapp.instance_app_id, iapi.instance_api_id, TRUE, p.update_user, p.update_ts
+                FROM params p
+                JOIN instance_api_lookup iapi ON p.host_id = iapi.host_id AND p.instance_id = iapi.instance_id
+                JOIN instance_app_lookup iapp ON p.host_id = iapp.host_id AND p.instance_id = iapp.instance_id
+                WHERE NOT EXISTS (
+                    SELECT 1
+                    FROM instance_app_api_t iaa
+                    WHERE iaa.host_id = p.host_id
+                      AND iaa.instance_app_id = iapp.instance_app_id
+                      AND iaa.instance_api_id = iapi.instance_api_id
+                )
+                ON CONFLICT (host_id, instance_app_id, instance_api_id) DO NOTHING
+                """;
+
+            try (PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+                for (Map<String, String> entry : instanceAppApis) {
+                    preparedStatement.setObject(1, promotableInstance.getHostId());
+                    preparedStatement.setObject(2, promotableInstance.getInstanceId());
+                    preparedStatement.setString(3, entry.get(DbConsumablePromotableInstance.API_ID_KEY));
+                    preparedStatement.setString(4, entry.get(DbConsumablePromotableInstance.API_VERSION_KEY));
+                    preparedStatement.setString(5, entry.get(DbConsumablePromotableInstance.APP_ID_KEY));
+                    preparedStatement.setString(6, promotableInstance.getUpdateUser());
+                    preparedStatement.setObject(7, promotableInstance.getUpdateTimestamp());
+                    preparedStatement.addBatch();
+                }
+                preparedStatement.executeBatch();
+            }
+        }
+
+        var instanceApiConfigs = promotableInstance.getInstanceApiConfigs();
+        if (!instanceApiConfigs.isEmpty()) {
+            final String deleteSql = """
+                DELETE FROM instance_api_property_t WHERE (host_id, instance_api_id) IN (
+                    SELECT ia.host_id, ia.instance_api_id
+                    FROM instance_api_t ia
+                    JOIN api_version_t av ON ia.host_id = av.host_id AND ia.api_version_id = av.api_version_id
+                    WHERE ia.host_id = ? AND ia.instance_id = ? AND av.api_id = ? AND av.api_version = ?
+                )
+                """;
+
+            try (PreparedStatement deletePreparedStatement = conn.prepareStatement(deleteSql)) {
+                for (Map<String, String> entry : instanceApiConfigs) {
+                    deletePreparedStatement.setObject(1, promotableInstance.getHostId());
+                    deletePreparedStatement.setObject(2, promotableInstance.getInstanceId());
+                    deletePreparedStatement.setString(3, entry.get(DbConsumablePromotableInstance.API_ID_KEY));
+                    deletePreparedStatement.setString(4, entry.get(DbConsumablePromotableInstance.API_VERSION_KEY));
+                    deletePreparedStatement.addBatch();
+                }
+                deletePreparedStatement.executeBatch();
+            }
+
+            final String upsertSql = """
+                WITH params AS MATERIALIZED (
+                    SELECT
+                        v.host_id::uuid as host_id,
+                        v.instance_id::uuid as instance_id,
+                        v.api_id::VARCHAR as api_id,
+                        v.api_version::VARCHAR as api_version,
+                        v.property_name::VARCHAR as property_name,
+                        v.property_value::VARCHAR as property_value,
+                        v.update_user::VARCHAR as update_user,
+                        v.update_ts::TIMESTAMP as update_ts
+                    FROM (
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    ) as v(host_id, instance_id, api_id, api_version, property_name, property_value, update_user, update_ts)
+                ),
+                property_info AS (
+                    SELECT DISTINCT cp.property_id, p.property_name
+                    FROM config_property_t cp
+                    JOIN config_t c ON cp.config_id = c.config_id
+                    JOIN params p ON CONCAT(c.config_name, '.', cp.property_name) = p.property_name
+                    WHERE cp.resource_type IN ('api', 'api|app_api', 'all')
+                ),
+                instance_api_info AS (
+                    SELECT DISTINCT ia.instance_api_id, av.api_id, av.api_version
+                    FROM instance_api_t ia
+                    JOIN api_version_t av ON ia.host_id = av.host_id AND ia.api_version_id = av.api_version_id
+                    JOIN params p ON ia.host_id = p.host_id AND ia.instance_id = p.instance_id AND av.api_id = p.api_id AND av.api_version = p.api_version
+                )
+                INSERT INTO instance_api_property_t (host_id, instance_api_id, property_id, property_value, aggregate_version, update_user, update_ts)
+                SELECT p.host_id, iai.instance_api_id, pi.property_id, p.property_value, 1 AS aggregate_version, p.update_user, p.update_ts
+                FROM params p
+                JOIN property_info pi ON p.property_name = pi.property_name
+                JOIN instance_api_info iai ON iai.api_id = p.api_id AND iai.api_version = p.api_version
+                ON CONFLICT (host_id, instance_api_id, property_id)
+                DO UPDATE SET
+                    property_value = EXCLUDED.property_value,
+                    aggregate_version = instance_api_property_t.aggregate_version + 1,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts
+                """;
+
+            try (PreparedStatement upsertPreparedStatement = conn.prepareStatement(upsertSql)) {
+                for (Map<String, String> entry : instanceApiConfigs) {
+                    upsertPreparedStatement.setObject(1, promotableInstance.getHostId());
+                    upsertPreparedStatement.setObject(2, promotableInstance.getInstanceId());
+                    upsertPreparedStatement.setString(3, entry.get(DbConsumablePromotableInstance.API_ID_KEY));
+                    upsertPreparedStatement.setString(4, entry.get(DbConsumablePromotableInstance.API_VERSION_KEY));
+                    upsertPreparedStatement.setString(5, entry.get(DbConsumablePromotableInstance.PROPERTY_NAME_KEY));
+                    upsertPreparedStatement.setString(6, entry.get(DbConsumablePromotableInstance.PROPERTY_VALUE_KEY));
+                    upsertPreparedStatement.setString(7, promotableInstance.getUpdateUser());
+                    upsertPreparedStatement.setObject(8, promotableInstance.getUpdateTimestamp());
+                    upsertPreparedStatement.addBatch();
+                }
+                upsertPreparedStatement.executeBatch();
+            }
+        }
+
+        var instanceAppConfigs = promotableInstance.getInstanceAppConfigs();
+        if (!instanceAppConfigs.isEmpty()) {
+            final String deleteSql = """
+                DELETE FROM instance_app_property_t
+                WHERE (host_id, instance_app_id) IN (
+                    SELECT ia.host_id, ia.instance_app_id
+                    FROM instance_app_t ia
+                    WHERE ia.host_id = ?
+                    AND ia.instance_id = ?
+                    AND ia.app_id = ?
+                )
+                """;
+
+            try (PreparedStatement deletePreparedStatement = conn.prepareStatement(deleteSql)) {
+                for (Map<String, String> entry : instanceAppConfigs) {
+                    deletePreparedStatement.setObject(1, promotableInstance.getHostId());
+                    deletePreparedStatement.setObject(2, promotableInstance.getInstanceId());
+                    deletePreparedStatement.setString(3, entry.get(DbConsumablePromotableInstance.APP_ID_KEY));
+                    deletePreparedStatement.addBatch();
+                }
+                deletePreparedStatement.executeBatch();
+            }
+
+            final String upsertSql = """
+                WITH params AS MATERIALIZED (
+                    SELECT
+                        v.host_id::uuid as host_id,
+                        v.instance_id::uuid as instance_id,
+                        v.app_id::VARCHAR as app_id,
+                        v.property_name::VARCHAR as property_name,
+                        v.property_value::VARCHAR as property_value,
+                        v.update_user::VARCHAR as update_user,
+                        v.update_ts::TIMESTAMP as update_ts
+                    FROM (
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ) as v(host_id, instance_id, app_id, property_name, property_value, update_user, update_ts)
+                ),
+                property_info AS (
+                    SELECT DISTINCT cp.property_id, p.property_name
+                    FROM config_property_t cp
+                    JOIN config_t c ON cp.config_id = c.config_id
+                    JOIN params p ON CONCAT(c.config_name, '.', cp.property_name) = p.property_name
+                    WHERE cp.resource_type IN ('app', 'app|app_api', 'all')
+                ),
+                instance_app_info AS (
+                    SELECT DISTINCT ia.instance_app_id, ia.app_id
+                    FROM instance_app_t ia
+                    JOIN params p ON ia.host_id = p.host_id AND ia.instance_id = p.instance_id AND ia.app_id = p.app_id
+                )
+                INSERT INTO instance_app_property_t (host_id, instance_app_id, property_id, property_value, aggregate_version, update_user, update_ts)
+                SELECT p.host_id, iai.instance_app_id, pi.property_id, p.property_value, 1 AS aggregate_version, p.update_user, p.update_ts
+                FROM params p
+                JOIN property_info pi ON pi.property_name = p.property_name
+                JOIN instance_app_info iai ON iai.app_id = p.app_id
+                ON CONFLICT (host_id, instance_app_id, property_id)
+                DO UPDATE SET
+                    property_value = EXCLUDED.property_value,
+                    aggregate_version = instance_app_property_t.aggregate_version + 1,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts
+                """;
+
+            try (PreparedStatement upsertPreparedStatement = conn.prepareStatement(upsertSql)) {
+                for (Map<String, String> entry : instanceAppConfigs) {
+                    upsertPreparedStatement.setObject(1, promotableInstance.getHostId());
+                    upsertPreparedStatement.setObject(2, promotableInstance.getInstanceId());
+                    upsertPreparedStatement.setString(3, entry.get(DbConsumablePromotableInstance.APP_ID_KEY));
+                    upsertPreparedStatement.setString(4, entry.get(DbConsumablePromotableInstance.PROPERTY_NAME_KEY));
+                    upsertPreparedStatement.setString(5, entry.get(DbConsumablePromotableInstance.PROPERTY_VALUE_KEY));
+                    upsertPreparedStatement.setString(6, promotableInstance.getUpdateUser());
+                    upsertPreparedStatement.setObject(7, promotableInstance.getUpdateTimestamp());
+                    upsertPreparedStatement.addBatch();
+                }
+                upsertPreparedStatement.executeBatch();
+            }
+        }
+
+        var instanceAppApiConfigs = promotableInstance.getInstanceAppApiConfigs();
+        if (!instanceAppApiConfigs.isEmpty()) {
+            final String deleteSql = """
+                DELETE FROM instance_app_api_property_t
+                WHERE (host_id, instance_app_id, instance_api_id) IN (
+                    SELECT iaa.host_id, iaa.instance_app_id, iaa.instance_api_id
+                    FROM instance_app_api_t iaa
+                    JOIN instance_app_t ia ON iaa.host_id = ia.host_id AND iaa.instance_app_id = ia.instance_app_id
+                    JOIN instance_api_t iai ON iaa.host_id = iai.host_id AND iaa.instance_api_id = iai.instance_api_id
+                    JOIN api_version_t av ON iai.host_id = av.host_id AND iai.api_version_id = av.api_version_id
+                    WHERE ia.host_id = ?
+                    AND ia.instance_id = ?
+                    AND ia.app_id = ?
+                    AND av.api_id = ?
+                    AND av.api_version = ?
+                )
+                """;
+
+            try (PreparedStatement deletePreparedStatement = conn.prepareStatement(deleteSql)) {
+                for (Map<String, String> entry : instanceAppApiConfigs) {
+                    deletePreparedStatement.setObject(1, promotableInstance.getHostId());
+                    deletePreparedStatement.setObject(2, promotableInstance.getInstanceId());
+                    deletePreparedStatement.setString(3, entry.get(DbConsumablePromotableInstance.APP_ID_KEY));
+                    deletePreparedStatement.setString(4, entry.get(DbConsumablePromotableInstance.API_ID_KEY));
+                    deletePreparedStatement.setString(5, entry.get(DbConsumablePromotableInstance.API_VERSION_KEY));
+                    deletePreparedStatement.addBatch();
+                }
+                deletePreparedStatement.executeBatch();
+            }
+
+            final String upsertSql = """
+                WITH params AS MATERIALIZED (
+                    SELECT
+                        v.host_id::uuid as host_id,
+                        v.instance_id::uuid as instance_id,
+                        v.app_id::VARCHAR as app_id,
+                        v.api_id::VARCHAR as api_id,
+                        v.api_version::VARCHAR as api_version,
+                        v.property_name::VARCHAR as property_name,
+                        v.property_value::VARCHAR as property_value,
+                        v.update_user::VARCHAR as update_user,
+                        v.update_ts::TIMESTAMP as update_ts
+                    FROM (
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) as v(host_id, instance_id, app_id, api_id, api_version, property_name, property_value, update_user, update_ts)
+                ),
+                property_info AS (
+                    SELECT DISTINCT cp.property_id, p.property_name
+                    FROM config_property_t cp
+                    JOIN config_t c ON cp.config_id = c.config_id
+                    JOIN params p ON CONCAT(c.config_name, '.', cp.property_name) = p.property_name
+                    WHERE cp.resource_type IN ('app_api', 'api|app_api', 'app|app_api', 'all')
+                ),
+                instance_app_api_info AS (
+                    SELECT DISTINCT iaa.instance_app_id, iaa.instance_api_id, ia.app_id, av.api_id, av.api_version
+                    FROM instance_app_api_t iaa
+                    JOIN instance_app_t ia ON iaa.host_id = ia.host_id AND iaa.instance_app_id = ia.instance_app_id
+                    JOIN instance_api_t iai ON iaa.host_id = iai.host_id AND iaa.instance_api_id = iai.instance_api_id
+                    JOIN api_version_t av ON iai.host_id = av.host_id AND iai.api_version_id = av.api_version_id
+                    JOIN params p ON ia.host_id = p.host_id AND ia.instance_id = p.instance_id AND ia.app_id = p.app_id
+                    AND av.api_id = p.api_id AND av.api_version = p.api_version
+                )
+                INSERT INTO instance_app_api_property_t (host_id, instance_app_id, instance_api_id, property_id, property_value, aggregate_version, update_user, update_ts)
+                SELECT p.host_id, iaai.instance_app_id, iaai.instance_api_id, pi.property_id, p.property_value, 1 AS aggregate_version, p.update_user, p.update_ts
+                FROM params p
+                JOIN property_info pi ON pi.property_name = p.property_name
+                JOIN instance_app_api_info iaai ON iaai.api_id = p.api_id AND iaai.api_version = p.api_version AND iaai.app_id = p.app_id
+                ON CONFLICT (host_id, instance_app_id, instance_api_id, property_id)
+                DO UPDATE SET
+                    property_value = EXCLUDED.property_value,
+                    aggregate_version = instance_app_api_property_t.aggregate_version + 1,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts
+                """;
+
+            try (PreparedStatement upsertPreparedStatement = conn.prepareStatement(upsertSql)) {
+                for (Map<String, String> entry : instanceAppApiConfigs) {
+                    upsertPreparedStatement.setObject(1, promotableInstance.getHostId());
+                    upsertPreparedStatement.setObject(2, promotableInstance.getInstanceId());
+                    upsertPreparedStatement.setString(3, entry.get(DbConsumablePromotableInstance.APP_ID_KEY));
+                    upsertPreparedStatement.setString(4, entry.get(DbConsumablePromotableInstance.API_ID_KEY));
+                    upsertPreparedStatement.setString(5, entry.get(DbConsumablePromotableInstance.API_VERSION_KEY));
+                    upsertPreparedStatement.setString(6, entry.get(DbConsumablePromotableInstance.PROPERTY_NAME_KEY));
+                    upsertPreparedStatement.setString(7, entry.get(DbConsumablePromotableInstance.PROPERTY_VALUE_KEY));
+                    upsertPreparedStatement.setString(8, promotableInstance.getUpdateUser());
+                    upsertPreparedStatement.setObject(9, promotableInstance.getUpdateTimestamp());
+                    upsertPreparedStatement.addBatch();
+                }
+                upsertPreparedStatement.executeBatch();
+            }
+        }
     }
 
     @Override
