@@ -263,11 +263,11 @@ public class AuthPersistenceImpl implements AuthPersistence {
                     update_ts = EXCLUDED.update_ts,
                     aggregate_version = EXCLUDED.aggregate_version
                 -- CRITICAL: Only update if the incoming event's version is newer
-                WHERE auth_client_t.aggregate_version < EXCLUDED.aggregate_version
+                WHERE auth_client_t.aggregate_version < EXCLUDED.aggregate_version AND auth_client_t.active = FALSE
                 """;
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
-        String hostId = (String) event.get(Constants.HOST);
+        String hostId = (String) map.get("hostId");
         String clientId = (String) map.get("clientId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
@@ -578,6 +578,14 @@ public class AuthPersistenceImpl implements AuthPersistence {
         return result;
     }
 
+    /**
+     * This is the method for the UI to refresh the client before updating it. So this one returns the
+     * active flag without condition.
+     *
+     * @param hostId host id
+     * @param clientId client id
+     * @return Result<String> result
+     */
     @Override
     public Result<String> getClientById(String hostId, String clientId) {
         if (logger.isTraceEnabled()) logger.trace("getClientById: hostId = {} clientId = {}", hostId, clientId);
@@ -729,6 +737,15 @@ public class AuthPersistenceImpl implements AuthPersistence {
 
     }
 
+    /**
+     * As the provider_id is generated based on UUID. There should not have any duplications and provider name cannot be
+     * used as a key for the conflict to recover from the soft delete. So it doesn't support the upsert here to bring back
+     * deleted record. If you want to recover a deleted record, please use the update.
+     * @param conn Connection
+     * @param event Event object
+     * @throws SQLException SQL exception
+     * @throws Exception generic exception
+     */
     @Override
     public void createAuthProvider(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql =
@@ -847,20 +864,19 @@ public class AuthPersistenceImpl implements AuthPersistence {
     @Override
     public void rotateAuthProvider(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         // update the auth_provider_t table with the new jwk
-        final String sqlJwk = "UPDATE auth_provider_t SET jwk = ?, update_user = ?, update_ts = ?, aggregate_version = ?" +
-                "WHERE provider_id = ? AND aggregate_version = ?";
+        final String sqlJwk = "UPDATE auth_provider_t SET jwk = ?, update_user = ?, update_ts = ?, aggregate_version = ?, active = TRUE" +
+                "WHERE provider_id = ? AND aggregate_version < ?";
         // insert the new key into auth_provider_key_t
         final String sqlInsert = "INSERT INTO auth_provider_key_t(provider_id, kid, public_key, private_key, key_type, update_user, update_ts, aggregate_version) " +
                 "VALUES (?, ?, ?, ?, ?,  ?, ?, ?)";
         // update the existing key in auth_provider_key_t
         final String sqlUpdate = "UPDATE auth_provider_key_t SET key_type = ?, update_user = ?, update_ts = ?, aggregate_version = ?" +
-                "WHERE provider_id = ? AND kid = ? AND aggregate_version = ?";
+                "WHERE provider_id = ? AND kid = ?";
         // delete the old key from auth_provider_key_t
-        final String sqlDelete = "DELETE FROM auth_provider_key_t WHERE provider_id = ? AND kid = ? AND aggregate_version = ?";
+        final String sqlDelete = "DELETE FROM auth_provider_key_t WHERE provider_id = ? AND kid = ?";
 
         Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
         String providerId = (String) map.get("providerId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sqlJwk)) {
@@ -870,12 +886,13 @@ public class AuthPersistenceImpl implements AuthPersistence {
             statement.setObject(3, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
             statement.setLong(4, newAggregateVersion);
             statement.setString(4, providerId);
-            statement.setLong(5, oldAggregateVersion);
+            statement.setLong(5, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-
-                throw new SQLException("Failed to update the jwk for auth provider with id " + providerId);
+                // If 0 rows updated, it means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("rotateAuthProvider skipped for providerId {} aggregateVersion {}. Record not found or a newer version already exists.", providerId, newAggregateVersion);
             }
 
             try (PreparedStatement statementInsert = conn.prepareStatement(sqlInsert)) {
@@ -902,7 +919,6 @@ public class AuthPersistenceImpl implements AuthPersistence {
                 statementUpdate.setLong(4, newAggregateVersion);
                 statementUpdate.setString(5, providerId);
                 statementUpdate.setString(6, (String) updateMap.get("kid"));
-                statementUpdate.setLong(7, oldAggregateVersion);
                 count = statementUpdate.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("Failed to update the auth provider key with provider id " + providerId);
@@ -912,7 +928,6 @@ public class AuthPersistenceImpl implements AuthPersistence {
                 Map<String, Object> deleteMap = (Map<String, Object>) map.get("delete");
                 statementDelete.setString(1, providerId);
                 statementDelete.setString(2, (String) deleteMap.get("kid"));
-                statementDelete.setLong(3, oldAggregateVersion);
                 count = statementDelete.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("Failed to delete the auth provider key with provider id " + providerId);
@@ -927,31 +942,17 @@ public class AuthPersistenceImpl implements AuthPersistence {
         }
     }
 
-    private boolean queryAuthProviderExists(Connection conn, String hostId, String providerId) throws SQLException {
-        final String sql =
-                """
-                SELECT COUNT(*) FROM auth_provider_t WHERE host_id = ? AND provider_id = ?
-                """;
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
-            pst.setObject(1, UUID.fromString(hostId));
-            pst.setString(2, providerId);
-            try (ResultSet rs = pst.executeQuery()) {
-                return rs.next() && rs.getInt(1) > 0;
-            }
-        }
-    }
-
     @Override
     public void updateAuthProvider(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql =
                 """
                 UPDATE auth_provider_t SET provider_name = ?, provider_desc = ?, operation_owner = ?,
-                delivery_owner = ?, update_user = ?, update_ts = ?, aggregate_version = ?
-                WHERE host_id = ? AND provider_id = ? AND aggregate_version = ?
+                delivery_owner = ?, update_user = ?, update_ts = ?, aggregate_version = ?, active = TRUE
+                WHERE host_id = ? AND provider_id = ? AND aggregate_version < ?
                 """;
         Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
         String providerId = (String) map.get("providerId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        String hostId = (String) map.get("hostId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
@@ -974,51 +975,56 @@ public class AuthPersistenceImpl implements AuthPersistence {
             statement.setString(5, (String) event.get(Constants.USER));
             statement.setObject(6, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
             statement.setLong(7, newAggregateVersion);
-            statement.setObject(8, UUID.fromString((String) map.get("hostId")));
+            statement.setObject(8, UUID.fromString(hostId));
             statement.setString(9, providerId);
-            statement.setLong(10, oldAggregateVersion);
+            statement.setLong(10, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryAuthProviderExists(conn, (String)event.get(Constants.HOST), providerId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict for provider " + providerId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
-                } else {
-                    throw new SQLException("No record found to update for provider " + providerId + ".");
-                }
+                // If 0 rows updated, it means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("updateAuthProvider skipped for hostId {} providerId {} aggregateVersion {}. Record not found or a newer version already exists.", hostId, providerId, newAggregateVersion);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during updateAuthProvider for providerId {} (old: {}) -> (new: {}): {}", providerId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during updateAuthProvider for hostId {} providerId {} aggregateVersion  {}: {}", hostId, providerId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateAuthProvider for providerId {} (old: {}) -> (new: {}): {}", providerId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during updateAuthProvider for hostId {} providerId {} aggregateVersion {}: {}", hostId, providerId, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
     public void deleteAuthProvider(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM auth_provider_t WHERE host_id = ? and provider_id = ? AND aggregate_version = ?";
+        final String sql =
+                """
+                UPDATE auth_provider_t SET active = FALSE, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? AND provider_id = ? AND aggregate_version < ?
+                """;
         Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
+        String hostId = (String)map.get("hostId");
         String providerId = (String) map.get("providerId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString((String) map.get("hostId")));
-            statement.setString(2, providerId);
-            statement.setLong(3, oldAggregateVersion);
+            statement.setString(1, (String) event.get(Constants.USER));
+            statement.setObject(2, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            statement.setLong(3, newAggregateVersion );
+            statement.setObject(4, UUID.fromString(hostId));
+            statement.setString(5, providerId);
+            // WHERE monotonicity check: use the new version as the check value
+            statement.setLong(6, newAggregateVersion); // Condition is WHERE aggregate_version < newAggregateVersion
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryAuthProviderExists(conn, (String)event.get(Constants.HOST), providerId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteAuthProvider for provider " + providerId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
-                } else {
-                    throw new SQLException("No record found to update for provider " + providerId + ".");
-                }
+                // If 0 rows updated, it means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Deletion skipped for hostId {} providerId {} aggregateVersion {}. Record not found or a newer version already exists.", hostId, providerId, newAggregateVersion);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during deleteAuthProvider for providerId {} aggregateVersion {}: {}", providerId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during deleteAuthProvider for providerId {} aggregateVersion {}: {}", providerId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteAuthProvider for providerId {} aggregateVersion {}: {}", providerId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during deleteAuthProvider for providerId {} aggregateVersion {}: {}", providerId, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
