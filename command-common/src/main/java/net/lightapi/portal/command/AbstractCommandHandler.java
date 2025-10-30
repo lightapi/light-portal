@@ -26,7 +26,6 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.util.Map;
-import java.util.Objects;
 /**
  * Abstract base class for handling schema commands that produce CloudEvents.
  * Implements the common logic for validation, nonce retrieval, event creation,
@@ -129,24 +128,19 @@ public abstract class AbstractCommandHandler implements HybridHandler {
      *
      */
     protected Result<Map<String, Object>> populateAggregateVersion(Map<String, Object> map) {
-        String eventType = getCloudEventType();
-        // for created event, we can derive the new aggregate versions.
-        if (eventType.endsWith("CreatedEvent") || eventType.endsWith("OnboardedEvent")) {
-            // For auth code created event, we don't need to increment the aggregate version.
+        String aggregateId = EventTypeUtil.getAggregateId(getCloudEventType(), map);
+        int aggregateVersion = dbProvider.getMaxAggregateVersion(aggregateId);
+        if(aggregateVersion == 0) {
+            // first time creating for the aggregate.
             map.put(PortalConstants.NEW_AGGREGATE_VERSION, 1);
             map.put(PortalConstants.AGGREGATE_VERSION, 0);
             return Success.of(map);
+        } else {
+            // the aggregate exists in the event source table.
+            long newAggregateVersion = aggregateVersion + 1;
+            map.put(PortalConstants.NEW_AGGREGATE_VERSION, newAggregateVersion);
+            return Success.of(map);
         }
-        // For other events, we need to increment the aggregate version.
-        if( !map.containsKey(PortalConstants.AGGREGATE_VERSION)) {
-            getLogger().error("The input map does not contain the aggregate version for event type {}.", eventType);
-            return Failure.of(new Status(OBJECT_NOT_FOUND, "aggregateVersion", eventType));
-        }
-        int oldAggregateVersion = ((Number) Objects.requireNonNull(map.get(PortalConstants.AGGREGATE_VERSION))).intValue();
-        // Increment the aggregate version by 1 for the new event.
-        int newAggregateVersion = oldAggregateVersion + 1;
-        map.put(PortalConstants.NEW_AGGREGATE_VERSION, newAggregateVersion);
-        return Success.of(map);
     }
 
     @Override

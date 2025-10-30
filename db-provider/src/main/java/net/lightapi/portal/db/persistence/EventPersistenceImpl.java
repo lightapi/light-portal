@@ -1,5 +1,6 @@
 package net.lightapi.portal.db.persistence;
 
+import com.networknt.config.JsonMapper;
 import com.networknt.monad.Failure;
 import com.networknt.monad.Result;
 import com.networknt.monad.Success;
@@ -8,17 +9,17 @@ import com.networknt.utility.Constants;
 import io.cloudevents.CloudEvent;
 import io.cloudevents.jackson.JsonFormat;
 import net.lightapi.portal.PortalConstants;
+import net.lightapi.portal.db.PortalDbProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static com.networknt.config.JsonMapper.objectMapper;
@@ -28,6 +29,8 @@ import static net.lightapi.portal.db.PortalDbProviderImpl.SQL_EXCEPTION;
 
 public class EventPersistenceImpl implements EventPersistence {
     private static final Logger logger = LoggerFactory.getLogger(EventPersistenceImpl.class);
+    private static final String OBJECT_NOT_FOUND = PortalDbProvider.OBJECT_NOT_FOUND;
+
     private static final JsonFormat jsonFormat = new JsonFormat();
     /**
      * Inserts multiple CloudEvents into the event_store_t and outbox_message_t tables
@@ -229,4 +232,30 @@ public class EventPersistenceImpl implements EventPersistence {
         return null;
     }
 
+    /**
+     * Get the max aggregate version from the aggregate id by query the event_store_t.
+     *
+     * @param aggregateId aggregate id
+     * @return A Result of Json object that contains key aggregateVersion and a number value for the max aggregateVersion.
+     */
+    @Override
+    public int getMaxAggregateVersion(String aggregateId) {
+        final String sql = "SELECT MAX(aggregate_version) aggregate_version FROM event_store_t WHERE aggregate_id = ?";
+        int aggregateVersion = 0;
+        try (final Connection conn = ds.getConnection()) {
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setObject(1, aggregateId);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if(resultSet.next()) {
+                        aggregateVersion = resultSet.getInt("aggregate_version");
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+        }
+        return aggregateVersion;
+    }
 }
