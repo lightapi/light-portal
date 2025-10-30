@@ -104,28 +104,22 @@ public interface PortalDbProvider extends DbProvider {
     void createRefreshToken(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> queryRefreshToken(String refreshToken);
     void deleteRefreshToken(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> listRefreshToken(int offset, int limit, String refreshToken, String hostId, String userId, String entityId,
-                                    String email, String firstName, String lastName, String clientId, String appId,
-                                    String appName, String scope, String userType, String roles, String groups, String positions,
-                                    String attributes, String csrf, String customClaim, String updateUser, Timestamp updateTs);
+    Result<String> getRefreshToken(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     // RefToken
     void createRefToken(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteRefToken(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> listRefToken(int offset, int limit, String refToken, String hostId, String clientId, String clientName, String updateUser, Timestamp updateTs);
+    Result<String> getRefToken(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> queryRefToken(String refToken);
 
     // AuthCode
     void createAuthCode(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteAuthCode(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> queryAuthCode(String authCode);
-    Result<String> listAuthCode(int offset, int limit, String hostId, String authCode, String userId,
-                                String entityId, String userType, String email, String roles, String groups, String positions,
-                                String attributes, String redirectUri, String scope, String remember, String codeChallenge,
-                                String challengeMethod, String updateUser, Timestamp updateTs);
+    Result<String> getAuthCode(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
 
     // AuthProvider
     Result<Map<String, Object>> queryProviderById(String providerId);
-    Result<String> queryProvider(int offset, int limit, String hostId, String providerId, String providerName, String providerDesc, String operationOwner, String deliveryOwner, String jwk, String updateUser, Timestamp updateTs);
+    Result<String> queryProvider(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     void createAuthProvider(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void rotateAuthProvider(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateAuthProvider(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -137,7 +131,7 @@ public interface PortalDbProvider extends DbProvider {
     // App
     Result<String> queryApp(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> queryAppById(String hostId, String appId);
-    Result<String> queryClient(int offset, int limit, String hostId, String appId, String apiId, String clientId, String clientName, String clientType, String clientProfile, String clientScope, String customClaim, String redirectUri, String authenticateClass, String deRefClientId);
+    Result<String> queryClient(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     void createApp(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateApp(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteApp(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -148,6 +142,7 @@ public interface PortalDbProvider extends DbProvider {
     void updateClient(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteClient(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> queryClientByClientId(String clientId);
+    Result<String> getClientById(String hostId, String clientId);
     Result<String> queryClientByProviderClientId(String providerId, String clientId);
     Result<String> queryClientByHostAppId(String host, String applicationId);
 

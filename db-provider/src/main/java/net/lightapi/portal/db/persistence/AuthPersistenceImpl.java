@@ -56,7 +56,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                     update_ts = EXCLUDED.update_ts,
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
-                WHERE app_t.aggregate_version < EXCLUDED.aggregate_version
+                WHERE app_t.aggregate_version < EXCLUDED.aggregate_version AND app_t.active = FALSE
                 """; // <<< CRITICAL: Added WHERE to ensure we only update if the incoming event is newer
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
@@ -235,217 +235,301 @@ public class AuthPersistenceImpl implements AuthPersistence {
 
     @Override
     public void createClient(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String insertClient =
+        // --- UPDATED SQL FOR UPSERT ---
+        final String upsertClient =
                 """
-                INSERT INTO auth_client_t (host_id, app_id, api_id, client_name, client_id,
-                client_type, client_profile, client_secret, client_scope, custom_claim, redirect_uri,
-                authenticate_class, deref_client_id, update_user, update_ts, aggregate_version)
-                VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,  ?)
+                INSERT INTO auth_client_t (
+                    host_id, client_id, client_name, app_id, api_id,
+                    client_type, client_profile, client_secret, client_scope, custom_claim,
+                    redirect_uri, authenticate_class, deref_client_id, update_user, update_ts, aggregate_version
+                )
+                VALUES (
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                )
+                ON CONFLICT (host_id, client_id) DO UPDATE -- <<< CONFLICT KEY is PRIMARY KEY
+                SET
+                    client_name = EXCLUDED.client_name,
+                    app_id = EXCLUDED.app_id,
+                    api_id = EXCLUDED.api_id,
+                    client_type = EXCLUDED.client_type,
+                    client_profile = EXCLUDED.client_profile,
+                    client_secret = EXCLUDED.client_secret,
+                    client_scope = EXCLUDED.client_scope,
+                    custom_claim = EXCLUDED.custom_claim,
+                    redirect_uri = EXCLUDED.redirect_uri,
+                    authenticate_class = EXCLUDED.authenticate_class,
+                    deref_client_id = EXCLUDED.deref_client_id,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version
+                -- CRITICAL: Only update if the incoming event's version is newer
+                WHERE auth_client_t.aggregate_version < EXCLUDED.aggregate_version
                 """;
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String) event.get(Constants.HOST);
         String clientId = (String) map.get("clientId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
-        try (PreparedStatement statement = conn.prepareStatement(insertClient)) {
-            statement.setObject(1, UUID.fromString((String) event.get(Constants.HOST)));
+
+        // Parameters 1-16 (16 placeholders in the VALUES clause)
+        try (PreparedStatement statement = conn.prepareStatement(upsertClient)) {
+            // --- SET VALUES (1 to 16) ---
+            int i = 1;
+            statement.setObject(i++, UUID.fromString(hostId)); // 1. host_id
+            statement.setObject(i++, UUID.fromString(clientId)); // 2. client_id
+
+            statement.setString(i++, (String) map.get("clientName")); // 3. client_name
+
             String appId = (String) map.get("appId");
             if (appId != null && !appId.isEmpty()) {
-                statement.setString(2, appId);
+                statement.setString(i++, appId); // 4. app_id
             } else {
-                statement.setNull(2, NULL);
+                statement.setNull(i++, Types.VARCHAR);
             }
+
             String apiId = (String) map.get("apiId");
             if (apiId != null && !apiId.isEmpty()) {
-                statement.setString(3, apiId);
+                statement.setString(i++, apiId); // 5. api_id
             } else {
-                statement.setNull(3, NULL);
+                statement.setNull(i++, Types.VARCHAR);
             }
-            statement.setString(4, (String) map.get("clientName"));
-            statement.setObject(5, UUID.fromString(clientId));
-            statement.setString(6, (String) map.get("clientType"));
-            statement.setString(7, (String) map.get("clientProfile"));
-            statement.setString(8, (String) map.get("clientSecret"));
+
+            statement.setString(i++, (String) map.get("clientType")); // 6. client_type
+            statement.setString(i++, (String) map.get("clientProfile")); // 7. client_profile
+            statement.setString(i++, (String) map.get("clientSecret")); // 8. client_secret
 
             String clientScope = (String) map.get("clientScope");
             if (clientScope != null && !clientScope.isEmpty()) {
-                statement.setString(9, clientScope);
+                statement.setString(i++, clientScope); // 9. client_scope
             } else {
-                statement.setNull(9, NULL);
+                statement.setNull(i++, Types.VARCHAR);
             }
+
             String customClaim = (String) map.get("customClaim");
             if (customClaim != null && !customClaim.isEmpty()) {
-                statement.setString(10, customClaim);
+                statement.setString(i++, customClaim); // 10. custom_claim
             } else {
-                statement.setNull(10, NULL);
+                statement.setNull(i++, Types.VARCHAR);
             }
+
             String redirectUri = (String) map.get("redirectUri");
             if (redirectUri != null && !redirectUri.isEmpty()) {
-                statement.setString(11, redirectUri);
+                statement.setString(i++, redirectUri); // 11. redirect_uri
             } else {
-                statement.setNull(11, NULL);
+                statement.setNull(i++, Types.VARCHAR);
             }
+
             String authenticateClass = (String) map.get("authenticateClass");
             if (authenticateClass != null && !authenticateClass.isEmpty()) {
-                statement.setString(12, authenticateClass);
+                statement.setString(i++, authenticateClass); // 12. authenticate_class
             } else {
-                statement.setNull(12, NULL);
+                statement.setNull(i++, Types.VARCHAR);
             }
+
             String deRefClientId = (String) map.get("deRefClientId");
             if (deRefClientId != null && !deRefClientId.isEmpty()) {
-                statement.setObject(13, UUID.fromString(deRefClientId));
+                statement.setObject(i++, UUID.fromString(deRefClientId)); // 13. deref_client_id
             } else {
-                statement.setNull(13, NULL);
+                statement.setNull(i++, Types.OTHER);
             }
-            statement.setString(14, (String) event.get(Constants.USER));
-            statement.setObject(15, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-            statement.setLong(16, newAggregateVersion);
+
+            statement.setString(i++, (String) event.get(Constants.USER)); // 14. update_user
+            statement.setObject(i++, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME))); // 15. update_ts
+            statement.setLong(i++, newAggregateVersion); // 16. aggregate_version (The New Version)
+
+            // --- Execute UPSERT ---
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("Failed to insert client %s with aggregateVersion %d", clientId, newAggregateVersion));
+                // count=0 means the ON CONFLICT clause was hit, BUT the monotonicity WHERE clause failed.
+                // (i.e., DB version >= incoming version). This is the desired idempotent/out-of-order protection behavior.
+                logger.warn("Client creation/update skipped for clientId {} aggregateVersion {}. A newer or same version already exists in the projection.", clientId, newAggregateVersion);
+            } else {
+                logger.info("Client {} successfully inserted or updated to aggregateVersion {}.", clientId, newAggregateVersion);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during createClient for clientId {} aggregateVersion {}: {}", clientId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            logger.error("SQLException during UPSERT for clientId {} aggregateVersion {}: {}", clientId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw for transaction management
         } catch (Exception e) {
-            logger.error("Exception during createClient for clientId {} aggregateVersion {}: {}", clientId, newAggregateVersion, e.getMessage(), e);
-            throw e;
-        }
-    }
-
-
-    private boolean queryClientExists(Connection conn, String hostId, String clientId) throws SQLException {
-        final String sql =
-                """
-                SELECT COUNT(*) FROM auth_client_t WHERE host_id = ? AND client_id = ?
-                """;
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
-            pst.setObject(1, UUID.fromString(hostId));
-            pst.setString(2, clientId);
-            try (ResultSet rs = pst.executeQuery()) {
-                return rs.next() && rs.getInt(1) > 0;
-            }
+            logger.error("Exception during UPSERT for clientId {} aggregateVersion {}: {}", clientId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw for transaction management
         }
     }
 
     @Override
     public void updateClient(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // --- UPDATED SQL FOR MONOTONICITY CHECK ---
+        // SQL now includes aggregate_version in SET clause and uses a monotonicity check in the WHERE clause.
         final String updateClient =
                 """
                 UPDATE auth_client_t SET app_id = ?, api_id = ?, client_name = ?,
                 client_type = ?, client_profile = ?,
                 client_scope = ?, custom_claim = ?, redirect_uri = ?, authenticate_class = ?,
                 deref_client_id = ?, update_user = ?, update_ts = ?, aggregate_version = ?
-                WHERE host_id = ? AND client_id = ? AND aggregate_version = ?
-                """;
+                WHERE host_id = ? AND client_id = ? AND aggregate_version < ?
+                """; // <<< CRITICAL: Changed '= ?' to '< ?' in the final aggregate_version check.
 
-        Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
+        Map<String, Object> map = SqlUtil.extractEventData(event); // Assuming extractEventData is the helper to get PortalConstants.DATA
+        String hostId = (String) map.get("hostId");
         String clientId = (String) map.get("clientId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(updateClient)) {
+            // --- SET CLAUSE PARAMETERS (1 to 13) ---
+            int i = 1;
+
+            // 1. app_id
             String appId = (String) map.get("appId");
             if (appId != null && !appId.isEmpty()) {
-                statement.setString(1, appId);
+                statement.setString(i++, appId);
             } else {
-                statement.setNull(1, NULL);
+                statement.setNull(i++, NULL);
             }
+
+            // 2. api_id
             String apiId = (String) map.get("apiId");
             if (apiId != null && !apiId.isEmpty()) {
-                statement.setString(2, apiId);
+                statement.setString(i++, apiId);
             } else {
-                statement.setNull(2, NULL);
+                statement.setNull(i++, NULL);
             }
-            statement.setString(3, (String) map.get("clientName"));
-            statement.setString(4, (String) map.get("clientType"));
-            statement.setString(5, (String) map.get("clientProfile"));
+
+            // 3. client_name
+            statement.setString(i++, (String) map.get("clientName"));
+
+            // 4. client_type
+            statement.setString(i++, (String) map.get("clientType"));
+
+            // 5. client_profile
+            statement.setString(i++, (String) map.get("clientProfile"));
+
+            // 6. client_scope
             String clientScope = (String) map.get("clientScope");
             if (clientScope != null && !clientScope.isEmpty()) {
-                statement.setString(6, clientScope);
+                statement.setString(i++, clientScope);
             } else {
-                statement.setNull(6, NULL);
+                statement.setNull(i++, NULL);
             }
+
+            // 7. custom_claim
             String customClaim = (String) map.get("customClaim");
             if (customClaim != null && !customClaim.isEmpty()) {
-                statement.setString(7, customClaim);
+                statement.setString(i++, customClaim);
             } else {
-                statement.setNull(7, NULL);
+                statement.setNull(i++, NULL);
             }
+
+            // 8. redirect_uri
             String redirectUri = (String) map.get("redirectUri");
             if (redirectUri != null && !redirectUri.isEmpty()) {
-                statement.setString(8, redirectUri);
+                statement.setString(i++, redirectUri);
             } else {
-                statement.setNull(8, NULL);
+                statement.setNull(i++, NULL);
             }
+
+            // 9. authenticate_class
             String authenticateClass = (String) map.get("authenticateClass");
             if (authenticateClass != null && !authenticateClass.isEmpty()) {
-                statement.setString(9, authenticateClass);
+                statement.setString(i++, authenticateClass);
             } else {
-                statement.setNull(9, NULL);
+                statement.setNull(i++, NULL);
             }
+
+            // 10. deref_client_id
             String deRefClientId = (String) map.get("deRefClientId");
             if (deRefClientId != null && !deRefClientId.isEmpty()) {
-                statement.setObject(10, UUID.fromString(deRefClientId));
+                statement.setObject(i++, UUID.fromString(deRefClientId));
             } else {
-                statement.setNull(10, Types.OTHER);
+                statement.setNull(i++, Types.OTHER);
             }
-            statement.setString(11, (String) event.get(Constants.USER));
-            statement.setObject(12, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-            statement.setLong(13, newAggregateVersion);
-            statement.setObject(14, UUID.fromString((String) map.get("hostId")));
-            statement.setObject(15, UUID.fromString(clientId));
-            statement.setLong(16, oldAggregateVersion);
+
+            // 11. update_user
+            statement.setString(i++, (String) event.get(Constants.USER));
+
+            // 12. update_ts
+            statement.setObject(i++, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+
+            // 13. aggregate_version (New Version in SET clause)
+            statement.setLong(i++, newAggregateVersion);
+
+            // --- WHERE CLAUSE PARAMETERS (15, 16, 17) ---
+
+            // 14. host_id
+            statement.setObject(i++, UUID.fromString(hostId));
+
+            // 15. client_id
+            statement.setObject(i++, UUID.fromString(clientId));
+
+            // 16. aggregate_version (Monotonicity Check: aggregate_version < newAggregateVersion)
+            statement.setLong(i, newAggregateVersion); // Check against the new version
+
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryClientExists(conn, (String)event.get(Constants.HOST), clientId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict for client " + clientId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
-                } else {
-                    throw new SQLException("No record found to update for client " + clientId + ".");
-                }
+                // If 0 rows updated, it means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Client update skipped for clientId {} (new version {}). Record not found or a newer version already exists in the projection.", clientId, newAggregateVersion);
             }
+            // NO THROW on count == 0. The method is now idempotent.
         } catch (SQLException e) {
-            logger.error("SQLException during updateClient for clientId {} (old: {}) -> (new: {}): {}", clientId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during updateClient for clientId {} (new: {}): {}", clientId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateClient for clientId {} (old: {}) -> (new: {}): {}", clientId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during updateClient for clientId {} (new: {}): {}", clientId, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
     public void deleteClient(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String deleteClient =
+        // --- UPDATED SQL FOR SOFT DELETE + MONOTONICITY CHECK ---
+        // SQL updates the 'active' flag and aggregate_version IF the current DB version is older than the incoming event's version.
+        final String softDeleteClient =
                 """
-                DELETE from auth_client_t WHERE host_id = ? AND client_id = ? AND aggregate_version = ?
-                """;
-        Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
-        String clientId = (String) map.get("clientId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+                UPDATE auth_client_t SET active = FALSE, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? AND client_id = ? AND aggregate_version < ?
+                """; // <<< CRITICAL: Sets active=FALSE and uses aggregate_version < ?
 
-        try (PreparedStatement statement = conn.prepareStatement(deleteClient)) {
-            statement.setObject(1, UUID.fromString((String) map.get("hostId")));
-            statement.setObject(2, UUID.fromString(clientId));
-            statement.setLong(3, oldAggregateVersion);
+        Map<String, Object> map = SqlUtil.extractEventData(event); // Assuming extractEventData is the helper to get PortalConstants.DATA
+        String hostId = (String) map.get("hostId");
+        String clientId = (String) map.get("clientId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event); // The new version for the soft-deleted state
+
+        try (PreparedStatement statement = conn.prepareStatement(softDeleteClient)) {
+            // --- SET CLAUSE PARAMETERS (1 to 3) ---
+            int i = 1;
+            statement.setString(i++, (String) event.get(Constants.USER)); // 1. update_user
+            statement.setObject(i++, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME))); // 2. update_ts
+            statement.setLong(i++, newAggregateVersion); // 3. aggregate_version (New Version in SET clause)
+
+            // --- WHERE CLAUSE PARAMETERS (4, 5, 6) ---
+            statement.setObject(i++, UUID.fromString(hostId)); // 4. host_id
+            statement.setObject(i++, UUID.fromString(clientId)); // 5. client_id
+            statement.setLong(i, newAggregateVersion); // 6. aggregate_version (Monotonicity Check: aggregate_version < newAggregateVersion)
+
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryClientExists(conn, (String)event.get(Constants.HOST), clientId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteClient for clientId " + clientId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
-                } else {
-                    throw new SQLException("No record found during deleteClient for clientId " + clientId + ". It might have been already deleted.");
-                }
+                // If 0 rows updated, it means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Deletion skipped for hostId {} clientId {} aggregateVersion {}. Record not found or a newer version already exists.", hostId, clientId, newAggregateVersion);
             }
+            // NO THROW on count == 0. The method is now idempotent.
         } catch (SQLException e) {
-            logger.error("SQLException during deleteClient for clientId {} aggregateVersion {}: {}", clientId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during deleteClient for hostId {} clientId {} aggregateVersion {}: {}", hostId, clientId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteClient for clientId {} aggregateVersion {}: {}", clientId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during deleteClient for hostId {} clientId {} aggregateVersion {}: {}", hostId, clientId, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
+    /**
+     * This method is called by the oauth-kafka for the client authentication. The client must be active in order to
+     * be used.
+     * @param clientId client id
+     * @return Result<String> the result
+     */
     @Override
     public Result<String> queryClientByClientId(String clientId) {
-        if (logger.isTraceEnabled()) logger.trace("queryClientByClientId: clientId = {}", clientId);
         Result<String> result;
         String sql =
                 """
@@ -453,7 +537,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                 client_profile, client_secret, client_scope, custom_claim, redirect_uri,
                 authenticate_class, deref_client_id, update_user, update_ts, aggregate_version
                 FROM auth_client_t
-                WHERE client_id = ?
+                WHERE active = TRUE AND client_id = ?
                 """;
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
@@ -481,7 +565,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                 }
             }
             if (map.isEmpty())
-                result = Failure.of(new Status(OBJECT_NOT_FOUND, "application with clientId ", clientId));
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "queryClientByClientId", clientId));
             else
                 result = Success.of(JsonMapper.toJson(map));
         } catch (SQLException e) {
@@ -492,7 +576,59 @@ public class AuthPersistenceImpl implements AuthPersistence {
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
         return result;
+    }
 
+    @Override
+    public Result<String> getClientById(String hostId, String clientId) {
+        if (logger.isTraceEnabled()) logger.trace("getClientById: hostId = {} clientId = {}", hostId, clientId);
+        Result<String> result;
+        String sql =
+                """
+                SELECT host_id, app_id, api_id, client_name, client_id, client_type,
+                client_profile, client_secret, client_scope, custom_claim, redirect_uri,
+                authenticate_class, deref_client_id, update_user, update_ts, aggregate_version, active
+                FROM auth_client_t
+                WHERE host_id = ? AND client_id = ?
+                """;
+        try (final Connection conn = ds.getConnection()) {
+            Map<String, Object> map = new HashMap<>();
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setObject(1, UUID.fromString(hostId));
+                statement.setObject(2, UUID.fromString(clientId));
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                        map.put("appId", resultSet.getString("app_id"));
+                        map.put("apiId", resultSet.getString("api_id"));
+                        map.put("clientName", resultSet.getString("client_name"));
+                        map.put("clientId", resultSet.getObject("client_id", UUID.class));
+                        map.put("clientType", resultSet.getString("client_type"));
+                        map.put("clientProfile", resultSet.getString("client_profile"));
+                        map.put("clientSecret", resultSet.getString("client_secret"));
+                        map.put("clientScope", resultSet.getString("client_scope"));
+                        map.put("customClaim", resultSet.getString("custom_claim"));
+                        map.put("redirectUri", resultSet.getString("redirect_uri"));
+                        map.put("authenticateClass", resultSet.getString("authenticate_class"));
+                        map.put("deRefClientId", resultSet.getObject("deref_client_id", UUID.class));
+                        map.put("updateUser", resultSet.getString("update_user"));
+                        map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                        map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                        map.put("active", resultSet.getBoolean("active"));
+                    }
+                }
+            }
+            if (map.isEmpty())
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "getClientById", hostId + "|" + clientId));
+            else
+                result = Success.of(JsonMapper.toJson(map));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
     }
 
     @Override
@@ -1046,63 +1182,39 @@ public class AuthPersistenceImpl implements AuthPersistence {
     }
 
     @Override
-    public Result<String> queryClient(int offset, int limit, String hostId, String appId, String apiId,
-                                      String clientId, String clientName,
-                                      String clientType, String clientProfile, String clientScope,
-                                      String customClaim, String redirectUri, String authenticateClass,
-                                      String deRefClientId) {
+    public Result<String> queryClient(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
                 client_id, host_id, app_id, api_id, client_name, client_type, client_profile,
                 client_scope, custom_claim, redirect_uri, authenticate_class, deref_client_id,
-                update_user, update_ts, aggregate_version
+                update_user, update_ts, aggregate_version, active
                 FROM auth_client_t
                 WHERE host_id = ?
                 """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
-
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-
-        addCondition(whereClause, parameters, "app_id", appId);
-        addCondition(whereClause, parameters, "api_id", apiId);
-        addCondition(whereClause, parameters, "client_id", clientId != null ? UUID.fromString(clientId) : null);
-        addCondition(whereClause, parameters, "client_name", clientName);
-        addCondition(whereClause, parameters, "client_type", clientType);
-        addCondition(whereClause, parameters, "client_profile", clientProfile);
-        addCondition(whereClause, parameters, "client_scope", clientScope);
-        addCondition(whereClause, parameters, "custom_claim", customClaim);
-        addCondition(whereClause, parameters, "redirect_uri", redirectUri);
-        addCondition(whereClause, parameters, "authenticate_class", authenticateClass);
-        addCondition(whereClause, parameters, "deref_client_id", deRefClientId != null ? UUID.fromString(deRefClientId) : null);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY client_id\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"app_id", "api_id", "client_name", "client_scope", "custom_claim", "redirect_uri"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("client_id", "host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("client_id", sorting, null) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> clients = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -1127,6 +1239,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     clients.add(map);
                 }
             }
@@ -1244,11 +1357,35 @@ public class AuthPersistenceImpl implements AuthPersistence {
     }
 
     @Override
-    public Result<String> listRefreshToken(int offset, int limit, String refreshToken, String hostId, String userId, String entityId,
-                                           String email, String firstName, String lastName, String clientId, String appId,
-                                           String appName, String scope, String userType, String roles, String groups, String positions,
-                                           String attributes, String csrf, String customClaim, String updateUser, Timestamp updateTs) {
+    public Result<String> getRefreshToken(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "r.host_id",
+                "refreshToken", "r.refresh_token",
+                "userId", "r.user_id",
+                "userType", "r.user_type",
+                "entityId", "r.entity_id",
+                "email", "r.email",
+                "firstName", "u.first_name",
+                "lastName", "u.lastName",
+                "clientId", "r.client_id",
+                "appId", "a.app_id"
+        ));
+        columnMap.put("appName", "a.app_name");
+        columnMap.put("scope", "r.scope");
+        columnMap.put("roles", "r.roles");
+        columnMap.put("groups", "r.groups");
+        columnMap.put("positions", "r.positions");
+        columnMap.put("attributes", "r.attributes");
+        columnMap.put("csrf", "r.csrf");
+        columnMap.put("customClaim", "r.custom_claim");
+        columnMap.put("updateUser", "r.update_user");
+        columnMap.put("updateTs", "r.update_ts");
+        columnMap.put("aggregateVersion", "r.aggregate_version");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
@@ -1260,56 +1397,24 @@ public class AuthPersistenceImpl implements AuthPersistence {
                 AND r.host_id = ?
                 """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
-
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-
-        addCondition(whereClause, parameters, "r.refresh_token", refreshToken != null ? UUID.fromString(refreshToken) : null);
-        addCondition(whereClause, parameters, "r.user_id", userId != null ? UUID.fromString(userId) : null);
-        addCondition(whereClause, parameters, "r.user_type", userType);
-        addCondition(whereClause, parameters, "u.entity_id", entityId);
-        addCondition(whereClause, parameters, "u.email", email);
-        addCondition(whereClause, parameters, "r.first_name", firstName);
-        addCondition(whereClause, parameters, "r.last_name", lastName);
-        addCondition(whereClause, parameters, "r.client_id", clientId != null ? UUID.fromString(clientId) : null);
-        addCondition(whereClause, parameters, "a.app_id", appId);
-        addCondition(whereClause, parameters, "a.app_name", appName);
-        addCondition(whereClause, parameters, "r.scope", scope);
-        addCondition(whereClause, parameters, "r.roles", roles);
-        addCondition(whereClause, parameters, "r.groups", groups);
-        addCondition(whereClause, parameters, "r.positions", positions);
-        addCondition(whereClause, parameters, "r.attributes", attributes);
-        addCondition(whereClause, parameters, "r.csrf", csrf);
-        addCondition(whereClause, parameters, "r.custom_claim", customClaim);
-        addCondition(whereClause, parameters, "r.update_user", updateUser);
-        addCondition(whereClause, parameters, "r.update_ts", updateTs);
-
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY r.user_id\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"r.entity_id", "r.email", "u.first_name", "u.last_name", "a.app_name", "r.roles", "r.groups", "r.positions", "r.attributes", "r.scope"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("r.host_id", "r.refresh_token", "r.user_id", "r.client_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("r.user_id", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> tokens = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -1556,11 +1661,11 @@ public class AuthPersistenceImpl implements AuthPersistence {
     }
 
     @Override
-    public Result<String> listAuthCode(int offset, int limit, String hostId, String authCode, String userId,
-                                       String entityId, String userType, String email, String roles, String groups, String positions,
-                                       String attributes, String redirectUri, String scope, String remember, String codeChallenge,
-                                       String challengeMethod, String updateUser, Timestamp updateTs) {
+    public Result<String> getAuthCode(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
@@ -1570,48 +1675,24 @@ public class AuthPersistenceImpl implements AuthPersistence {
                 WHERE host_id = ?
                 """;
 
-        StringBuilder sqlBuilder = new StringBuilder();
-
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-
-        addCondition(whereClause, parameters, "auth_code", authCode);
-        addCondition(whereClause, parameters, "user_id", userId != null ? UUID.fromString(userId) : null);
-        addCondition(whereClause, parameters, "entity_id", entityId);
-        addCondition(whereClause, parameters, "user_type", userType);
-        addCondition(whereClause, parameters, "email", email);
-        addCondition(whereClause, parameters, "roles", roles);
-        addCondition(whereClause, parameters, "redirect_uri", redirectUri);
-        addCondition(whereClause, parameters, "scope", scope);
-        addCondition(whereClause, parameters, "remember", remember);
-        addCondition(whereClause, parameters, "code_challenge", codeChallenge);
-        addCondition(whereClause, parameters, "challenge_method", challengeMethod);
-
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY update_ts\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"entity_id", "email", "roles", "redirect_uri", "scope"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("host_id", "user_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("update_ts", sorting, null) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> authCodes = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -1695,52 +1776,38 @@ public class AuthPersistenceImpl implements AuthPersistence {
     }
 
     @Override
-    public Result<String> queryProvider(int offset, int limit, String hostId, String providerId, String providerName, String providerDesc,
-                                        String operationOwner, String deliveryOwner, String jwk, String updateUser, Timestamp updateTs) {
+    public Result<String> queryProvider(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
                 host_id, provider_id, provider_name, provider_desc, operation_owner,
-                delivery_owner, jwk, update_user, update_ts, aggregate_version
+                delivery_owner, jwk, update_user, update_ts, aggregate_version, active
                 FROM auth_provider_t
                 WHERE host_id = ?
                 """;
-        StringBuilder sqlBuilder = new StringBuilder(s);
 
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-
-        addCondition(whereClause, parameters, "provider_id", providerId);
-        addCondition(whereClause, parameters, "provider_name", providerName);
-        addCondition(whereClause, parameters, "provider_desc", providerDesc);
-        addCondition(whereClause, parameters, "operation_owner", operationOwner != null ? UUID.fromString(operationOwner) : null);
-        addCondition(whereClause, parameters, "delivery_owner", deliveryOwner != null ? UUID.fromString(deliveryOwner) : null);
-        addCondition(whereClause, parameters, "jwk", jwk);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY provider_id\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"provider_name", "provider_desc"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("provider_id", sorting, null) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> providers = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -1760,6 +1827,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                     // handling date properly
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     providers.add(map);
                 }
             }
@@ -1916,8 +1984,22 @@ public class AuthPersistenceImpl implements AuthPersistence {
     }
 
     @Override
-    public Result<String> listRefToken(int offset, int limit, String refToken, String hostId, String clientId, String clientName, String updateUser, Timestamp updateTs) {
+    public Result<String> getRefToken(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "r.host_id",
+                "refToken", "r.ref_token",
+                "jwtToken", "r.jwt_token",
+                "clientId", "r.client_id",
+                "clientName", "c.client_name",
+                "updateUser", "r.update_user",
+                "updateTs", "r.update_ts",
+                "aggregateVersion", "r.aggregate_version"
+        ));
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
@@ -1927,42 +2009,24 @@ public class AuthPersistenceImpl implements AuthPersistence {
                 AND r.host_id = ?
                 """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
-
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-
-        addCondition(whereClause, parameters, "r.ref_token", refToken);
-        addCondition(whereClause, parameters, "r.client_id", clientId != null ? UUID.fromString(clientId) : null);
-        addCondition(whereClause, parameters, "c.client_name", clientName);
-        addCondition(whereClause, parameters, "r.update_user", updateUser);
-        addCondition(whereClause, parameters, "r.update_ts", updateTs);
-
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY r.client_id\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"c_client_name"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("r.host_id", "r.client_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("r.client_id", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> tokens = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
