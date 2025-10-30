@@ -124,6 +124,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void updateApp(Connection connection, Map<String, Object> event) throws SQLException, Exception { authPersistence.updateApp(connection, event); }
     @Override public void deleteApp(Connection connection, Map<String, Object> event) throws SQLException, Exception { authPersistence.deleteApp(connection, event); }
     @Override public Result<String> queryApp(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return authPersistence.queryApp(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String>  queryAppById(java.lang.String hostId, java.lang.String appId) { return authPersistence.queryAppById(hostId, appId); }
     @Override public Result<String> getAppIdLabel(String hostId) { return authPersistence.getAppIdLabel(hostId); }
     @Override public void createClient(Connection connection, Map<String, Object> event) throws SQLException, Exception { authPersistence.createClient(connection, event); }
     @Override public void updateClient(Connection connection, Map<String, Object> event) throws SQLException, Exception { authPersistence.updateClient(connection, event); }
@@ -463,6 +464,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     // --- Event ---
     @Override public Result<String> insertEventStore(CloudEvent[] events) { return eventPersistence.insertEventStore(events); }
+    @Override public int getMaxAggregateVersion(String aggregateId) { return eventPersistence.getMaxAggregateVersion(aggregateId); }
 
     // --- Product / Instance Applicable Properties
     @Override

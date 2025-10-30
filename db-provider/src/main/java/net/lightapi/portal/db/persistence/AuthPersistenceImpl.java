@@ -1000,6 +1000,52 @@ public class AuthPersistenceImpl implements AuthPersistence {
     }
 
     @Override
+    public Result<String> queryAppById(String hostId, String appId) {
+        Result<String> result = null;
+        String sql =
+                """
+                SELECT host_id, app_id, app_name, app_desc, is_kafka_app, operation_owner,
+                delivery_owner, aggregate_version, active, update_user, update_ts
+                FROM app_t
+                WHERE host_id = ? AND app_id = ?
+                """;
+        try (final Connection conn = ds.getConnection()) {
+            Map<String, Object> map = new HashMap<>();
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setObject(1, UUID.fromString(hostId));
+                statement.setString(2, appId);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                        map.put("appId", resultSet.getString("app_id"));
+                        map.put("appName", resultSet.getString("app_name"));
+                        map.put("appDesc", resultSet.getString("app_desc"));
+                        map.put("isKafkaApp", resultSet.getBoolean("is_kafka_app"));
+                        map.put("operationOwner", resultSet.getObject("operation_owner", UUID.class));
+                        map.put("deliveryOwner", resultSet.getObject("delivery_owner", UUID.class));
+                        map.put("updateUser", resultSet.getString("update_user"));
+                        map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                        map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                        map.put("active", resultSet.getBoolean("active"));
+                    }
+                }
+            }
+            if (map.isEmpty())
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "queryAppByAppId", hostId + "|" + appId));
+            else
+                result = Success.of(JsonMapper.toJson(map));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
     public Result<String> queryClient(int offset, int limit, String hostId, String appId, String apiId,
                                       String clientId, String clientName,
                                       String clientType, String clientProfile, String clientScope,
