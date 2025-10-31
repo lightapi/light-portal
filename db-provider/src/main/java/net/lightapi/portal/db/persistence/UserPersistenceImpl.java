@@ -491,6 +491,71 @@ public class UserPersistenceImpl implements UserPersistence {
         return result;
     }
 
+    /**
+     * Called by the GetUserById handler to refresh the user_t data before update form is rendered.
+     * @param userId userId
+     * @return Result<String> result
+     */
+    @Override
+    public Result<String> getUserById(String userId) {
+        Result<String> result = null;
+
+        String sql =
+            """
+            SELECT u.user_id, u.email, u.language,
+            u.first_name, u.last_name, u.user_type, u.phone_number, u.gender,
+            u.birthday, u.country, u.province, u.city, u.address,
+            u.post_code, u.aggregate_version, COALESCE(c.customer_id, e.employee_id) AS entity_id,
+            c.referral_id, e.manager_id, uh.host_id
+            FROM user_t u
+            LEFT JOIN user_host_t uh ON u.user_id = uh.user_id
+            LEFT JOIN customer_t c ON uh.host_id = c.host_id AND u.user_id = c.user_id
+            LEFT JOIN employee_t e ON uh.host_id = e.host_id AND u.user_id = e.user_id
+            WHERE uh.current = TRUE AND u.user_id = ?
+            """;
+
+        try (final Connection conn = ds.getConnection()) {
+            Map<String, Object> map = new HashMap();
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setObject(1, UUID.fromString(userId));
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        map.put("userId", resultSet.getObject("user_id", UUID.class));
+                        map.put("email", resultSet.getString("email"));
+                        map.put("language", resultSet.getString("language"));
+                        map.put("firstName", resultSet.getString("first_name"));
+                        map.put("lastName", resultSet.getString("last_name"));
+                        map.put("userType", resultSet.getString("user_type"));
+                        map.put("phoneNumber", resultSet.getString("phone_number"));
+                        map.put("gender", resultSet.getString("gender"));
+                        map.put("birthday", resultSet.getDate("birthday"));
+                        map.put("country", resultSet.getString("country"));
+                        map.put("province", resultSet.getString("province"));
+                        map.put("city", resultSet.getString("city"));
+                        map.put("address", resultSet.getString("address"));
+                        map.put("postCode", resultSet.getString("post_code"));
+                        map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                        map.put("entityId", resultSet.getString("entity_id"));
+                        map.put("referralId", resultSet.getString("referral_id"));
+                        map.put("managerId", resultSet.getString("manager_id"));
+                        map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    }
+                }
+            }
+            if (map.size() == 0)
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "user", userId));
+            else
+                result = Success.of(JsonMapper.toJson(map));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
     @Override
     public Result<String> queryUserByTypeEntityId(String userType, String entityId) {
         Result<String> result = null;

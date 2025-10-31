@@ -92,6 +92,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public Result<String> loginUserByEmail(String email) { return userPersistence.loginUserByEmail(email); }
     @Override public Result<String> queryUserByEmail(String email) { return userPersistence.queryUserByEmail(email); }
     @Override public Result<String> queryUserById(String userId) { return userPersistence.queryUserById(userId); }
+    @Override public Result<String> getUserById(String userId) { return userPersistence.getUserById(userId); }
     @Override public Result<String> queryUserByTypeEntityId(String userType, String entityId) { return userPersistence.queryUserByTypeEntityId(userType, entityId); }
     @Override public Result<String> queryUserByWallet(String cryptoType, String cryptoAddress) { return userPersistence.queryUserByWallet(cryptoType, cryptoAddress); }
     @Override public Result<String> queryUserByHostId(int offset, int limit, String filters, String globalFilter, String sorting) { return userPersistence.queryUserByHostId(offset, limit, filters, globalFilter, sorting); }

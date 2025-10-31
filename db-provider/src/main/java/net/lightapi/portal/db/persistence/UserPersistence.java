@@ -11,6 +11,7 @@ public interface UserPersistence {
     Result<String> loginUserByEmail(String email);
     Result<String> queryUserByEmail(String email);
     Result<String> queryUserById(String userId);
+    Result<String> getUserById(String userId);
     Result<String> queryUserByTypeEntityId(String userType, String entityId);
     Result<String> queryUserByWallet(String cryptoType, String cryptoAddress);
     Result<String> queryUserByHostId(int offset, int limit, String filters, String globalFilter, String sorting);
