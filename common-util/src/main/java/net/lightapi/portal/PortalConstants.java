@@ -320,9 +320,9 @@ public class PortalConstants {
     // -- Auth --
     public static final String AGGREGATE_AUTH_CODE = "AuthCode";
     public static final String AGGREGATE_CLIENT = "Client";
-    public static final String AGGREGATE_PROVIDER = "Provider";
-    public static final String AGGREGATE_REFRESH_TOKEN = "RefreshToken";
-    public static final String AGGREGATE_REF_TOKEN = "RefToken";
+    public static final String AGGREGATE_AUTH_PROVIDER = "AuthProvider";
+    public static final String AGGREGATE_AUTH_REFRESH_TOKEN = "AuthRefreshToken";
+    public static final String AGGREGATE_AUTH_REF_TOKEN = "AuthRefToken";
 
     // -- Category --
     public static final String AGGREGATE_CATEGORY = "Category";

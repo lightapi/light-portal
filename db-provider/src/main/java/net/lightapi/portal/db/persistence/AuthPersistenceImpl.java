@@ -296,7 +296,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
 
             statement.setString(i++, (String) map.get("clientType")); // 6. client_type
             statement.setString(i++, (String) map.get("clientProfile")); // 7. client_profile
-            statement.setString(i++, (String) map.get("clientSecret")); // 8. client_secret
+            statement.setString(i++, (String) map.get("clientSecretEncrypted")); // 8. client_secret
 
             String clientScope = (String) map.get("clientScope");
             if (clientScope != null && !clientScope.isEmpty()) {
@@ -1748,7 +1748,8 @@ public class AuthPersistenceImpl implements AuthPersistence {
     public Result<Map<String, Object>> queryProviderById(String providerId) {
         final String sql =
                 """
-                SELECT host_id, provider_id, provider_name, jwk, aggregate_version
+                SELECT host_id, provider_id, provider_name, provider_desc, operation_owner, delivery_owner,
+                jwk, aggregate_version, update_user, update_ts, active
                 FROM auth_provider_t
                 WHERE provider_id = ?
                 """;
@@ -1762,8 +1763,14 @@ public class AuthPersistenceImpl implements AuthPersistence {
                         map.put("hostId", resultSet.getObject("host_id", UUID.class));
                         map.put("providerId", resultSet.getString("provider_id"));
                         map.put("providerName", resultSet.getString("provider_name"));
+                        map.put("providerDesc", resultSet.getString("provider_desc"));
                         map.put("jwk", resultSet.getString("jwk"));
                         map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                        map.put("updateUser", resultSet.getString("update_user"));
+                        map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                        map.put("active", resultSet.getBoolean("active"));
+                        map.put("operationOwner", resultSet.getObject("operation_owner", UUID.class));
+                        map.put("deliveryOwner", resultSet.getObject("delivery_owner", UUID.class));
                     }
                 }
             }

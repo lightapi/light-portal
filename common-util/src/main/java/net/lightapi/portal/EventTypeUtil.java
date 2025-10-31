@@ -673,7 +673,7 @@ public class EventTypeUtil {
                 if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, authCode);
                 yield authCode;
             }
-            case PortalConstants.AGGREGATE_PROVIDER -> {
+            case PortalConstants.AGGREGATE_AUTH_PROVIDER -> {
                 String providerId = (String) dataMap.get("providerId");
                 if (providerId == null) {
                     logger.warn("providerId is null in data map for aggregate type: {}", aggregateType);
@@ -682,7 +682,7 @@ public class EventTypeUtil {
                 if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, providerId);
                 yield providerId;
             }
-            case PortalConstants.AGGREGATE_REFRESH_TOKEN -> {
+            case PortalConstants.AGGREGATE_AUTH_REFRESH_TOKEN -> {
                 String refreshToken = (String) dataMap.get("refreshToken");
                 if (refreshToken == null) {
                     logger.warn("refreshToken is null in data map for aggregate type: {}", aggregateType);
@@ -691,7 +691,7 @@ public class EventTypeUtil {
                 if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, refreshToken);
                 yield refreshToken;
             }
-            case PortalConstants.AGGREGATE_REF_TOKEN -> {
+            case PortalConstants.AGGREGATE_AUTH_REF_TOKEN -> {
                 String refToken = (String) dataMap.get("refToken");
                 if (refToken == null) {
                     logger.warn("refToken is null in data map for aggregate type: {}", aggregateType);
