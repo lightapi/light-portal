@@ -85,7 +85,7 @@ public interface PortalDbProvider extends DbProvider {
     void onboardUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void confirmUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void verifyUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<Long> queryNonceByUserId(String userId);
+    long queryNonceByUserId(String userId);
     void createSocialUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -602,19 +602,7 @@ public interface PortalDbProvider extends DbProvider {
     default CloudEvent[] buildCloudEvent(Map<String, Object> map, String eventType, String aggregateId,
                                        String aggregateType, String userId, String host) {
 
-        Number nonce;
-        Result<Long> nonceResult = queryNonceByUserId(userId);
-        if(nonceResult.isFailure()) {
-            if(nonceResult.getError().getStatusCode() != 404) {
-                logger.error("Failed to query nonce for user: {} with error code {}", userId, nonceResult.getError().getCode());
-                throw new IllegalStateException("Failed to query nonce for user: " + userId);
-            } else {
-                // this is a brand-new user that is created or onboarded.
-                nonce = 1;
-            }
-        } else {
-            nonce = nonceResult.getResult();
-        }
+        long nonce = queryNonceByUserId(userId);
         if(logger.isTraceEnabled()) logger.trace("nonce = {}", nonce);
 
         CloudEventBuilder eventTemplate = CloudEventBuilder.v1()

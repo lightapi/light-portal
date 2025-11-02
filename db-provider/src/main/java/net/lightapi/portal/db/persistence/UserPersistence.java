@@ -20,7 +20,7 @@ public interface UserPersistence {
 
     void createUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void onboardUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<Long> queryNonceByUserId(String userId);
+    long queryNonceByUserId(String userId);
 
     void confirmUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void verifyUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;

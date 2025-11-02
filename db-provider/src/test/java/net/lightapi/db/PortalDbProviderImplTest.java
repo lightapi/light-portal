@@ -124,13 +124,8 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testGetNextNonce() {
-        Result<Long> result = dbProvider.queryNonceByUserId("01964b05-5532-7c79-8cde-191dcbd421b8");
-        if(result.isFailure()) {
-            System.out.println(result.getError());
-        } else {
-            System.out.println(result.getResult());
-            System.out.println(result.getResult().getClass());
-        }
+        long nonce = dbProvider.queryNonceByUserId("01964b05-5532-7c79-8cde-191dcbd421b8");
+        System.out.println("nonce = " + nonce);
     }
 
     @Test

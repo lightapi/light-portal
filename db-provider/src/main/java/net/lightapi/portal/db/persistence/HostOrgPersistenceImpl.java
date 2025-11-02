@@ -15,10 +15,7 @@ import net.lightapi.portal.db.util.SqlUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.time.OffsetDateTime;
 import java.util.*;
 
@@ -38,6 +35,72 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
         this.notificationService = notificationService;
     }
 
+
+    @Override
+    public void createOrg(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // --- UPDATED SQL FOR UPSERT ---
+        // This UPSERT handles:
+        // 1. First time insert (no conflict).
+        // 2. Re-creation/Update (conflict on domain) -> UPDATE existing row, respecting version monotonicity.
+        final String upsertOrg =
+                """
+                INSERT INTO org_t (domain, org_name, org_desc, org_owner, aggregate_version, active, update_user, update_ts)
+                VALUES (?, ?, ?, ?, ?, TRUE, ?, ?)
+                ON CONFLICT (domain) DO UPDATE
+                SET org_name = EXCLUDED.org_name,
+                    org_desc = EXCLUDED.org_desc,
+                    org_owner = EXCLUDED.org_owner,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts
+                WHERE org_t.aggregate_version < EXCLUDED.aggregate_version
+                """; // <<< CRITICAL: Monotonicity check in WHERE clause
+
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String domain = (String)map.get("domain");
+        String orgOwner = (String)map.get("orgOwner");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        // Parameters 1-7 (7 placeholders in the VALUES clause, excluding the hardcoded TRUE for active)
+        try (PreparedStatement statement = conn.prepareStatement(upsertOrg)) {
+            // --- SET VALUES (1 to 7) ---
+            int i = 1;
+            statement.setString(i++, domain); // 1. domain (PK)
+            statement.setString(i++, (String)map.get("orgName")); // 2. org_name
+
+            // 3. org_desc (Assuming it's required and present based on DDL NOT NULL)
+            String orgDesc = (String)map.get("orgDesc");
+            if (orgDesc != null && !orgDesc.isEmpty()) {
+                statement.setString(i++, orgDesc);
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+
+            statement.setObject(i++, UUID.fromString(orgOwner)); // 4. org_owner
+            statement.setLong(i++, newAggregateVersion); // 5. aggregate_version (New Version)
+            // 6. active is TRUE in SQL
+            statement.setString(i++, (String)event.get(Constants.USER)); // 6. update_user
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME))); // 7. update_ts
+
+            // --- Execute UPSERT ---
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // count=0 means the ON CONFLICT clause was hit, BUT the monotonicity WHERE clause failed.
+                logger.warn("Org creation/update skipped for domain {} aggregateVersion {}. A newer or same version already exists in the projection.", domain, newAggregateVersion);
+            } else {
+                logger.info("Org {} successfully inserted or updated to aggregateVersion {}.", domain, newAggregateVersion);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during UPSERT for Org {} aggregateVersion {}: {}", domain, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw for transaction management
+        } catch (Exception e) {
+            logger.error("Exception during UPSERT for Org {} aggregateVersion {}: {}", domain, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw for transaction management
+        }
+    }
+
+    /*
     @Override
     public void createOrg(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String insertOrg = "INSERT INTO org_t (domain, org_name, org_desc, org_owner, update_user, update_ts, aggregate_version) " +
@@ -155,64 +218,74 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
             throw e;
         }
     }
-
-    private boolean queryOrgExists(Connection conn, String domain) throws SQLException {
-        final String sql =
-                """
-                SELECT COUNT(*) FROM org_t WHERE domain = ?
-                """;
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
-            pst.setString(1, domain);
-            try (ResultSet rs = pst.executeQuery()) {
-                return rs.next() && rs.getInt(1) > 0;
-            }
-        }
-    }
+    */
 
     @Override
     public void updateOrg(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // --- UPDATED SQL FOR MONOTONICITY ---
+        // Sets new version and checks that the current DB version is strictly LESS than the incoming new version.
+        // This is the read model's idempotent check.
         final String updateOrgSql = "UPDATE org_t SET org_name = ?, org_desc = ?, org_owner = ?, " +
-                "update_user = ?, update_ts = ?, aggregate_version = ? " +
-                "WHERE domain = ? AND aggregate_version = ?";
+                "update_user = ?, update_ts = ?, aggregate_version = ?, active = TRUE " +
+                "WHERE domain = ? AND aggregate_version < ?"; // <<< CRITICAL: Changed '= ?' to '< ?'
 
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        Map<String, Object> map = SqlUtil.extractEventData(event); // Assuming extractEventData is the helper to get PortalConstants.DATA
         String domain = (String)map.get("domain");
+
+        // oldAggregateVersion is needed only for logging the context of the original command, not the SQL check.
         long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
-        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event); // The new version from the event
 
         try (PreparedStatement statement = conn.prepareStatement(updateOrgSql)) {
+            int i = 1;
+
+            // 1. org_name
             String orgName = (String)map.get("orgName");
             if (orgName != null && !orgName.isEmpty()) {
-                statement.setString(1, orgName);
+                statement.setString(i++, orgName);
             } else {
-                statement.setNull(1, NULL);
+                statement.setNull(i++, NULL);
             }
+
+            // 2. org_desc
             String orgDesc = (String)map.get("orgDesc");
             if (orgDesc != null && !orgDesc.isEmpty()) {
-                statement.setString(2, orgDesc);
+                statement.setString(i++, orgDesc);
             } else {
-                statement.setNull(2, NULL);
+                statement.setNull(i++, NULL);
             }
+
+            // 3. org_owner
             String orgOwner = (String)map.get("orgOwner");
             if (orgOwner != null && !orgOwner.isEmpty()) {
-                statement.setObject(3, UUID.fromString(orgOwner));
+                statement.setObject(i++, UUID.fromString(orgOwner));
             } else {
-                statement.setNull(3, NULL);
+                statement.setNull(i++, NULL);
             }
-            statement.setString(4, (String)event.get(Constants.USER));
-            statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(6, newAggregateVersion);
-            statement.setString(7, domain);
-            statement.setLong(8, oldAggregateVersion);
+
+            // 4. update_user
+            statement.setString(i++, (String)event.get(Constants.USER));
+
+            // 5. update_ts
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+            // 6. aggregate_version (NEW version in SET clause)
+            statement.setLong(i++, newAggregateVersion);
+
+            // 7. domain (in WHERE clause)
+            statement.setString(i++, domain);
+
+            // 8. aggregate_version (MONOTONICITY check in WHERE clause)
+            statement.setLong(i, newAggregateVersion); // Condition: WHERE aggregate_version < newAggregateVersion
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryOrgExists(conn, domain)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during updateOrg for domain " + domain + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
-                } else {
-                    throw new SQLException("No record found during updateOrg for domain " + domain + ".");
-                }
+                // count=0 means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Org update skipped for domain {} (new version {}). Record not found or a newer version already exists.", domain, newAggregateVersion);
             }
+            // NO THROW on count == 0. The method is now idempotent.
+
         } catch (SQLException e) {
             logger.error("SQLException during updateOrg for domain {} (old: {}) -> (new: {}): {}", domain, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
@@ -224,63 +297,121 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
 
     @Override
     public void deleteOrg(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String deleteOrgSql = "DELETE FROM org_t WHERE domain = ? AND aggregate_version = ?";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String domain = (String)map.get("domain"); // For logging/exceptions
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        // --- UPDATED SQL FOR SOFT DELETE + MONOTONICITY ---
+        // Updates the 'active' flag to FALSE and sets the new version IF the current DB version is older than the incoming event's version.
+        final String softDeleteOrgSql =
+                """
+                UPDATE org_t SET active = false, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE domain = ? AND aggregate_version < ?
+                """; // <<< CRITICAL: Changed from DELETE to UPDATE, and used aggregate_version < ?
 
-        try (PreparedStatement statement = conn.prepareStatement(deleteOrgSql)) {
-            statement.setString(1, domain);
-            statement.setLong(2, oldAggregateVersion);
+        Map<String, Object> map = SqlUtil.extractEventData(event); // Assuming extractEventData is the helper to get PortalConstants.DATA
+        String domain = (String)map.get("domain"); // The domain PK
+
+        // newAggregateVersion is the version of the incoming Delete event (the target version).
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        try (PreparedStatement statement = conn.prepareStatement(softDeleteOrgSql)) {
+            int i = 1;
+
+            // 1. update_user
+            statement.setString(i++, (String)event.get(Constants.USER));
+
+            // 2. update_ts
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+            // 3. aggregate_version (NEW version in SET clause)
+            statement.setLong(i++, newAggregateVersion);
+
+            // 4. domain (in WHERE clause)
+            statement.setString(i++, domain);
+
+            // 5. aggregate_version (MONOTONICITY check in WHERE clause)
+            statement.setLong(i, newAggregateVersion); // Condition: WHERE aggregate_version < newAggregateVersion
+
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryOrgExists(conn, domain)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteOrg for domain " + domain + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
-                } else {
-                    throw new SQLException("No record found during deleteOrg for domain " + domain + ". It might have been already deleted.");
-                }
+                // count=0 means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("deleteOrg skipped for domain {} aggregateVersion {}. Record not found or a newer version already exists.", domain, newAggregateVersion);
             }
+            // NO THROW on count == 0. The method is now idempotent.
+
         } catch (SQLException e) {
-            logger.error("SQLException during deleteOrg for domain {} aggregateVersion {}: {}", domain, oldAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during deleteOrg for domain {} aggregateVersion {}: {}", domain, newAggregateVersion, e.getMessage(), e);
             throw e; // Re-throw SQLException
         } catch (Exception e) {
-            logger.error("Exception during deleteOrg for domain {} aggregateVersion {}: {}", domain, oldAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during deleteOrg for domain {} aggregateVersion {}: {}", domain, newAggregateVersion, e.getMessage(), e);
             throw e; // Re-throw generic Exception
         }
     }
 
     @Override
     public void createHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String insertHost =
+        // Use UPSERT: INSERT ON CONFLICT DO UPDATE
+        // This handles:
+        // 1. First time insert (no conflict).
+        // 2. Re-creation/Update (conflict on host_id) -> UPDATE the existing row (setting active=TRUE and new version).
+
+        final String upsertHost =
                 """
-                INSERT INTO host_t (host_id, domain, sub_domain, host_desc, host_owner, update_user, update_ts, aggregate_version)
-                VALUES (?, ?, ?, ?, ?,  ?, ?, ?)
-                """;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+                INSERT INTO host_t (host_id, domain, sub_domain, host_desc, host_owner, update_user, update_ts, aggregate_version, active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (host_id) DO UPDATE
+                SET domain = EXCLUDED.domain,
+                    sub_domain = EXCLUDED.sub_domain,
+                    host_desc = EXCLUDED.host_desc,
+                    host_owner = EXCLUDED.host_owner,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                WHERE host_t.aggregate_version < EXCLUDED.aggregate_version
+                """; // <<< CRITICAL: Added WHERE to ensure we only update if the incoming event is newer
+
+        Map<String, Object> map = SqlUtil.extractEventData(event);
         String hostId = (String)map.get("hostId"); // enriched in the service.
         String domain = (String)map.get("domain");
         String hostOwner = (String)map.get("hostOwner");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
-        try (PreparedStatement statement = conn.prepareStatement(insertHost)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setString(2, domain);
-            statement.setString(3, (String)map.get("subDomain"));
-            statement.setString(4, (String)map.get("hostDesc"));
-            statement.setObject(5, UUID.fromString(hostOwner));
-            statement.setString(6, (String)event.get(Constants.USER));
-            statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(8, newAggregateVersion);
+        // Parameters 1-8 (8 placeholders in the VALUES clause)
+        try (PreparedStatement statement = conn.prepareStatement(upsertHost)) {
+            // --- SET VALUES (1 to 8) ---
+            int i = 1;
+            statement.setObject(i++, UUID.fromString(hostId)); // 1. host_id (PK)
+            statement.setString(i++, domain); // 2. domain
+            statement.setString(i++, (String)map.get("subDomain")); // 3. sub_domain
+
+            // 4. host_desc
+            if (map.containsKey("hostDesc")) {
+                statement.setString(i++, (String) map.get("hostDesc"));
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+
+            statement.setObject(i++, UUID.fromString(hostOwner)); // 5. host_owner
+            statement.setString(i++, (String)event.get(Constants.USER)); // 6. update_user
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME))); // 7. update_ts
+            statement.setLong(i++, newAggregateVersion); // 8. aggregate_version
+            // active is TRUE in SQL
+
+            // --- Execute UPSERT ---
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("Failed during createHost for hostId %s with aggregateVersion %d", hostId, newAggregateVersion));
+                // count=0 means the ON CONFLICT clause was hit, BUT the monotonicity WHERE clause failed.
+                logger.warn("createHost skipped for hostId {} aggregateVersion {}. A newer or same version already exists in the projection.", hostId, newAggregateVersion);
+            } else {
+                logger.info("Host {} successfully inserted or updated to aggregateVersion {}.", hostId, newAggregateVersion);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during createHost for hostId {} aggregateVersion {}: {}", hostId, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw SQLException
+            // Log the critical unique constraint violation if it happens on the secondary key (domain, sub_domain)
+            // This is a data integrity error from upstream if it happens on insert.
+            logger.error("SQLException during createHost UPSERT for hostId {} aggregateVersion {}: {}", hostId, newAggregateVersion, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            logger.error("Exception during createHost for hostId {} aggregateVersion {}: {}", hostId, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during createHost UPSERT for hostId {} aggregateVersion {}: {}", hostId, newAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -299,78 +430,121 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
 
     @Override
     public void updateHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String updateHostSql =
+        // We will attempt to update the record IF the incoming event is newer than the current projection version.
+        // We also explicitly set active = TRUE (assuming an update implies the host is now active).
+        final String sql =
                 """
-                UPDATE host_t SET host_desc = ?, host_owner = ?,
-                update_user = ?, update_ts = ?, aggregate_version = ?
-                WHERE host_id = ? AND aggregate_version = ?
-                """;
+                UPDATE host_t SET host_desc = ?, host_owner = ?, update_user = ?, update_ts = ?,
+                aggregate_version = ?, active = TRUE
+                WHERE host_id = ? AND aggregate_version < ?
+                """; // <<< CRITICAL: Changed '= ?' to '< ?' in the WHERE clause AND added active=TRUE
 
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)map.get("currentHostId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
-        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+        Map<String, Object> map = SqlUtil.extractEventData(event); // Assuming extractEventData is the helper to get PortalConstants.DATA
+        String hostId = (String) map.get("currentHostId"); // The hostId of the aggregate
 
-        try (PreparedStatement statement = conn.prepareStatement(updateHostSql)) {
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event); // The new version from the event
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            int i = 1;
+
+            // 1. host_desc
             String hostDesc = (String)map.get("hostDesc");
             if (hostDesc != null && !hostDesc.isEmpty()) {
-                statement.setString(1, hostDesc);
+                statement.setString(i++, hostDesc);
             } else {
-                statement.setNull(1, NULL);
+                statement.setNull(i++, NULL);
             }
+
+            // 2. host_owner
             String hostOwner = (String)map.get("hostOwner");
             if (hostOwner != null && !hostOwner.isEmpty()) {
-                statement.setObject(2, UUID.fromString(hostOwner));
+                statement.setObject(i++, UUID.fromString(hostOwner));
             } else {
-                statement.setNull(2, NULL);
+                statement.setNull(i++, NULL);
             }
-            statement.setString(3, (String)event.get(Constants.USER));
-            statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(5, newAggregateVersion);
-            statement.setObject(6, UUID.fromString(hostId));
-            statement.setLong(7, oldAggregateVersion);
+
+            // 3. update_user
+            statement.setString(i++, (String)event.get(Constants.USER));
+
+            // 4. update_ts
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+            // 5. aggregate_version (NEW version in SET clause)
+            statement.setLong(i++, newAggregateVersion);
+
+            // 6. host_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(hostId));
+
+            // 7. aggregate_version (MONOTONICITY check in WHERE clause)
+            statement.setLong(i, newAggregateVersion); // Condition: WHERE aggregate_version < newAggregateVersion
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryHostExists(conn, hostId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during updateHost for hostId " + hostId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
-                } else {
-                    throw new SQLException("No record found during updateHost for hostId " + hostId + ".");
-                }
+                // count=0 means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("updateHost skipped for hostId {} aggregateVersion {}. Record not found or a newer version already exists.", hostId, newAggregateVersion);
             }
+            // NO THROW on count == 0. The method is now idempotent.
+
         } catch (SQLException e) {
-            logger.error("SQLException during updateHost for hostId {} (old: {}) -> (new: {}): {}", hostId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during updateHost for hostId {} aggregateVersion {}: {}", hostId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateHost for hostId {} (old: {}) -> (new: {}): {}", hostId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during updateHost for hostId {} aggregateVersion {}: {}", hostId, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
     public void deleteHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String deleteHostSql = "DELETE from host_t WHERE host_id = ? AND aggregate_version = ?";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)map.get("currentHostId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        // --- UPDATED SQL FOR SOFT DELETE + MONOTONICITY ---
+        // Updates the 'active' flag to FALSE and sets the new version IF the current DB version is older than the incoming event's version.
+        final String softDeleteHostSql =
+                """
+                UPDATE host_t SET active = false, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? AND aggregate_version < ?
+                """; // <<< CRITICAL: Changed from DELETE to UPDATE, and used aggregate_version < ?
 
-        try (PreparedStatement statement = conn.prepareStatement(deleteHostSql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setLong(2, oldAggregateVersion);
+        Map<String, Object> map = SqlUtil.extractEventData(event); // Assuming extractEventData is the helper to get PortalConstants.DATA
+        String hostId = (String) map.get("currentHostId"); // The hostId of the aggregate
+
+        // oldAggregateVersion is the version the command handler operated on (for context/logging).
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        // newAggregateVersion is the version of the incoming Delete event (the target version).
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        try (PreparedStatement statement = conn.prepareStatement(softDeleteHostSql)) {
+            int i = 1;
+
+            // 1. update_user
+            statement.setString(i++, (String)event.get(Constants.USER));
+
+            // 2. update_ts
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+            // 3. aggregate_version (NEW version in SET clause)
+            statement.setLong(i++, newAggregateVersion);
+
+            // 4. host_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(hostId));
+
+            // 5. aggregate_version (MONOTONICITY check in WHERE clause)
+            statement.setLong(i, newAggregateVersion); // Condition: WHERE aggregate_version < newAggregateVersion
+
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryHostExists(conn, hostId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteHost for hostId " + hostId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
-                } else {
-                    throw new SQLException("No record found during deleteHost for hostId " + hostId + ". It might have been already deleted.");
-                }
+                // If 0 rows updated, it means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("deleteHost skipped for hostId {} aggregateVersion {}. Record not found or a newer version already exists.", hostId, newAggregateVersion);
             }
+            // NO THROW on count == 0. The method is now idempotent.
+
         } catch (SQLException e) {
-            logger.error("SQLException during deleteHost for hostId {} aggregateVersion {}: {}", hostId, oldAggregateVersion, e.getMessage(), e);
-            throw e;
+            logger.error("SQLException during deleteHost for hostId {} aggregateVersion {}: {}", hostId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw SQLException
         } catch (Exception e) {
-            logger.error("Exception during deleteHost for hostId {}: {} aggregateVersion {}", hostId, oldAggregateVersion, e.getMessage(), e);
-            throw e;
+            logger.error("Exception during deleteHost for hostId {} aggregateVersion {}: {}", hostId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw generic Exception
         }
     }
 
@@ -485,20 +659,6 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
         }
     }
 
-    // detect if this is the first host for the user. If yes, set the current to true.
-    private boolean queryUserHostExists(Connection conn, String userId) throws SQLException {
-        final String sql =
-                """
-                SELECT COUNT(*) FROM user_host_t WHERE user_id = ?
-                """;
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
-            pst.setObject(1, UUID.fromString(userId));
-            try (ResultSet rs = pst.executeQuery()) {
-                return rs.next() && rs.getInt(1) > 0;
-            }
-        }
-    }
-
     // detect if there is an entry of host_id and user_id mapping in user_host_t table.
     private boolean queryUserHostExists(Connection conn, String hostId, String userId) throws SQLException {
         final String sql =
@@ -516,70 +676,112 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
 
     @Override
     public void createUserHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String insertHost =
+        // --- UPDATED SQL FOR UPSERT ---
+        // This UPSERT handles:
+        // 1. First time insert (no conflict).
+        // 2. Re-creation/Update (conflict on host_id, user_id) -> UPDATE existing row.
+        final String upsertUserHost =
                 """
-                INSERT INTO user_host_t (host_id, user_id, current, update_user, update_ts, aggregate_version)
-                VALUES (?, ?, ?, ?, ?,  ?)
-                """;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+                INSERT INTO user_host_t (host_id, user_id, current, aggregate_version, active, update_user, update_ts)
+                VALUES (?, ?, ?, ?, TRUE, ?, ?)
+                ON CONFLICT (host_id, user_id) DO UPDATE
+                SET current = EXCLUDED.current,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts
+                WHERE user_host_t.aggregate_version < EXCLUDED.aggregate_version
+                """; // <<< CRITICAL: Added WHERE to enforce monotonicity
+
+        Map<String, Object> map = SqlUtil.extractEventData(event);
         String hostId = (String)map.get("hostId");
         String userId = (String)map.get("userId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
-        try (PreparedStatement statement = conn.prepareStatement(insertHost)) {
+        // We assume the event payload NOW CONTAINS the final state of 'current' for this (user, host) pair.
+        // The complex 'queryUserHostExists' logic has been moved UPSTREAM to the command handler.
+        boolean currentFlagValue = (boolean)map.getOrDefault("current", false); // Assume command handler provided 'current' flag value
 
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(userId));
-            if (queryUserHostExists(conn, userId)) {
-                statement.setBoolean(3, false);
-            } else {
-                statement.setBoolean(3, true);
-            }
-            statement.setString(4, (String)event.get(Constants.USER));
-            statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(6, newAggregateVersion);
+        // Parameters 1-7 (7 placeholders in the VALUES clause)
+        try (PreparedStatement statement = conn.prepareStatement(upsertUserHost)) {
+            // --- SET VALUES (1 to 7) ---
+            int i = 1;
+            statement.setObject(i++, UUID.fromString(hostId)); // 1. host_id
+            statement.setObject(i++, UUID.fromString(userId)); // 2. user_id
+            statement.setBoolean(i++, currentFlagValue); // 3. current (Value provided by event)
+            statement.setLong(i++, newAggregateVersion); // 4. aggregate_version
+            // 5. active is hardcoded to TRUE in SQL
+            statement.setString(i++, (String) event.get(Constants.USER)); // 6. update_user
+            statement.setObject(i, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME))); // 7. update_ts
+
+            // --- Execute UPSERT ---
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("Failed during createUserHost for hostId %s userId %s with aggregateVersion %d", hostId, userId, newAggregateVersion));
+                // count=0 means the ON CONFLICT clause was hit, BUT the WHERE clause (aggregate_version < EXCLUDED.aggregate_version) failed.
+                logger.warn("Creation/Update skipped for hostId {} userId {} aggregateVersion {}. A newer or same version already exists in the projection.", hostId, userId, newAggregateVersion);
+            } else {
+                logger.info("UserHost mapping {}/{} successfully inserted or updated to aggregateVersion {}.", hostId, userId, newAggregateVersion);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during createUserHost for hostId {} userId {} aggregateVersion {}: {}", hostId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw SQLException
+            logger.error("SQLException during UPSERT for hostId {} userId {} aggregateVersion {}: {}", hostId, userId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw for transaction management
         } catch (Exception e) {
-            logger.error("Exception during createUserHost for hostId {} userId {} aggregateVersion {}: {}", hostId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw generic Exception
+            logger.error("Exception during UPSERT for hostId {} userId {} aggregateVersion {}: {}", hostId, userId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw for transaction management
         }
     }
 
     @Override
     public void deleteUserHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String insertHost =
+        // --- UPDATED SQL FOR SOFT DELETE + MONOTONICITY ---
+        // Sets the 'active' flag to FALSE and sets the new version IF the current DB version is older than the incoming event's version.
+        final String softDeleteUserHostSql =
                 """
-                DELETE FROM user_host_t WHERE host_id = ? AND user_id = ? AND aggregate_version = ?
-                """;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)map.get("hostId");
-        String userId = (String)map.get("userId");
-        long aggregateVersion = SqlUtil.getOldAggregateVersion(event);
+                UPDATE user_host_t SET active = false, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? AND user_id = ? AND aggregate_version < ?
+                """; // <<< CRITICAL: Changed from DELETE to UPDATE, and used aggregate_version < ?
 
-        try (PreparedStatement statement = conn.prepareStatement(insertHost)) {
+        Map<String, Object> map = SqlUtil.extractEventData(event); // Assuming extractEventData is the helper to get PortalConstants.DATA
+        String hostId = (String) map.get("hostId");
+        String userId = (String) map.get("userId");
 
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(userId));
-            statement.setLong(3, aggregateVersion);
+        // newAggregateVersion is the version of the incoming Delete event (the target version).
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        try (PreparedStatement statement = conn.prepareStatement(softDeleteUserHostSql)) {
+            int i = 1;
+
+            // 1. update_user
+            statement.setString(i++, (String)event.get(Constants.USER));
+
+            // 2. update_ts
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+            // 3. aggregate_version (NEW version in SET clause)
+            statement.setLong(i++, newAggregateVersion);
+
+            // 4. host_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(hostId));
+
+            // 5. user_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(userId));
+
+            // 6. aggregate_version (MONOTONICITY check in WHERE clause)
+            statement.setLong(i, newAggregateVersion); // Condition: WHERE aggregate_version < newAggregateVersion
+
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryUserHostExists(conn, hostId, userId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteUserHost for hostId " + hostId + " userId " + userId + " aggregateVersion " + aggregateVersion + " but found a different version or already updated.");
-                } else {
-                    throw new SQLException("No record found during deleteUserHost for hostId " + hostId + " userId " + userId + ". It might have been already deleted.");
-                }
+                // If 0 rows updated, it means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("deleteUserHost skipped for hostId {} userId {} aggregateVersion {}. Record not found or a newer version already exists.", hostId, userId, newAggregateVersion);
             }
+            // NO THROW on count == 0. The method is now idempotent.
+
         } catch (SQLException e) {
-            logger.error("SQLException during deleteUserHost for hostId {} userId {} aggregateVersion {}: {}", hostId, userId, aggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during deleteUserHost for hostId {} userId {} aggregateVersion {}: {}", hostId, userId, newAggregateVersion, e.getMessage(), e);
             throw e; // Re-throw SQLException
         } catch (Exception e) {
-            logger.error("Exception during deleteUserHost for hostId {} userId {} aggregateVersion {}: {}", hostId, userId, aggregateVersion, e.getMessage(), e);
+            logger.error("Exception during deleteUserHost for hostId {} userId {} aggregateVersion {}: {}", hostId, userId, newAggregateVersion, e.getMessage(), e);
             throw e; // Re-throw generic Exception
         }
     }
@@ -698,94 +900,29 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
-                domain, org_name, org_desc, org_owner, update_user, update_ts, aggregate_version
+                domain, org_name, org_desc, org_owner, update_user,
+                update_ts, aggregate_version, active
                 FROM org_t
                 WHERE 1=1
                 """;
-        StringBuilder sqlBuilder = new StringBuilder(s);
 
         List<Object> parameters = new ArrayList<>();
 
-        StringBuilder whereClause = new StringBuilder();
-
-        // Material React Table Filters (Dynamic Filters)
-        for (Map<String, Object> filter : filters) {
-            String filterId = (String) filter.get("id");
-            String dbColumnName = camelToSnake(filterId);
-            Object filterValue = filter.get("value");
-            if (filterId != null && filterValue != null && !filterValue.toString().isEmpty()) {
-                whereClause.append(" AND ").append(dbColumnName).append(" ILIKE ?");
-                parameters.add("%" + filterValue + "%");
-            }
-        }
-
-        // Global Filter (Search across multiple columns)
-        if (globalFilter != null && !globalFilter.isEmpty()) {
-            whereClause.append(" AND (");
-            // Define columns to search for global filter (e.g., org_name, org_desc, etc.)
-            String[] globalSearchColumns = {"domain", "org_name", "org_desc"};
-            List<String> globalConditions = new ArrayList<>();
-            for (String col : globalSearchColumns) {
-                globalConditions.add(col + " ILIKE ?");
-                parameters.add("%" + globalFilter + "%");
-            }
-            whereClause.append(String.join(" OR ", globalConditions));
-            whereClause.append(")");
-        }
-
-        // Append the constructed WHERE clause
-        sqlBuilder.append(whereClause);
-
-
-        // Dynamic Sorting
-        StringBuilder orderByClause = new StringBuilder();
-        if (sorting.isEmpty()) {
-            // Default sort if none provided
-            orderByClause.append(" ORDER BY domain");
-        } else {
-            orderByClause.append(" ORDER BY ");
-            List<String> sortExpressions = new ArrayList<>();
-            for (Map<String, Object> sort : sorting) {
-                String sortId = (String) sort.get("id");
-                String dbColumnName = camelToSnake(sortId);
-                Boolean isDesc = (Boolean) sort.get("desc"); // 'desc' is typically a boolean or "true"/"false" string
-                if (sortId != null && !sortId.isEmpty()) {
-                    String direction = (isDesc != null && isDesc) ? "DESC" : "ASC";
-                    // Quote column name to handle SQL keywords or mixed case
-                    sortExpressions.add(dbColumnName + " " + direction);
-                }
-            }
-            // Use default if dynamic sort failed to produce anything
-            orderByClause.append(sortExpressions.isEmpty() ? "domain" : String.join(", ", sortExpressions));
-        }
-        sqlBuilder.append(orderByClause);
-
-        // Pagination
-        sqlBuilder.append("\nLIMIT ? OFFSET ?");
+        String[] searchColumns = {"domain", "org_name", "org_desc"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("org_owner"), Arrays.asList(searchColumns), filters, null, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("domain", sorting, null) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
-
-        String sql = sqlBuilder.toString();
-        if(logger.isTraceEnabled()) logger.trace("sql = {}", sql);
-
+        if(logger.isTraceEnabled()) logger.trace("sql = {}", sqlBuilder);
         int total = 0;
         List<Map<String, Object>> orgs = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                // Ensure proper type setting (especially for UUIDs, Booleans, etc.)
-                if (parameters.get(i) instanceof UUID) {
-                    preparedStatement.setObject(i + 1, parameters.get(i));
-                } else if (parameters.get(i) instanceof Boolean) {
-                    preparedStatement.setBoolean(i + 1, (Boolean) parameters.get(i));
-                } else {
-                    preparedStatement.setObject(i + 1, parameters.get(i));
-                }
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -801,17 +938,15 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     orgs.add(map);
                 }
             }
-
 
             Map<String, Object> resultMap = new HashMap<>();
             resultMap.put("total", total);
             resultMap.put("orgs", orgs);
             result = Success.of(JsonMapper.toJson(resultMap));
-
-
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
@@ -831,95 +966,28 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
-                host_id, domain, sub_domain, host_desc, host_owner, update_user, update_ts, aggregate_version
+                host_id, domain, sub_domain, host_desc, host_owner, update_user, update_ts, aggregate_version, active
                 FROM host_t
                 WHERE 1=1
                 """;
-        StringBuilder sqlBuilder = new StringBuilder(s);
-
-
         List<Object> parameters = new ArrayList<>();
 
-        StringBuilder whereClause = new StringBuilder();
-
-        // Material React Table Filters (Dynamic Filters)
-        for (Map<String, Object> filter : filters) {
-            String filterId = (String) filter.get("id"); // Column name
-            String dbColumnName = camelToSnake(filterId);
-            Object filterValue = filter.get("value");    // Value to filter by
-            if (filterId != null && filterValue != null && !filterValue.toString().isEmpty()) {
-                // Using LIKE for flexible filtering, assuming string/text columns
-                whereClause.append(" AND ").append(dbColumnName).append(" ILIKE ?"); // ILIKE is case-insensitive LIKE in Postgres
-                parameters.add("%" + filterValue + "%");
-            }
-        }
-
-        // Global Filter (Search across multiple columns)
-        if (globalFilter != null && !globalFilter.isEmpty()) {
-            whereClause.append(" AND (");
-            // Define columns to search for global filter (e.g., table_name, table_desc)
-            String[] globalSearchColumns = {"domain, sub_domain, host_desc"};
-            List<String> globalConditions = new ArrayList<>();
-            for (String col : globalSearchColumns) {
-                globalConditions.add(col + " ILIKE ?");
-                parameters.add("%" + globalFilter + "%");
-            }
-            whereClause.append(String.join(" OR ", globalConditions));
-            whereClause.append(")");
-        }
-
-        // Append the constructed WHERE clause
-        sqlBuilder.append(whereClause);
-
-
-        // Dynamic Sorting
-        StringBuilder orderByClause = new StringBuilder();
-        if (sorting.isEmpty()) {
-            // Default sort if none provided
-            orderByClause.append(" ORDER BY domain");
-        } else {
-            orderByClause.append(" ORDER BY ");
-            List<String> sortExpressions = new ArrayList<>();
-            for (Map<String, Object> sort : sorting) {
-                String sortId = (String) sort.get("id");
-                String dbColumnName = camelToSnake(sortId);
-                Boolean isDesc = (Boolean) sort.get("desc"); // 'desc' is typically a boolean or "true"/"false" string
-                if (sortId != null && !sortId.isEmpty()) {
-                    String direction = (isDesc != null && isDesc) ? "DESC" : "ASC";
-                    // Quote column name to handle SQL keywords or mixed case
-                    sortExpressions.add(dbColumnName + " " + direction);
-                }
-            }
-            // Use default if dynamic sort failed to produce anything
-            orderByClause.append(sortExpressions.isEmpty() ? "domain" : String.join(", ", sortExpressions));
-        }
-        sqlBuilder.append(orderByClause);
-
-        // Pagination
-        sqlBuilder.append("\nLIMIT ? OFFSET ?");
+        String[] searchColumns = {"domain", "sub_domain", "host_desc"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("domain, sub_domain", sorting, null) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
-        if(logger.isTraceEnabled()) logger.trace("sql: {}", sql);
+        if(logger.isTraceEnabled()) logger.trace("sql: {}", sqlBuilder);
         int total = 0;
         List<Map<String, Object>> hosts = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                // Ensure proper type setting (especially for UUIDs, Booleans, etc.)
-                if (parameters.get(i) instanceof UUID) {
-                    preparedStatement.setObject(i + 1, parameters.get(i));
-                } else if (parameters.get(i) instanceof Boolean) {
-                    preparedStatement.setBoolean(i + 1, (Boolean) parameters.get(i));
-                } else {
-                    preparedStatement.setObject(i + 1, parameters.get(i));
-                }
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -937,6 +1005,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     hosts.add(map);
                 }
             }
@@ -978,102 +1047,31 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                 SELECT COUNT(*) OVER () AS total,
                 uh.host_id, h.domain, h.sub_domain, uh.user_id,
                 u.email, u.first_name, u.last_name, uh.current,
-                uh.update_user, uh.update_ts, uh.aggregate_version
+                uh.update_user, uh.update_ts, uh.aggregate_version, uh.active
                 FROM user_host_t uh
                 INNER JOIN host_t h ON uh.host_id = h.host_id
                 INNER JOIN user_t u ON uh.user_id = u.user_id
                 WHERE 1=1
                 """;
-        StringBuilder sqlBuilder = new StringBuilder(s);
-
-
         List<Object> parameters = new ArrayList<>();
 
-        StringBuilder whereClause = new StringBuilder();
-
-        // Material React Table Filters (Dynamic Filters) ---
-        for (Map<String, Object> filter : filters) {
-            String filterId = (String) filter.get("id"); // Column name
-            String dbColumnName = mapToDbColumn(columnMap, filterId);
-            Object filterValue = filter.get("value");    // Value to filter by
-            if (filterId != null && filterValue != null && !filterValue.toString().isEmpty()) {
-                if(dbColumnName.equals("uh.user_id") || dbColumnName.equals("uh.host_id")) {
-                    whereClause.append(" AND ").append(dbColumnName).append(" = ?");
-                    parameters.add(UUID.fromString(filterValue.toString()));
-                } else {
-                    whereClause.append(" AND ").append(dbColumnName).append(" ILIKE ?");
-                    parameters.add("%" + filterValue + "%");
-                }
-            }
-        }
-
-        // Global Filter (Search across multiple columns)
-        if (globalFilter != null && !globalFilter.isEmpty()) {
-            whereClause.append(" AND (");
-            // Define columns to search for global filter (e.g., table_name, table_desc)
-            String[] globalSearchColumns = {"h.domain", "h.sub_domain", "u.email", "u.first_name", "u.last_name"};
-            List<String> globalConditions = new ArrayList<>();
-            for (String col : globalSearchColumns) {
-                globalConditions.add(col + " ILIKE ?");
-                parameters.add("%" + globalFilter + "%");
-            }
-            whereClause.append(String.join(" OR ", globalConditions));
-            whereClause.append(")");
-        }
-
-        // Append the constructed WHERE clause
-        sqlBuilder.append(whereClause);
-
-
-        // Dynamic Sorting
-        StringBuilder orderByClause = new StringBuilder();
-        if (sorting.isEmpty()) {
-            // Default sort if none provided
-            orderByClause.append(" ORDER BY u.email");
-        } else {
-            orderByClause.append(" ORDER BY ");
-            List<String> sortExpressions = new ArrayList<>();
-            for (Map<String, Object> sort : sorting) {
-                String sortId = (String) sort.get("id");
-                String dbColumnName = mapToDbColumn(columnMap, sortId);
-                Boolean isDesc = (Boolean) sort.get("desc"); // 'desc' is typically a boolean or "true"/"false" string
-                if (sortId != null && !sortId.isEmpty()) {
-                    String direction = (isDesc != null && isDesc) ? "DESC" : "ASC";
-                    // Quote column name to handle SQL keywords or mixed case
-                    sortExpressions.add(dbColumnName + " " + direction);
-                }
-            }
-            // Use default if dynamic sort failed to produce anything
-            orderByClause.append(sortExpressions.isEmpty() ? "u.email" : String.join(", ", sortExpressions));
-        }
-        sqlBuilder.append(orderByClause);
-
-        // Pagination
-        sqlBuilder.append("\nLIMIT ? OFFSET ?");
+        String[] searchColumns = {"h.domain", "h.sub_domain", "u.email", "u.first_name", "u.last_name"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("uh.host_id", "uh.user_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("u.email", sorting, null) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
-        if(logger.isTraceEnabled()) logger.trace("sql: {}", sql);
+        if(logger.isTraceEnabled()) logger.trace("sql: {}", sqlBuilder);
 
         int total = 0;
         List<Map<String, Object>> userHosts = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                // Ensure proper type setting (especially for UUIDs, Booleans, etc.)
-                if (parameters.get(i) instanceof UUID) {
-                    preparedStatement.setObject(i + 1, parameters.get(i));
-                } else if (parameters.get(i) instanceof Boolean) {
-                    preparedStatement.setBoolean(i + 1, (Boolean) parameters.get(i));
-                } else {
-                    preparedStatement.setObject(i + 1, parameters.get(i));
-                }
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 if(logger.isTraceEnabled()) logger.trace("resultSet: {}", resultSet);
@@ -1095,6 +1093,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     userHosts.add(map);
                 }
             }

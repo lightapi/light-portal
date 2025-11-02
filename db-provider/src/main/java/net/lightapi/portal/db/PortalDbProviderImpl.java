@@ -100,7 +100,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public Result<String> getHostLabelByUserId(String userId) {return userPersistence.getHostLabelByUserId(userId); }
     @Override public void createUser(Connection connection, Map<String, Object> event) throws SQLException, Exception { userPersistence.createUser(connection, event); }
     @Override public void onboardUser(Connection connection, Map<String, Object> event) throws SQLException, Exception { userPersistence.onboardUser(connection, event); }
-    @Override public Result<Long> queryNonceByUserId(String userId) { return userPersistence.queryNonceByUserId(userId); }
+    @Override public long queryNonceByUserId(String userId) { return userPersistence.queryNonceByUserId(userId); }
     @Override public void confirmUser(Connection connection, Map<String, Object> event) throws SQLException, Exception { userPersistence.confirmUser(connection, event); }
     @Override public void verifyUser(Connection connection, Map<String, Object> event) throws SQLException, Exception { userPersistence.verifyUser(connection, event); }
     @Override public void createSocialUser(Connection connection, Map<String, Object> event) throws SQLException, Exception { userPersistence.createSocialUser(connection, event); }

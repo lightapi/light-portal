@@ -836,9 +836,8 @@ public class UserPersistenceImpl implements UserPersistence {
     }
 
     @Override
-    public Result<Long> queryNonceByUserId(String userId){
+    public long queryNonceByUserId(String userId){
         final String updateNonceSql = "UPDATE user_t SET nonce = nonce + 1 WHERE user_id = ? RETURNING nonce;";
-        Result<Long> result = null;
         try (Connection connection = ds.getConnection();
              PreparedStatement statement = connection.prepareStatement(updateNonceSql)) {
             Long nonce = null;
@@ -849,18 +848,16 @@ public class UserPersistenceImpl implements UserPersistence {
                 }
             }
             if (nonce == null)
-                result = Failure.of(new Status(OBJECT_NOT_FOUND, "user nonce", userId));
+                return 1L;
             else
-                result = Success.of(nonce);
-
+                return nonce;
         } catch (SQLException e) {
             logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+            return 1L;
         } catch (Exception e) {
             logger.error("Exception:", e);
-            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+            return 1L;
         }
-        return result;
     }
 
     @Override
