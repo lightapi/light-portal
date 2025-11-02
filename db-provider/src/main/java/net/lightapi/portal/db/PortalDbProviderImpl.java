@@ -200,6 +200,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public Result<String> getUserHost(int offset, int limit, String filters, String globalFilter, String sorting) { return hostOrgPersistence.getUserHost(offset, limit, filters, globalFilter, sorting); }
     @Override public Result<String> getHostByDomain(String domain, String subDomain, String hostDesc) { return hostOrgPersistence.getHostByDomain(domain, subDomain, hostDesc); }
     @Override public Result<String> getHostLabel() { return hostOrgPersistence.getHostLabel(); }
+    @Override public Result<String> getOrgByDomain(String domain) { return hostOrgPersistence.getOrgByDomain(domain); }
+    @Override public String getHostId(String domain, String subDomain) { return hostOrgPersistence.getHostId(domain, subDomain); }
 
     // --- Config ---
     @Override public void createConfig(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.createConfig(connection, event); }

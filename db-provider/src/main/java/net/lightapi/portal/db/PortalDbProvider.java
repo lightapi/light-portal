@@ -202,6 +202,8 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> getUserHost(int offset, int limit, String filters, String globalFilter, String sorting);
     Result<String> getHostByDomain(String domain, String subDomain, String hostDesc);
     Result<String> getHostLabel();
+    Result<String> getOrgByDomain(String domain);
+    String getHostId(String domain, String subDomain);
 
     // Config
     void createConfig(Connection conn, Map<String, Object> event) throws SQLException, Exception;

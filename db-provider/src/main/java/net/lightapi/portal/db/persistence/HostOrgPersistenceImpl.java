@@ -440,7 +440,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                 """; // <<< CRITICAL: Changed '= ?' to '< ?' in the WHERE clause AND added active=TRUE
 
         Map<String, Object> map = SqlUtil.extractEventData(event); // Assuming extractEventData is the helper to get PortalConstants.DATA
-        String hostId = (String) map.get("currentHostId"); // The hostId of the aggregate
+        String hostId = (String) map.get("hostId");
 
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event); // The new version from the event
 
@@ -506,10 +506,8 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                 """; // <<< CRITICAL: Changed from DELETE to UPDATE, and used aggregate_version < ?
 
         Map<String, Object> map = SqlUtil.extractEventData(event); // Assuming extractEventData is the helper to get PortalConstants.DATA
-        String hostId = (String) map.get("currentHostId"); // The hostId of the aggregate
+        String hostId = (String) map.get("hostId");
 
-        // oldAggregateVersion is the version the command handler operated on (for context/logging).
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         // newAggregateVersion is the version of the incoming Delete event (the target version).
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
@@ -813,14 +811,14 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
     }
 
     @Override
-    public Result<String> queryHostById(String id) {
+    public Result<String> queryHostById(String hostId) {
         final String queryHostById = "SELECT host_id, domain, sub_domain, host_desc, host_owner, " +
-                "update_user, update_ts, aggregate_version FROM host_t WHERE host_id = ?";
+                "update_user, update_ts, aggregate_version, active FROM host_t WHERE host_id = ?";
         Result<String> result;
         try (final Connection conn = ds.getConnection()) {
             Map<String, Object> map = new HashMap<>();
             try (PreparedStatement statement = conn.prepareStatement(queryHostById)) {
-                statement.setObject(1, UUID.fromString(id));
+                statement.setObject(1, UUID.fromString(hostId));
                 try (ResultSet resultSet = statement.executeQuery()) {
                     if (resultSet.next()) {
                         map.put("hostId", resultSet.getObject("host_id", UUID.class));
@@ -831,11 +829,12 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                         map.put("updateUser", resultSet.getString("update_user"));
                         map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                         map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                        map.put("active", resultSet.getBoolean("active"));
                     }
                 }
             }
             if (map.isEmpty())
-                result = Failure.of(new Status(OBJECT_NOT_FOUND, "host with id", id));
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "queryHostById", hostId));
             else
                 result = Success.of(JsonMapper.toJson(map));
         } catch (SQLException e) {
@@ -958,6 +957,47 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
     }
 
     @Override
+    public Result<String> getOrgByDomain(String domain) {
+        Result<String> result;
+        String sql =
+            """
+            SELECT domain, org_name, org_desc, org_owner, aggregate_version,
+            active, update_user, update_ts
+            FROM org_t
+            WHERE domain = ?
+            """;
+        try (final Connection conn = ds.getConnection()) {
+            Map<String, Object> map = new HashMap<>();
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setString(1, domain);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        map.put("domain", resultSet.getString("domain"));
+                        map.put("orgName", resultSet.getString("org_name"));
+                        map.put("orgDesc", resultSet.getString("org_desc"));
+                        map.put("orgOwner", resultSet.getObject("org_owner", UUID.class));
+                        map.put("updateUser", resultSet.getString("update_user"));
+                        map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                        map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                        map.put("active", resultSet.getBoolean("active"));
+                    }
+                }
+            }
+            if (map.isEmpty())
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "getOrgByDomain", domain));
+            else
+                result = Success.of(JsonMapper.toJson(map));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
     public Result<String> getHost(int offset, int limit, String filtersJson, String globalFilter, String sortingJson) {
         Result<String> result = null;
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
@@ -996,7 +1036,6 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-                    map.put("currentHostId", resultSet.getObject("host_id", UUID.class));
                     map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("domain", resultSet.getString("domain"));
                     map.put("subDomain", resultSet.getString("sub_domain"));
@@ -1206,5 +1245,26 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
         return result;
+    }
+
+    @Override
+    public String getHostId(String domain, String subDomain) {
+        final String sql = "SELECT host_id FROM host_t WHERE domain = ? AND sub_domain = ?";
+        String hostId = null;
+        try (Connection connection = ds.getConnection();
+            PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, domain);
+            statement.setString(2, subDomain);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if(resultSet.next()){
+                    hostId = resultSet.getString(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+        }
+        return hostId;
     }
 }
