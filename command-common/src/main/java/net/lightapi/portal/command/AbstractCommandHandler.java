@@ -127,19 +127,35 @@ public abstract class AbstractCommandHandler implements HybridHandler {
      * based on the event type and existing aggregateVersion in the data map.
      *
      */
-    protected Result<Map<String, Object>> populateAggregateVersion(Map<String, Object> map) {
+    protected void populateAggregateVersion(Map<String, Object> map) {
         String aggregateId = EventTypeUtil.getAggregateId(getCloudEventType(), map);
         int aggregateVersion = dbProvider.getMaxAggregateVersion(aggregateId);
         if(aggregateVersion == 0) {
             // first time creating for the aggregate.
             map.put(PortalConstants.NEW_AGGREGATE_VERSION, 1);
             map.put(PortalConstants.AGGREGATE_VERSION, 0);
-            return Success.of(map);
         } else {
             // the aggregate exists in the event source table.
             long newAggregateVersion = aggregateVersion + 1;
             map.put(PortalConstants.NEW_AGGREGATE_VERSION, newAggregateVersion);
-            return Success.of(map);
+        }
+    }
+
+    /**
+     * Subclasses can override this to use customized logic to populate the old aggregateVersion and new aggregateVersion
+     * based on the event type and existing aggregateVersion in the data map.
+     *
+     */
+    protected void populateAggregateVersion(Map<String, Object> map, String aggregateId) {
+        int aggregateVersion = dbProvider.getMaxAggregateVersion(aggregateId);
+        if(aggregateVersion == 0) {
+            // first time creating for the aggregate.
+            map.put(PortalConstants.NEW_AGGREGATE_VERSION, 1);
+            map.put(PortalConstants.AGGREGATE_VERSION, 0);
+        } else {
+            // the aggregate exists in the event source table.
+            long newAggregateVersion = aggregateVersion + 1;
+            map.put(PortalConstants.NEW_AGGREGATE_VERSION, newAggregateVersion);
         }
     }
 
@@ -195,33 +211,19 @@ public abstract class AbstractCommandHandler implements HybridHandler {
             userId = (String)map.get(USER_ID);
         }
         // --- 2. Get Nonce ---
-        Number nonce;
-        Result<String> result = HybridQueryClient.getNonceByUserId(exchange, userId);
-        if(result.isFailure()) {
-            if(result.getError().getStatusCode() != 404) {
-                return NioUtils.toByteBuffer(getStatus(exchange, result.getError()));
-            } else {
-                // this is a brand-new user that is created or onboarded.
-                nonce = 1;
-            }
-        } else {
-            nonce = PortalUtil.parseNumber(result.getResult());
-        }
+        long nonce = dbProvider.queryNonceByUserId(userId);
         if(logger.isTraceEnabled()) logger.trace("nonce = {}", nonce);
 
         // get the new aggregate version and put it in the map.
-        Result<Map<String, Object>> aggregateVersionResult = populateAggregateVersion(map);
-        if (aggregateVersionResult.isFailure()) {
-            return NioUtils.toByteBuffer(getStatus(exchange, aggregateVersionResult.getError()));
-        }
+        populateAggregateVersion(map);
 
         // --- 3. Build CloudEvent ---
         CloudEvent[] events = buildCloudEvent(map, userId, host, nonce);
         if(logger.isTraceEnabled()) {
             // Log the created CloudEvents for debugging purposes
             for (CloudEvent event : events) {
-                logger.trace("Created CloudEvent: id={}, type={}, source={}, data={}",
-                        event.getId(), event.getType(), event.getSource(), new String(event.getData().toBytes(), StandardCharsets.UTF_8));
+                logger.trace("Created CloudEvent: id={}, type={}, source={}, nonce {} data={}",
+                        event.getId(), event.getType(), event.getSource(), event.getExtension("nonce"), new String(event.getData().toBytes(), StandardCharsets.UTF_8));
             }
         }
 
