@@ -1075,7 +1075,8 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                 "email", "u.email",
                 "firstName", "u.first_name",
                 "lastName", "u.last_name",
-                "current", "uh.current"
+                "current", "uh.current",
+                "active", "uh.active"
         );
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -1095,9 +1096,9 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
         List<Object> parameters = new ArrayList<>();
 
         String[] searchColumns = {"h.domain", "h.sub_domain", "u.email", "u.first_name", "u.last_name"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("uh.host_id", "uh.user_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("uh.host_id", "uh.user_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
-                dynamicSorting("u.email", sorting, null) +
+                dynamicSorting("u.email", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
