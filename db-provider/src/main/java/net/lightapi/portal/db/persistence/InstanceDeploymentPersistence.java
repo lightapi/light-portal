@@ -51,32 +51,32 @@ public interface InstanceDeploymentPersistence {
     void createProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception; // Renamed from createProductVersion in original
     void updateProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception; // Renamed from updateProductVersion
     void deleteProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception; // Renamed from deleteProductVersion
-    Result<String> getProduct(int offset, int limit, String hostId, String productVersionId, String productId, String productVersion, String light4jVersion, Boolean breakCode, Boolean breakConfig, String releaseNote, String versionDesc, String releaseType, Boolean current, String versionStatus);
+    Result<String> getProduct(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
+    Result<String> getProductVersion(String hostId, String productVersionId);
     Result<String> getProductIdLabel(String hostId);
     Result<String> getProductVersionLabel(String hostId, String productId);
     Result<String> getProductVersionIdLabel(String hostId);
+    String getProductVersionId(String hostId, String productId, String productVersion);
 
     // ProductVersionEnvironment
     void createProductVersionEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteProductVersionEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> getProductVersionEnvironment(int offset, int limit, String hostId, String productVersionId, String productId, String productVersion, String systemEnv, String runtimeEnv);
+    Result<String> getProductVersionEnvironment(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
 
     // ProductVersionPipeline
     void createProductVersionPipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteProductVersionPipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> getProductVersionPipeline(int offset, int limit, String hostId, String productVersionId, String productId, String productVersion, String pipelineId, String pipelineName, String pipelineVersion);
+    Result<String> getProductVersionPipeline(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
 
     // ProductVersionConfig
     void createProductVersionConfig(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteProductVersionConfig(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> getProductVersionConfig(int offset, int limit, List<SortCriterion> sorting, List<FilterCriterion> filtering, String globalFilter,
-                                           String hostId, String productVersionId, String productId, String productVersion, String configId,
-                                           String configName);
+    Result<String> getProductVersionConfig(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
 
     // ProductVersionConfigProperty
     void createProductVersionConfigProperty(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteProductVersionConfigProperty(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> getProductVersionConfigProperty(int offset, int limit, String hostId, String productVersionId, String productId, String productVersion, String configId, String configName, String propertyId, String propertyName);
+    Result<String> getProductVersionConfigProperty(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
 
     // Pipeline
     void createPipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception;

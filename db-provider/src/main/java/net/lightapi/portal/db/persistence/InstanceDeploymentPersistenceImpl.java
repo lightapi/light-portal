@@ -2687,75 +2687,125 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
     @Override
     public void createProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql =
+        // --- 1. PRIMARY UPSERT SQL (Creates or Reactivates the specific product version) ---
+        // PRIMARY KEY is assumed to be (host_id, product_version_id)
+        final String upsertSql =
                 """
                 INSERT INTO product_version_t(host_id, product_version_id, product_id, product_version,
                 light4j_version, break_code, break_config, release_note, version_desc, release_type, current,
-                version_status, update_user, update_ts, aggregate_version)
-                VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?)
+                version_status, update_user, update_ts, aggregate_version, active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (host_id, product_version_id) DO UPDATE
+                SET product_id = EXCLUDED.product_id,
+                    product_version = EXCLUDED.product_version,
+                    light4j_version = EXCLUDED.light4j_version,
+                    break_code = EXCLUDED.break_code,
+                    break_config = EXCLUDED.break_config,
+                    release_note = EXCLUDED.release_note,
+                    version_desc = EXCLUDED.version_desc,
+                    release_type = EXCLUDED.release_type,
+                    current = EXCLUDED.current,
+                    version_status = EXCLUDED.version_status,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                WHERE product_version_t.aggregate_version < EXCLUDED.aggregate_version
                 """;
-        final String sqlUpdate = "UPDATE product_version_t SET current = false \n" +
-                "WHERE host_id = ?\n" +
-                "AND product_id = ?\n" +
-                "AND product_version != ?";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+
+        // --- 2. UPDATE SQL (To set all other versions of the same product to current = false) ---
+        // This update needs to be idempotent.
+        final String updateOthersSql =
+                """
+                UPDATE product_version_t SET current = false, update_user = ?, update_ts = ?
+                WHERE host_id = ?
+                AND product_id = ?
+                AND product_version_id != ?
+                AND current = TRUE
+                """; // <<< CRITICAL: Only set current=false if it is true (for idempotency)
+
+        Map<String, Object> map = SqlUtil.extractEventData(event);
         String hostId = (String)event.get(Constants.HOST);
+        String productVersionId = (String)map.get("productVersionId");
         String productId = (String)map.get("productId");
         String productVersion = (String)map.get("productVersion");
-        Boolean current = (Boolean)map.get("current");
+        Boolean current = (Boolean)map.getOrDefault("current", false); // Default to false if not provided
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+        String updateTsStr = (String)event.get(CloudEventV1.TIME);
+        String updateUser = (String)event.get(Constants.USER);
+        OffsetDateTime updateTs = OffsetDateTime.parse(updateTsStr);
 
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString((String)map.get("productVersionId")));
-            statement.setString(3, productId);
-            statement.setString(4, productVersion);
-            statement.setString(5, (String)map.get("light4jVersion"));
+        try (PreparedStatement statement = conn.prepareStatement(upsertSql)) {
+            int i = 1;
+
+            // --- PRIMARY UPSERT PARAMETERS ---
+            statement.setObject(i++, UUID.fromString(hostId)); // 1. host_id
+            statement.setObject(i++, UUID.fromString(productVersionId)); // 2. product_version_id (PK)
+            statement.setString(i++, productId); // 3. product_id
+            statement.setString(i++, productVersion); // 4. product_version
+            statement.setString(i++, (String)map.get("light4jVersion")); // 5. light4j_version
+
+            // 6. break_code
             if (map.containsKey("breakCode")) {
-                statement.setBoolean(6, (Boolean) map.get("breakCode"));
+                statement.setBoolean(i++, (Boolean) map.get("breakCode"));
             } else {
-                statement.setNull(6, Types.BOOLEAN);
+                statement.setNull(i++, Types.BOOLEAN);
             }
+
+            // 7. break_config
             if (map.containsKey("breakConfig")) {
-                statement.setBoolean(7, (Boolean) map.get("breakConfig"));
+                statement.setBoolean(i++, (Boolean) map.get("breakConfig"));
             } else {
-                statement.setNull(7, Types.BOOLEAN);
+                statement.setNull(i++, Types.BOOLEAN);
             }
+
+            // 8. release_note
             if (map.containsKey("releaseNote")) {
-                statement.setString(8, (String) map.get("releaseNote"));
+                statement.setString(i++, (String) map.get("releaseNote"));
             } else {
-                statement.setNull(8, Types.VARCHAR);
+                statement.setNull(i++, Types.VARCHAR);
             }
+
+            // 9. version_desc
             if (map.containsKey("versionDesc")) {
-                statement.setString(9, (String) map.get("versionDesc"));
+                statement.setString(i++, (String) map.get("versionDesc"));
             } else {
-                statement.setNull(9, Types.VARCHAR);
+                statement.setNull(i++, Types.VARCHAR);
             }
-            statement.setString(10, (String)map.get("releaseType"));
-            statement.setBoolean(11, current);
-            statement.setString(12, (String)map.get("versionStatus"));
-            statement.setString(13, (String)event.get(Constants.USER));
-            statement.setObject(14, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(15, newAggregateVersion);
+
+            statement.setString(i++, (String)map.get("releaseType")); // 10. release_type
+            statement.setBoolean(i++, current); // 11. current (NOTE: This value is in the event)
+            statement.setString(i++, (String)map.get("versionStatus")); // 12. version_status
+            statement.setString(i++, updateUser); // 13. update_user
+            statement.setObject(i++, updateTs); // 14. update_ts
+            statement.setLong(i++, newAggregateVersion); // 15. aggregate_version
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("Failed during createProduct for hostId %s productId %s productVersion %s with aggregateVersion %d", hostId, productId, productVersion, newAggregateVersion));
+                // UPSERT monotonicity failed. Log and ignore.
+                logger.warn("Product Version creation/update skipped for productId {} version {}. A newer or same version already exists.", productId, productVersion);
             }
-            // try to update current to false for others if current is true.
-            if(current != null && current) {
-                try (PreparedStatement statementUpdate = conn.prepareStatement(sqlUpdate)) {
-                    statementUpdate.setObject(1, UUID.fromString(hostId));
-                    statementUpdate.setString(2, productId);
-                    statementUpdate.setString(3, productVersion);
+
+            // --- STATE MANAGEMENT: Set others to current=false if this new one is true ---
+            if(current && count > 0) {
+                // If the new version is set to current=TRUE, ensure all others are set to FALSE.
+                try (PreparedStatement statementUpdate = conn.prepareStatement(updateOthersSql)) {
+                    int j = 1;
+                    statementUpdate.setString(j++, updateUser);
+                    statementUpdate.setObject(j++, updateTs);
+                    statementUpdate.setObject(j++, UUID.fromString(hostId));
+                    statementUpdate.setString(j++, productId);
+                    statementUpdate.setObject(j, UUID.fromString(productVersionId)); // The ID of the currently active version
+
                     statementUpdate.executeUpdate();
                 }
             }
+
         } catch (SQLException e) {
-            logger.error("SQLException during createProduct (version) for productId {} version {}: {}", productId, productVersion, e.getMessage(), e);
+            logger.error("SQLException during createProduct (version) UPSERT for productId {} version {} aggregateVersion {}: {}", productId, productVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createProduct (version) for productId {} version {}: {}", productId, productVersion, e.getMessage(), e);
+            logger.error("Exception during createProduct (version) for productId {} version {} aggregateVersion {}: {}", productId, productVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -2776,77 +2826,99 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
     @Override
     public void updateProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // --- 1. PRIMARY UPDATE SQL (Monotonicity Check) ---
+        // Changed WHERE aggregate_version = ? to aggregate_version < ?
         final String sql =
                 """
                 UPDATE product_version_t SET light4j_version = ?, break_code = ?, break_config = ?,
                 release_note = ?, version_desc = ?, release_type = ?, current = ?, version_status = ?,
                 update_user = ?, update_ts = ?, aggregate_version = ?
-                WHERE host_id = ? AND product_version_id = ? AND aggregate_version = ?
-                """;
-        final String sqlUpdate = "UPDATE product_version_t SET current = false \n" +
+                WHERE host_id = ? AND product_version_id = ? AND aggregate_version < ?
+                """; // <<< CRITICAL: Changed '= ?' to '< ?' for idempotent update
+
+        // --- 2. SECONDARY UPDATE SQL (Set others to current=false) ---
+        // This remains the same, but it should also update update_user/update_ts for consistency.
+        final String updateOthersSql = "UPDATE product_version_t SET current = false, update_user = ?, update_ts = ? \n" + // Added update_user/update_ts
                 "WHERE host_id = ?\n" +
                 "AND product_id = ?\n" +
-                "AND product_version != ?";
+                "AND product_version_id != ?"; // Use product_version_id for uniqueness
 
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST);
         String productId = (String)map.get("productId");
-        String productVersion = (String)map.get("productVersion");
+        // String productVersion = (String)map.get("productVersion"); // Unused in new logic
         String productVersionId = (String)map.get("productVersionId");
-        Boolean current = (Boolean)map.get("current");
+        Boolean current = (Boolean)map.getOrDefault("current", false); // Use getOrDefault for safety
         long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
+        String updateTsStr = (String)event.get(CloudEventV1.TIME);
+        String updateUser = (String)event.get(Constants.USER);
+        OffsetDateTime updateTs = OffsetDateTime.parse(updateTsStr);
+
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setString(1, (String)map.get("light4jVersion"));
+            int i = 1;
+
+            // --- PRIMARY UPDATE PARAMETERS (1 to 14) ---
+            statement.setString(i++, (String)map.get("light4jVersion")); // 1. light4j_version
+
             if (map.containsKey("breakCode")) {
-                statement.setBoolean(2, (Boolean) map.get("breakCode"));
+                statement.setBoolean(i++, (Boolean) map.get("breakCode"));
             } else {
-                statement.setNull(2, Types.BOOLEAN);
+                statement.setNull(i++, Types.BOOLEAN);
             }
+
             if (map.containsKey("breakConfig")) {
-                statement.setBoolean(3, (Boolean) map.get("breakConfig"));
+                statement.setBoolean(i++, (Boolean) map.get("breakConfig"));
             } else {
-                statement.setNull(3, Types.BOOLEAN);
+                statement.setNull(i++, Types.BOOLEAN);
             }
+
             if (map.containsKey("releaseNote")) {
-                statement.setString(4, (String) map.get("releaseNote"));
+                statement.setString(i++, (String) map.get("releaseNote"));
             } else {
-                statement.setNull(4, Types.VARCHAR);
+                statement.setNull(i++, Types.VARCHAR);
             }
 
             if (map.containsKey("versionDesc")) {
-                statement.setString(5, (String) map.get("versionDesc"));
+                statement.setString(i++, (String) map.get("versionDesc"));
             } else {
-                statement.setNull(5, Types.VARCHAR);
+                statement.setNull(i++, Types.VARCHAR);
             }
-            statement.setString(6, (String)map.get("releaseType"));
-            statement.setBoolean(7, current);
-            statement.setString(8, (String)map.get("versionStatus"));
-            statement.setString(9, (String)event.get(Constants.USER));
-            statement.setObject(10, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(11, newAggregateVersion);
-            statement.setObject(12, UUID.fromString(hostId));
-            statement.setObject(13, UUID.fromString(productVersionId));
-            statement.setLong(14, oldAggregateVersion);
+
+            statement.setString(i++, (String)map.get("releaseType")); // 6. release_type
+            statement.setBoolean(i++, current); // 7. current
+            statement.setString(i++, (String)map.get("versionStatus")); // 8. version_status
+            statement.setString(i++, updateUser); // 9. update_user
+            statement.setObject(i++, updateTs); // 10. update_ts
+            statement.setLong(i++, newAggregateVersion); // 11. aggregate_version (New Version in SET)
+
+            statement.setObject(i++, UUID.fromString(hostId)); // 12. host_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(productVersionId)); // 13. product_version_id (in WHERE clause)
+            statement.setLong(i, newAggregateVersion); // 14. Monotonicity Check: aggregate_version < newAggregateVersion
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryProductExists(conn, hostId, productVersionId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during updateProduct for hostId " + hostId + " productVersionId " + productVersionId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
-                } else {
-                    throw new SQLException("No record found during updateProduct for hostId " + hostId + " productVersionId " + productVersionId + ".");
-                }
+                // If 0 rows updated, it means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Product Version update skipped for hostId {} productVersionId {} (new version {}). Record not found or a newer version already exists.", hostId, productVersionId, newAggregateVersion);
             }
-            // try to update current to false for others if current is true.
-            if(current != null && current) {
-                try (PreparedStatement statementUpdate = conn.prepareStatement(sqlUpdate)) {
-                    statementUpdate.setObject(1, UUID.fromString(hostId));
-                    statementUpdate.setString(2, productId);
-                    statementUpdate.setString(3, productVersion);
+
+            // --- STATE MANAGEMENT: Set others to current=false if this new one is true ---
+            if(current && count > 0) {
+                // If the new version is set to current=TRUE, ensure all others are set to FALSE.
+                try (PreparedStatement statementUpdate = conn.prepareStatement(updateOthersSql)) {
+                    int j = 1;
+                    statementUpdate.setString(j++, updateUser); // 1. update_user
+                    statementUpdate.setObject(j++, updateTs); // 2. update_ts
+                    statementUpdate.setObject(j++, UUID.fromString(hostId)); // 3. host_id
+                    statementUpdate.setString(j++, productId); // 4. product_id
+                    statementUpdate.setObject(j, UUID.fromString(productVersionId)); // 5. product_version_id (the ID of the version being SET to TRUE)
+
                     statementUpdate.executeUpdate();
                 }
             }
+
         } catch (SQLException e) {
             logger.error("SQLException during updateProduct for hostId {} productVersionId {} (old: {}) -> (new: {}): {}", hostId, productVersionId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
@@ -2856,91 +2928,107 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         }
     }
 
+    /**
+     * This method should only be called if the current flag is false. The service handler should validte it.
+     *
+     */
     @Override
     public void deleteProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql =
+        // --- UPDATED SQL FOR SOFT DELETE + MONOTONICITY ---
+        // Updates the 'active' flag to FALSE and sets the new version IF the current DB version is older than the incoming event's version.
+        final String softDeleteProductSql =
                 """
-                DELETE FROM product_version_t WHERE host_id = ?
-                AND product_version_id = ? AND aggregate_version = ?
-                """;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
-        String productVersionId = (String)map.get("productVersionId");
-        String productId = (String)map.get("productId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+                UPDATE product_version_t SET active = false, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? AND product_version_id = ? AND aggregate_version < ?
+                """; // <<< CRITICAL: Changed from DELETE to UPDATE, and used aggregate_version < ?
 
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(productVersionId));
-            statement.setLong(3, oldAggregateVersion);
+        Map<String, Object> map = SqlUtil.extractEventData(event); // Assuming extractEventData is the helper to get PortalConstants.DATA
+        String hostId = (String)event.get(Constants.HOST); // HostId from CloudEvent extension
+        String productVersionId = (String)map.get("productVersionId");
+
+        // productId is not needed for the SQL
+        // String productId = (String)map.get("productId");
+
+        // oldAggregateVersion is the version the command handler operated on (for context/logging).
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        // newAggregateVersion is the version of the incoming Delete event (the target version).
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        String updateTsStr = (String)event.get(CloudEventV1.TIME);
+        String updateUser = (String)event.get(Constants.USER);
+        OffsetDateTime updateTs = OffsetDateTime.parse(updateTsStr);
+
+        try (PreparedStatement statement = conn.prepareStatement(softDeleteProductSql)) {
+            int i = 1;
+
+            // 1. update_user
+            statement.setString(i++, updateUser);
+
+            // 2. update_ts
+            statement.setObject(i++, updateTs);
+
+            // 3. aggregate_version (NEW version in SET clause)
+            statement.setLong(i++, newAggregateVersion);
+
+            // 4. host_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(hostId));
+
+            // 5. product_version_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(productVersionId));
+
+            // 6. aggregate_version (MONOTONICITY check in WHERE clause)
+            statement.setLong(i, newAggregateVersion); // Condition: WHERE aggregate_version < newAggregateVersion
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryProductExists(conn, hostId, productVersionId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteProduct for hostId " + hostId + " productVersionId " + productVersionId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
-                } else {
-                    throw new SQLException("No record found during deleteProduct for hostId " + hostId + " productVersionId " + productVersionId + ". It might have been already deleted.");
-                }
+                // If 0 rows updated, it means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Product Version soft-delete skipped for hostId {} productVersionId {} (new version {}). Record not found or a newer version already exists.", hostId, productVersionId, newAggregateVersion);
             }
+            // NO THROW on count == 0. The method is now idempotent.
+
         } catch (SQLException e) {
-            logger.error("SQLException during deleteProduct for hostId {} productVersionId {} aggregateVersion {}: {}", hostId, productVersionId, oldAggregateVersion, e.getMessage(), e);
-            throw e;
+            logger.error("SQLException during softDeleteProduct for hostId {} productVersionId {} aggregateVersion {}: {}", hostId, productVersionId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw SQLException
         } catch (Exception e) {
-            logger.error("Exception during deleteProduct for hostId {} productVersionId {} aggregateVersion {}: {}", hostId, productVersionId, oldAggregateVersion, e.getMessage(), e);
-            throw e;
+            logger.error("Exception during softDeleteProduct for hostId {} productVersionId {} aggregateVersion {}: {}", hostId, productVersionId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw generic Exception
         }
     }
 
     @Override
-    public Result<String> getProduct(int offset, int limit, String hostId, String productVersionId, String productId, String productVersion,
-                                     String light4jVersion, Boolean breakCode, Boolean breakConfig, String releaseNote,
-                                     String versionDesc, String releaseType, Boolean current, String versionStatus) {
+    public Result<String> getProduct(int offset, int limit, String filtersJson, String globalFilter, String  sortingJson, String hostId) {
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         Result<String> result = null;
         String s = """
                 SELECT COUNT(*) OVER () AS total,
-                host_id, product_version_id, product_id, product_version, light4j_version, break_code, break_config,
-                release_note, version_desc, release_type, current, version_status, update_user, update_ts, aggregate_version
+                host_id, product_version_id, product_id, product_version,
+                light4j_version, break_code, break_config, release_note,
+                version_desc, release_type, current, version_status,
+                update_user, update_ts, aggregate_version, active
                 FROM product_version_t
-                WHERE 1=1
+                WHERE host_id = ?
                 """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
-        StringBuilder whereClause = new StringBuilder();
-        addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "product_version_id", productVersionId != null ? UUID.fromString(productVersionId) : null);
-        addCondition(whereClause, parameters, "product_id", productId);
-        addCondition(whereClause, parameters, "product_version", productVersion);
-        addCondition(whereClause, parameters, "light4j_version", light4jVersion);
-        addCondition(whereClause, parameters, "break_code", breakCode);
-        addCondition(whereClause, parameters, "break_config", breakConfig);
-        addCondition(whereClause, parameters, "release_note", releaseNote);
-        addCondition(whereClause, parameters, "version_desc", versionDesc);
-        addCondition(whereClause, parameters, "release_type", releaseType);
-        addCondition(whereClause, parameters, "current", current);
-        addCondition(whereClause, parameters, "version_status", versionStatus);
+        parameters.add(UUID.fromString(hostId));
 
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY product_id, product_version DESC\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"release_note", "version_desc", "org_desc"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("host_id", "product_version_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("product_id, product_version", sorting, null) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
-
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> products = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -2965,6 +3053,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     // handling date properly
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     products.add(map);
                 }
             }
@@ -2982,6 +3071,59 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
         return result;
+    }
+
+    @Override
+    public Result<String> getProductVersion(String hostId, String productVersionId) {
+        Result<String> result;
+        String sql =
+                """
+                SELECT host_id, product_version_id, product_id, product_version,
+                light4j_version, break_code, break_config, release_note,
+                version_desc, release_type, current, version_status,
+                update_user, update_ts, aggregate_version, active
+                FROM product_version_t
+                WHERE host_id = ? AND product_version_id = ?
+                """;
+        try (final Connection conn = ds.getConnection()) {
+            Map<String, Object> map = new HashMap<>();
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setObject(1, UUID.fromString(hostId));
+                statement.setObject(2, UUID.fromString(productVersionId));
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                        map.put("productVersionId", resultSet.getObject("product_version_id", UUID.class));
+                        map.put("productId", resultSet.getString("product_id"));
+                        map.put("productVersion", resultSet.getString("product_version"));
+                        map.put("light4jVersion", resultSet.getString("light4j_version"));
+                        map.put("breakCode", resultSet.getBoolean("break_code"));
+                        map.put("breakConfig", resultSet.getBoolean("break_config"));
+                        map.put("releaseNote", resultSet.getString("release_note"));
+                        map.put("versionDesc", resultSet.getString("version_desc"));
+                        map.put("releaseType", resultSet.getString("release_type"));
+                        map.put("current", resultSet.getBoolean("current"));
+                        map.put("versionStatus", resultSet.getString("version_status"));
+                        map.put("updateUser", resultSet.getString("update_user"));
+                        map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                        map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                        map.put("active", resultSet.getBoolean("active"));
+                    }
+                }
+            }
+            if (map.isEmpty())
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "getProductVersion", productVersionId));
+            else
+                result = Success.of(JsonMapper.toJson(map));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
     }
 
     @Override
@@ -3068,6 +3210,28 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
+    public String getProductVersionId(String hostId, String productId, String productVersion) {
+        final String sql = "SELECT product_version_id FROM product_version_t WHERE host_id = ? AND product_id = ? AND product_version = ?";
+        String productVersionId = null;
+        try (Connection connection = ds.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setString(2, productId);
+            statement.setString(3, productVersion);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if(resultSet.next()){
+                    productVersionId = resultSet.getString(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+        }
+        return productVersionId;
+    }
+
+    @Override
     public void createProductVersionEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql =
                 """
@@ -3139,50 +3303,53 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> getProductVersionEnvironment(int offset, int limit, String hostId, String productVersionId,
-                                                       String productId, String productVersion, String systemEnv, String runtimeEnv) {
+    public Result<String> getProductVersionEnvironment(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "pve.host_id",
+                "productVersionId", "pve.product_version_id",
+                "productId", "pv.product_id",
+                "productVersion", "pv.product_version",
+                "systemEnv", "pve.system_env",
+                "runtimeEnv", "pve.runtime_env",
+                "updateUser", "pve.update_user",
+                "updateTs", "pve.update_ts",
+                "aggregateVersion", "pve.aggregate_version",
+                "active", "pve.active"
+        ));
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
                 pve.host_id, pve.product_version_id, pv.product_id, pv.product_version,
-                pve.system_env, pve.runtime_env, pve.update_user, pve.update_ts, pve.aggregate_version
+                pve.system_env, pve.runtime_env, pve.update_user,
+                pve.update_ts, pve.aggregate_version, pve.active
                 FROM product_version_environment_t pve
                 INNER JOIN product_version_t pv ON pv.product_version_id = pve.product_version_id
-                WHERE 1=1
+                WHERE pve.host_id = ?
                 """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
-        StringBuilder whereClause = new StringBuilder();
-        addCondition(whereClause, parameters, "pve.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "pve.product_version_id", productVersionId != null ? UUID.fromString(productVersionId) : null);
-        addCondition(whereClause, parameters, "pv.product_id", productId);
-        addCondition(whereClause, parameters, "pv.product_version", productVersion);
-        addCondition(whereClause, parameters, "pve.system_env", systemEnv);
-        addCondition(whereClause, parameters, "pve.runtime_env", runtimeEnv);
+        parameters.add(UUID.fromString(hostId));
 
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY pv.product_id, pv.product_version, pve.system_env, pve.runtime_env DESC\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"pve.system_env", "pve.runtime_env"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("pve.host_id", "pve.product_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("pv.product_id, pv.product_version, pve.system_env, pve.runtime_env", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> productEnvironments = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -3200,6 +3367,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     productEnvironments.add(map);
                 }
             }
@@ -3281,53 +3449,54 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> getProductVersionPipeline(int offset, int limit, String hostId, String productVersionId,
-                                                    String productId, String productVersion, String pipelineId,
-                                                    String pipelineName, String pipelineVersion) {
+    public Result<String> getProductVersionPipeline(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "pvp.host_id",
+                "productVersionId", "pvp.product_version_id",
+                "productId", "pv.product_id",
+                "productVersion", "pv.product_version",
+                "pipelineId", "pvp.pipeline_id",
+                "pipelineName", "p.pipeline_name",
+                "pipelineVersion", "p.pipeline_version",
+                "updateUser", "pvp.update_user",
+                "updateTs", "pvp.update_ts",
+                "aggregateVersion", "pvp.aggregate_version"
+        ));
+        columnMap.put("active", "a.app_name");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
-                """
-                SELECT COUNT(*) OVER () AS total,
-                pvp.host_id, pvp.product_version_id, pv.product_id, pv.product_version,
-                pvp.pipeline_id, p.pipeline_name, p.pipeline_version, pvp.update_user, pvp.update_ts, pvp.aggregate_version
-                FROM product_version_pipeline_t pvp
-                INNER JOIN product_version_t pv ON pv.product_version_id = pvp.product_version_id
-                INNER JOIN pipeline_t p ON p.pipeline_id = pvp.pipeline_id
-                WHERE 1=1
-                """;
+            """
+            SELECT COUNT(*) OVER () AS total,
+            pvp.host_id, pvp.product_version_id, pv.product_id, pv.product_version,
+            pvp.pipeline_id, p.pipeline_name, p.pipeline_version, pvp.update_user,
+            pvp.update_ts, pvp.aggregate_version, pvp.active
+            FROM product_version_pipeline_t pvp
+            INNER JOIN product_version_t pv ON pv.product_version_id = pvp.product_version_id
+            INNER JOIN pipeline_t p ON p.pipeline_id = pvp.pipeline_id
+            WHERE pvp.host_id = ?
+            """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
-        StringBuilder whereClause = new StringBuilder();
-        addCondition(whereClause, parameters, "pvp.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "pvp.product_version_id", productVersionId != null ? UUID.fromString(productVersionId) : null);
-        addCondition(whereClause, parameters, "pv.product_id", productId);
-        addCondition(whereClause, parameters, "pv.product_version", productVersion);
-        addCondition(whereClause, parameters, "pvp.pipeline_id", pipelineId != null ? UUID.fromString(pipelineId) : null);
-        addCondition(whereClause, parameters, "p.pipeline_name", pipelineName);
-        addCondition(whereClause, parameters, "p.pipeline_version", pipelineVersion);
+        parameters.add(UUID.fromString(hostId));
 
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY pv.product_id, pv.product_version, p.pipeline_name, p.pipeline_version DESC\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"p.pipeline_name"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("pvp.host_id", "pvp.product_version_id", "pvp.pipeline_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("pv.product_id, pv.product_version, p.pipeline_name, p.pipeline_version", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
-
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> productPipelines = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -3346,6 +3515,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     productPipelines.add(map);
                 }
             }
@@ -3430,10 +3600,8 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> getProductVersionConfig(int offset, int limit, List<SortCriterion> sorting, List<FilterCriterion> filtering, String globalFilter,
-                                                  String hostId, String productVersionId, String productId, String productVersion, String configId,
-                                                  String configName) {
-        final Map<String, String> API_TO_DB_COLUMN_MAP = Map.of(
+    public Result<String> getProductVersionConfig(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "pvc.host_id",
                 "productVersionId", "pvc.product_version_id",
                 "productId", "pv.product_id",
@@ -3441,107 +3609,42 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 "configId", "pvc.config_id",
                 "configName", "c.config_name",
                 "updateUser", "pvc.update_user",
-                "updateTs", "pvc.update_ts"
-        );
-        // The base query with the window function for total count is efficient.
-        String baseSql =
+                "updateTs", "pvc.update_ts",
+                "active", "pvc.active"
+        ));
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
+        String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
                 pvc.host_id, pvc.product_version_id, pv.product_id, pv.product_version,
-                pvc.config_id, c.config_name, pvc.update_user, pvc.update_ts, pvc.aggregate_version
+                pvc.config_id, c.config_name, pvc.update_user, pvc.update_ts, pvc.aggregate_version, pvc.active
                 FROM product_version_config_t pvc
                 INNER JOIN product_version_t pv ON pv.host_id = pvc.host_id AND pv.product_version_id = pvc.product_version_id
                 INNER JOIN config_t c ON c.config_id = pvc.config_id
+                WHERE pvc.host_id = ?
                 """;
 
-        StringBuilder sqlBuilder = new StringBuilder(baseSql);
         List<Object> parameters = new ArrayList<>();
-        List<String> whereClauses = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
 
-        // --- 1. Build WHERE clause from filters ---
+        String[] searchColumns = {"c.config_name"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("pvc.host_id", "pvc.product_version_id", "pvc.config_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("pv.product_id, pv.product_version, c.config_name", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
-        // Add mandatory hostId filter.
-        if (hostId != null) {
-            whereClauses.add("pvc.host_id = ?");
-            parameters.add(UUID.fromString(hostId));
-        }
-
-        // Handle dynamic column filters from MRT
-        if (filtering != null) {
-            for (FilterCriterion filter : filtering) {
-                String dbColumn = API_TO_DB_COLUMN_MAP.get(filter.getId());
-                if (dbColumn == null) {
-                    logger.warn("Invalid filter column requested: {}", filter.getId());
-                    continue; // Or return an error
-                }
-                whereClauses.add(dbColumn + " ILIKE ?"); // Use ILIKE for case-insensitive matching in PostgreSQL
-                parameters.add("%" + filter.getValue() + "%");
-            }
-        }
-
-        // Handle global filter from MRT
-        if (globalFilter != null && !globalFilter.isBlank()) {
-            List<String> globalSearchableColumns = List.of("pv.product_id", "pv.product_version", "c.config_name");
-            String globalWhere = globalSearchableColumns.stream()
-                    .map(col -> col + " ILIKE ?")
-                    .collect(Collectors.joining(" OR "));
-
-            whereClauses.add("(" + globalWhere + ")");
-            for (int i = 0; i < globalSearchableColumns.size(); i++) {
-                parameters.add("%" + globalFilter + "%");
-            }
-        }
-
-        if (!whereClauses.isEmpty()) {
-            sqlBuilder.append(" WHERE ").append(String.join(" AND ", whereClauses));
-        }
-
-        // --- 2. Build ORDER BY clause ---
-        if (sorting != null && !sorting.isEmpty()) {
-            String orderByClause = sorting.stream()
-                    .map(sortCriterion -> {
-                        String dbColumn = API_TO_DB_COLUMN_MAP.get(sortCriterion.getId());
-                        if (dbColumn == null) {
-                            logger.warn("Invalid sort column requested: {}", sortCriterion.getId());
-                            return null; // This will be filtered out
-                        }
-                        return dbColumn + (sortCriterion.isDesc() ? " DESC" : " ASC");
-                    })
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.joining(", "));
-
-            if (!orderByClause.isEmpty()) {
-                sqlBuilder.append(" ORDER BY ").append(orderByClause);
-            } else {
-                // Fallback to default sort if all provided columns were invalid
-                sqlBuilder.append(" ORDER BY pv.product_id, pv.product_version, c.config_name DESC");
-            }
-        } else {
-            // Default sort order when no sorting is provided by the client
-            sqlBuilder.append(" ORDER BY pv.product_id, pv.product_version, c.config_name DESC");
-        }
-
-
-        // --- 3. Add Pagination ---
-        sqlBuilder.append(" LIMIT ? OFFSET ?");
         parameters.add(limit);
         parameters.add(offset);
-
-
-        // --- 4. Execute Query ---
-        String finalSql = sqlBuilder.toString();
-        if(logger.isTraceEnabled()) logger.trace("Final SQL: {}, Parameters: {}", finalSql, parameters);
 
         int total = 0;
         List<Map<String, Object>> productConfigs = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(finalSql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 boolean isFirstRow = true;
                 while (resultSet.next()) {
@@ -3560,6 +3663,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class).toString() : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     productConfigs.add(map);
                 }
             }
@@ -3568,11 +3672,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             resultMap.put("productConfigs", productConfigs);
             return Success.of(JsonMapper.toJson(resultMap));
         } catch (SQLException e) {
-            logger.error("SQLException executing query: " + finalSql, e);
-            return Failure.of(new Status("ERR10001", "SQL_EXCEPTION", e.getMessage())); // Use your own error codes
+            logger.error("SQLException:", e);
+            return Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
         } catch (Exception e) {
-            logger.error("Generic exception executing query: " + finalSql, e);
-            return Failure.of(new Status("ERR10000", "GENERIC_EXCEPTION", e.getMessage()));
+            logger.error("Exception:", e);
+            return Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
     }
 
@@ -3642,55 +3746,56 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> getProductVersionConfigProperty(int offset, int limit, String hostId, String productVersionId,
-                                                          String productId, String productVersion, String configId,
-                                                          String configName, String propertyId, String propertyName) {
+    public Result<String> getProductVersionConfigProperty(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "pvcp.host_id",
+                "productVersionId", "pvcp.product_version_id",
+                "productId", "pv.product_id",
+                "productVersion", "pv.product_version",
+                "configId", "cp.config_id",
+                "configName", "c.config_name",
+                "propertyId", "pvcp.property_id",
+                "propertyName", "cp.property_name",
+                "updateUser", "pvcp.update_user",
+                "updateTs", "pvcp.update_ts"
+        ));
+        columnMap.put("aggregateVersion", "pvcp.aggregate_version");
+        columnMap.put("active", "pvcp.active");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
-                """
-                        SELECT COUNT(*) OVER () AS total,
-                        pvcp.host_id, pvcp.product_version_id, pv.product_id, pv.product_version,
-                        cp.config_id, c.config_name, pvcp.property_id, cp.property_name, pvcp.update_user, pvcp.update_ts, pvcp.aggregate_version
-                        FROM product_version_config_property_t pvcp
-                        INNER JOIN product_version_t pv ON pv.host_id = pvcp.host_id AND pv.product_version_id = pvcp.product_version_id
-                        INNER JOIN config_property_t cp ON cp.property_id = pvcp.property_id
-                        INNER JOIN config_t c ON c.config_id = cp.config_id
-                        WHERE 1=1
-                        """;
+            """
+            SELECT COUNT(*) OVER () AS total,
+            pvcp.host_id, pvcp.product_version_id, pv.product_id, pv.product_version,
+            cp.config_id, c.config_name, pvcp.property_id, cp.property_name, pvcp.update_user, pvcp.update_ts, pvcp.aggregate_version
+            FROM product_version_config_property_t pvcp
+            INNER JOIN product_version_t pv ON pv.host_id = pvcp.host_id AND pv.product_version_id = pvcp.product_version_id
+            INNER JOIN config_property_t cp ON cp.property_id = pvcp.property_id
+            INNER JOIN config_t c ON c.config_id = cp.config_id
+            WHERE pvcp.host = ?
+            """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
-        StringBuilder whereClause = new StringBuilder();
-        addCondition(whereClause, parameters, "pvcp.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "pvcp.product_version_id", productVersionId != null ? UUID.fromString(productVersionId) : null);
-        addCondition(whereClause, parameters, "pv.product_id", productId);
-        addCondition(whereClause, parameters, "pv.product_version", productVersion);
-        addCondition(whereClause, parameters, "cp.config_id", configId != null ? UUID.fromString(configId) : null);
-        addCondition(whereClause, parameters, "c.config_name", configName);
-        addCondition(whereClause, parameters, "pvcp.property_id", propertyId != null ? UUID.fromString(propertyId) : null);
-        addCondition(whereClause, parameters, "cp.property_name", propertyName);
+        parameters.add(UUID.fromString(hostId));
 
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY pv.product_id, pv.product_version, c.config_name, cp.property_name DESC\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"c.config_name", "cp.property_name"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("pvcp.host_id", "pvcp.product_version_id", "cp.config_id", "pvcp.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("pv.product_id, pv.product_version, c.config_name, cp.property_name", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> productProperties = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
 
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -3711,6 +3816,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     productProperties.add(map);
                 }
             }

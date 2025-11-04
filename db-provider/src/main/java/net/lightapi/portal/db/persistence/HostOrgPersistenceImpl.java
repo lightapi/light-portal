@@ -415,19 +415,6 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
         }
     }
 
-    private boolean queryHostExists(Connection conn, String hostId) throws SQLException {
-        final String sql =
-                """
-                SELECT COUNT(*) FROM host_t WHERE host_id = ?
-                """;
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
-            pst.setObject(1, UUID.fromString(hostId));
-            try (ResultSet rs = pst.executeQuery()) {
-                return rs.next() && rs.getInt(1) > 0;
-            }
-        }
-    }
-
     @Override
     public void updateHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         // We will attempt to update the record IF the incoming event is newer than the current projection version.
