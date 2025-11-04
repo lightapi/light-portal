@@ -2810,20 +2810,6 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         }
     }
 
-    private boolean queryProductExists(Connection conn, String hostId, String productVersionId) throws SQLException {
-        final String sql =
-                """
-                SELECT COUNT(*) FROM product_version_t WHERE host_id = ? AND product_version_id = ?
-                """;
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
-            pst.setObject(1, UUID.fromString(hostId));
-            pst.setObject(2, UUID.fromString(productVersionId));
-            try (ResultSet rs = pst.executeQuery()) {
-                return rs.next() && rs.getInt(1) > 0;
-            }
-        }
-    }
-
     @Override
     public void updateProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         // --- 1. PRIMARY UPDATE SQL (Monotonicity Check) ---
@@ -3233,74 +3219,122 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
     @Override
     public void createProductVersionEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql =
+        // --- UPDATED SQL FOR UPSERT ---
+        // Assuming the Unique Constraint is (host_id, product_version_id, system_env, runtime_env)
+        final String upsertSql =
                 """
                 INSERT INTO product_version_environment_t(host_id, product_version_id,
-                system_env, runtime_env, update_user, update_ts, aggregate_version)
-                VALUES (?, ?, ?, ?, ?,  ?, ?)
-                """;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+                system_env, runtime_env, update_user, update_ts, aggregate_version, active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (host_id, product_version_id, system_env, runtime_env) DO UPDATE
+                SET update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                WHERE product_version_environment_t.aggregate_version < EXCLUDED.aggregate_version
+                """; // <<< CRITICAL: ON CONFLICT on the composite key and monotonicity check
+
+        Map<String, Object> map = SqlUtil.extractEventData(event);
         String hostId = (String)event.get(Constants.HOST);
         String productVersionId = (String)map.get("productVersionId");
         String systemEnv = (String)map.get("systemEnv");
         String runtimeEnv = (String)map.get("runtimeEnv");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(productVersionId));
-            statement.setString(3, systemEnv);
-            statement.setString(4, runtimeEnv);
-            statement.setString(5, (String)event.get(Constants.USER));
-            statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(7, newAggregateVersion);
+        try (PreparedStatement statement = conn.prepareStatement(upsertSql)) {
+            int i = 1;
+            // --- SET VALUES (1 to 7) ---
+            statement.setObject(i++, UUID.fromString(hostId)); // 1. host_id (Part of PK)
+            statement.setObject(i++, UUID.fromString(productVersionId)); // 2. product_version_id (Part of PK)
+            statement.setString(i++, systemEnv); // 3. system_env (Part of PK)
+            statement.setString(i++, runtimeEnv); // 4. runtime_env (Part of PK)
+            statement.setString(i++, (String)event.get(Constants.USER)); // 5. update_user
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME))); // 6. update_ts
+            statement.setLong(i++, newAggregateVersion); // 7. aggregate_version (New Version)
 
+            // --- Execute UPSERT ---
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("Failed during createProductVersionEnvironment for hostId %s productVersionId %s systemEnv %s runtimeEnv %s with aggregateVersion %d", hostId, productVersionId, systemEnv, runtimeEnv, newAggregateVersion));
+                // count=0 means the ON CONFLICT clause was hit, BUT the WHERE clause failed (version was newer or same).
+                logger.warn("Environment creation/reactivation skipped for hostId {} productVersionId {}. A newer or same version already exists in the projection.", hostId, productVersionId);
+            } else {
+                logger.info("Product Version Environment successfully inserted or updated to aggregateVersion {}.", newAggregateVersion);
             }
+
         } catch (SQLException e) {
-            logger.error("SQLException during createProductVersionEnvironment for hostId {} productVersionId {} systemEnv {} runtimeEnv {} aggregateVersion {}: {}", hostId, productVersionId, systemEnv, runtimeEnv, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            logger.error("SQLException during UPSERT for hostId {} productVersionId {} systemEnv {} runtimeEnv {} aggregateVersion {}: {}", hostId, productVersionId, systemEnv, runtimeEnv, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw SQLException
         } catch (Exception e) {
-            logger.error("Exception during createProductVersionEnvironment for hostId {} productVersionId {} systemEnv {} runtimeEnv {} aggregateVersion {}: {}", hostId, productVersionId, systemEnv, runtimeEnv, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            logger.error("Exception during UPSERT for hostId {} productVersionId {} systemEnv {} runtimeEnv {} aggregateVersion {}: {}", hostId, productVersionId, systemEnv, runtimeEnv, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw generic Exception
         }
     }
 
     @Override
     public void deleteProductVersionEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql =
+        // --- UPDATED SQL FOR SOFT DELETE + MONOTONICITY ---
+        // Updates the 'active' flag to FALSE and sets the new version IF the current DB version is older than the incoming event's version.
+        final String softDeleteSql =
                 """
-                DELETE FROM product_version_environment_t WHERE host_id = ?
-                AND product_version_id = ? AND system_env = ? AND runtime_env = ? AND aggregate_version = ?
-                """;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+                UPDATE product_version_environment_t SET active = false, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? AND product_version_id = ? AND system_env = ? AND runtime_env = ? AND aggregate_version < ?
+                """; // <<< CRITICAL: Changed from DELETE to UPDATE, and used aggregate_version < ?
+
+        Map<String, Object> map = SqlUtil.extractEventData(event);
         String hostId = (String)event.get(Constants.HOST);
         String productVersionId = (String)map.get("productVersionId");
         String systemEnv = (String)map.get("systemEnv");
         String runtimeEnv = (String)map.get("runtimeEnv");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(productVersionId));
-            statement.setString(3, systemEnv);
-            statement.setString(4, runtimeEnv);
-            statement.setLong(5, oldAggregateVersion);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        String updateTsStr = (String)event.get(CloudEventV1.TIME);
+        String updateUser = (String)event.get(Constants.USER);
+        OffsetDateTime updateTs = OffsetDateTime.parse(updateTsStr);
+
+        try (PreparedStatement statement = conn.prepareStatement(softDeleteSql)) {
+            int i = 1;
+
+            // 1. update_user
+            statement.setString(i++, updateUser);
+
+            // 2. update_ts
+            statement.setObject(i++, updateTs);
+
+            // 3. aggregate_version (NEW version in SET clause)
+            statement.setLong(i++, newAggregateVersion);
+
+            // 4. host_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(hostId));
+
+            // 5. product_version_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(productVersionId));
+
+            // 6. system_env (in WHERE clause)
+            statement.setString(i++, systemEnv);
+
+            // 7. runtime_env (in WHERE clause)
+            statement.setString(i++, runtimeEnv);
+
+            // 8. aggregate_version (MONOTONICITY check in WHERE clause)
+            statement.setLong(i, newAggregateVersion); // Condition: WHERE aggregate_version < newAggregateVersion
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed during deleteProductVersionEnvironment for hostId " + hostId + " productVersionId " + productVersionId + " systemEnv " + systemEnv + " runtimeEnv " + runtimeEnv);
+                // If 0 rows updated, it means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Environment soft-delete skipped for hostId {} productVersionId {} (new version {}). Record not found or a newer version already exists.", hostId, productVersionId, newAggregateVersion);
             }
+            // NO THROW on count == 0. The method is now idempotent.
         } catch (SQLException e) {
-            logger.error("SQLException during deleteProductVersionEnvironment for hostId {} productVersionId {} systemEnv {} runtimeEnv {} aggregateVersion {}: {}", hostId, productVersionId, systemEnv, runtimeEnv, oldAggregateVersion, e.getMessage(), e);
-            throw e;
+            logger.error("SQLException during softDeleteEnvironment for hostId {} productVersionId {} aggregateVersion {}: {}", hostId, productVersionId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw SQLException
         } catch (Exception e) {
-            logger.error("Exception during deleteProductVersionEnvironment for hostId {} productVersionId {} systemEnv {} runtimeEnv {} aggregateVersion {}: {}", hostId, productVersionId, systemEnv, runtimeEnv, oldAggregateVersion, e.getMessage(), e);
-            throw e;
+            logger.error("Exception during softDeleteEnvironment for hostId {} productVersionId {} aggregateVersion {}: {}", hostId, productVersionId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw generic Exception
         }
     }
+
 
     @Override
     public Result<String> getProductVersionEnvironment(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
@@ -3388,62 +3422,119 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
     @Override
     public void createProductVersionPipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "INSERT INTO product_version_pipeline_t(host_id, product_version_id, " +
-                "pipeline_id, update_user, update_ts, aggregate_version) " +
-                "VALUES (?, ?, ?, ?, ?, ?)";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        // --- UPDATED SQL FOR UPSERT ---
+        // Assuming the Unique Constraint is (host_id, product_version_id, pipeline_id)
+        final String upsertSql =
+                """
+                INSERT INTO product_version_pipeline_t(host_id, product_version_id,
+                pipeline_id, update_user, update_ts, aggregate_version, active)
+                VALUES (?, ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (host_id, product_version_id, pipeline_id) DO UPDATE
+                SET update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                WHERE product_version_pipeline_t.aggregate_version < EXCLUDED.aggregate_version
+                """; // <<< CRITICAL: ON CONFLICT on the composite key and monotonicity check
+
+        Map<String, Object> map = SqlUtil.extractEventData(event);
         String hostId = (String)event.get(Constants.HOST);
         String productVersionId = (String)map.get("productVersionId");
         String pipelineId = (String)map.get("pipelineId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+        String updateUser = (String)event.get(Constants.USER);
+        OffsetDateTime updateTs = OffsetDateTime.parse((String)event.get(CloudEventV1.TIME));
 
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(productVersionId));
-            statement.setObject(3, UUID.fromString(pipelineId));
-            statement.setString(4, (String)event.get(Constants.USER));
-            statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(6, newAggregateVersion);
+        try (PreparedStatement statement = conn.prepareStatement(upsertSql)) {
+            int i = 1;
+            // --- SET VALUES (1 to 6) ---
+            statement.setObject(i++, UUID.fromString(hostId)); // 1. host_id (Part of PK)
+            statement.setObject(i++, UUID.fromString(productVersionId)); // 2. product_version_id (Part of PK)
+            statement.setObject(i++, UUID.fromString(pipelineId)); // 3. pipeline_id (Part of PK)
+            statement.setString(i++, updateUser); // 4. update_user
+            statement.setObject(i++, updateTs); // 5. update_ts
+            statement.setLong(i++, newAggregateVersion); // 6. aggregate_version (New Version)
 
+            // --- Execute UPSERT ---
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("Failed during createProductVersionPipeline for hostId %s productVersionId %s pipelineId %s with aggregateVersion %d", hostId, productVersionId, pipelineId, newAggregateVersion));
+                // count=0 means the ON CONFLICT clause was hit, BUT the WHERE clause failed (version was newer or same).
+                logger.warn("Pipeline creation/reactivation skipped for hostId {} productVersionId {} pipelineId {}. A newer or same version already exists in the projection.", hostId, productVersionId, pipelineId);
+            } else {
+                logger.info("Product Version Pipeline successfully inserted or updated to aggregateVersion {}.", newAggregateVersion);
             }
+
         } catch (SQLException e) {
-            logger.error("SQLException during createProductVersionPipeline for hostId {} productVersionId {} pipelineId {} aggregateVersion {}: {}", hostId, productVersionId, pipelineId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            logger.error("SQLException during UPSERT for hostId {} productVersionId {} pipelineId {} aggregateVersion {}: {}", hostId, productVersionId, pipelineId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw SQLException
         } catch (Exception e) {
-            logger.error("Exception during createProductVersionPipeline for hostId {} productVersionId {} pipelineId {} aggregateVersion {}: {}", hostId, productVersionId, pipelineId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            logger.error("Exception during UPSERT for hostId {} productVersionId {} pipelineId {} aggregateVersion {}: {}", hostId, productVersionId, pipelineId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw generic Exception
         }
     }
 
     @Override
     public void deleteProductVersionPipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM product_version_pipeline_t WHERE host_id = ? " +
-                "AND product_version_id = ? AND pipeline_id = ?";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String productVersionId = (String)map.get("productVersionId"); // For logging/exceptions
-        String pipelineId = (String)map.get("pipelineId"); // For logging/exceptions
+        // --- UPDATED SQL FOR SOFT DELETE + MONOTONICITY ---
+        // Updates the 'active' flag to FALSE and sets the new version IF the current DB version is older than the incoming event's version.
+        final String softDeleteSql =
+                """
+                UPDATE product_version_pipeline_t SET active = false, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? AND product_version_id = ? AND pipeline_id = ? AND aggregate_version < ?
+                """; // <<< CRITICAL: Changed from DELETE to UPDATE, and used aggregate_version < ?
 
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(productVersionId));
-            statement.setObject(3, UUID.fromString(pipelineId));
+        Map<String, Object> map = SqlUtil.extractEventData(event); // Assuming extractEventData is the helper to get PortalConstants.DATA
+        String hostId = (String)event.get(Constants.HOST); // HostId from CloudEvent extension
+        String productVersionId = (String)map.get("productVersionId");
+        String pipelineId = (String)map.get("pipelineId");
+
+        // Old version is for logging context
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        // New version is the version of the incoming Delete event (the target version).
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        String updateUser = (String)event.get(Constants.USER);
+        OffsetDateTime updateTs = OffsetDateTime.parse((String)event.get(CloudEventV1.TIME));
+
+        try (PreparedStatement statement = conn.prepareStatement(softDeleteSql)) {
+            int i = 1;
+
+            // 1. update_user
+            statement.setString(i++, updateUser);
+
+            // 2. update_ts
+            statement.setObject(i++, updateTs);
+
+            // 3. aggregate_version (NEW version in SET clause)
+            statement.setLong(i++, newAggregateVersion);
+
+            // 4. host_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(hostId));
+
+            // 5. product_version_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(productVersionId));
+
+            // 6. pipeline_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(pipelineId));
+
+            // 7. aggregate_version (MONOTONICITY check in WHERE clause)
+            statement.setLong(i, newAggregateVersion); // Condition: WHERE aggregate_version < newAggregateVersion
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to delete the product version pipeline with productVersionId " + productVersionId + " and pipelineId " + pipelineId);
+                // If 0 rows updated, it means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Pipeline soft-delete skipped for hostId {} productVersionId {} pipelineId {}. Record not found or a newer version already exists.", hostId, productVersionId, pipelineId);
             }
-            notificationService.insertNotification(event, true, null);
+            // NO THROW on count == 0. The method is now idempotent.
+            notificationService.insertNotification(event, true, null); // Insert success notification
         } catch (SQLException e) {
-            logger.error("SQLException during deleteProductVersionPipeline for productVersionId {} pipelineId {}: {}", productVersionId, pipelineId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during softDeleteProductVersionPipeline for productVersionId {} pipelineId {} new version {}: {}", productVersionId, pipelineId, newAggregateVersion, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage()); // Insert failure notification
             throw e; // Re-throw SQLException
         } catch (Exception e) {
-            logger.error("Exception during deleteProductVersionPipeline for productVersionId {} pipelineId {}: {}", productVersionId, pipelineId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during softDeleteProductVersionPipeline for productVersionId {} pipelineId {} new version {}: {}", productVersionId, pipelineId, newAggregateVersion, e.getMessage(), e);
+            notificationService.insertNotification(event, false, e.getMessage()); // Insert failure notification
             throw e; // Re-throw generic Exception
         }
     }
@@ -3536,66 +3627,122 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
     @Override
     public void createProductVersionConfig(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql =
+        // --- UPDATED SQL FOR UPSERT ---
+        // Assuming the Unique Constraint is (host_id, product_version_id, config_id)
+        final String upsertSql =
                 """
                 INSERT INTO product_version_config_t(host_id, product_version_id,
-                config_id, update_user, update_ts, aggregate_version)
-                VALUES (?, ?, ?, ?, ?,  ?)
-                """;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+                config_id, update_user, update_ts, aggregate_version, active)
+                VALUES (?, ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (host_id, product_version_id, config_id) DO UPDATE
+                SET update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                WHERE product_version_config_t.aggregate_version < EXCLUDED.aggregate_version
+                """; // <<< CRITICAL: ON CONFLICT on the composite key and monotonicity check
+
+        Map<String, Object> map = SqlUtil.extractEventData(event);
         String hostId = (String)event.get(Constants.HOST);
         String productVersionId = (String)map.get("productVersionId");
         String configId = (String)map.get("configId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+        String updateUser = (String)event.get(Constants.USER);
+        OffsetDateTime updateTs = OffsetDateTime.parse((String)event.get(CloudEventV1.TIME));
 
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(productVersionId));
-            statement.setObject(3, UUID.fromString(configId));
-            statement.setString(4, (String)event.get(Constants.USER));
-            statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(6, newAggregateVersion);
 
+        try (PreparedStatement statement = conn.prepareStatement(upsertSql)) {
+            int i = 1;
+            // --- SET VALUES (1 to 6) ---
+            statement.setObject(i++, UUID.fromString(hostId)); // 1. host_id (Part of PK)
+            statement.setObject(i++, UUID.fromString(productVersionId)); // 2. product_version_id (Part of PK)
+            statement.setObject(i++, UUID.fromString(configId)); // 3. config_id (Part of PK)
+            statement.setString(i++, updateUser); // 4. update_user
+            statement.setObject(i++, updateTs); // 5. update_ts
+            statement.setLong(i++, newAggregateVersion); // 6. aggregate_version (New Version)
+
+            // --- Execute UPSERT ---
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("Failed during createProductVersionConfig for hostId %s productVersionId %s configId %s with aggregateVersion %d", hostId, productVersionId, configId, newAggregateVersion));
+                // count=0 means the ON CONFLICT clause was hit, BUT the WHERE clause failed (version was newer or same).
+                logger.warn("Config creation/reactivation skipped for hostId {} productVersionId {} configId {}. A newer or same version already exists in the projection.", hostId, productVersionId, configId);
+            } else {
+                logger.info("Product Version Config successfully inserted or updated to aggregateVersion {}.", newAggregateVersion);
             }
+
         } catch (SQLException e) {
-            logger.error("SQLException during createProductVersionConfig for hostId {} productVersionId {} configId {} aggregateVersion {}: {}", hostId, productVersionId, configId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            logger.error("SQLException during UPSERT for hostId {} productVersionId {} configId {} aggregateVersion {}: {}", hostId, productVersionId, configId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw SQLException
         } catch (Exception e) {
-            logger.error("Exception during createProductVersionConfig for hostId {} productVersionId {} configId {} aggregateVersion {}: {}", hostId, productVersionId, configId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            logger.error("Exception during UPSERT for hostId {} productVersionId {} configId {} aggregateVersion {}: {}", hostId, productVersionId, configId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw generic Exception
         }
     }
 
     @Override
     public void deleteProductVersionConfig(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM product_version_config_t WHERE host_id = ? " +
-                "AND product_version_id = ? AND config_id = ?";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
+        // --- UPDATED SQL FOR SOFT DELETE + MONOTONICITY ---
+        // Updates the 'active' flag to FALSE and sets the new version IF the current DB version is older than the incoming event's version.
+        final String softDeleteSql =
+                """
+                UPDATE product_version_config_t SET active = false, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? AND product_version_id = ? AND config_id = ? AND aggregate_version < ?
+                """; // <<< CRITICAL: Changed from DELETE to UPDATE, and used aggregate_version < ?
+
+        Map<String, Object> map = SqlUtil.extractEventData(event); // Assuming extractEventData is the helper to get PortalConstants.DATA
+        String hostId = (String)event.get(Constants.HOST); // HostId from CloudEvent extension
         String productVersionId = (String)map.get("productVersionId");
         String configId = (String)map.get("configId");
 
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(productVersionId));
-            statement.setObject(3, UUID.fromString(configId));
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        // New version is the version of the incoming Delete event (the target version).
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        String updateUser = (String)event.get(Constants.USER);
+        OffsetDateTime updateTs = OffsetDateTime.parse((String)event.get(CloudEventV1.TIME));
+
+        try (PreparedStatement statement = conn.prepareStatement(softDeleteSql)) {
+            int i = 1;
+
+            // 1. update_user
+            statement.setString(i++, updateUser);
+
+            // 2. update_ts
+            statement.setObject(i++, updateTs);
+
+            // 3. aggregate_version (NEW version in SET clause)
+            statement.setLong(i++, newAggregateVersion);
+
+            // 4. host_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(hostId));
+
+            // 5. product_version_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(productVersionId));
+
+            // 6. config_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(configId));
+
+            // 7. aggregate_version (MONOTONICITY check in WHERE clause)
+            statement.setLong(i, newAggregateVersion); // Condition: WHERE aggregate_version < newAggregateVersion
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to delete the product version config with productVersionId " + productVersionId + " and configId " + configId);
+                // If 0 rows updated, it means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Config soft-delete skipped for hostId {} productVersionId {} configId {}. Record not found or a newer version already exists.", hostId, productVersionId, configId);
             }
+            // NO THROW on count == 0. The method is now idempotent.
+            // Assuming notificationService is available in the current context
             notificationService.insertNotification(event, true, null);
+
         } catch (SQLException e) {
-            logger.error("SQLException during deleteProductVersionConfig for productVersionId {} configId {}: {}", productVersionId, configId, e.getMessage(), e);
+            logger.error("SQLException during softDeleteProductVersionConfig for hostId {} productVersionId {} configId {} new version {}: {}", hostId, productVersionId, configId, newAggregateVersion, e.getMessage(), e);
             notificationService.insertNotification(event, false, e.getMessage());
-            throw e;
+            throw e; // Re-throw SQLException
         } catch (Exception e) {
-            logger.error("Exception during deleteProductVersionConfig for productVersionId {} configId {}: {}", productVersionId, configId, e.getMessage(), e);
+            logger.error("Exception during softDeleteProductVersionConfig for hostId {} productVersionId {} configId {} new version {}: {}", hostId, productVersionId, configId, newAggregateVersion, e.getMessage(), e);
             notificationService.insertNotification(event, false, e.getMessage());
-            throw e;
+            throw e; // Re-throw generic Exception
         }
     }
 
@@ -3682,64 +3829,120 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
     @Override
     public void createProductVersionConfigProperty(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql =
+        // --- UPDATED SQL FOR UPSERT ---
+        // Assuming the Unique Constraint is (host_id, product_version_id, property_id)
+        final String upsertSql =
                 """
                 INSERT INTO product_version_config_property_t(host_id, product_version_id,
-                property_id, update_user, update_ts, aggregate_version)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+                property_id, update_user, update_ts, aggregate_version, active)
+                VALUES (?, ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (host_id, product_version_id, property_id) DO UPDATE
+                SET update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                WHERE product_version_config_property_t.aggregate_version < EXCLUDED.aggregate_version
+                """; // <<< CRITICAL: ON CONFLICT on the composite key and monotonicity check
+
+        Map<String, Object> map = SqlUtil.extractEventData(event);
         String hostId = (String)event.get(Constants.HOST);
         String productVersionId = (String)map.get("productVersionId");
         String propertyId = (String)map.get("propertyId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+        String updateUser = (String)event.get(Constants.USER);
+        OffsetDateTime updateTs = OffsetDateTime.parse((String)event.get(CloudEventV1.TIME));
 
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(productVersionId));
-            statement.setObject(3, UUID.fromString(propertyId));
-            statement.setString(4, (String)event.get(Constants.USER));
-            statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(6, newAggregateVersion);
 
+        try (PreparedStatement statement = conn.prepareStatement(upsertSql)) {
+            int i = 1;
+            // --- SET VALUES (1 to 6) ---
+            statement.setObject(i++, UUID.fromString(hostId)); // 1. host_id (Part of PK)
+            statement.setObject(i++, UUID.fromString(productVersionId)); // 2. product_version_id (Part of PK)
+            statement.setObject(i++, UUID.fromString(propertyId)); // 3. property_id (Part of PK)
+            statement.setString(i++, updateUser); // 4. update_user
+            statement.setObject(i++, updateTs); // 5. update_ts
+            statement.setLong(i++, newAggregateVersion); // 6. aggregate_version (New Version)
+
+            // --- Execute UPSERT ---
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("Failed during createProductVersionConfigProperty for hostId %s productVersionId %s propertyId %s with aggregateVersion %d", hostId, productVersionId, propertyId, newAggregateVersion));
+                // count=0 means the ON CONFLICT clause was hit, BUT the WHERE clause failed (version was newer or same).
+                logger.warn("Property creation/reactivation skipped for hostId {} productVersionId {} propertyId {}. A newer or same version already exists in the projection.", hostId, productVersionId, propertyId);
+            } else {
+                logger.info("Product Version Config Property successfully inserted or updated to aggregateVersion {}.", newAggregateVersion);
             }
+
         } catch (SQLException e) {
-            logger.error("SQLException during createProductVersionConfigProperty for hostId {} productVersionId {} propertyId {} aggregateVersion {}: {}", hostId, productVersionId, propertyId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            logger.error("SQLException during UPSERT for hostId {} productVersionId {} propertyId {} aggregateVersion {}: {}", hostId, productVersionId, propertyId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw SQLException
         } catch (Exception e) {
-            logger.error("Exception during createProductVersionConfigProperty for hostId {} productVersionId {} propertyId {} aggregateVersion {}: {}", hostId, productVersionId, propertyId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            logger.error("Exception during UPSERT for hostId {} productVersionId {} propertyId {} aggregateVersion {}: {}", hostId, productVersionId, propertyId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw generic Exception
         }
     }
 
     @Override
     public void deleteProductVersionConfigProperty(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM product_version_config_property_t WHERE host_id = ? " +
-                "AND product_version_id = ? AND property_id = ?";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String productVersionId = (String)map.get("productVersionId"); // For logging/exceptions
-        String propertyId = (String)map.get("propertyId"); // For logging/exceptions
+        // --- UPDATED SQL FOR SOFT DELETE + MONOTONICITY ---
+        // Updates the 'active' flag to FALSE and sets the new version IF the current DB version is older than the incoming event's version.
+        final String softDeleteSql =
+                """
+                UPDATE product_version_config_property_t SET active = false, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? AND product_version_id = ? AND property_id = ? AND aggregate_version < ?
+                """; // <<< CRITICAL: Changed from DELETE to UPDATE, and used aggregate_version < ?
 
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(productVersionId));
-            statement.setObject(3, UUID.fromString(propertyId));
+        Map<String, Object> map = SqlUtil.extractEventData(event); // Assuming extractEventData is the helper to get PortalConstants.DATA
+        String hostId = (String)event.get(Constants.HOST); // HostId from CloudEvent extension
+        String productVersionId = (String)map.get("productVersionId");
+        String propertyId = (String)map.get("propertyId");
+
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        // New version is the version of the incoming Delete event (the target version).
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        String updateUser = (String)event.get(Constants.USER);
+        OffsetDateTime updateTs = OffsetDateTime.parse((String)event.get(CloudEventV1.TIME));
+
+        try (PreparedStatement statement = conn.prepareStatement(softDeleteSql)) {
+            int i = 1;
+
+            // 1. update_user
+            statement.setString(i++, updateUser);
+
+            // 2. update_ts
+            statement.setObject(i++, updateTs);
+
+            // 3. aggregate_version (NEW version in SET clause)
+            statement.setLong(i++, newAggregateVersion);
+
+            // 4. host_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(hostId));
+
+            // 5. product_version_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(productVersionId));
+
+            // 6. property_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(propertyId));
+
+            // 7. aggregate_version (MONOTONICITY check in WHERE clause)
+            statement.setLong(i, newAggregateVersion); // Condition: WHERE aggregate_version < newAggregateVersion
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to delete the product version config property with productVersionId " + productVersionId + " and propertyId " + propertyId);
+                // If 0 rows updated, it means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Property soft-delete skipped for hostId {} productVersionId {} propertyId {}. Record not found or a newer version already exists.", hostId, productVersionId, propertyId);
             }
+            // NO THROW on count == 0. The method is now idempotent.
+            // Assuming notificationService is available in the current context
             notificationService.insertNotification(event, true, null);
+
         } catch (SQLException e) {
-            logger.error("SQLException during deleteProductVersionConfigProperty for productVersionId {} propertyId {}: {}", productVersionId, propertyId, e.getMessage(), e);
+            logger.error("SQLException during softDeleteProductVersionConfigProperty for hostId {} productVersionId {} propertyId {} new version {}: {}", hostId, productVersionId, propertyId, newAggregateVersion, e.getMessage(), e);
             notificationService.insertNotification(event, false, e.getMessage());
             throw e; // Re-throw SQLException
         } catch (Exception e) {
-            logger.error("Exception during deleteProductVersionConfigProperty for productVersionId {} propertyId {}: {}", productVersionId, propertyId, e.getMessage(), e);
+            logger.error("Exception during softDeleteProductVersionConfigProperty for hostId {} productVersionId {} propertyId {} new version {}: {}", hostId, productVersionId, propertyId, newAggregateVersion, e.getMessage(), e);
             notificationService.insertNotification(event, false, e.getMessage());
             throw e; // Re-throw generic Exception
         }
