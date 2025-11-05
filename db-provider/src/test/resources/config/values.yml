@@ -19,3 +19,6 @@ cache.caches:
 service.singletons:
   - com.networknt.db.provider.DbProvider:
     - net.lightapi.portal.db.PortalDbProviderImpl
+  - net.lightapi.portal.mutator.EventEnricher:
+    - net.lightapi.portal.mutator.ProductVersionConfigEnricher
+    - net.lightapi.portal.mutator.ProductVersionConfigPropertyEnricher

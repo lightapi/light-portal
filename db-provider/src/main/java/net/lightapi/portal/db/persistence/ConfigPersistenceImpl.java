@@ -361,6 +361,30 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     }
 
     @Override
+    public String queryConfigId(String configName) {
+        final String sql =
+                """
+                SELECT config_id
+                FROM config_t WHERE config_name = ?
+                """;
+        String configId = null;
+        try (Connection connection = ds.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, configName);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if(resultSet.next()){
+                    configId = resultSet.getString(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+        }
+        return configId;
+    }
+
+    @Override
     public Result<String> getConfigIdLabel() {
         final String sql = "SELECT config_id, config_name FROM config_t ORDER BY config_name";
         Result<String> result;
@@ -498,6 +522,34 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
         return result;
+    }
+
+    @Override
+    public String queryPropertyId(String configName, String propertyName) {
+        final String sql =
+            """
+            SELECT cp.property_id
+            FROM config_property_t cp
+            JOIN config_t c ON cp.config_id = c.config_id
+            WHERE c.config_name = ?
+            AND cp.property_name = ?
+            """;
+        String propertyId = null;
+        try (Connection connection = ds.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, configName);
+            statement.setString(2, propertyName);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if(resultSet.next()){
+                    propertyId = resultSet.getString(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+        }
+        return propertyId;
     }
 
     @Override

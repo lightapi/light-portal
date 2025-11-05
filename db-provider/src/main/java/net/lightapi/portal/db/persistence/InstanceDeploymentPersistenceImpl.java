@@ -3218,6 +3218,28 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
+    public String queryProductVersionId(String hostId, String productId, String light4jVersion) {
+        final String sql = "SELECT product_version_id FROM product_version_t WHERE host_id = ? AND product_id = ? AND light4j_version = ?";
+        String productVersionId = null;
+        try (Connection connection = ds.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setString(2, productId);
+            statement.setString(3, light4jVersion);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if(resultSet.next()){
+                    productVersionId = resultSet.getString(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+        }
+        return productVersionId;
+    }
+
+    @Override
     public void createProductVersionEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         // --- UPDATED SQL FOR UPSERT ---
         // Assuming the Unique Constraint is (host_id, product_version_id, system_env, runtime_env)
@@ -3627,44 +3649,25 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
     @Override
     public void createProductVersionConfig(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        // --- UPDATED SQL FOR UPSERT WITH SUBQUERIES (INSERT INTO ... SELECT) ---
-        // This query atomically finds the necessary UUIDs and then inserts/updates the junction table.
+        // --- UPDATED SQL FOR UPSERT ---
+        // Assuming the Unique Constraint is (host_id, product_version_id, config_id)
         final String upsertSql =
                 """
-                INSERT INTO product_version_config_t (
-                    host_id, product_version_id, config_id, update_user, update_ts, aggregate_version, active
-                )
-                SELECT
-                    ? AS host_id_param,               -- 1. host_id
-                    pv.product_version_id,            -- 2. product_version_id (Lookup)
-                    cf.config_id,                     -- 3. config_id (Lookup)
-                    ? AS update_user_param,           -- 4. update_user
-                    ? AS update_ts_param,             -- 5. update_ts
-                    ? AS aggregate_version_param,     -- 6. aggregate_version
-                    TRUE AS active_param
-                FROM
-                    config_t cf
-                JOIN
-                    product_version_t pv ON pv.host_id = ?  -- 7. host_id for PV lookup
-                WHERE
-                    cf.config_name = ?                     -- 8. config_name for CF lookup
-                    AND pv.product_id = ?                  -- 9. product_id for PV lookup
-                    AND pv.light4j_version = ?             -- 10. light4j_version for PV lookup
-
+                INSERT INTO product_version_config_t(host_id, product_version_id,
+                config_id, update_user, update_ts, aggregate_version, active)
+                VALUES (?, ?, ?, ?, ?, ?, TRUE)
                 ON CONFLICT (host_id, product_version_id, config_id) DO UPDATE
                 SET update_user = EXCLUDED.update_user,
                     update_ts = EXCLUDED.update_ts,
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 WHERE product_version_config_t.aggregate_version < EXCLUDED.aggregate_version
-                """;
+                """; // <<< CRITICAL: ON CONFLICT on the composite key and monotonicity check
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
-        String hostId = (String)map.get("hostId");
-        String configName = (String)map.get("configName");
-        String productId = (String)map.get("productId");
-        String light4jVersion = (String)map.get("light4jVersion");
-
+        String hostId = (String)event.get(Constants.HOST);
+        String productVersionId = (String)map.get("productVersionId");
+        String configId = (String)map.get("configId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
         String updateUser = (String)event.get(Constants.USER);
         OffsetDateTime updateTs = OffsetDateTime.parse((String)event.get(CloudEventV1.TIME));
@@ -3672,52 +3675,29 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
         try (PreparedStatement statement = conn.prepareStatement(upsertSql)) {
             int i = 1;
-            // --- SET VALUES (1 to 10) ---
-
-            // 1. host_id_param (For host_id in the VALUES list)
-            statement.setObject(i++, UUID.fromString(hostId));
-
-            // 2. update_user_param
-            statement.setString(i++, updateUser);
-
-            // 3. update_ts_param
-            statement.setObject(i++, updateTs);
-
-            // 4. aggregate_version_param
-            statement.setLong(i++, newAggregateVersion);
-
-            // --- LOOKUP PREDICATES (WHERE clauses for the SELECT) ---
-
-            // 5. host_id for PV lookup (pv.host_id = ?)
-            statement.setObject(i++, UUID.fromString(hostId));
-
-            // 6. config_name for CF lookup (cf.config_name = ?)
-            statement.setString(i++, configName);
-
-            // 7. product_id for PV lookup (pv.product_id = ?)
-            statement.setString(i++, productId);
-
-            // 8. light4j_version for PV lookup (pv.light4j_version = ?)
-            statement.setString(i++, light4jVersion);
+            // --- SET VALUES (1 to 6) ---
+            statement.setObject(i++, UUID.fromString(hostId)); // 1. host_id (Part of PK)
+            statement.setObject(i++, UUID.fromString(productVersionId)); // 2. product_version_id (Part of PK)
+            statement.setObject(i++, UUID.fromString(configId)); // 3. config_id (Part of PK)
+            statement.setString(i++, updateUser); // 4. update_user
+            statement.setObject(i++, updateTs); // 5. update_ts
+            statement.setLong(i++, newAggregateVersion); // 6. aggregate_version (New Version)
 
             // --- Execute UPSERT ---
             int count = statement.executeUpdate();
             if (count == 0) {
-                // If count=0, it means either:
-                // 1. The join failed (e.g., configName or productId/light4jVersion does not exist in their respective tables).
-                // 2. The ON CONFLICT WHERE clause failed (version was newer or same).
-                logger.warn("Config creation/reactivation skipped for productId {}/{} configName {}. Check FK existence or version monotonicity.", productId, light4jVersion, configName);
+                // count=0 means the ON CONFLICT clause was hit, BUT the WHERE clause failed (version was newer or same).
+                logger.warn("Config creation/reactivation skipped for hostId {} productVersionId {} configId {}. A newer or same version already exists in the projection.", hostId, productVersionId, configId);
             } else {
-                logger.info("Product Version Config successfully inserted or updated (Count: {}).", count);
+                logger.info("Product Version Config successfully inserted or updated to aggregateVersion {}.", newAggregateVersion);
             }
 
         } catch (SQLException e) {
-            // Log the parameters that caused the failure for easy debugging
-            logger.error("SQLException during UPSERT (hostId: {}, product: {}/{}, configName: {}) version {}: {}", hostId, productId, light4jVersion, configName, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            logger.error("SQLException during UPSERT for hostId {} productVersionId {} configId {} aggregateVersion {}: {}", hostId, productVersionId, configId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw SQLException
         } catch (Exception e) {
-            logger.error("Exception during UPSERT (hostId: {}, product: {}/{}, configName: {}) version {}: {}", hostId, productId, light4jVersion, configName, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            logger.error("Exception during UPSERT for hostId {} productVersionId {} configId {} aggregateVersion {}: {}", hostId, productVersionId, configId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw generic Exception
         }
     }
 
@@ -3871,50 +3851,25 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
     @Override
     public void createProductVersionConfigProperty(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        // --- UPDATED SQL FOR UPSERT WITH SUBQUERIES (INSERT INTO ... SELECT) ---
-        // This query atomically finds the necessary UUIDs and then inserts/updates the junction table.
+        // --- UPDATED SQL FOR UPSERT ---
+        // Assuming the Unique Constraint is (host_id, product_version_id, property_id)
         final String upsertSql =
                 """
-                INSERT INTO product_version_config_property_t (
-                    host_id, product_version_id, property_id, update_user, update_ts, aggregate_version, active
-                )
-                SELECT
-                    ? AS host_id_param,               -- 1. host_id (for the junction table)
-                    pv.product_version_id,            -- 2. product_version_id (Lookup from product_version_t)
-                    cp.property_id,                   -- 3. property_id (Lookup from config_property_t)
-                    ? AS update_user_param,           -- 4. update_user
-                    ? AS update_ts_param,             -- 5. update_ts
-                    ? AS aggregate_version_param,     -- 6. aggregate_version
-                    TRUE AS active_param
-                FROM
-                    config_t cf
-                JOIN
-                    config_property_t cp ON cp.config_id = cf.config_id
-                JOIN
-                    product_version_t pv ON pv.host_id = ? -- 7. host_id for PV lookup
-                WHERE
-                    cf.config_name = ?                     -- 8. config_name for CF lookup
-                    AND cp.property_name = ?               -- 9. property_name for CP lookup
-                    AND pv.product_id = ?                  -- 10. product_id for PV lookup
-                    AND pv.light4j_version = ?             -- 11. light4j_version for PV lookup
-
+                INSERT INTO product_version_config_property_t(host_id, product_version_id,
+                property_id, update_user, update_ts, aggregate_version, active)
+                VALUES (?, ?, ?, ?, ?, ?, TRUE)
                 ON CONFLICT (host_id, product_version_id, property_id) DO UPDATE
                 SET update_user = EXCLUDED.update_user,
                     update_ts = EXCLUDED.update_ts,
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 WHERE product_version_config_property_t.aggregate_version < EXCLUDED.aggregate_version
-                """;
+                """; // <<< CRITICAL: ON CONFLICT on the composite key and monotonicity check
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
         String hostId = (String)event.get(Constants.HOST);
-
-        // Inferred lookup keys from event data
-        String configName = (String)map.get("configName");
-        String propertyName = (String)map.get("propertyName");
-        String productId = (String)map.get("productId");
-        String light4jVersion = (String)map.get("light4jVersion");
-
+        String productVersionId = (String)map.get("productVersionId");
+        String propertyId = (String)map.get("propertyId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
         String updateUser = (String)event.get(Constants.USER);
         OffsetDateTime updateTs = OffsetDateTime.parse((String)event.get(CloudEventV1.TIME));
@@ -3922,52 +3877,29 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
         try (PreparedStatement statement = conn.prepareStatement(upsertSql)) {
             int i = 1;
-            // --- SET VALUES (1 to 11) ---
-
-            // 1. host_id_param (For host_id in the VALUES list)
-            statement.setObject(i++, UUID.fromString(hostId));
-
-            // 2. update_user_param
-            statement.setString(i++, updateUser);
-
-            // 3. update_ts_param
-            statement.setObject(i++, updateTs);
-
-            // 4. aggregate_version_param
-            statement.setLong(i++, newAggregateVersion);
-
-            // --- LOOKUP PREDICATES (WHERE clauses for the SELECT) ---
-
-            // 5. host_id for PV lookup (pv.host_id = ?)
-            statement.setObject(i++, UUID.fromString(hostId));
-
-            // 6. config_name for CF lookup (cf.config_name = ?)
-            statement.setString(i++, configName);
-
-            // 7. property_name for CP lookup (cp.property_name = ?)
-            statement.setString(i++, propertyName);
-
-            // 8. product_id for PV lookup (pv.product_id = ?)
-            statement.setString(i++, productId);
-
-            // 9. light4j_version for PV lookup (pv.light4j_version = ?)
-            statement.setString(i++, light4jVersion);
+            // --- SET VALUES (1 to 6) ---
+            statement.setObject(i++, UUID.fromString(hostId)); // 1. host_id (Part of PK)
+            statement.setObject(i++, UUID.fromString(productVersionId)); // 2. product_version_id (Part of PK)
+            statement.setObject(i++, UUID.fromString(propertyId)); // 3. property_id (Part of PK)
+            statement.setString(i++, updateUser); // 4. update_user
+            statement.setObject(i++, updateTs); // 5. update_ts
+            statement.setLong(i++, newAggregateVersion); // 6. aggregate_version (New Version)
 
             // --- Execute UPSERT ---
             int count = statement.executeUpdate();
             if (count == 0) {
-                // If count=0, it means either the join failed (FKs did not exist) OR the monotonicity check failed.
-                logger.warn("Property mapping creation/reactivation skipped for productId {}/{}/configName {}/propertyName {}. Check FK existence or version monotonicity.", productId, light4jVersion, configName, propertyName);
+                // count=0 means the ON CONFLICT clause was hit, BUT the WHERE clause failed (version was newer or same).
+                logger.warn("Property creation/reactivation skipped for hostId {} productVersionId {} propertyId {}. A newer or same version already exists in the projection.", hostId, productVersionId, propertyId);
             } else {
-                logger.info("Product Version Config Property mapping successfully inserted or updated (Count: {}).", count);
+                logger.info("Product Version Config Property successfully inserted or updated to aggregateVersion {}.", newAggregateVersion);
             }
 
         } catch (SQLException e) {
-            logger.error("SQLException during UPSERT (hostId: {}, product: {}/{}, configName: {}) version {}: {}", hostId, productId, light4jVersion, configName, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            logger.error("SQLException during UPSERT for hostId {} productVersionId {} propertyId {} aggregateVersion {}: {}", hostId, productVersionId, propertyId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw SQLException
         } catch (Exception e) {
-            logger.error("Exception during UPSERT (hostId: {}, product: {}/{}, configName: {}) version {}: {}", hostId, productId, light4jVersion, configName, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            logger.error("Exception during UPSERT for hostId {} productVersionId {} propertyId {} aggregateVersion {}: {}", hostId, productVersionId, propertyId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw generic Exception
         }
     }
 

@@ -212,6 +212,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> getConfig(int offset, int limit, String filters, String globalFilter, String sorting);
     Result<String> queryConfigById(String configId);
     Result<String> getConfigIdLabel();
+    String queryConfigId(String configName);
     Result<String> getPropertyIdLabel(String configId);
     Result<String> getConfigIdApiAppLabel(String resourceType);
     Result<String> getPropertyIdApiAppLabel(String configId, String resourceType);
@@ -222,9 +223,9 @@ public interface PortalDbProvider extends DbProvider {
     void deleteConfigProperty(Connection conn, Map<String, Object> event) throws SQLException, Exception;
 
     Result<String> getConfigProperty(int offset, int limit, String filters, String globalFilter, String sorting);
-
     Result<String> queryConfigPropertyById(String configId);
     Result<String> queryConfigPropertyByPropertyId(String configId, String propertyId);
+    String queryPropertyId(String configName, String propertyName);
 
     // EnvironmentProperty
     void createConfigEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -459,6 +460,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> getProductVersionLabel(String hostId, String productId);
     Result<String> getProductVersionIdLabel(String hostId);
     String getProductVersionId(String hostId, String productId, String productVersion);
+    String queryProductVersionId(String hostId, String productId, String light4jVersion);
 
     // ProductVersionEnvironment
     void createProductVersionEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception;

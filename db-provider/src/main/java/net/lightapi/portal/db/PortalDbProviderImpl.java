@@ -5,8 +5,6 @@ import io.cloudevents.CloudEvent;
 import net.lightapi.portal.db.persistence.*;
 import net.lightapi.portal.db.util.NotificationService;
 import net.lightapi.portal.db.util.NotificationServiceImpl;
-import net.lightapi.portal.validation.FilterCriterion;
-import net.lightapi.portal.validation.SortCriterion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -210,12 +208,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public Result<String> getConfig(int offset, int limit, String filters, String globalFilter, String sorting) { return configPersistence.getConfig(offset, limit, filters, globalFilter, sorting); }
     @Override public Result<String> queryConfigById(String configId) { return configPersistence.queryConfigById(configId); }
     @Override public Result<String> getConfigIdLabel() { return configPersistence.getConfigIdLabel(); }
+    @Override public String queryConfigId(String configName) { return configPersistence.queryConfigId(configName); }
     @Override public Result<String> getConfigIdApiAppLabel(String resourceType) { return configPersistence.getConfigIdApiAppLabel(resourceType); }
     @Override public void createConfigProperty(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.createConfigProperty(connection, event); }
     @Override public void updateConfigProperty(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.updateConfigProperty(connection, event); }
     @Override public void deleteConfigProperty(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.deleteConfigProperty(connection, event); }
     @Override public Result<String> getConfigProperty(int offset, int limit, String filters, String globalFilter, String sorting) { return configPersistence.getConfigProperty(offset, limit, filters, globalFilter, sorting); }
     @Override public Result<String> queryConfigPropertyById(String configId) { return configPersistence.queryConfigPropertyById(configId); }
+    @Override public String queryPropertyId(String configName, String propertyName) { return configPersistence.queryPropertyId(configName, propertyName); }
     @Override public Result<String> queryConfigPropertyByPropertyId(String configId, String propertyId) { return configPersistence.queryConfigPropertyByPropertyId(configId, propertyId); }
     @Override public Result<String> getPropertyIdLabel(String configId) { return configPersistence.getPropertyIdLabel(configId); }
     @Override public Result<String> getPropertyIdApiAppLabel(String configId, String resourceType) { return configPersistence.getPropertyIdApiAppLabel(configId, resourceType); }
@@ -295,6 +295,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public Result<String> getProductVersionLabel(String hostId, String productId) { return instanceDeploymentPersistence.getProductVersionLabel(hostId, productId); }
     @Override public Result<String> getProductVersionIdLabel(String hostId) { return instanceDeploymentPersistence.getProductVersionIdLabel(hostId); }
     @Override public String getProductVersionId(String hostId, String productId, String productVersion) { return instanceDeploymentPersistence.getProductVersionId(hostId, productId, productVersion); }
+    @Override public String queryProductVersionId(String hostId, String productId, String light4jVersion) { return instanceDeploymentPersistence.queryProductVersionId(hostId, productId, light4jVersion); };
     @Override public void createProductVersionEnvironment(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.createProductVersionEnvironment(connection, event); }
     @Override public void deleteProductVersionEnvironment(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.deleteProductVersionEnvironment(connection, event); }
     @Override public Result<String> getProductVersionEnvironment(int offset, int limit, String filters, String globalFitler, String sorting, String hostId) { return instanceDeploymentPersistence.getProductVersionEnvironment(offset, limit, filters, globalFitler, sorting, hostId); }

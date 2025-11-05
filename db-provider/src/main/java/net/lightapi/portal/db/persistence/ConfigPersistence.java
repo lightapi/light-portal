@@ -13,6 +13,7 @@ public interface ConfigPersistence {
     void deleteConfig(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getConfig(int offset, int limit, String filters, String globalFilter, String sorting);
     Result<String> queryConfigById(String configId);
+    String queryConfigId(String configName);
     Result<String> getConfigIdLabel();
     Result<String> getConfigIdApiAppLabel(String resourceType);
 
@@ -25,6 +26,7 @@ public interface ConfigPersistence {
     Result<String> queryConfigPropertyByPropertyId(String configId, String propertyId); // Gets a specific property
     Result<String> getPropertyIdLabel(String configId);
     Result<String> getPropertyIdApiAppLabel(String configId, String resourceType);
+    String queryPropertyId(String configName, String propertyName);
 
     // EnvironmentProperty
     void createConfigEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception;

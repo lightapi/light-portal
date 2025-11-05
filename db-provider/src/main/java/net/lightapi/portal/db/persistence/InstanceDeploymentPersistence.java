@@ -57,6 +57,7 @@ public interface InstanceDeploymentPersistence {
     Result<String> getProductVersionLabel(String hostId, String productId);
     Result<String> getProductVersionIdLabel(String hostId);
     String getProductVersionId(String hostId, String productId, String productVersion);
+    String queryProductVersionId(String hostId, String productId, String light4jVersion);
 
     // ProductVersionEnvironment
     void createProductVersionEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception;
