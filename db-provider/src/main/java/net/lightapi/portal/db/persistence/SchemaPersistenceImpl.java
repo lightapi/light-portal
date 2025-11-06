@@ -81,7 +81,7 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
                 statement.setNull(8, Types.VARCHAR);
             }
             statement.setString(9, (String)map.get("schemaBody")); // Required
-            statement.setString(10, (String)map.get("schemaOwner")); // Required
+            statement.setObject(10, UUID.fromString((String)map.get("schemaOwner"))); // Required
             statement.setString(11, (String)map.get("schemaStatus")); // Required
 
             String example = (String)map.get("example");
@@ -181,7 +181,7 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
                 statement.setNull(6, Types.VARCHAR);
             }
             statement.setString(7, (String)map.get("schemaBody"));
-            statement.setString(8, (String)map.get("schemaOwner"));
+            statement.setObject(8, UUID.fromString((String)map.get("schemaOwner")));
             statement.setString(9, (String)map.get("schemaStatus"));
             String example = (String)map.get("example");
             if (example != null && !example.isBlank()) {
@@ -331,7 +331,7 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
                     map.put("schemaDesc", resultSet.getString("schema_desc"));
                     // schemaBody is usually not returned in get list query for performance reasons
                     // map.put("schemaBody", resultSet.getString("schema_body"));
-                    map.put("schemaOwner", resultSet.getString("schema_owner"));
+                    map.put("schemaOwner", resultSet.getObject("schema_owner", UUID.class));
                     map.put("schemaStatus", resultSet.getString("schema_status"));
                     map.put("example", resultSet.getString("example"));
                     map.put("commentStatus", resultSet.getString("comment_status"));
@@ -425,7 +425,7 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
                         map.put("schemaName", resultSet.getString("schema_name"));
                         map.put("schemaDesc", resultSet.getString("schema_desc"));
                         map.put("schemaBody", resultSet.getString("schema_body"));
-                        map.put("schemaOwner", resultSet.getString("schema_owner"));
+                        map.put("schemaOwner", resultSet.getObject("schema_owner", UUID.class));
                         map.put("schemaStatus", resultSet.getString("schema_status"));
                         map.put("example", resultSet.getString("example"));
                         map.put("commentStatus", resultSet.getString("comment_status"));
@@ -484,7 +484,7 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
                     map.put("schemaName", resultSet.getString("schema_name"));
                     map.put("schemaDesc", resultSet.getString("schema_desc"));
                     map.put("schemaBody", resultSet.getString("schema_body"));
-                    map.put("schemaOwner", resultSet.getString("schema_owner"));
+                    map.put("schemaOwner", resultSet.getObject("schema_owner", UUID.class));
                     map.put("schemaStatus", resultSet.getString("schema_status"));
                     map.put("example", resultSet.getString("example"));
                     map.put("commentStatus", resultSet.getString("comment_status"));
@@ -542,7 +542,7 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
                     map.put("schemaName", resultSet.getString("schema_name"));
                     map.put("schemaDesc", resultSet.getString("schema_desc"));
                     map.put("schemaBody", resultSet.getString("schema_body"));
-                    map.put("schemaOwner", resultSet.getString("schema_owner"));
+                    map.put("schemaOwner", resultSet.getObject("schema_owner", UUID.class));
                     map.put("schemaStatus", resultSet.getString("schema_status"));
                     map.put("example", resultSet.getString("example"));
                     map.put("commentStatus", resultSet.getString("comment_status"));
