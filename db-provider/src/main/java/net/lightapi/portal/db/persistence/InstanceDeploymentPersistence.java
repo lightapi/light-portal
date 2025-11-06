@@ -86,12 +86,6 @@ public interface InstanceDeploymentPersistence {
     Result<String> getPipeline(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> getPipelineLabel(String hostId);
 
-    // InstancePipeline
-    void createInstancePipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void updateInstancePipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void deleteInstancePipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> getInstancePipeline(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
-
     // Platform
     void createPlatform(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updatePlatform(Connection conn, Map<String, Object> event) throws SQLException, Exception;
