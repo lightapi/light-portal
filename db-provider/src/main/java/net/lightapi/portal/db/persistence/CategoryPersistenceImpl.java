@@ -24,6 +24,7 @@ import java.time.OffsetDateTime;
 import java.util.*;
 
 import static com.networknt.db.provider.SqlDbStartupHook.ds;
+import static net.lightapi.portal.db.util.SqlUtil.*;
 
 public class CategoryPersistenceImpl implements CategoryPersistence {
     private static final Logger logger = LoggerFactory.getLogger(CategoryPersistenceImpl.class);
@@ -189,66 +190,62 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
     }
 
     @Override
-    public Result<String> getCategory(int offset, int limit, String hostId, String categoryId, String entityType,
-                                      String categoryName, String categoryDesc, String parentCategoryId,
-                                      String parentCategoryName, Integer sortOrder) {
+    public Result<String> getCategory(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "cat.host_id",
+                "categoryId", "cat.category_id",
+                "entityType", "cat.entity_type",
+                "categoryName", "cat.category_name",
+                "categoryDesc", "cat.category_desc",
+                "parentCategoryId", "cat.parent_category_id",
+                "sortOrder", "cat.sort_order",
+                "updateUser", "cat.update_user",
+                "updateTs", "cat.update_ts",
+                "active", "cat.active"
+        ));
+        columnMap.put("aggregateVersion", "cat.aggregate_version");
+        columnMap.put("parentCategoryName", "parent_category_name");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
-                """
-                SELECT COUNT(*) OVER () AS total,
-                cat.category_id, cat.host_id, cat.entity_type, cat.category_name, cat.category_desc, cat.parent_category_id,
-                cat.sort_order, cat.update_user, cat.update_ts, cat.aggregate_version,
-                parent_cat.category_name AS parent_category_name
-                FROM category_t cat
-                LEFT JOIN category_t parent_cat ON cat.parent_category_id = parent_cat.category_id
-                WHERE
-                """;
+            """
+            SELECT COUNT(*) OVER () AS total,
+            cat.category_id, cat.host_id, cat.entity_type,
+            cat.category_name, cat.category_desc, cat.parent_category_id,
+            cat.sort_order, cat.update_user, cat.update_ts, cat.active,
+            cat.aggregate_version, parent_cat.category_name AS parent_category_name,
+            FROM category_t cat
+            LEFT JOIN category_t parent_cat ON cat.parent_category_id = parent_cat.category_id
+            WHERE
+            """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
-        // Use a separate list to build condition strings to manage AND correctly
-        List<String> conditions = new ArrayList<>();
-
         // --- Handle host_id condition first ---
         if (hostId != null && !hostId.isEmpty()) {
-            conditions.add("(cat.host_id = ? OR cat.host_id IS NULL)");
+            s = s + "cat.host_id = ? OR cat.host_id IS NULL";
             parameters.add(UUID.fromString(hostId));
         } else {
-            conditions.add("cat.host_id IS NULL");
-            // No parameter for IS NULL
+            s = s + "cat.host_id IS NULL";
         }
 
-        // --- Add other conditions using the helper ---
-        addConditionToList(conditions, parameters, "cat.category_id", categoryId != null ? UUID.fromString(categoryId) : null);
-        addConditionToList(conditions, parameters, "cat.entity_type", entityType);
-        addConditionToList(conditions, parameters, "cat.category_name", categoryName);
-        addConditionToList(conditions, parameters, "cat.category_desc", categoryDesc); // Consider LIKE here if needed
-        addConditionToList(conditions, parameters, "cat.parent_category_id", parentCategoryId != null ? UUID.fromString(parentCategoryId) : null);
-        // parentCategoryName is derived, not filtered here
-        addConditionToList(conditions, parameters, "cat.sort_order", sortOrder);
-
-        // --- Join conditions with AND ---
-        sqlBuilder.append(String.join(" AND ", conditions));
-
-        // --- Add ORDER BY, LIMIT, OFFSET ---
-        sqlBuilder.append(" ORDER BY cat.category_name\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"cat.category_name", "cat.category_desc", "e.endpoint_desc"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("cat.host_id", "cat.category_id", "cat.parent_category_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("cat.category_name", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
-        // if(logger.isTraceEnabled()) logger.trace("sql = {}", sql);
         int total = 0;
         List<Map<String, Object>> categories = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -268,6 +265,7 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     categories.add(map);
                 }
             }

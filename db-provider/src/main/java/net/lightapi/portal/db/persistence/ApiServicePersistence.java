@@ -12,7 +12,7 @@ public interface ApiServicePersistence {
     void createService(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateService(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteService(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> queryService(int offset, int limit, String hostId, String apiId, String apiName, String apiDesc, String operationOwner, String deliveryOwner, String region, String businessGroup, String lob, String platform, String capability, String gitRepo, String apiTags, String apiStatus);
+    Result<String> queryService(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> queryApiLabel(String hostId);
 
     // Service Version
@@ -25,7 +25,7 @@ public interface ApiServicePersistence {
     void updateServiceSpec(Connection conn, Map<String, Object> event) throws SQLException, Exception;
 
     // Service Endpoint
-    Result<String> queryServiceEndpoint(int offset, int limit, String hostId, String apiVersionId, String apiId, String apiVersion, String endpoint, String method, String path, String desc);
+    Result<String> queryServiceEndpoint(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> queryEndpointLabel(String hostId, String apiVersionId);
     Result<String> queryEndpointScope(String hostId, String endpointId);
 

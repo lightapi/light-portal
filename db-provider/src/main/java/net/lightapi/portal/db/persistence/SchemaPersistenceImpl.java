@@ -24,7 +24,7 @@ import java.time.OffsetDateTime;
 import java.util.*;
 
 import static com.networknt.db.provider.SqlDbStartupHook.ds;
-import static net.lightapi.portal.db.util.SqlUtil.addCondition;
+import static net.lightapi.portal.db.util.SqlUtil.*;
 
 
 public class SchemaPersistenceImpl implements SchemaPersistence {
@@ -281,60 +281,38 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
     }
 
     @Override
-    public Result<String> getSchema(int offset, int limit, String hostId, String schemaId, String schemaVersion, String schemaType,
-                                    String specVersion, String schemaSource, String schemaName, String schemaDesc, String schemaBody,
-                                    String schemaOwner, String schemaStatus, String example, String commentStatus) {
+    public Result<String> getSchema(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result;
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
                 schema_id, host_id, schema_version, schema_type, spec_version, schema_source, schema_name, schema_desc, schema_body,
-                schema_owner, schema_status, example, comment_status, update_user, update_ts, aggregate_version
+                schema_owner, schema_status, example, comment_status, update_user, update_ts, aggregate_version, active
                 FROM schema_t
-                WHERE 1=1
+                WHERE host_id = ?
                 """;
-        StringBuilder sqlBuilder = new StringBuilder(s);
 
         List<Object> parameters = new ArrayList<>();
-        StringBuilder whereClause = new StringBuilder();
+        parameters.add(UUID.fromString(hostId));
 
-        addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "schema_id", schemaId);
-        addCondition(whereClause, parameters, "schema_version", schemaVersion);
-        addCondition(whereClause, parameters, "schema_type", schemaType);
-        addCondition(whereClause, parameters, "spec_version", specVersion);
-        addCondition(whereClause, parameters, "schema_source", schemaSource);
-        addCondition(whereClause, parameters, "schema_name", schemaName);
-        addCondition(whereClause, parameters, "schema_desc", schemaDesc);
-        // schemaBody is usually not used in get list query for performance reasons
-        addCondition(whereClause, parameters, "schema_owner", schemaOwner);
-        addCondition(whereClause, parameters, "schema_status", schemaStatus);
-        // categoryId is not a column in schema_t table, so it is ignored in WHERE clause
-        addCondition(whereClause, parameters, "example", example);
-        addCondition(whereClause, parameters, "comment_status", commentStatus);
-
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY schema_name\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"schema_name", "schema_desc", "schema_body", "example"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("host_id", "product_version_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("schema_name", sorting, null) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> schemas = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -360,7 +338,7 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
-
+                    map.put("active", resultSet.getBoolean("active"));
                     schemas.add(map);
                 }
             }

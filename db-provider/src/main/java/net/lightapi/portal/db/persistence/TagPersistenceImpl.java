@@ -24,7 +24,7 @@ import java.time.OffsetDateTime;
 import java.util.*;
 
 import static com.networknt.db.provider.SqlDbStartupHook.ds;
-import static net.lightapi.portal.db.util.SqlUtil.addCondition;
+import static net.lightapi.portal.db.util.SqlUtil.*;
 
 public class TagPersistenceImpl implements TagPersistence {
     private static final Logger logger = LoggerFactory.getLogger(TagPersistenceImpl.class);
@@ -172,58 +172,46 @@ public class TagPersistenceImpl implements TagPersistence {
     }
 
     @Override
-    public Result<String> getTag(int offset, int limit, String hostId, String tagId, String entityType, String tagName, String tagDesc) {
+    public Result<String> getTag(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
-                """
-                        SELECT COUNT(*) OVER () AS total,
-                        tag_id, host_id, entity_type, tag_name, tag_desc, update_user, update_ts, aggregate_version
-                        FROM tag_t
-                """;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append(s);
+            """
+                SELECT COUNT(*) OVER () AS total,
+                tag_id, host_id, entity_type, tag_name, tag_desc,
+                update_user, update_ts, aggregate_version, active
+                FROM tag_t
+            """;
 
         List<Object> parameters = new ArrayList<>();
-        StringBuilder whereClause = new StringBuilder();
 
         if (hostId != null && !hostId.isEmpty()) {
             // Manually construct the OR group for host_id
-            whereClause.append("WHERE (host_id = ? OR host_id IS NULL)");
+            s = s + "WHERE (host_id = ? OR host_id IS NULL)";
             parameters.add(UUID.fromString(hostId));
         } else {
             // Only add 'host_id IS NULL' if hostId parameter is NOT provided
             // This means we ONLY want global tables in this case.
             // If hostId WAS provided, the '(cond OR NULL)' handles both cases.
-            whereClause.append("WHERE host_id IS NULL");
+            s = s + "WHERE host_id IS NULL";
         }
 
-        addCondition(whereClause, parameters, "tag_id", tagId != null ? UUID.fromString(tagId) : null);
-        addCondition(whereClause, parameters, "entity_type", entityType);
-        addCondition(whereClause, parameters, "tag_name", tagName);
-        addCondition(whereClause, parameters, "tag_desc", tagDesc);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY tag_name\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"tag_name", "tag_desc"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("host_id", "tag_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("tag_name", sorting, null) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
-
-        String sql = sqlBuilder.toString();
-        if(logger.isTraceEnabled()) logger.trace("sql: {}", sql);
         int total = 0;
         List<Map<String, Object>> tags = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -240,7 +228,7 @@ public class TagPersistenceImpl implements TagPersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
-
+                    map.put("active", resultSet.getBoolean("active"));
                     tags.add(map);
                 }
             }

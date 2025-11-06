@@ -1546,71 +1546,67 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> getInstance(int offset, int limit, String hostId, String instanceId, String instanceName,
-                                      String productVersionId, String productId, String productVersion, String serviceId,
-                                      Boolean current, Boolean readonly, String environment, String serviceDesc,
-                                      String instanceDesc, String zone,  String region, String lob, String resourceName,
-                                      String businessName, String envTag, String topicClassification) {
+    public Result<String> getInstance(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
+
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "i.host_id",
+                "categoryId", "i.instance_id",
+                "entityType", "i.instance_name",
+                "categoryName", "i.product_version_id",
+                "categoryDesc", "pv.product_id",
+                "parentCategoryId", "pv.product_version",
+                "sortOrder", "i.service_id",
+                "updateUser", "i.current",
+                "updateTs", "i.readonly",
+                "active", "i.environment"
+        ));
+        columnMap.put("aggregateVersion", "i.service_desc");
+        columnMap.put("parentCategoryName", "i.instance_desc");
+        columnMap.put("parentCategoryName", "i.zone");
+        columnMap.put("parentCategoryName", "i.region");
+        columnMap.put("parentCategoryName", "i.lob");
+        columnMap.put("parentCategoryName", "i.resource_name");
+        columnMap.put("parentCategoryName", "i.business_name");
+        columnMap.put("parentCategoryName", "i.env_tag");
+        columnMap.put("parentCategoryName", "i.topic_classification");
+        columnMap.put("parentCategoryName", "i.update_user");
+        columnMap.put("parentCategoryName", "i.update_ts");
+        columnMap.put("parentCategoryName", "i.aggregate_version");
+        columnMap.put("parentCategoryName", "i.active");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
-                """
-                        SELECT COUNT(*) OVER () AS total,
-                        i.host_id, i.instance_id, i.instance_name, i.product_version_id, pv.product_id, pv.product_version,
-                        i.service_id, i.current, i.readonly, i.environment, i.service_desc, i.instance_desc, i.zone, i.region,
-                        i.lob, i.resource_name, i.business_name, i.env_tag, i.topic_classification, i.update_user, i.update_ts,
-                        i.aggregate_version
-                        FROM instance_t i
-                        INNER JOIN product_version_t pv ON pv.product_version_id = i.product_version_id
-                        WHERE 1=1
-                """;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append(s).append("\n");
+            """
+                SELECT COUNT(*) OVER () AS total,
+                i.host_id, i.instance_id, i.instance_name, i.product_version_id, pv.product_id, pv.product_version,
+                i.service_id, i.current, i.readonly, i.environment, i.service_desc, i.instance_desc, i.zone, i.region,
+                i.lob, i.resource_name, i.business_name, i.env_tag, i.topic_classification, i.update_user, i.update_ts,
+                i.aggregate_version, i.active
+                FROM instance_t i
+                INNER JOIN product_version_t pv ON pv.product_version_id = i.product_version_id
+                WHERE i.host_id = ?
+            """;
 
         List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-
-        addCondition(whereClause, parameters, "i.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "i.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
-        addCondition(whereClause, parameters, "i.instance_name", instanceName);
-        addCondition(whereClause, parameters, "i.product_version_id", productVersionId != null ? UUID.fromString(productVersionId) : null);
-        addCondition(whereClause, parameters, "pv.product_id", productId);
-        addCondition(whereClause, parameters, "pv.product_version", productVersion);
-        addCondition(whereClause, parameters, "i.service_id", serviceId);
-        addCondition(whereClause, parameters, "i.current", current);
-        addCondition(whereClause, parameters, "i.readonly", readonly);
-        addCondition(whereClause, parameters, "i.environment", environment);
-        addCondition(whereClause, parameters, "i.service_desc", serviceDesc);
-        addCondition(whereClause, parameters, "i.instance_desc", instanceDesc);
-        addCondition(whereClause, parameters, "i.zone", zone);
-        addCondition(whereClause, parameters, "i.region", region);
-        addCondition(whereClause, parameters, "i.lob", lob);
-        addCondition(whereClause, parameters, "i.resource_name", resourceName);
-        addCondition(whereClause, parameters, "i.business_name", businessName);
-        addCondition(whereClause, parameters, "i.env_tag", envTag);
-        addCondition(whereClause, parameters, "i.topic_classification", topicClassification);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY i.instance_id\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"i.instance_name", "i.service_desc", "i.instance_desc", "i.zone", "i.region", "i.lob", "i.resource_name", "i.business_name"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("i.host_id", "i.instance_id", "i.product_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("i.instance_id", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
-
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> instances = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -1641,6 +1637,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     instances.add(map);
                 }
             }
@@ -1827,61 +1824,57 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> getInstanceApi(int offset, int limit, String hostId, String instanceApiId, String instanceId, String instanceName,
-                                         String productId, String productVersion, String apiVersionId, String apiId, String apiVersion,
-                                         Boolean active) {
+    public Result<String> getInstanceApi(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "ia.host_id",
+                "instanceApiId", "ia.instance_api_id",
+                "instanceId", "ia.instance_id",
+                "instanceName", "i.instance_name",
+                "productId", "pv.product_id",
+                "productVersion", "pv.product_version",
+                "apiVersionId", "ia.api_version_id",
+                "apiId", "av.api_id",
+                "apiVersion", "av.api_version",
+                "active", "ia.active"
+        ));
+        columnMap.put("updateUser", "ia.update_user");
+        columnMap.put("updateTs", "ia.update_ts");
+        columnMap.put("aggregateVersion", "ia.aggregate_version");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
-                """
-                        SELECT COUNT(*) OVER () AS total,
-                        ia.host_id, ia.instance_api_id, ia.instance_id, i.instance_name, pv.product_id,
-                        pv.product_version, ia.api_version_id, av.api_id, av.api_version, ia.active,
-                        ia.update_user, ia.update_ts, ia.aggregate_version
-                        FROM instance_api_t ia
-                        INNER JOIN instance_t i ON ia.instance_id = i.instance_id
-                        INNER JOIN product_version_t pv ON i.product_version_id = pv.product_version_id
-                        INNER JOIN api_version_t av ON ia.api_version_id = av.api_version_id
-                        WHERE 1=1
-                """;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append(s).append("\n");
+            """
+                SELECT COUNT(*) OVER () AS total,
+                ia.host_id, ia.instance_api_id, ia.instance_id, i.instance_name, pv.product_id,
+                pv.product_version, ia.api_version_id, av.api_id, av.api_version, ia.active,
+                ia.update_user, ia.update_ts, ia.aggregate_version
+                FROM instance_api_t ia
+                INNER JOIN instance_t i ON ia.instance_id = i.instance_id
+                INNER JOIN product_version_t pv ON i.product_version_id = pv.product_version_id
+                INNER JOIN api_version_t av ON ia.api_version_id = av.api_version_id
+                WHERE ia.host_id = ?
+            """;
 
         List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-
-        addCondition(whereClause, parameters, "ia.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "ia.instance_api_id", instanceApiId != null ? UUID.fromString(instanceApiId) : null);
-        addCondition(whereClause, parameters, "ia.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
-        addCondition(whereClause, parameters, "i.instance_name", instanceName);
-        addCondition(whereClause, parameters, "pv.product_id", productId);
-        addCondition(whereClause, parameters, "pv.product_version", productVersion);
-        addCondition(whereClause, parameters, "api_version_id", apiVersionId != null ? UUID.fromString(apiVersionId) : null);
-        addCondition(whereClause, parameters, "av.api_id", apiId);
-        addCondition(whereClause, parameters, "av.api_version", apiVersion);
-        addCondition(whereClause, parameters, "active", active);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY instance_id, api_version_id\n" + // Added ordering
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"i.instance_name"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("ia.host_id", "ia.instance_api_id", "ia.instance_id", "ia.api_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("instance_id, api_version_id", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
-
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> instanceApis = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -2082,64 +2075,61 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> getInstanceApiPathPrefix(int offset, int limit, String hostId, String instanceApiId, String instanceId,
-                                                   String instanceName, String productId, String productVersion, String apiVersionId,
-                                                   String apiId, String apiVersion, String pathPrefix) {
+    public Result<String> getInstanceApiPathPrefix(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "iapp.host_id",
+                "instanceApiId", "iapp.instance_api_id",
+                "instanceId", "iai.instance_id",
+                "instanceName", "i.instance_name",
+                "productId", "pv.product_id",
+                "productVersion", "pv.product_version",
+                "apiVersionId", "iai.api_version_id",
+                "apiId", "av.api_id",
+                "apiVersion", "av.api_version",
+                "pathPrefix", "iapp.path_prefix"
+        ));
+        columnMap.put("updateUser", "iapp.update_user");
+        columnMap.put("updateTs", "iapp.update_ts");
+        columnMap.put("aggregateVersion", "iapp.aggregate_version");
+        columnMap.put("active", "iapp.active");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
-                """
-                        SELECT COUNT(*) OVER () AS total,
-                        iapp.host_id, iapp.instance_api_id, iai.instance_id, i.instance_name,
-                        pv.product_id, pv.product_version, iai.api_version_id, av.api_id,
-                        av.api_version, iapp.path_prefix, iapp.update_user, iapp.update_ts, iapp.aggregate_version
-                        FROM instance_api_path_prefix_t iapp
-                        INNER JOIN instance_api_t iai ON iapp.instance_api_id = iai.instance_api_id
-                        INNER JOIN instance_t i ON i.instance_id = iai.instance_id
-                        INNER JOIN product_version_t pv ON pv.product_version_id = i.product_version_id
-                        INNER JOIN api_version_t av ON av.api_version_id = iai.api_version_id
-                        INNER JOIN api_t ai ON ai.api_id = av.api_id
-                        WHERE 1=1
-                """;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append(s).append("\n");
+            """
+                SELECT COUNT(*) OVER () AS total,
+                iapp.host_id, iapp.instance_api_id, iai.instance_id, i.instance_name,
+                pv.product_id, pv.product_version, iai.api_version_id, av.api_id,
+                av.api_version, iapp.path_prefix, iapp.update_user, iapp.update_ts,
+                iapp.aggregate_version, iapp.active
+                FROM instance_api_path_prefix_t iapp
+                INNER JOIN instance_api_t iai ON iapp.instance_api_id = iai.instance_api_id
+                INNER JOIN instance_t i ON i.instance_id = iai.instance_id
+                INNER JOIN product_version_t pv ON pv.product_version_id = i.product_version_id
+                INNER JOIN api_version_t av ON av.api_version_id = iai.api_version_id
+                INNER JOIN api_t ai ON ai.api_id = av.api_id
+                WHERE iapp.host_id = ?
+            """;
 
         List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-
-        addCondition(whereClause, parameters, "iapp.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "iapp.instance_api_id", instanceApiId != null ? UUID.fromString(instanceApiId) : null);
-        addCondition(whereClause, parameters, "iai.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
-        addCondition(whereClause, parameters, "i.instance_name", instanceName);
-        addCondition(whereClause, parameters, "pv.product_id", productId);
-        addCondition(whereClause, parameters, "pv.product_version", productVersion);
-        addCondition(whereClause, parameters, "iai.api_version_id", apiVersionId != null ? UUID.fromString(apiVersionId) : null);
-        addCondition(whereClause, parameters, "av.api_id", apiId);
-        addCondition(whereClause, parameters, "av.api_version", apiVersion);
-        addCondition(whereClause, parameters, "iapp.path_prefix", pathPrefix);
-
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY iai.instance_id, iapp.instance_api_id, iapp.path_prefix\n" + // Added ordering
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"i.instance_name", "iapp.path_prefix"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("iapp.host_id", "iapp.instance_api_id", "iai.instance_id", "iai.api_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("iai.instance_id, iapp.instance_api_id, iapp.path_prefix", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
-
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> instanceApiPathPrefixes = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -2161,6 +2151,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     instanceApiPathPrefixes.add(map);
                 }
             }
@@ -2316,70 +2307,66 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> getInstanceAppApi(int offset, int limit, String hostId, String instanceAppId, String instanceApiId,
-                                            String instanceId, String instanceName, String productId, String productVersion,
-                                            String appId, String appVersion, String apiVersionId, String apiId,
-                                            String apiVersion, Boolean active) {
+    public Result<String> getInstanceAppApi(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "iaa.host_id",
+                "instanceAppId", "iaa.instance_app_id",
+                "appId", "iap.app_id",
+                "appVersion", "iap.app_version",
+                "instanceApiId", "iaa.instance_api_id",
+                "instanceId", "iai.instance_id",
+                "instanceName", "i.instance_name",
+                "productId", "pv.product_id",
+                "productVersion", "pv.product_version",
+                "apiVersionId", "iai.api_version_id"
+        ));
+        columnMap.put("apiId", "av.api_id");
+        columnMap.put("apiVersion", "av.api_version");
+        columnMap.put("active", "iaa.active");
+        columnMap.put("updateUser", "iaa.update_user");
+        columnMap.put("updateTs", "iaa.update_ts");
+        columnMap.put("aggregateVersion", "iaa.aggregate_version");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
-                """
-                                SELECT COUNT(*) OVER () AS total,
-                                iaa.host_id, iaa.instance_app_id, iap.app_id, iap.app_version,
-                                iaa.instance_api_id, iai.instance_id, i.instance_name, pv.product_id,
-                                pv.product_version, iai.api_version_id, av.api_id, av.api_version, iaa.active,
-                                iaa.update_user, iaa.update_ts, iaa.aggregate_version
-                                FROM instance_app_api_t iaa
-                                INNER JOIN instance_app_t iap ON iaa.instance_app_id = iap.instance_app_id
-                                INNER JOIN app_t a ON iap.app_id = a.app_id
-                                INNER JOIN instance_api_t iai ON iaa.instance_api_id = iai.instance_api_id
-                                INNER JOIN instance_t i ON i.instance_id = iai.instance_id
-                                INNER JOIN product_version_t pv ON pv.product_version_id = i.product_version_id
-                                INNER JOIN api_version_t av ON av.api_version_id = iai.api_version_id
-                                INNER JOIN api_t ai ON ai.api_id = av.api_id
-                                WHERE 1=1
-                        """;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append(s).append("\n");
+            """
+                SELECT COUNT(*) OVER () AS total,
+                iaa.host_id, iaa.instance_app_id, iap.app_id, iap.app_version,
+                iaa.instance_api_id, iai.instance_id, i.instance_name, pv.product_id,
+                pv.product_version, iai.api_version_id, av.api_id, av.api_version, iaa.active,
+                iaa.update_user, iaa.update_ts, iaa.aggregate_version
+                FROM instance_app_api_t iaa
+                INNER JOIN instance_app_t iap ON iaa.instance_app_id = iap.instance_app_id
+                INNER JOIN app_t a ON iap.app_id = a.app_id
+                INNER JOIN instance_api_t iai ON iaa.instance_api_id = iai.instance_api_id
+                INNER JOIN instance_t i ON i.instance_id = iai.instance_id
+                INNER JOIN product_version_t pv ON pv.product_version_id = i.product_version_id
+                INNER JOIN api_version_t av ON av.api_version_id = iai.api_version_id
+                INNER JOIN api_t ai ON ai.api_id = av.api_id
+                WHERE iaa.host_id = ?
+            """;
 
         List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-
-        addCondition(whereClause, parameters, "iaa.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "iaa.instance_app_id", instanceAppId != null ? UUID.fromString(instanceAppId) : null);
-        addCondition(whereClause, parameters, "iaa.instance_api_id", instanceApiId != null ? UUID.fromString(instanceApiId) : null);
-        addCondition(whereClause, parameters, "iai.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
-        addCondition(whereClause, parameters, "i.instance_name", instanceName);
-        addCondition(whereClause, parameters, "pv.product_id", productId);
-        addCondition(whereClause, parameters, "pv.product_version", productVersion);
-        addCondition(whereClause, parameters, "iap.app_id", appId);
-        addCondition(whereClause, parameters, "iap.app_version", appVersion);
-        addCondition(whereClause, parameters, "iai.api_version_id", apiVersionId != null ? UUID.fromString(apiVersionId) : null);
-        addCondition(whereClause, parameters, "av.api_id", apiId);
-        addCondition(whereClause, parameters, "av.api_version", apiVersion);
-        addCondition(whereClause, parameters, "active", active);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY i.instance_name, iap.app_id, av.api_id\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"i.instance_name"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("iaa.host_id", "iaa.instance_app_id", "iaa.instance_api_id", "iai.instance_id", "iai.api_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("i.instance_name, iap.app_id, av.api_id", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> instanceApis = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -2556,58 +2543,56 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> getInstanceApp(int offset, int limit, String hostId, String instanceAppId, String instanceId, String instanceName,
-                                         String productId, String productVersion, String appId, String appVersion, Boolean active) {
+    public Result<String> getInstanceApp(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "ia.host_id",
+                "instanceAppId", "ia.instance_app_id",
+                "instanceId", "ia.instance_id",
+                "instanceName", "i.instance_name",
+                "productId", "pv.product_id",
+                "productVersion", "pv.product_version",
+                "appId", "ia.app_id",
+                "appVersion", "ia.app_version",
+                "active", "ia.active",
+                "updateUser", "ia.update_user"
+        ));
+        columnMap.put("updateTs", "ia.update_ts");
+        columnMap.put("aggregateVersion", "ia.aggregate_version");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
-                """
-                        SELECT COUNT(*) OVER () AS total,
-                        ia.host_id, ia.instance_app_id, ia.instance_id, i.instance_name, pv.product_id, pv.product_version,
-                        ia.app_id, ia.app_version, ia.active, ia.update_user, ia.update_ts, ia.aggregate_version
-                        FROM instance_app_t ia
-                        INNER JOIN instance_t i ON ia.instance_id = i.instance_id
-                        INNER JOIN product_version_t pv ON i.product_version_id = pv.product_version_id
-                        WHERE 1=1
-                """;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append(s).append("\n");
+            """
+                SELECT COUNT(*) OVER () AS total,
+                ia.host_id, ia.instance_app_id, ia.instance_id, i.instance_name, pv.product_version_id,
+                pv.product_id, pv.product_version, ia.app_id, ia.app_version, ia.active, ia.update_user,
+                ia.update_ts, ia.aggregate_version
+                FROM instance_app_t ia
+                INNER JOIN instance_t i ON ia.instance_id = i.instance_id
+                INNER JOIN product_version_t pv ON i.product_version_id = pv.product_version_id
+                WHERE ia.host_id = ?
+            """;
 
         List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-
-        addCondition(whereClause, parameters, "ia.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "ia.instance_app_id", instanceAppId != null ? UUID.fromString(instanceAppId) : null);
-        addCondition(whereClause, parameters, "ia.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
-        addCondition(whereClause, parameters, "i.instance_name", instanceName);
-        addCondition(whereClause, parameters, "pv.product_id", productId);
-        addCondition(whereClause, parameters, "pv.product_version", productVersion);
-        addCondition(whereClause, parameters, "ia.app_id", appId);
-        addCondition(whereClause, parameters, "ia.app_version", appVersion);
-        addCondition(whereClause, parameters, "ia.active", active);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY instance_id, app_id, app_version\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"i.instance_name"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("ia.host_id", "ia.instance_app_id", "ia.instance_id", "pv.product_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("instance_id, app_id, app_version", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
-        if(logger.isTraceEnabled()) logger.trace("sql = {}", sql);
         int total = 0;
         List<Map<String, Object>> instanceApps = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -2620,6 +2605,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("instanceAppId", resultSet.getObject("instance_app_id", UUID.class));
                     map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
                     map.put("instanceName", resultSet.getString("instance_name"));
+                    map.put("productVersionId", resultSet.getObject("productVersionId", UUID.class));
                     map.put("productId", resultSet.getString("product_id"));
                     map.put("productVersion", resultSet.getString("product_version"));
                     map.put("appId", resultSet.getString("app_id"));
@@ -4269,65 +4255,60 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> getPipeline(int offset, int limit, String hostId, String pipelineId, String platformId,
-                                      String platformName, String platformVersion, String pipelineVersion,
-                                      String pipelineName, Boolean current, String endpoint, String versionStatus,
-                                      String systemEnv, String runtimeEnv, String requestSchema, String responseSchema) {
+    public Result<String> getPipeline(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
+
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "p.host_id",
+                "pipelineId", "p.pipeline_id",
+                "platformId", "p.platform_id",
+                "platformName", "pf.platform_name",
+                "platformVersion", "pf.platform_version",
+                "pipelineVersion", "p.pipeline_version",
+                "pipelineName", "p.pipeline_name",
+                "current", "p.current",
+                "endpoint", "p.endpoint",
+                "versionStatus", "p.version_status"
+        ));
+        columnMap.put("systemEnv", "p.system_env");
+        columnMap.put("runtimeEnv", "p.runtime_env");
+        columnMap.put("requestSchema", "p.request_schema");
+        columnMap.put("responseSchema", "p.response_schema");
+        columnMap.put("updateUser", "p.update_user");
+        columnMap.put("updateTs", "p.update_ts");
+        columnMap.put("aggregateVersion", "p.aggregate_version");
+        columnMap.put("active", "p.active");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
-                """
-                SELECT COUNT(*) OVER () AS total,
-                p.host_id, p.pipeline_id, p.platform_id, pf.platform_name, pf.platform_version,
-                p.pipeline_version, p.pipeline_name, p.current, p.endpoint, p.version_status,
-                p.system_env, p.runtime_env, p.request_schema, p.response_schema,
-                p.update_user, p.update_ts, p.aggregate_version
-                FROM pipeline_t p
-                INNER JOIN platform_t pf ON pf.platform_id = p.platform_id
-                WHERE 1=1
-                """;
+            """
+            SELECT COUNT(*) OVER () AS total,
+            p.host_id, p.pipeline_id, p.platform_id, pf.platform_name, pf.platform_version,
+            p.pipeline_version, p.pipeline_name, p.current, p.endpoint, p.version_status,
+            p.system_env, p.runtime_env, p.request_schema, p.response_schema,
+            p.update_user, p.update_ts, p.aggregate_version, p.active
+            FROM pipeline_t p
+            INNER JOIN platform_t pf ON pf.platform_id = p.platform_id
+            WHERE 1=1
+            """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
-        StringBuilder whereClause = new StringBuilder();
-        addCondition(whereClause, parameters, "p.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "p.pipeline_id", pipelineId != null ? UUID.fromString(pipelineId) : null);
-        addCondition(whereClause, parameters, "p.platform_id", platformId != null ? UUID.fromString(platformId) : null);
-        addCondition(whereClause, parameters, "pf.platform_name", platformName);
-        addCondition(whereClause, parameters, "pf.platform_version", platformVersion);
-        addCondition(whereClause, parameters, "p.pipeline_version", pipelineVersion);
-        addCondition(whereClause, parameters, "p.pipeline_name", pipelineName);
-        addCondition(whereClause, parameters, "p.current", current);
-        addCondition(whereClause, parameters, "p.endpoint", endpoint);
-        addCondition(whereClause, parameters, "p.version_status", versionStatus);
-        addCondition(whereClause, parameters, "p.system_env", systemEnv);
-        addCondition(whereClause, parameters, "p.runtime_env", runtimeEnv);
-        addCondition(whereClause, parameters, "p.request_schema", requestSchema);
-        addCondition(whereClause, parameters, "p.response_schema", responseSchema);
 
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append(" AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY p.pipeline_id\n" +
-                "LIMIT ? OFFSET ?");
-
+        String[] searchColumns = {"pf.platform_name", "p.pipeline_name", "p.endpoint"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("p.host_id", "p.pipeline_id", "p.platform_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("p.pipeline_id", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
         parameters.add(limit);
         parameters.add(offset);
-
-        String sql = sqlBuilder.toString();
-        // if(logger.isTraceEnabled()) logger.trace("sql = {}", sql);
         int total = 0;
         List<Map<String, Object>> pipelines = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -4351,9 +4332,9 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("requestSchema", resultSet.getString("request_schema"));
                     map.put("responseSchema", resultSet.getString("response_schema"));
                     map.put("updateUser", resultSet.getString("update_user"));
-                    // handling date properly
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     pipelines.add(map);
                 }
             }
@@ -4528,60 +4509,60 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> getInstancePipeline(int offset, int limit, String hostId, String instanceId, String instanceName,
-                                              String productId, String productVersion, String pipelineId, String platformName,
-                                              String platformVersion, String pipelineName, String pipelineVersion) {
+    public Result<String> getInstancePipeline(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "ip.host_id",
+                "instanceId", "ip.instance_id",
+                "instanceName", "i.instance_name",
+                "productId", "pv.product_id",
+                "productVersion", "pv.product_version",
+                "pipelineId", "ip.pipeline_id",
+                "platformName", "pf.platform_name",
+                "platformVersion", "pf.platform_version",
+                "pipelineName", "p.pipeline_name",
+                "pipelineVersion", "p.pipeline_version"
+        ));
+        columnMap.put("updateUser", "ip.update_user");
+        columnMap.put("updateTs", "ip.update_ts");
+        columnMap.put("aggregateVersion", "ip.aggregate_version");
+        columnMap.put("active", "ip.active");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
-                """
-                        SELECT ip.host_id, ip.instance_id, i.instance_name, pv.product_id,
-                        pv.product_version, ip.pipeline_id, pf.platform_name, pf.platform_version,
-                        p.pipeline_name, p.pipeline_version, ip.update_user, ip.update_ts, ip.aggregate_version,
-                        FROM instance_pipeline_t ip
-                        INNER JOIN instance_t i ON ip.instance_id = i.instance_id
-                        INNER JOIN product_version_t pv ON i.product_version_id = pv.product_version_id
-                        INNER JOIN pipeline_t p ON p.pipeline_id = ip.pipeline_id
-                        INNER JOIN platform_t pf ON p.platform_id = pf.platform_id
-                        WHERE 1=1
-                """;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append(s).append("\n");
+            """
+                SELECT ip.host_id, ip.instance_id, i.instance_name, pv.product_id,
+                pv.product_version, ip.pipeline_id, pf.platform_name, pf.platform_version,
+                p.pipeline_name, p.pipeline_version, ip.update_user,
+                ip.update_ts, ip.aggregate_version, ip.active
+                FROM instance_pipeline_t ip
+                INNER JOIN instance_t i ON ip.instance_id = i.instance_id
+                INNER JOIN product_version_t pv ON i.product_version_id = pv.product_version_id
+                INNER JOIN pipeline_t p ON p.pipeline_id = ip.pipeline_id
+                INNER JOIN platform_t pf ON p.platform_id = pf.platform_id
+                WHERE ip.host_id = ?
+            """;
 
         List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-        addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
-        addCondition(whereClause, parameters, "instance_name", instanceName);
-        addCondition(whereClause, parameters, "product_id", productId);
-        addCondition(whereClause, parameters, "product_version", productVersion);
-        addCondition(whereClause, parameters, "pipeline_id", pipelineId != null ? UUID.fromString(pipelineId) : null);
-        addCondition(whereClause, parameters, "platform_name", platformName);
-        addCondition(whereClause, parameters, "platform_version", platformVersion);
-        addCondition(whereClause, parameters, "pipeline_name", pipelineName);
-        addCondition(whereClause, parameters, "pipeline_version", pipelineVersion);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY instance_id, pipeline_id\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"i.instance_name", "pf.platform_name", "p.pipeline_name"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("ip.host_id", "ip.instance_id", "ip.pipeline_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("instance_id, pipeline_id", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> instancePipelines = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -4603,6 +4584,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     instancePipelines.add(map);
                 }
             }
@@ -4822,62 +4804,39 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> getPlatform(int offset, int limit, String hostId, String platformId, String platformName, String platformVersion,
-                                      String clientType, String clientUrl, String credentials, String proxyUrl, Integer proxyPort,
-                                      String handlerClass, String consoleUrl, String environment, String zone, String region, String lob) {
+    public Result<String> getPlatform(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
-                """
-                SELECT COUNT(*) OVER () AS total,
-                host_id, platform_id, platform_name, platform_version, client_type, client_url,
-                credentials, proxy_url, proxy_port, handler_class, console_url, environment,
-                zone, region, lob, update_user, update_ts, aggregate_version
-                FROM platform_t
-                WHERE 1=1
-                """;
+            """
+            SELECT COUNT(*) OVER () AS total,
+            host_id, platform_id, platform_name, platform_version, client_type, client_url,
+            credentials, proxy_url, proxy_port, handler_class, console_url, environment,
+            zone, region, lob, update_user, update_ts, aggregate_version, active
+            FROM platform_t
+            WHERE host_id = ?
+            """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-        addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "platform_id", platformId != null ? UUID.fromString(platformId) : null);
-        addCondition(whereClause, parameters, "platform_name", platformName);
-        addCondition(whereClause, parameters, "platform_version", platformVersion);
-        addCondition(whereClause, parameters, "client_type", clientType);
-        addCondition(whereClause, parameters, "handler_class", handlerClass);
-        addCondition(whereClause, parameters, "client_url", clientUrl);
-        addCondition(whereClause, parameters, "credentials", credentials);
-        addCondition(whereClause, parameters, "proxy_url", proxyUrl);
-        addCondition(whereClause, parameters, "proxy_port", proxyPort);
-        addCondition(whereClause, parameters, "console_url", consoleUrl);
-        addCondition(whereClause, parameters, "environment", environment);
-        addCondition(whereClause, parameters, "zone", zone);
-        addCondition(whereClause, parameters, "region", region);
-        addCondition(whereClause, parameters, "lob", lob);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY platform_id\n" +
-                "LIMIT ? OFFSET ?");
-
+        String[] searchColumns = {"platform_name"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("host_id", "platform_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("platform_id", sorting, null) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
-
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> platforms = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -4904,7 +4863,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
-
+                    map.put("active", resultSet.getBoolean("active"));
                     platforms.add(map);
                 }
             }
@@ -5143,69 +5102,60 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> getDeploymentInstance(int offset, int limit, String hostId, String instanceId, String instanceName, String deploymentInstanceId,
-                                                String serviceId, String ipAddress, Integer portNumber, String systemEnv, String runtimeEnv,
-                                                String pipelineId, String pipelineName, String pipelineVersion, String deployStatus) {
+    public Result<String> getDeploymentInstance(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "di.host_id",
+                "instanceId", "di.instance_id",
+                "instanceName", "i.instance_name",
+                "deploymentInstanceId", "di.deployment_instance_id",
+                "serviceId", "di.service_id",
+                "ipAddress", "di.ip_address",
+                "portNumber", "di.port_number",
+                "systemEnv", "di.system_env",
+                "runtimeEnv", "di.runtime_env",
+                "pipelineId", "di.pipeline_id"
+        ));
+        columnMap.put("pipelineName", "p.pipeline_name");
+        columnMap.put("pipelineVersion", "p.pipeline_version");
+        columnMap.put("deployStatus", "di.deploy_status");
+        columnMap.put("updateUser", "di.update_user");
+        columnMap.put("updateTs", "di.update_ts");
+        columnMap.put("aggregateVersion", "di.aggregate_version");
+        columnMap.put("active", "di.active");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
-                """
-                SELECT COUNT(*) OVER () AS total,
-                di.host_id, di.instance_id, i.instance_name, di.deployment_instance_id, di.service_id, di.ip_address,
-                di.port_number, di.system_env, di.runtime_env, di.pipeline_id, p.pipeline_name, p.pipeline_version,
-                di.deploy_status, di.update_user, di.update_ts, di.aggregate_version
-                FROM deployment_instance_t di
-                INNER JOIN instance_t i ON i.instance_id = di.instance_id
-                INNER JOIN pipeline_t p ON p.pipeline_id = di.pipeline_id
-                WHERE 1=1
-                """;
+            """
+            SELECT COUNT(*) OVER () AS total,
+            di.host_id, di.instance_id, i.instance_name, di.deployment_instance_id, di.service_id, di.ip_address,
+            di.port_number, di.system_env, di.runtime_env, di.pipeline_id, p.pipeline_name, p.pipeline_version,
+            di.deploy_status, di.update_user, di.update_ts, di.aggregate_version, di.active
+            FROM deployment_instance_t di
+            INNER JOIN instance_t i ON i.instance_id = di.instance_id
+            INNER JOIN pipeline_t p ON p.pipeline_id = di.pipeline_id
+            WHERE di.host_id = ?
+            """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
-        StringBuilder whereClause = new StringBuilder();
-
-        // Add conditions based on input parameters
-        addCondition(whereClause, parameters, "di.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "di.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
-        addCondition(whereClause, parameters, "i.instance_name", instanceName);
-        addCondition(whereClause, parameters, "di.deployment_instance_id", deploymentInstanceId != null ? UUID.fromString(deploymentInstanceId) : null);
-        addCondition(whereClause, parameters, "di.service_id", serviceId);
-        addCondition(whereClause, parameters, "di.ip_address", ipAddress);
-        addCondition(whereClause, parameters, "di.port_number", portNumber); // Integer, addCondition should handle it or be adapted
-        addCondition(whereClause, parameters, "di.system_env", systemEnv);
-        addCondition(whereClause, parameters, "di.runtime_env", runtimeEnv);
-        addCondition(whereClause, parameters, "di.pipeline_id", pipelineId != null ? UUID.fromString(pipelineId) : null);
-        addCondition(whereClause, parameters, "p.pipeline_name", pipelineName);
-        addCondition(whereClause, parameters, "p.pipeline_version", pipelineVersion);
-        addCondition(whereClause, parameters, "di.deploy_status", deployStatus);
-
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        // It's good practice to order by a consistent key, e.g., the primary key or a creation timestamp.
-        // Using deployment_instance_id for ordering.
-        sqlBuilder.append(" ORDER BY di.host_id, di.deployment_instance_id\n") // Or just deployment_instance_id if host_id is always filtered
-                .append("LIMIT ? OFFSET ?");
+        parameters.add(UUID.fromString(hostId));
+        String[] searchColumns = {"i.instance_name", "p.pipeline_name"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("di.host_id", "di.instance_id", "di.deployment_instance_id", "di.pipeline_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("di.host_id, di.deployment_instance_id", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
         int total = 0;
-        List<Map<String, Object>> deploymentInstances = new ArrayList<>(); // Changed variable name
+        List<Map<String, Object>> deploymentInstances = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                // The template's addCondition likely handles setObject(..., null) which works for most types.
-                // For Integers specifically, setObject(i + 1, null) might not map to SQL NULL correctly for all drivers,
-                // setNull(i+1, Types.INTEGER) is safer.
-                // Given the template uses setObject for all, we'll follow that.
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -5238,7 +5188,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
-
+                    map.put("active", resultSet.getBoolean("active"));
                     deploymentInstances.add(map); // Changed variable name
                 }
             }
@@ -5537,54 +5487,54 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> getDeployment(int offset, int limit, String hostId, String deploymentId,
-                                        String deploymentInstanceId, String serviceId, String deploymentStatus,
-                                        String deploymentType, String platformJobId) {
+    public Result<String> getDeployment(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "d.host_id",
+                "deploymentId", "d.deployment_id",
+                "deploymentInstanceId", "d.deployment_instance_id",
+                "serviceId", "di.service_id",
+                "deploymentStatus", "d.deployment_status",
+                "deploymentType", "d.deployment_type",
+                "scheduleTs", "d.schedule_ts",
+                "platformJobId", "d.platform_job_id",
+                "updateUser", "d.update_user",
+                "updateTs", "d.update_ts"
+        ));
+        columnMap.put("aggregateVersion", "d.aggregate_version");
+        columnMap.put("updateUser", "d.active");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
-                """
-                SELECT COUNT(*) OVER () AS total,
-                d.host_id, d.deployment_id, d.deployment_instance_id, di.service_id, d.deployment_status,
-                d.deployment_type, d.schedule_ts, d.platform_job_id, d.update_user, d.update_ts, d.aggregate_version
-                FROM deployment_t d
-                INNER JOIN deployment_instance_t di ON di.deployment_instance_id = d.deployment_instance_id
-                WHERE 1=1
-                """;
+            """
+            SELECT COUNT(*) OVER () AS total,
+            d.host_id, d.deployment_id, d.deployment_instance_id, di.service_id, d.deployment_status,
+            d.deployment_type, d.schedule_ts, d.platform_job_id, d.update_user,
+            d.update_ts, d.aggregate_version, d.active
+            FROM deployment_t d
+            INNER JOIN deployment_instance_t di ON di.deployment_instance_id = d.deployment_instance_id
+            WHERE d.host_id = ?
+            """;
 
-
-        StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
-        StringBuilder whereClause = new StringBuilder();
+        parameters.add(UUID.fromString(hostId));
 
-        addCondition(whereClause, parameters, "d.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "d.deployment_id", deploymentId != null ? UUID.fromString(deploymentId) : null);
-        addCondition(whereClause, parameters, "d.deployment_instance_id", deploymentInstanceId != null ? UUID.fromString(deploymentInstanceId) : null);
-        addCondition(whereClause, parameters, "di.service_id", serviceId);
-        addCondition(whereClause, parameters, "d.deployment_status", deploymentStatus);
-        addCondition(whereClause, parameters, "d.deployment_type", deploymentType);
-        addCondition(whereClause, parameters, "d.platform_job_id", platformJobId);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY d.deployment_id\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"di.service_id"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("d.host_id", "d.deployment_id", "d.deployment_instance_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("d.deployment_id", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
-
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> deployments = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -5604,7 +5554,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
-
+                    map.put("active", resultSet.getBoolean("active"));
                     deployments.add(map);
                 }
             }

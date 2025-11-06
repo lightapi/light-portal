@@ -121,9 +121,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testQueryService() {
-        Result<String> result = dbProvider.queryService(0, 2, "01964b05-552a-7c4b-9184-6857e7f3dc5f", "1234",
-                null, null, null, null, null, null, null,
-                null, null, null, null, null);
+        Result<String> result = dbProvider.queryService(0, 2, null, null, null, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
@@ -133,8 +131,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testQueryRule() {
-        Result<String> result = dbProvider.queryRule(0, 2, "01964b05-552a-7c4b-9184-6857e7f3dc5f", null,
-                null, null, null, null, null, null, null);
+        Result<String> result = dbProvider.queryRule(0, 2, null, null, null, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
@@ -283,7 +280,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testGetCategory() {
-        Result<String> result = dbProvider.getCategory(0, 2, "01964b05-552a-7c4b-9184-6857e7f3dc5f", null, null, null, null, null, null, null);
+        Result<String> result = dbProvider.getCategory(0, 2, null, null, null, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
@@ -293,7 +290,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testGetCategoryWithoutHostId() {
-        Result<String> result = dbProvider.getCategory(0, 2, null, null, null, null, null, null, null, null);
+        Result<String> result = dbProvider.getCategory(0, 2, null, null, null, null);
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
@@ -353,7 +350,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testGetTag() {
-        Result<String> result = dbProvider.getTag(0, 2, "01964b05-552a-7c4b-9184-6857e7f3dc5f", null, null, null, null);
+        Result<String> result = dbProvider.getTag(0, 2, null, null, null, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {

@@ -9,7 +9,7 @@ public interface TagPersistence {
     void createTag(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateTag(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteTag(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> getTag(int offset, int limit, String hostId, String tagId, String entityType, String tagName, String tagDesc);
+    Result<String> getTag(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> getTagLabel(String hostId);
     Result<String> getTagById(String tagId);
     Result<String> getTagByName(String hostId, String tagName);

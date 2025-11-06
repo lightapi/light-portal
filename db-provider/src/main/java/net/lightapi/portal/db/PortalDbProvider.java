@@ -8,8 +8,6 @@ import com.networknt.utility.UuidUtil;
 import io.cloudevents.CloudEvent;
 import io.cloudevents.core.builder.CloudEventBuilder;
 import net.lightapi.portal.PortalConstants;
-import net.lightapi.portal.validation.FilterCriterion;
-import net.lightapi.portal.validation.SortCriterion;
 
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
@@ -151,9 +149,7 @@ public interface PortalDbProvider extends DbProvider {
     void createService(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateService(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteService(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> queryService(int offset, int limit, String hostId, String apiId, String apiName,
-                                String apiDesc, String operationOwner, String deliveryOwner, String region, String businessGroup,
-                                String lob, String platform, String capability, String gitRepo, String apiTags, String apiStatus);
+    Result<String> queryService(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> getApiVersionIdLabel(String hostId);
     Result<String> queryApiLabel(String hostId);
     Result<String> queryApiVersionLabel(String hostId, String apiId);
@@ -167,8 +163,7 @@ public interface PortalDbProvider extends DbProvider {
     void updateServiceSpec(Connection conn, Map<String, Object> event) throws SQLException, Exception;
 
     // ServiceEndpoint
-    Result<String> queryServiceEndpoint(int offset, int limit, String hostId, String apiVersionId, String apiId, String apiVersion,
-                                        String endpoint, String method, String path, String desc);
+    Result<String> queryServiceEndpoint(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> queryEndpointRule(String hostId, String apiId, String apiVersion, String endpoint);
     Result<String> queryEndpointScope(String hostId, String endpointId);
 
@@ -237,27 +232,20 @@ public interface PortalDbProvider extends DbProvider {
     void createInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> getInstanceApi(int offset, int limit, String hostId, String instanceApiId, String instanceId, String instanceName,
-                                  String productId, String productVersion, String apiVersionId, String apiId, String apiVersion,
-                                  Boolean active);
+    Result<String> getInstanceApi(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> getInstanceApiLabel(String hostId, String instanceId);
 
     // InstanceApiPathPrefix
     void createInstanceApiPathPrefix(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateInstanceApiPathPrefix(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteInstanceApiPathPrefix(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> getInstanceApiPathPrefix(int offset, int limit, String hostId, String instanceApiId, String instanceId,
-                                            String instanceName, String productId, String productVersion, String apiVersionId,
-                                            String apiId, String apiVersion, String pathPrefix);
+    Result<String> getInstanceApiPathPrefix(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
 
     // InstanceAppApi
     void createInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> getInstanceAppApi(int offset, int limit, String hostId, String instanceAppId, String instanceApiId,
-                                     String instanceId, String instanceName, String productId, String productVersion,
-                                     String appId, String appVersion, String apiVersionId, String apiId,
-                                     String apiVersion, Boolean active);
+    Result<String> getInstanceAppApi(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
 
     // ConfigInstanceApi (should be InstanceApiProperty config, perhaps a copy of original method set)
     void createConfigInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -269,8 +257,7 @@ public interface PortalDbProvider extends DbProvider {
     void createInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> getInstanceApp(int offset, int limit, String hostId, String instanceAppId, String instanceId, String instanceName,
-                                  String productId, String productVersion, String appId, String appVersion, Boolean active);
+    Result<String> getInstanceApp(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> getInstanceAppLabel(String hostId, String instanceId);
 
     // ConfigInstanceApp (should be InstanceAppProperty config)
@@ -322,9 +309,7 @@ public interface PortalDbProvider extends DbProvider {
     void updateRule(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteRule(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<List<Map<String, Object>>> queryRuleByGroup(String groupId);
-    Result<String> queryRule(int offset, int limit, String hostId, String ruleId, String ruleName,
-                             String ruleVersion, String ruleType, String ruleGroup, String ruleDesc,
-                             String ruleBody, String ruleOwner);
+    Result<String> queryRule(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<Map<String, Object>> queryRuleById(String ruleId);
     Result<String> queryRuleByType(String ruleType);
     Result<List<Map<String, Object>>> queryRuleByHostApiId(String hostId, String apiId, String apiVersion);
@@ -490,47 +475,28 @@ public interface PortalDbProvider extends DbProvider {
     void unlockInstance(Connection conn, Map<String, Object> event) throws Exception;
     void cloneInstance(Connection conn, Map<String, Object> event) throws Exception;
     void promoteInstance(Connection conn, Map<String, Object> event) throws Exception;
-    Result<String> getInstance(int offset, int limit, String hostId, String instanceId, String instanceName,
-                               String productVersionId, String productId, String productVersion, String serviceId, Boolean current,
-                               Boolean readonly, String environment, String serviceDesc, String instanceDesc, String zone,
-                               String region, String lob, String resourceName, String businessName, String envTag,
-                               String topicClassification);
+    Result<String> getInstance(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> getInstanceLabel(String hostId);
 
     // Pipeline
     void createPipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updatePipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deletePipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> getPipeline(int offset, int limit, String hostId, String pipelineId, String platformId,
-                               String platformName, String platformVersion, String pipelineVersion,
-                               String pipelineName, Boolean current, String endpoint, String versionStatus,
-                               String systemEnv, String runtimeEnv, String requestSchema, String responseSchema);
+    Result<String> getPipeline(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> getPipelineLabel(String hostId);
-
-    // InstancePipeline
-    void createInstancePipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void updateInstancePipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void deleteInstancePipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> getInstancePipeline(int offset, int limit, String hostId, String instanceId, String instanceName,
-                                       String productId, String productVersion, String pipelineId, String platformName,
-                                       String platformVersion, String pipelineName, String pipelineVersion);
 
     // Platform
     void createPlatform(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updatePlatform(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deletePlatform(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> getPlatform(int offset, int limit, String hostId, String platformId, String platformName, String platformVersion,
-                               String clientType, String clientUrl, String credentials, String proxyUrl, Integer proxyPort,
-                               String handlerClass, String consoleUrl, String environment, String zone, String region, String lob);
+    Result<String> getPlatform(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> getPlatformLabel(String hostId);
 
     // DeploymentInstance
     void createDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> getDeploymentInstance(int offset, int limit, String hostId, String instanceId, String instanceName, String deploymentInstanceId,
-                                         String serviceId, String ipAddress, Integer portNumber, String systemEnv, String runtimeEnv,
-                                         String pipelineId, String pipelineName, String pipelineVersion, String deployStatus);
+    Result<String> getDeploymentInstance(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> getDeploymentInstancePipeline(String hostId, String instanceId, String systemEnv, String runtimeEnv);
     Result<String> getDeploymentInstanceLabel(String hostId, String instanceId);
 
@@ -540,16 +506,13 @@ public interface PortalDbProvider extends DbProvider {
     void updateDeploymentJobId(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateDeploymentStatus(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteDeployment(Connection conn, Map<String, Object> event) throws SQLException, Exception; // Changed from Result<String> to void
-    Result<String> getDeployment(int offset, int limit, String hostId, String deploymentId,
-                                 String deploymentInstanceId, String serviceId, String deploymentStatus,
-                                 String deploymentType, String platformJobId);
+    Result<String> getDeployment(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
 
     // Category
     void createCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> getCategory(int offset, int limit, String hostId, String categoryId, String entityType, String categoryName, String categoryDesc,
-                               String parentCategoryId, String parentCategoryName, Integer sortOrder);
+    Result<String> getCategory(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> getCategoryLabel(String hostId);
     Result<String> getCategoryById(String categoryId);
     Result<String> getCategoryByName(String hostId, String categoryName);
@@ -560,9 +523,7 @@ public interface PortalDbProvider extends DbProvider {
     void createSchema(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateSchema(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteSchema(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> getSchema(int offset, int limit, String hostId, String schemaId, String schemaVersion, String schemaType,
-                             String specVersion, String schemaSource, String schemaName, String schemaDesc, String schemaBody,
-                             String schemaOwner, String schemaStatus, String example, String commentStatus);
+    Result<String> getSchema(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> getSchemaLabel(String hostId);
     Result<String> getSchemaById(String schemaId);
     Result<String> getSchemaByCategoryId(String categoryId);
@@ -572,7 +533,7 @@ public interface PortalDbProvider extends DbProvider {
     void createTag(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateTag(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteTag(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> getTag(int offset, int limit, String hostId, String tagId, String entityType, String tagName, String tagDesc);
+    Result<String> getTag(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> getTagLabel(String hostId);
     Result<String> getTagById(String tagId);
     Result<String> getTagByName(String hostId, String tagName);
@@ -582,8 +543,7 @@ public interface PortalDbProvider extends DbProvider {
     void createSchedule(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateSchedule(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteSchedule(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> getSchedule(int offset, int limit, String hostId, String scheduleId, String scheduleName, String frequencyUnit,
-                               Integer frequencyTime, String startTs, String eventTopic, String eventType, String eventData);
+    Result<String> getSchedule(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> getScheduleLabel(String hostId);
     Result<String> getScheduleById(String scheduleId);
 

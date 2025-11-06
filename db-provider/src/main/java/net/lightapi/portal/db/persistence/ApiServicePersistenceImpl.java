@@ -21,7 +21,7 @@ import java.util.*;
 
 import static com.networknt.db.provider.SqlDbStartupHook.ds;
 import static java.sql.Types.NULL;
-import static net.lightapi.portal.db.util.SqlUtil.addCondition;
+import static net.lightapi.portal.db.util.SqlUtil.*;
 
 public class ApiServicePersistenceImpl implements ApiServicePersistence {
     private static final Logger logger = LoggerFactory.getLogger(ApiServicePersistenceImpl.class);
@@ -341,64 +341,39 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     }
 
     @Override
-    public Result<String> queryService(int offset, int limit, String hostId, String apiId, String apiName,
-                                       String apiDesc, String operationOwner, String deliveryOwner, String region, String businessGroup,
-                                       String lob, String platform, String capability, String gitRepo, String apiTags, String apiStatus) {
+    public Result<String> queryService(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
                 host_id, api_id, api_name,
                 api_desc, operation_owner, delivery_owner, region, business_group,
                 lob, platform, capability, git_repo, api_tags, api_status,
-                update_user, update_ts, aggregate_version
+                update_user, update_ts, aggregate_version, active
                 FROM api_t
                 WHERE host_id = ?
                 """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
-
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-
-        SqlUtil.addCondition(whereClause, parameters, "api_id", apiId);
-        SqlUtil.addCondition(whereClause, parameters, "api_name", apiName);
-        SqlUtil.addCondition(whereClause, parameters, "api_desc", apiDesc);
-        SqlUtil.addCondition(whereClause, parameters, "operation_owner", operationOwner != null ? UUID.fromString(operationOwner) : null);
-        SqlUtil.addCondition(whereClause, parameters, "delivery_owner", deliveryOwner != null ? UUID.fromString(deliveryOwner) : null);
-        SqlUtil.addCondition(whereClause, parameters, "region", region);
-        SqlUtil.addCondition(whereClause, parameters, "business_group", businessGroup);
-        SqlUtil.addCondition(whereClause, parameters, "lob", lob);
-        SqlUtil.addCondition(whereClause, parameters, "platform", platform);
-        SqlUtil.addCondition(whereClause, parameters, "capability", capability);
-        SqlUtil.addCondition(whereClause, parameters, "git_repo", gitRepo);
-        SqlUtil.addCondition(whereClause, parameters, "api_tags", apiTags);
-        SqlUtil.addCondition(whereClause, parameters, "api_status", apiStatus);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-
-        sqlBuilder.append(" ORDER BY api_id\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"api_id", "api_name", "api_desc"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("api_id", sorting, null) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> services = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -426,6 +401,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts", OffsetDateTime.class));
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     services.add(map);
                 }
             }
@@ -1036,55 +1012,55 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     }
 
     @Override
-    public Result<String> queryServiceEndpoint(int offset, int limit, String hostId, String apiVersionId, String apiId, String apiVersion,
-                                               String endpoint, String method, String path, String desc) {
+    public Result<String> queryServiceEndpoint(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
-        String s =
-                """
-                    SELECT COUNT(*) OVER () AS total,
-                    e.host_id, e.endpoint_id, e.api_version_id, v.api_id, v.api_version,
-                    e.endpoint, e.http_method, e.endpoint_path, e.endpoint_desc, e.aggregate_version
-                    FROM api_endpoint_t e
-                    INNER JOIN api_version_t v ON e.api_version_id = v.api_version_id
-                    WHERE e.host_id = ? AND e.api_version_id = ?
-                """;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "e.host_id",
+                "endpointId", "e.endpoint_id",
+                "apiVersionId", "e.api_version_id",
+                "apiId", "v.api_id",
+                "apiVersion", "v.api_version",
+                "endpoint", "e.endpoint",
+                "httpMethod", "e.http_method",
+                "endpointPath", "e.endpoint_path",
+                "endpointDesc", "e.endpoint_desc",
+                "aggregateVersion", "e.aggregate_version"
+        ));
+        columnMap.put("active", "e.active");
+        columnMap.put("updateUser", "e.update_user");
+        columnMap.put("updateTs", "e.updateTs");
 
-        StringBuilder sqlBuilder = new StringBuilder();
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
+        String s =
+            """
+                SELECT COUNT(*) OVER () AS total,
+                e.host_id, e.endpoint_id, e.api_version_id, v.api_id,
+                v.api_version, e.endpoint, e.http_method, e.endpoint_path,
+                e.endpoint_desc, e.aggregate_version,
+                e.active, e.update_user, e.update_ts
+                FROM api_endpoint_t e
+                INNER JOIN api_version_t v ON e.api_version_id = v.api_version_id
+                WHERE e.host_id = ?
+            """;
+
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
-        parameters.add(UUID.fromString(apiVersionId)); // ensure apiVersionId is converted to UUID
 
-        StringBuilder whereClause = new StringBuilder();
-        addCondition(whereClause, parameters, "v.api_id", apiId);
-        addCondition(whereClause, parameters, "v.api_version", apiVersion);
-        addCondition(whereClause, parameters, "e.endpoint", endpoint);
-        addCondition(whereClause, parameters, "e.http_method", method);
-        addCondition(whereClause, parameters, "e.endpoint_path", path);
-        addCondition(whereClause, parameters, "e.endpoint_desc", desc);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append(" AND ").append(whereClause);
-        }
-
-
-        sqlBuilder.append(" ORDER BY e.endpoint\n" +
-                "LIMIT ? OFFSET ?");
+        String[] searchColumns = {"e.endpoint", "e.endpoint_path", "e.endpoint_desc"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("e.host_id", "e.endpoint_id", "e.api_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("e.endpoint", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
-
-        String sql = s + sqlBuilder.toString(); // Append the WHERE and ORDER BY clauses to the initial select
         int total = 0;
         List<Map<String, Object>> endpoints = new ArrayList<>();
-
-
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -1094,8 +1070,6 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                         total = resultSet.getInt("total");
                         isFirstRow = false;
                     }
-
-
                     map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("endpointId", resultSet.getObject("endpoint_id", UUID.class));
                     map.put("apiVersionId", resultSet.getObject("api_version_id", UUID.class));
@@ -1106,10 +1080,12 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                     map.put("endpointPath", resultSet.getString("endpoint_path"));
                     map.put("endpointDesc", resultSet.getString("endpoint_desc"));
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts", OffsetDateTime.class));
+                    map.put("active", resultSet.getBoolean("active"));
                     endpoints.add(map);
                 }
             }
-
             Map<String, Object> resultMap = new HashMap<>();
             resultMap.put("total", total);
             resultMap.put("endpoints", endpoints);

@@ -21,7 +21,7 @@ import java.util.*;
 
 import static com.networknt.db.provider.SqlDbStartupHook.ds;
 import static java.sql.Types.NULL;
-import static net.lightapi.portal.db.util.SqlUtil.addCondition;
+import static net.lightapi.portal.db.util.SqlUtil.*;
 
 public class RulePersistenceImpl implements RulePersistence {
 
@@ -349,51 +349,45 @@ public class RulePersistenceImpl implements RulePersistence {
     }
 
     @Override
-    public Result<String> queryRule(int offset, int limit, String hostId, String ruleId, String ruleName,
-                                    String ruleVersion, String ruleType, String ruleGroup, String ruleDesc,
-                                    String ruleBody, String ruleOwner) {
+    public Result<String> queryRule(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result;
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
                 host_id, rule_id, rule_name, rule_version, rule_type, rule_group, rule_desc, rule_body, rule_owner,
-                update_user, update_ts, aggregate_version
+                update_user, update_ts, aggregate_version, active
                 FROM rule_t
-                WHERE 1 = 1
+                WHERE
                 """;
-        StringBuilder sqlBuilder = new StringBuilder(s);
 
         List<Object> parameters = new ArrayList<>();
-        StringBuilder whereClause = new StringBuilder();
 
-        addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "rule_id", ruleId);
-        addCondition(whereClause, parameters, "rule_name", ruleName);
-        addCondition(whereClause, parameters, "rule_version", ruleVersion);
-        addCondition(whereClause, parameters, "rule_type", ruleType);
-        addCondition(whereClause, parameters, "rule_group", ruleGroup);
-        addCondition(whereClause, parameters, "rule_desc", ruleDesc);
-        addCondition(whereClause, parameters, "rule_body", ruleBody);
-        addCondition(whereClause, parameters, "rule_owner", ruleOwner);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
+        if (hostId != null && !hostId.isEmpty()) {
+            s = s + " (host_id = ? OR host_id IS NULL)";
+            parameters.add(UUID.fromString(hostId));
+        } else {
+            s = s + " host_id IS NULL";
         }
-        sqlBuilder.append(" ORDER BY rule_id\n" +
-                "LIMIT ? OFFSET ?");
+
+        String[] searchColumns = {"rule_name", "rule_desc"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("product_id, product_version", sorting, null) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
-        String sql = sqlBuilder.toString();
+
         int total = 0;
         List<Map<String, Object>> rules = new ArrayList<>();
 
-        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
-
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
                     Map<String, Object> map = new HashMap<>();
@@ -414,6 +408,7 @@ public class RulePersistenceImpl implements RulePersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     rules.add(map);
                 }
             }

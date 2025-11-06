@@ -303,11 +303,8 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         if(logger.isTraceEnabled()) logger.trace("queryRolePermission sql: {}", sqlBuilder);
         int total = 0;
         List<Map<String, Object>> rolePermissions = new ArrayList<>();
-
         try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sqlBuilder)) {
-
             populateParameters(preparedStatement, parameters);
-
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -407,11 +404,8 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         int total = 0;
         List<Map<String, Object>> roleUsers = new ArrayList<>();
 
-
         try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sqlBuilder)) {
-
             populateParameters(preparedStatement, parameters);
-
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -746,9 +740,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         List<Map<String, Object>> roleRowFilters = new ArrayList<>();
 
         try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sqlBuilder)) {
-
             populateParameters(preparedStatement, parameters);
-
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {

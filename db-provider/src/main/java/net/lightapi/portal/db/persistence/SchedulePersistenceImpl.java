@@ -23,7 +23,7 @@ import java.time.OffsetDateTime;
 import java.util.*;
 
 import static com.networknt.db.provider.SqlDbStartupHook.ds;
-import static net.lightapi.portal.db.util.SqlUtil.addCondition;
+import static net.lightapi.portal.db.util.SqlUtil.*;
 
 public class SchedulePersistenceImpl implements SchedulePersistence {
 
@@ -180,58 +180,38 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
     }
 
     @Override
-    public Result<String> getSchedule(int offset, int limit, String hostId, String scheduleId, String scheduleName, String frequencyUnit,
-                                      Integer frequencyTime, String startTs, String eventTopic, String eventType, String eventData) {
+    public Result<String> getSchedule(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
             """
             SELECT COUNT(*) OVER () AS total,
             schedule_id, host_id, schedule_name, frequency_unit, frequency_time,
-            start_ts, event_topic, event_type, event_data, update_user, update_ts, aggregate_version
+            start_ts, event_topic, event_type, event_data, update_user,
+            update_ts, aggregate_version, active
             FROM schedule_t
-            WHERE 1=1
+            WHERE host_id = ?
             """;
-        StringBuilder sqlBuilder = new StringBuilder(s);
 
         List<Object> parameters = new ArrayList<>();
-        StringBuilder whereClause = new StringBuilder();
+        parameters.add(UUID.fromString(hostId));
 
-        // Add conditions based on input parameters using the helper
-        addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "schedule_id", scheduleId != null ? UUID.fromString(scheduleId) : null);
-        addCondition(whereClause, parameters, "schedule_name", scheduleName);
-        addCondition(whereClause, parameters, "frequency_unit", frequencyUnit);
-        addCondition(whereClause, parameters, "frequency_time", frequencyTime);
-        addCondition(whereClause, parameters, "event_topic", eventTopic);
-        addCondition(whereClause, parameters, "event_type", eventType);
-        // eventData is TEXT, exact match might not be useful, consider LIKE or omit
-        // addCondition(whereClause, parameters, "event_data", eventData);
+        String[] searchColumns = {"schedule_name"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("schedule_id", "host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("schedule_name", sorting, null) +
+                "\nLIMIT ? OFFSET ?";
 
-
-        // Append the dynamic WHERE conditions if any were added
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        // Add ordering and pagination
-        sqlBuilder.append(" ORDER BY schedule_name\n" + // Default order
-                "LIMIT ? OFFSET ?");
-
-        parameters.add(limit);  // Add limit parameter
-        parameters.add(offset); // Add offset parameter
-
-        String sql = sqlBuilder.toString();
+        parameters.add(limit);
+        parameters.add(offset);
         int total = 0; // Variable to store total count
         List<Map<String, Object>> schedules = new ArrayList<>(); // List to hold results
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            // Bind all collected parameters
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true; // Flag to get total count only once
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 // Process the results
@@ -254,8 +234,8 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
-
-                    schedules.add(map); // Add map to the list
+                    map.put("active", resultSet.getBoolean("active"));
+                    schedules.add(map);
                 }
             }
             Map<String, Object> resultMap = new HashMap<>();
