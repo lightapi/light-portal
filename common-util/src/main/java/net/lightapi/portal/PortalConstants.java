@@ -162,15 +162,20 @@ public class PortalConstants {
     public static final String SCHEMA_DELETED_EVENT = "SchemaDeletedEvent";
 
     // --- Service Events ---
-    public static final String SERVICE_CREATED_EVENT = "ServiceCreatedEvent";
-    public static final String SERVICE_UPDATED_EVENT = "ServiceUpdatedEvent";
-    public static final String SERVICE_SPEC_UPDATED_EVENT = "ServiceSpecUpdatedEvent";
-    public static final String SERVICE_DELETED_EVENT = "ServiceDeletedEvent";
-    public static final String SERVICE_VERSION_CREATED_EVENT = "ServiceVersionCreatedEvent";
-    public static final String SERVICE_VERSION_UPDATED_EVENT = "ServiceVersionUpdatedEvent";
-    public static final String SERVICE_VERSION_DELETED_EVENT = "ServiceVersionDeletedEvent";
-    public static final String ENDPOINT_RULE_CREATED_EVENT = "EndpointRuleCreatedEvent";
-    public static final String ENDPOINT_RULE_DELETED_EVENT = "EndpointRuleDeletedEvent";
+    public static final String API_CREATED_EVENT = "ApiCreatedEvent";
+    public static final String API_UPDATED_EVENT = "ApiUpdatedEvent";
+    public static final String API_DELETED_EVENT = "ApiDeletedEvent";
+    public static final String API_VERSION_CREATED_EVENT = "ApiVersionCreatedEvent";
+    public static final String API_VERSION_UPDATED_EVENT = "ApiVersionUpdatedEvent";
+    public static final String API_VERSION_SPEC_UPDATED_EVENT = "ApiVersionSpecUpdatedEvent";
+    public static final String API_VERSION_DELETED_EVENT = "ApiVersionDeletedEvent";
+    public static final String API_ENDPOINT_RULE_CREATED_EVENT = "ApiEndpointRuleCreatedEvent";
+    public static final String API_ENDPOINT_RULE_DELETED_EVENT = "ApiEndpointRuleDeletedEvent";
+    public static final String API_ENDPOINT_CREATED_EVENT = "ApiEndpointCreatedEvent";
+    public static final String API_ENDPOINT_DELETED_EVENT = "ApiEndpointDeletedEvent";
+    public static final String API_ENDPOINT_SCOPE_CREATED_EVENT = "ApiEndpointScopeCreatedEvent";
+    public static final String API_ENDPOINT_SCOPE_DELETED_EVENT = "ApiEndpointScopeDeletedEvent";
+
     // --- Auth Events ---
     public static final String AUTH_REFRESH_TOKEN_CREATED_EVENT = "AuthRefreshTokenCreatedEvent";
     public static final String AUTH_REFRESH_TOKEN_DELETED_EVENT = "AuthRefreshTokenDeletedEvent";
@@ -403,9 +408,6 @@ public class PortalConstants {
 
     public static final String AGGREGATE_SCHEMA = "Schema";
 
-    // -- Api --
-    public static final String AGGREGATE_API = "Api";
-
     // -- Schedule --
     public static final String AGGREGATE_SCHEDULE = "Schedule";
 
@@ -422,11 +424,12 @@ public class PortalConstants {
     public static final String AGGREGATE_PRODUCT_VERSION_CONFIG = "ProductVersionConfig";
     public static final String AGGREGATE_PRODUCT_VERSION_CONFIG_PROPERTY = "ProductVersionConfigProperty";
 
-    // -- Service --
-    public static final String AGGREGATE_SERVICE = "Service";
-    public static final String AGGREGATE_SERVICE_VERSION = "ServiceVersion";
-    public static final String AGGREGATE_SERVICE_SPEC = "ServiceSpec";
-    public static final String AGGREGATE_ENDPOINT_RULE = "EndpointRule";
-
+    // -- Api --
+    public static final String AGGREGATE_API = "Api";
+    public static final String AGGREGATE_API_VERSION = "ApiVersion";
+    public static final String AGGREGATE_API_VERSION_SPEC = "ApiVersionSpec";
+    public static final String AGGREGATE_API_ENDPOINT = "ApiEndpoint";
+    public static final String AGGREGATE_API_ENDPOINT_SCOPE = "ApiEndpointScope";
+    public static final String AGGREGATE_API_ENDPOINT_RULE = "ApiEndpointRule";
 
 }

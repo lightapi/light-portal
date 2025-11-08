@@ -157,27 +157,32 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public Result<String> queryRefToken(String refToken) {return authPersistence.queryRefToken(refToken); };
 
     // --- ApiService ---
-    @Override public void createService(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.createService(connection, event); }
-    @Override public void updateService(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.updateService(connection, event); }
-    @Override public void deleteService(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.deleteService(connection, event); }
-    @Override public Result<String> queryService(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return apiServicePersistence.queryService(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public void createApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.createApi(connection, event); }
+    @Override public void updateApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.updateApi(connection, event); }
+    @Override public void deleteApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.deleteApi(connection, event); }
+    @Override public Result<String> queryApi(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return apiServicePersistence.queryApi(offset, limit, filters, globalFilter, sorting, hostId); }
     @Override public Result<String> queryApiLabel(String hostId) { return apiServicePersistence.queryApiLabel(hostId); }
-    @Override public void createServiceVersion(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.createServiceVersion(connection, event); }
-    @Override public void updateServiceVersion(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.updateServiceVersion(connection, event); }
-    @Override public void deleteServiceVersion(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.deleteServiceVersion(connection, event); }
-    @Override public Result<String> queryServiceVersion(String hostId, String apiId) { return apiServicePersistence.queryServiceVersion(hostId, apiId); }
+    @Override public Result<String> getApiById(String hostId, String apiId) { return apiServicePersistence.getApiById(hostId, apiId); }
+    @Override public Result<String> getApiVersionById(String hostId, String apiVersionId) { return apiServicePersistence.getApiVersionById(hostId, apiVersionId); }
+    @Override public String queryApiVersionId(String hostId, String apiId, String apiVersion) { return apiServicePersistence.queryApiVersionId(hostId, apiId, apiVersion); }
+
+    @Override public void createApiVersion(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.createApiVersion(connection, event); }
+    @Override public void updateApiVersion(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.updateApiVersion(connection, event); }
+    @Override public void deleteApiVersion(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.deleteApiVersion(connection, event); }
+    @Override public Result<String> queryApiVersion(String hostId, String apiId) { return apiServicePersistence.queryApiVersion(hostId, apiId); }
     @Override public Result<String> getApiVersionIdLabel(String hostId) { return apiServicePersistence.getApiVersionIdLabel(hostId); }
     @Override public Result<String> queryApiVersionLabel(String hostId, String apiId) { return apiServicePersistence.queryApiVersionLabel(hostId, apiId); }
-    @Override public void updateServiceSpec(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.updateServiceSpec(connection, event); }
-    @Override public Result<String> queryServiceEndpoint(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return apiServicePersistence.queryServiceEndpoint(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public void updateApiVersionSpec(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.updateApiVersionSpec(connection, event); }
+    @Override public Result<String> queryApiEndpoint(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return apiServicePersistence.queryApiEndpoint(offset, limit, filters, globalFilter, sorting, hostId); }
     @Override public Result<String> queryEndpointLabel(String hostId, String apiVersionId) { return apiServicePersistence.queryEndpointLabel(hostId, apiVersionId); }
-    @Override public Result<String> queryEndpointScope(String hostId, String endpointId) { return apiServicePersistence.queryEndpointScope(hostId, endpointId); }
-    @Override public void createEndpointRule(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.createEndpointRule(connection, event); }
-    @Override public void deleteEndpointRule(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.deleteEndpointRule(connection, event); }
-    @Override public Result<String> queryEndpointRule(String hostId, String apiId, String apiVersion, String endpoint) { return apiServicePersistence.queryEndpointRule(hostId, apiId, apiVersion, endpoint); }
+    @Override public Result<String> queryApiEndpointScope(String hostId, String endpointId) { return apiServicePersistence.queryApiEndpointScope(hostId, endpointId); }
+    @Override public void createApiEndpointRule(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.createApiEndpointRule(connection, event); }
+    @Override public void deleteApiEndpointRule(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.deleteApiEndpointRule(connection, event); }
+    @Override public Result<String> queryApiEndpointRule(String hostId, String endpointId) { return apiServicePersistence.queryApiEndpointRule(hostId, endpointId); }
     @Override public Result<String> queryServiceRule(String hostId, String apiId, String apiVersion) { return apiServicePersistence.queryServiceRule(hostId, apiId, apiVersion); }
-    @Override public Result<String> queryServicePermission(String hostId, String apiId, String apiVersion) { return apiServicePersistence.queryServicePermission(hostId, apiId, apiVersion); }
-    @Override public Result<List<String>> queryServiceFilter(String hostId, String apiId, String apiVersion) { return apiServicePersistence.queryServiceFilter(hostId, apiId, apiVersion); }
+
+    @Override public Result<String> queryApiPermission(String hostId, String apiId, String apiVersion) { return apiServicePersistence.queryApiPermission(hostId, apiId, apiVersion); }
+    @Override public Result<List<String>> queryApiFilter(String hostId, String apiId, String apiVersion) { return apiServicePersistence.queryApiFilter(hostId, apiId, apiVersion); }
     @Override public Result<String> getServiceIdLabel(String hostId) { return apiServicePersistence.getServiceIdLabel(hostId); }
 
     // --- HostOrg ---
