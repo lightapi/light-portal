@@ -164,6 +164,7 @@ public interface PortalDbProvider extends DbProvider {
     void updateApiVersionSpec(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getApiVersionById(String hostId, String apiVersionId);
     String queryApiVersionId(String hostId, String apiId, String apiVersion);
+    Map<String, Object> getEndpointIdMap(String hostId, String apiVersionId);
 
     // ServiceEndpoint
     Result<String> queryApiEndpoint(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);

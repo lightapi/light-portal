@@ -18,20 +18,15 @@ public interface ApiServicePersistence {
 
     // Service Version
     void createApiVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void createApiEndpoint(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void createApiEndpointScope(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateApiVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void updateApiEndpoint(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void updateApiEndpointScope(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteApiVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void deleteApiEndpoint(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void deleteApiEndpointScope(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getApiVersionById(String hostId, String apiVersionId);
     String queryApiVersionId(String hostId, String apiId, String apiVersion);
     Result<String> queryApiVersion(String hostId, String apiId);
     Result<String> getApiVersionIdLabel(String hostId);
     Result<String> queryApiVersionLabel(String hostId, String apiId);
     void updateApiVersionSpec(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    Map<String, Object> getEndpointIdMap(String hostId, String apiVersionId);
 
     // Service Endpoint
     Result<String> queryApiEndpoint(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);

@@ -18,6 +18,7 @@ import java.time.OffsetDateTime;
 import java.util.*;
 
 import static com.networknt.db.provider.SqlDbStartupHook.ds;
+import static java.sql.Types.NULL;
 import static net.lightapi.portal.db.util.SqlUtil.*;
 
 public class ApiServicePersistenceImpl implements ApiServicePersistence {
@@ -674,133 +675,6 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
         return result;
     }
 
-    /*
-    @Override
-    public void createServiceVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String insertServiceVersion = "INSERT INTO api_version_t (host_id, api_version_id, api_id, api_version, api_type, service_id, api_version_desc, " +
-                "spec_link, spec, update_user, update_ts, aggregate_version) " +
-                "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,  ?, ?)";
-        final String insertEndpoint = "INSERT INTO api_endpoint_t (host_id, endpoint_id, api_version_id, endpoint, http_method, " +
-                "endpoint_path, endpoint_name, endpoint_desc, update_user, update_ts, aggregate_version) " +
-                "VALUES (?,? ,?, ?, ?,  ?, ?, ?, ?, ?,  ?)";
-        final String insertScope = "INSERT INTO api_endpoint_scope_t (host_id, endpoint_id, scope, scope_desc, " +
-                "update_user, update_ts, aggregate_version) " +
-                "VALUES (?, ?, ?, ?, ?,  ?, ?)";
-
-        Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
-        String apiVersionId = (String) map.get("apiVersionId");
-        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
-        try (PreparedStatement statement = conn.prepareStatement(insertServiceVersion)) {
-            statement.setObject(1, UUID.fromString((String) map.get("hostId")));
-            statement.setObject(2, UUID.fromString(apiVersionId));
-            statement.setString(3, (String) map.get("apiId"));
-            statement.setString(4, (String) map.get("apiVersion"));
-            statement.setString(5, (String) map.get("apiType"));
-            statement.setString(6, (String) map.get("serviceId"));
-
-            if (map.containsKey("apiVersionDesc")) {
-                String apiDesc = (String) map.get("apiVersionDesc");
-                if (apiDesc != null && !apiDesc.trim().isEmpty()) {
-                    statement.setString(7, apiDesc);
-                } else {
-                    statement.setNull(7, Types.VARCHAR);
-                }
-            } else {
-                statement.setNull(7, Types.VARCHAR);
-            }
-            if (map.containsKey("specLink")) {
-                String specLink = (String) map.get("specLink");
-                if (specLink != null && !specLink.trim().isEmpty()) {
-                    statement.setString(8, specLink);
-                } else {
-                    statement.setNull(8, Types.VARCHAR);
-                }
-            } else {
-                statement.setNull(8, Types.VARCHAR);
-            }
-            if (map.containsKey("spec")) {
-                String spec = (String) map.get("spec");
-                if (spec != null && !spec.trim().isEmpty()) {
-                    statement.setString(9, spec);
-                } else {
-                    statement.setNull(9, Types.VARCHAR);
-                }
-            } else {
-                statement.setNull(9, Types.VARCHAR);
-            }
-            statement.setString(10, (String) event.get(Constants.USER));
-            statement.setObject(11, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-            statement.setLong(12, newAggregateVersion);
-            int count = statement.executeUpdate();
-            if (count == 0) {
-                throw new SQLException(String.format("Failed to insert api version %s with aggregateVersion %d", apiVersionId, newAggregateVersion));
-            }
-            List<Map<String, Object>> endpoints = (List<Map<String, Object>>) map.get("endpoints");
-            if (endpoints != null && !endpoints.isEmpty()) {
-                // insert endpoints
-                for (Map<String, Object> endpoint : endpoints) {
-                    try (PreparedStatement statementInsert = conn.prepareStatement(insertEndpoint)) {
-                        statementInsert.setObject(1, UUID.fromString((String) map.get("hostId")));
-                        statementInsert.setObject(2, UUID.fromString((String) endpoint.get("endpointId")));
-                        statementInsert.setObject(3, UUID.fromString(apiVersionId));
-                        statementInsert.setString(4, (String) endpoint.get("endpoint"));
-
-                        if (endpoint.get("httpMethod") == null)
-                            statementInsert.setNull(5, NULL);
-                        else
-                            statementInsert.setString(5, ((String) endpoint.get("httpMethod")).toLowerCase().trim());
-
-                        if (endpoint.get("endpointPath") == null)
-                            statementInsert.setNull(6, NULL);
-                        else
-                            statementInsert.setString(6, (String) endpoint.get("endpointPath"));
-
-                        if (endpoint.get("endpointName") == null)
-                            statementInsert.setNull(7, NULL);
-                        else
-                            statementInsert.setString(7, (String) endpoint.get("endpointName"));
-
-                        if (endpoint.get("endpointDesc") == null)
-                            statementInsert.setNull(8, NULL);
-                        else
-                            statementInsert.setString(8, (String) endpoint.get("endpointDesc"));
-
-                        statementInsert.setString(9, (String) event.get(Constants.USER));
-                        statementInsert.setObject(10, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-                        statementInsert.setLong(11, newAggregateVersion);
-                        statementInsert.executeUpdate();
-                    }
-                    // insert scopes
-                    List<String> scopes = (List<String>) endpoint.get("scopes");
-                    if (scopes != null && !scopes.isEmpty()) {
-                        for (String scope : scopes) {
-                            String[] scopeDesc = scope.split(":");
-                            try (PreparedStatement statementScope = conn.prepareStatement(insertScope)) {
-                                statementScope.setObject(1, UUID.fromString((String) map.get("hostId")));
-                                statementScope.setObject(2, UUID.fromString((String) endpoint.get("endpointId")));
-                                statementScope.setString(3, scopeDesc[0]);
-                                if (scopeDesc.length == 1)
-                                    statementScope.setNull(4, NULL);
-                                else
-                                    statementScope.setString(4, scopeDesc[1]);
-                                statementScope.setString(5, (String) event.get(Constants.USER));
-                                statementScope.setObject(6, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-                                statementScope.setLong(7, newAggregateVersion);
-                                statementScope.executeUpdate();
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (SQLException e) {
-            logger.error("SQLException during createServiceVersion for id {} and aggregateVersion {}: {}", apiVersionId, newAggregateVersion, e.getMessage(), e);
-            throw e;
-        } catch (Exception e) {
-            logger.error("Exception during createServiceVersion for id {} and aggregateVersion {}: {}", apiVersionId, newAggregateVersion, e.getMessage(), e);
-            throw e;
-        }
-    }
-    */
     @Override
     public void createApiVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
@@ -808,7 +682,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
         // 1. First time insert (no conflict).
         // 2. Re-creation (conflict on host_id, api_version_id) -> UPDATE the existing soft-deleted row (setting active=TRUE and new version).
 
-        final String sql =
+        final String sqlApiVersion =
                 """
                 INSERT INTO api_version_t (
                     host_id,
@@ -839,16 +713,65 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
                 WHERE api_version_t.aggregate_version < EXCLUDED.aggregate_version
+                AND active = FALSE
                 """;
 
-        // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        final String sqlEndpoint =
+                """
+                INSERT INTO api_endpoint_t (
+                    host_id,
+                    endpoint_id,
+                    api_version_id,
+                    endpoint,
+                    http_method,
+                    endpoint_path,
+                    endpoint_name,
+                    endpoint_desc,
+                    update_user,
+                    update_ts,
+                    active
+                ) VALUES (?,? ,?, ?, ?,  ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (host_id, endpoint_id) DO UPDATE
+                SET api_version_id = EXCLUDED.api_version_id,
+                    endpoint = EXCLUDED.endpoint,
+                    http_method = EXCLUDED.http_method,
+                    endpoint_path = EXCLUDED.endpoint
+                    endpoint_name = EXCLUDED.endpoint_name,
+                    endpoint_desc = EXCLUDED.endpoint_desc,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    active = TRUE
+                    -- OCC/IDM: Only update if the endpoint is soft-deleted.
+                    WHERE active = FALSE
+                """;
+
+        final String sqlScope =
+                """
+                INSERT INTO api_endpoint_scope_t (
+                    host_id,
+                    endpoint_id,
+                    scope,
+                    scope_desc,
+                    update_user,
+                    update_ts,
+                    active
+                ) VALUES (?, ?, ?, ?, ?,  ?, TRUE)
+                ON CONFLICT (host_id, endpoint_id, scope) DO UPDATE
+                SET scope_desc = EXCLUDED.scope_desc,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    active = TRUE
+                    -- OCC/IDM: Only update if the endpoint scope is soft-deleted.
+                    WHERE active = FALSE
+                """;
+
         Map<String, Object> map = SqlUtil.extractEventData(event);
 
         String hostId = (String)map.get("hostId");
         String apiVersionId = (String)map.get("apiVersionId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+        try (PreparedStatement statement = conn.prepareStatement(sqlApiVersion)) {
             // INSERT values (12 placeholders + active=TRUE in SQL, total 12 dynamic values)
             int i = 1;
             // 1: host_id
@@ -898,277 +821,12 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 // This is the desired idempotent/out-of-order protection behavior. Log and ignore.
                 logger.warn("Creation/Reactivation skipped for hostId {} apiVersionId {} aggregateVersion {}. A newer or same version already exists.", hostId, apiVersionId, newAggregateVersion);
             }
-        } catch (SQLException e) {
-            logger.error("SQLException during createServiceVersion for hostId {} apiVersionId {} aggregateVersion {}: {}", hostId, apiVersionId, newAggregateVersion, e.getMessage(), e);
-            throw e;
-        } catch (Exception e) {
-            logger.error("Exception during createServiceVersion for hostId {} apiVersionId {} aggregateVersion {}: {}", hostId, apiVersionId, newAggregateVersion, e.getMessage(), e);
-            throw e;
-        }
-    }
 
-    @Override
-    public void createApiEndpoint(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        // Use UPSERT: INSERT ON CONFLICT DO UPDATE
-        // This handles:
-        // 1. First time insert (no conflict).
-        // 2. Re-creation (conflict on host_id, endpoint_id) -> UPDATE the existing soft-deleted row (setting active=TRUE and new version).
-
-        final String sql =
-                """
-                INSERT INTO api_endpoint_t (
-                    host_id,
-                    endpoint_id,
-                    api_version_id,
-                    endpoint,
-                    http_method,
-                    endpoint_path,
-                    endpoint_name,
-                    endpoint_desc,
-                    update_user,
-                    update_ts,
-                    aggregate_version,
-                    active
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)
-                ON CONFLICT (host_id, endpoint_id) DO UPDATE
-                SET api_version_id = EXCLUDED.api_version_id,
-                    endpoint = EXCLUDED.endpoint,
-                    http_method = EXCLUDED.http_method,
-                    endpoint_path = EXCLUDED.endpoint_path,
-                    endpoint_name = EXCLUDED.endpoint_name,
-                    endpoint_desc = EXCLUDED.endpoint_desc,
-                    update_user = EXCLUDED.update_user,
-                    update_ts = EXCLUDED.update_ts,
-                    aggregate_version = EXCLUDED.aggregate_version,
-                    active = TRUE
-                -- OCC/IDM: Only update if the incoming event is newer
-                WHERE api_endpoint_t.aggregate_version < EXCLUDED.aggregate_version
-                """;
-
-        // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
-        Map<String, Object> map = SqlUtil.extractEventData(event);
-
-        String hostId = (String)map.get("hostId");
-        String endpointId = (String)map.get("endpointId");
-        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
-
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            // INSERT values (11 placeholders + active=TRUE in SQL, total 11 dynamic values)
-            int i = 1;
-            // 1: host_id
-            statement.setObject(i++, UUID.fromString(hostId));
-            // 2: endpoint_id
-            statement.setObject(i++, UUID.fromString(endpointId));
-            // 3: api_version_id
-            statement.setObject(i++, UUID.fromString((String)map.get("apiVersionId")));
-            // 4: endpoint
-            statement.setString(i++, (String)map.get("endpoint"));
-
-            // 5: http_method
-            if (map.containsKey("httpMethod")) {
-                statement.setString(i++, (String)map.get("httpMethod"));
-            } else {
-                statement.setNull(i++, Types.VARCHAR);
-            }
-
-            // 6: endpoint_path
-            if (map.containsKey("endpointPath")) {
-                statement.setString(i++, (String)map.get("endpointPath"));
-            } else {
-                statement.setNull(i++, Types.VARCHAR);
-            }
-
-            // 7: endpoint_name
-            statement.setString(i++, (String)map.get("endpointName"));
-
-            // 8: endpoint_desc
-            if (map.containsKey("endpointDesc")) {
-                statement.setString(i++, (String)map.get("endpointDesc"));
-            } else {
-                statement.setNull(i++, Types.VARCHAR);
-            }
-
-            // 9: update_user
-            statement.setString(i++, (String)event.get(Constants.USER));
-            // 10: update_ts
-            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            // 11: aggregate_version
-            statement.setLong(i++, newAggregateVersion);
-
-            int count = statement.executeUpdate();
-            if (count == 0) {
-                // count=0 means the ON CONFLICT clause was hit, BUT the WHERE clause (aggregate_version < EXCLUDED.aggregate_version) failed.
-                // This is the desired idempotent/out-of-order protection behavior. Log and ignore.
-                logger.warn("Creation/Reactivation skipped for hostId {} endpointId {} aggregateVersion {}. A newer or same version already exists.", hostId, endpointId, newAggregateVersion);
-            }
-        } catch (SQLException e) {
-            logger.error("SQLException during createApiEndpoint for hostId {} endpointId {} aggregateVersion {}: {}", hostId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
-        } catch (Exception e) {
-            logger.error("Exception during createApiEndpoint for hostId {} endpointId {} aggregateVersion {}: {}", hostId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
-        }
-    }
-
-    @Override
-    public void createApiEndpointScope(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        // Use UPSERT: INSERT ON CONFLICT DO UPDATE
-        // This handles:
-        // 1. First time insert (no conflict).
-        // 2. Re-creation (conflict on host_id, endpoint_id, scope) -> UPDATE the existing soft-deleted row (setting active=TRUE and new version).
-
-        final String sql =
-                """
-                INSERT INTO api_endpoint_scope_t (
-                    host_id,
-                    endpoint_id,
-                    scope,
-                    scope_desc,
-                    update_user,
-                    update_ts,
-                    aggregate_version,
-                    active
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, TRUE)
-                ON CONFLICT (host_id, endpoint_id, scope) DO UPDATE
-                SET scope_desc = EXCLUDED.scope_desc,
-                    update_user = EXCLUDED.update_user,
-                    update_ts = EXCLUDED.update_ts,
-                    aggregate_version = EXCLUDED.aggregate_version,
-                    active = TRUE
-                -- OCC/IDM: Only update if the incoming event is newer
-                WHERE api_endpoint_scope_t.aggregate_version < EXCLUDED.aggregate_version
-                """;
-
-        // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
-        Map<String, Object> map = SqlUtil.extractEventData(event);
-
-        String hostId = (String)map.get("hostId");
-        String endpointId = (String)map.get("endpointId");
-        String scope = (String)map.get("scope");
-        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
-
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            // INSERT values (7 placeholders + active=TRUE in SQL, total 7 dynamic values)
-            int i = 1;
-            // 1: host_id
-            statement.setObject(i++, UUID.fromString(hostId));
-            // 2: endpoint_id
-            statement.setObject(i++, UUID.fromString(endpointId));
-            // 3: scope
-            statement.setString(i++, scope);
-
-            // 4: scope_desc
-            if (map.containsKey("scopeDesc")) {
-                statement.setString(i++, (String)map.get("scopeDesc"));
-            } else {
-                statement.setNull(i++, Types.VARCHAR);
-            }
-
-            // 5: update_user
-            statement.setString(i++, (String)event.get(Constants.USER));
-            // 6: update_ts
-            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            // 7: aggregate_version
-            statement.setLong(i++, newAggregateVersion);
-
-            int count = statement.executeUpdate();
-            if (count == 0) {
-                // count=0 means the ON CONFLICT clause was hit, BUT the WHERE clause (aggregate_version < EXCLUDED.aggregate_version) failed.
-                // This is the desired idempotent/out-of-order protection behavior. Log and ignore.
-                logger.warn("Creation/Reactivation skipped for hostId {} endpointId {} scope {} aggregateVersion {}. A newer or same version already exists.", hostId, endpointId, scope, newAggregateVersion);
-            }
-        } catch (SQLException e) {
-            logger.error("SQLException during createApiEndpointScope for hostId {} endpointId {} scope {} aggregateVersion {}: {}", hostId, endpointId, scope, newAggregateVersion, e.getMessage(), e);
-            throw e;
-        } catch (Exception e) {
-            logger.error("Exception during createApiEndpointScope for hostId {} endpointId {} scope {} aggregateVersion {}: {}", hostId, endpointId, scope, newAggregateVersion, e.getMessage(), e);
-            throw e;
-        }
-    }
-
-    /*
-    @Override
-    public void updateServiceVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String updateApi = "UPDATE api_version_t SET api_id = ?, api_version = ?, api_type = ?, service_id = ?, " +
-                "api_version_desc = ?, spec_link = ?,  spec = ?," +
-                "update_user = ?, update_ts = ?, aggregate_version =? " +
-                "WHERE host_id = ? AND api_version_id = ? AND aggregate_version = ?";
-        final String deleteEndpoint = "DELETE FROM api_endpoint_t WHERE host_id = ? AND api_version_id = ? AND aggregate_version = ?";
-        final String insertEndpoint = "INSERT INTO api_endpoint_t (host_id, endpoint_id, api_version_id, endpoint, http_method, " +
-                "endpoint_path, endpoint_name, endpoint_desc, update_user, update_ts, aggregate_version) " +
-                "VALUES (?,? ,?, ?, ?,  ?, ?, ?, ?, ?,  ?)";
-        final String insertScope = "INSERT INTO api_endpoint_scope_t (host_id, endpoint_id, scope, scope_desc, " +
-                "update_user, update_ts, aggregate_version) " +
-                "VALUES (?, ?, ?, ?, ?,  ?, ?)";
-
-        Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
-        String apiVersionId = (String) map.get("apiVersionId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
-        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
-        try (PreparedStatement statement = conn.prepareStatement(updateApi)) {
-            statement.setString(1, (String) map.get("apiId"));
-            statement.setString(2, (String) map.get("apiVersion"));
-            statement.setString(3, (String) map.get("apiType"));
-            statement.setString(4, (String) map.get("serviceId"));
-
-            if (map.containsKey("apiVersionDesc")) {
-                String apiDesc = (String) map.get("apiVersionDesc");
-                if (apiDesc != null && !apiDesc.trim().isEmpty()) {
-                    statement.setString(5, apiDesc);
-                } else {
-                    statement.setNull(5, Types.VARCHAR);
-                }
-            } else {
-                statement.setNull(5, Types.VARCHAR);
-            }
-            if (map.containsKey("specLink")) {
-                String specLink = (String) map.get("specLink");
-                if (specLink != null && !specLink.trim().isEmpty()) {
-                    statement.setString(6, specLink);
-                } else {
-                    statement.setNull(6, Types.VARCHAR);
-                }
-            } else {
-                statement.setNull(6, Types.VARCHAR);
-            }
-            if (map.containsKey("spec")) {
-                String spec = (String) map.get("spec");
-                if (spec != null && !spec.trim().isEmpty()) {
-                    statement.setString(7, spec);
-                } else {
-                    statement.setNull(7, Types.VARCHAR);
-                }
-            } else {
-                statement.setNull(7, Types.VARCHAR);
-            }
-
-            statement.setString(8, (String) event.get(Constants.USER));
-            statement.setObject(9, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-            statement.setLong(10, newAggregateVersion);
-            statement.setObject(11, UUID.fromString((String) map.get("hostId")));
-            statement.setObject(12, UUID.fromString(apiVersionId));
-            statement.setLong(13, oldAggregateVersion);
-
-            int count = statement.executeUpdate();
-            if (count == 0) {
-                if (queryServiceVersionExists(conn, (String)event.get(Constants.HOST), apiVersionId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict for apiVersionId " + apiVersionId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
-                } else {
-                    throw new SQLException("No record found to update for apiVersionId " + apiVersionId + ".");
-                }
-            }
             List<Map<String, Object>> endpoints = (List<Map<String, Object>>) map.get("endpoints");
             if (endpoints != null && !endpoints.isEmpty()) {
-                // delete endpoints for the api version. the api_endpoint_scope_t will be deleted by the cascade.
-                try (PreparedStatement statementDelete = conn.prepareStatement(deleteEndpoint)) {
-                    statementDelete.setObject(1, UUID.fromString((String) map.get("hostId")));
-                    statementDelete.setObject(2, UUID.fromString(apiVersionId));
-                    statementDelete.setLong(3, oldAggregateVersion);
-                    statementDelete.executeUpdate();
-                }
                 // insert endpoints
                 for (Map<String, Object> endpoint : endpoints) {
-                    try (PreparedStatement statementInsert = conn.prepareStatement(insertEndpoint)) {
+                    try (PreparedStatement statementInsert = conn.prepareStatement(sqlEndpoint)) {
                         statementInsert.setObject(1, UUID.fromString((String) map.get("hostId")));
                         statementInsert.setObject(2, UUID.fromString((String) endpoint.get("endpointId")));
                         statementInsert.setObject(3, UUID.fromString(apiVersionId));
@@ -1196,7 +854,6 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
 
                         statementInsert.setString(9, (String) event.get(Constants.USER));
                         statementInsert.setObject(10, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-                        statementInsert.setLong(11, newAggregateVersion);
                         statementInsert.executeUpdate();
                     }
                     // insert scopes
@@ -1204,7 +861,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                     if (scopes != null && !scopes.isEmpty()) {
                         for (String scope : scopes) {
                             String[] scopeDesc = scope.split(":");
-                            try (PreparedStatement statementScope = conn.prepareStatement(insertScope)) {
+                            try (PreparedStatement statementScope = conn.prepareStatement(sqlScope)) {
                                 statementScope.setObject(1, UUID.fromString((String) map.get("hostId")));
                                 statementScope.setObject(2, UUID.fromString((String) endpoint.get("endpointId")));
                                 statementScope.setString(3, scopeDesc[0]);
@@ -1214,7 +871,6 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                                     statementScope.setString(4, scopeDesc[1]);
                                 statementScope.setString(5, (String) event.get(Constants.USER));
                                 statementScope.setObject(6, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-                                statementScope.setLong(7, newAggregateVersion);
                                 statementScope.executeUpdate();
                             }
                         }
@@ -1222,21 +878,20 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 }
             }
         } catch (SQLException e) {
-            logger.error("SQLException during updateServiceVersion for id {} (old: {}) -> (new: {}): {}", apiVersionId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during createServiceVersion for hostId {} apiVersionId {} aggregateVersion {}: {}", hostId, apiVersionId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateServiceVersion for id {} (old: {}) -> (new: {}): {}", apiVersionId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during createServiceVersion for hostId {} apiVersionId {} aggregateVersion {}: {}", hostId, apiVersionId, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
-    */
 
     @Override
     public void updateApiVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the service version should be active.
-        final String sql =
+        final String sqlApiVersion =
                 """
                 UPDATE api_version_t
                 SET api_id = ?,
@@ -1254,6 +909,79 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                   AND api_version_id = ?
                   AND aggregate_version < ?
                 """; // <<< CRITICAL: Added aggregate_version < ? to enforce monotonicity (OCC/IDM)
+        final String sqlDeactivateEndpoint =
+                """
+                UPDATE api_endpoint_t
+                SET active = FALSE,
+                update_user = ?,
+                update_ts = ?
+                WHERE host_id = ?
+                AND api_version_id = ?
+                """;
+        final String sqlDeactivateScope =
+                """
+                UPDATE api_endpoint_scope_t
+                SET active = FALSE,
+                update_user = ?,
+                update_ts = ?
+                WHERE host_id = ?
+                AND endpoint_id IN
+                (
+                    SELECT endpoint_id
+                    FROM api_endpoint_t
+                    WHERE host_id = ?
+                    AND api_version_id = ?
+                )
+                """;
+
+        final String sqlEndpoint =
+                """
+                INSERT INTO api_endpoint_t (
+                    host_id,
+                    endpoint_id,
+                    api_version_id,
+                    endpoint,
+                    http_method,
+                    endpoint_path,
+                    endpoint_name,
+                    endpoint_desc,
+                    update_user,
+                    update_ts,
+                    active
+                ) VALUES (?,? ,?, ?, ?,  ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (host_id, endpoint_id) DO UPDATE
+                SET api_version_id = EXCLUDED.api_version_id,
+                    endpoint = EXCLUDED.endpoint,
+                    http_method = EXCLUDED.http_method,
+                    endpoint_path = EXCLUDED.endpoint
+                    endpoint_name = EXCLUDED.endpoint_name,
+                    endpoint_desc = EXCLUDED.endpoint_desc,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    active = TRUE
+                    -- OCC/IDM: Only update if the endpoint is soft-deleted.
+                    WHERE active = FALSE
+                """;
+
+        final String sqlScope =
+                """
+                INSERT INTO api_endpoint_scope_t (
+                    host_id,
+                    endpoint_id,
+                    scope,
+                    scope_desc,
+                    update_user,
+                    update_ts,
+                    active
+                ) VALUES (?, ?, ?, ?, ?,  ?, TRUE)
+                ON CONFLICT (host_id, endpoint_id, scope) DO UPDATE
+                SET scope_desc = EXCLUDED.scope_desc,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    active = TRUE
+                    -- OCC/IDM: Only update if the endpoint scope is soft-deleted.
+                    WHERE active = FALSE
+                """;
 
         // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
         Map<String, Object> map = SqlUtil.extractEventData(event);
@@ -1262,7 +990,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
         String apiVersionId = (String)map.get("apiVersionId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+        try (PreparedStatement statement = conn.prepareStatement(sqlApiVersion)) {
             // SET values (10 dynamic values + active = TRUE in SQL)
             int i = 1;
             // 1: api_id
@@ -1318,6 +1046,80 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
                 logger.warn("Update skipped for hostId {} apiVersionId {} aggregateVersion {}. Record not found or a newer/same version already exists.", hostId, apiVersionId, newAggregateVersion);
             }
+
+            List<Map<String, Object>> endpoints = (List<Map<String, Object>>) map.get("endpoints");
+            if (endpoints != null && !endpoints.isEmpty()) {
+                // deactivate endpoints for the api version.
+                try (PreparedStatement statementDelete = conn.prepareStatement(sqlDeactivateEndpoint)) {
+                    statementDelete.setObject(1, UUID.fromString((String) map.get("hostId")));
+                    statementDelete.setObject(2, UUID.fromString(apiVersionId));
+                    statementDelete.setString(3, (String) event.get(Constants.USER));
+                    statementDelete.setObject(4, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                    statementDelete.executeUpdate();
+                }
+                // deactivate scopes for the api version.
+                try (PreparedStatement statementDelete = conn.prepareStatement(sqlDeactivateScope)) {
+                    statementDelete.setObject(1, UUID.fromString((String) map.get("hostId")));
+                    statementDelete.setObject(2, UUID.fromString((String) map.get("hostId")));
+                    statementDelete.setObject(3, UUID.fromString(apiVersionId));
+                    statementDelete.setString(4, (String) event.get(Constants.USER));
+                    statementDelete.setObject(5, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                    statementDelete.executeUpdate();
+                }
+
+                // insert or update endpoints
+                for (Map<String, Object> endpoint : endpoints) {
+                    try (PreparedStatement statementInsert = conn.prepareStatement(sqlEndpoint)) {
+                        statementInsert.setObject(1, UUID.fromString((String) map.get("hostId")));
+                        statementInsert.setObject(2, UUID.fromString((String) endpoint.get("endpointId")));
+                        statementInsert.setObject(3, UUID.fromString(apiVersionId));
+                        statementInsert.setString(4, (String) endpoint.get("endpoint"));
+
+                        if (endpoint.get("httpMethod") == null)
+                            statementInsert.setNull(5, NULL);
+                        else
+                            statementInsert.setString(5, ((String) endpoint.get("httpMethod")).toLowerCase().trim());
+
+                        if (endpoint.get("endpointPath") == null)
+                            statementInsert.setNull(6, NULL);
+                        else
+                            statementInsert.setString(6, (String) endpoint.get("endpointPath"));
+
+                        if (endpoint.get("endpointName") == null)
+                            statementInsert.setNull(7, NULL);
+                        else
+                            statementInsert.setString(7, (String) endpoint.get("endpointName"));
+
+                        if (endpoint.get("endpointDesc") == null)
+                            statementInsert.setNull(8, NULL);
+                        else
+                            statementInsert.setString(8, (String) endpoint.get("endpointDesc"));
+
+                        statementInsert.setString(9, (String) event.get(Constants.USER));
+                        statementInsert.setObject(10, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                        statementInsert.executeUpdate();
+                    }
+                    // insert or update scopes
+                    List<String> scopes = (List<String>) endpoint.get("scopes");
+                    if (scopes != null && !scopes.isEmpty()) {
+                        for (String scope : scopes) {
+                            String[] scopeDesc = scope.split(":");
+                            try (PreparedStatement statementScope = conn.prepareStatement(sqlScope)) {
+                                statementScope.setObject(1, UUID.fromString((String) map.get("hostId")));
+                                statementScope.setObject(2, UUID.fromString((String) endpoint.get("endpointId")));
+                                statementScope.setString(3, scopeDesc[0]);
+                                if (scopeDesc.length == 1)
+                                    statementScope.setNull(4, NULL);
+                                else
+                                    statementScope.setString(4, scopeDesc[1]);
+                                statementScope.setString(5, (String) event.get(Constants.USER));
+                                statementScope.setObject(6, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                                statementScope.executeUpdate();
+                            }
+                        }
+                    }
+                }
+            }
         } catch (SQLException e) {
             logger.error("SQLException during updateServiceVersion for hostId {} apiVersionId {} aggregateVersion {}: {}", hostId, apiVersionId, newAggregateVersion, e.getMessage(), e);
             throw e;
@@ -1328,174 +1130,10 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     }
 
     @Override
-    public void updateApiEndpoint(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
-        // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
-        // We explicitly set active = TRUE as an UPDATE event implies the endpoint should be active.
-        final String sql =
-                """
-                UPDATE api_endpoint_t
-                SET api_version_id = ?,
-                    endpoint = ?,
-                    http_method = ?,
-                    endpoint_path = ?,
-                    endpoint_name = ?,
-                    endpoint_desc = ?,
-                    update_user = ?,
-                    update_ts = ?,
-                    aggregate_version = ?,
-                    active = TRUE
-                WHERE host_id = ?
-                  AND endpoint_id = ?
-                  AND aggregate_version < ?
-                """; // <<< CRITICAL: Added aggregate_version < ? to enforce monotonicity (OCC/IDM)
-
-        // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
-        Map<String, Object> map = SqlUtil.extractEventData(event);
-
-        String hostId = (String)map.get("hostId");
-        String endpointId = (String)map.get("endpointId");
-        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
-
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            // SET values (9 dynamic values + active = TRUE in SQL)
-            int i = 1;
-            // 1: api_version_id
-            statement.setObject(i++, UUID.fromString((String)map.get("apiVersionId")));
-            // 2: endpoint
-            statement.setString(i++, (String)map.get("endpoint"));
-
-            // 3: http_method
-            if (map.containsKey("httpMethod")) {
-                statement.setString(i++, (String)map.get("httpMethod"));
-            } else {
-                statement.setNull(i++, Types.VARCHAR);
-            }
-
-            // 4: endpoint_path
-            if (map.containsKey("endpointPath")) {
-                statement.setString(i++, (String)map.get("endpointPath"));
-            } else {
-                statement.setNull(i++, Types.VARCHAR);
-            }
-
-            // 5: endpoint_name
-            statement.setString(i++, (String)map.get("endpointName"));
-
-            // 6: endpoint_desc
-            if (map.containsKey("endpointDesc")) {
-                statement.setString(i++, (String)map.get("endpointDesc"));
-            } else {
-                statement.setNull(i++, Types.VARCHAR);
-            }
-
-            // 7: update_user
-            statement.setString(i++, (String)event.get(Constants.USER));
-            // 8: update_ts
-            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            // 9: aggregate_version
-            statement.setLong(i++, newAggregateVersion);
-
-
-            // WHERE conditions (3 placeholders)
-            // 10: host_id
-            statement.setObject(i++, UUID.fromString(hostId));
-            // 11: endpoint_id
-            statement.setObject(i++, UUID.fromString(endpointId));
-            // 12: aggregate_version < ? (new version for OCC/IDM check)
-            statement.setLong(i++, newAggregateVersion);
-
-            int count = statement.executeUpdate();
-            if (count == 0) {
-                // If 0 rows updated, it means the record was either not found
-                // OR aggregate_version >= newAggregateVersion (OCC/IDM check failed).
-                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
-                logger.warn("Update skipped for hostId {} endpointId {} aggregateVersion {}. Record not found or a newer/same version already exists.", hostId, endpointId, newAggregateVersion);
-            }
-        } catch (SQLException e) {
-            logger.error("SQLException during updateApiEndpoint for hostId {} endpointId {} aggregateVersion {}: {}", hostId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
-        } catch (Exception e) {
-            logger.error("Exception during updateApiEndpoint for hostId {} endpointId {} aggregateVersion {}: {}", hostId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
-        }
-    }
-
-    @Override
-    public void updateApiEndpointScope(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
-        // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
-        // We explicitly set active = TRUE as an UPDATE event implies the scope should be active.
-        final String sql =
-                """
-                UPDATE api_endpoint_scope_t
-                SET scope_desc = ?,
-                    update_user = ?,
-                    update_ts = ?,
-                    aggregate_version = ?,
-                    active = TRUE
-                WHERE host_id = ?
-                  AND endpoint_id = ?
-                  AND scope = ?
-                  AND aggregate_version < ?
-                """; // <<< CRITICAL: Added aggregate_version < ? to enforce monotonicity (OCC/IDM)
-
-        // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
-        Map<String, Object> map = SqlUtil.extractEventData(event);
-
-        String hostId = (String)map.get("hostId");
-        String endpointId = (String)map.get("endpointId");
-        String scope = (String)map.get("scope");
-        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
-
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            // SET values (4 dynamic values + active = TRUE in SQL)
-            int i = 1;
-            // 1: scope_desc
-            if (map.containsKey("scopeDesc")) {
-                statement.setString(i++, (String)map.get("scopeDesc"));
-            } else {
-                statement.setNull(i++, Types.VARCHAR);
-            }
-            // 2: update_user
-            statement.setString(i++, (String)event.get(Constants.USER));
-            // 3: update_ts
-            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            // 4: aggregate_version
-            statement.setLong(i++, newAggregateVersion);
-
-
-            // WHERE conditions (4 placeholders)
-            // 5: host_id
-            statement.setObject(i++, UUID.fromString(hostId));
-            // 6: endpoint_id
-            statement.setObject(i++, UUID.fromString(endpointId));
-            // 7: scope
-            statement.setString(i++, scope);
-            // 8: aggregate_version < ? (new version for OCC/IDM check)
-            statement.setLong(i++, newAggregateVersion);
-
-            int count = statement.executeUpdate();
-            if (count == 0) {
-                // If 0 rows updated, it means the record was either not found
-                // OR aggregate_version >= newAggregateVersion (OCC/IDM check failed).
-                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
-                logger.warn("Update skipped for hostId {} endpointId {} scope {} aggregateVersion {}. Record not found or a newer/same version already exists.", hostId, endpointId, scope, newAggregateVersion);
-            }
-        } catch (SQLException e) {
-            logger.error("SQLException during updateApiEndpointScope for hostId {} endpointId {} scope {} aggregateVersion {}: {}", hostId, endpointId, scope, newAggregateVersion, e.getMessage(), e);
-            throw e;
-        } catch (Exception e) {
-            logger.error("Exception during updateApiEndpointScope for hostId {} endpointId {} scope {} aggregateVersion {}: {}", hostId, endpointId, scope, newAggregateVersion, e.getMessage(), e);
-            throw e;
-        }
-    }
-
-    @Override
     public void deleteApiVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
-        final String sql =
+        final String sqlDeactivateApiVersion =
                 """
                 UPDATE api_version_t
                 SET active = FALSE,
@@ -1506,6 +1144,30 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                   AND api_version_id = ?
                   AND aggregate_version < ?
                 """; // <<< CRITICAL: Added aggregate_version < ? to enforce monotonicity (OCC/IDM)
+        final String sqlDeactivateEndpoint =
+                """
+                UPDATE api_endpoint_t
+                SET active = FALSE,
+                update_user = ?,
+                update_ts = ?
+                WHERE host_id = ?
+                AND api_version_id = ?
+                """;
+        final String sqlDeactivateScope =
+                """
+                UPDATE api_endpoint_scope_t
+                SET active = FALSE,
+                update_user = ?,
+                update_ts = ?
+                WHERE host_id = ?
+                AND endpoint_id IN
+                (
+                    SELECT endpoint_id
+                    FROM api_endpoint_t
+                    WHERE host_id = ?
+                    AND api_version_id = ?
+                )
+                """;
 
         // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
         Map<String, Object> map = SqlUtil.extractEventData(event);
@@ -1515,7 +1177,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
         // A delete event represents a state change, so it should have a new, incremented version.
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+        try (PreparedStatement statement = conn.prepareStatement(sqlDeactivateApiVersion)) {
             // SET values (3 placeholders)
             // 1: update_user
             statement.setString(1, (String)event.get(Constants.USER));
@@ -1540,133 +1202,28 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
                 logger.warn("Soft delete skipped for hostId {} apiVersionId {} aggregateVersion {}. Record not found or a newer/same version already exists.", hostId, apiVersionId, newAggregateVersion);
             }
+            // deactivate endpoints for the api version.
+            try (PreparedStatement statementDelete = conn.prepareStatement(sqlDeactivateEndpoint)) {
+                statementDelete.setObject(1, UUID.fromString((String) map.get("hostId")));
+                statementDelete.setObject(2, UUID.fromString(apiVersionId));
+                statementDelete.setString(3, (String) event.get(Constants.USER));
+                statementDelete.setObject(4, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                statementDelete.executeUpdate();
+            }
+            // deactivate scopes for the api version.
+            try (PreparedStatement statementDelete = conn.prepareStatement(sqlDeactivateScope)) {
+                statementDelete.setObject(1, UUID.fromString((String) map.get("hostId")));
+                statementDelete.setObject(2, UUID.fromString((String) map.get("hostId")));
+                statementDelete.setObject(3, UUID.fromString(apiVersionId));
+                statementDelete.setString(4, (String) event.get(Constants.USER));
+                statementDelete.setObject(5, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                statementDelete.executeUpdate();
+            }
         } catch (SQLException e) {
             logger.error("SQLException during deleteServiceVersion for hostId {} apiVersionId {} aggregateVersion {}: {}", hostId, apiVersionId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
             logger.error("Exception during deleteServiceVersion for hostId {} apiVersionId {} aggregateVersion {}: {}", hostId, apiVersionId, newAggregateVersion, e.getMessage(), e);
-            throw e;
-        }
-    }
-
-    @Override
-    public void deleteApiEndpoint(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        // Use UPDATE to implement Soft Delete (setting active = FALSE).
-        // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
-        final String sql =
-                """
-                UPDATE api_endpoint_t
-                SET active = FALSE,
-                    update_user = ?,
-                    update_ts = ?,
-                    aggregate_version = ?
-                WHERE host_id = ?
-                  AND endpoint_id = ?
-                  AND aggregate_version < ?
-                """; // <<< CRITICAL: Added aggregate_version < ? to enforce monotonicity (OCC/IDM)
-
-        // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
-        Map<String, Object> map = SqlUtil.extractEventData(event);
-
-        String hostId = (String)map.get("hostId");
-        String endpointId = (String)map.get("endpointId");
-        // A delete event represents a state change, so it should have a new, incremented version.
-        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
-
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            // SET values (3 placeholders)
-            // 1: update_user
-            statement.setString(1, (String)event.get(Constants.USER));
-            // 2: update_ts
-            statement.setObject(2, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            // 3: aggregate_version (the new version)
-            statement.setLong(3, newAggregateVersion);
-
-            // WHERE conditions (3 placeholders)
-            // 4: host_id
-            statement.setObject(4, UUID.fromString(hostId));
-            // 5: endpoint_id
-            statement.setObject(5, UUID.fromString(endpointId));
-            // 6: aggregate_version < ? (new version for OCC/IDM check)
-            statement.setLong(6, newAggregateVersion);
-
-            int count = statement.executeUpdate();
-            if (count == 0) {
-                // If 0 rows updated, it means:
-                // 1. The record was not found (already deleted or never existed).
-                // 2. The OCC/IDM check failed (aggregate_version >= newAggregateVersion).
-                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
-                logger.warn("Soft delete skipped for hostId {} endpointId {} aggregateVersion {}. Record not found or a newer/same version already exists.", hostId, endpointId, newAggregateVersion);
-            }
-        } catch (SQLException e) {
-            logger.error("SQLException during deleteApiEndpoint for hostId {} endpointId {} aggregateVersion {}: {}", hostId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
-        } catch (Exception e) {
-            logger.error("Exception during deleteApiEndpoint for hostId {} endpointId {} aggregateVersion {}: {}", hostId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
-        }
-    }
-
-    @Override
-    public void deleteApiEndpointScope(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        // Use UPDATE to implement Soft Delete (setting active = FALSE).
-        // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
-        final String sql =
-                """
-                UPDATE api_endpoint_scope_t
-                SET active = FALSE,
-                    update_user = ?,
-                    update_ts = ?,
-                    aggregate_version = ?
-                WHERE host_id = ?
-                  AND endpoint_id = ?
-                  AND scope = ?
-                  AND aggregate_version < ?
-                """; // <<< CRITICAL: Added aggregate_version < ? to enforce monotonicity (OCC/IDM)
-
-        // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
-        Map<String, Object> map = SqlUtil.extractEventData(event);
-
-        String hostId = (String)map.get("hostId");
-        String endpointId = (String)map.get("endpointId");
-        String scope = (String)map.get("scope");
-        // A delete event represents a state change, so it should have a new, incremented version.
-        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
-        // oldAggregateVersion is kept for logging context from the original method.
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
-
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            // SET values (3 placeholders)
-            // 1: update_user
-            statement.setString(1, (String)event.get(Constants.USER));
-            // 2: update_ts
-            statement.setObject(2, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            // 3: aggregate_version (the new version)
-            statement.setLong(3, newAggregateVersion);
-
-            // WHERE conditions (4 placeholders)
-            // 4: host_id
-            statement.setObject(4, UUID.fromString(hostId));
-            // 5: endpoint_id
-            statement.setObject(5, UUID.fromString(endpointId));
-            // 6: scope
-            statement.setString(6, scope);
-            // 7: aggregate_version < ? (new version for OCC/IDM check)
-            statement.setLong(7, newAggregateVersion);
-
-            int count = statement.executeUpdate();
-            if (count == 0) {
-                // If 0 rows updated, it means:
-                // 1. The record was not found (already deleted or never existed).
-                // 2. The OCC/IDM check failed (aggregate_version >= newAggregateVersion).
-                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
-                logger.warn("Soft delete skipped for hostId {} endpointId {} scope {} (old: {}) -> (new: {}). Record not found or a newer/same version already exists.", hostId, endpointId, scope, oldAggregateVersion, newAggregateVersion);
-            }
-        } catch (SQLException e) {
-            logger.error("SQLException during deleteApiEndpointScope for hostId {} endpointId {} scope {} (old: {}) -> (new: {}): {}", hostId, endpointId, scope, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
-        } catch (Exception e) {
-            logger.error("Exception during deleteApiEndpointScope for hostId {} endpointId {} scope {} (old: {}) -> (new: {}): {}", hostId, endpointId, scope, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -1796,124 +1353,9 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
         return result;
     }
 
-    /*
-    @Override
-    public void updateServiceSpec(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String updateApiVersion =
-                """
-                UPDATE api_version_t SET spec = ?,
-                update_user = ?, update_ts = ?, aggregate_version = ?
-                WHERE host_id = ? AND api_version_id = ? AND aggregate_version = ?
-                """;
-        final String deleteEndpoint = "DELETE FROM api_endpoint_t WHERE host_id = ? AND api_version_id = ? AND aggregate_version = ?";
-        final String insertEndpoint = "INSERT INTO api_endpoint_t (host_id, endpoint_id, api_version_id, endpoint, http_method, " +
-                "endpoint_path, endpoint_name, endpoint_desc, update_user, update_ts, aggregate_version) " +
-                "VALUES (?,? ,?, ?, ?,   ?, ?, ?, ?, ?,  ?)";
-        final String insertScope = "INSERT INTO api_endpoint_scope_t (host_id, endpoint_id, scope, scope_desc, " +
-                "update_user, update_ts, aggregate_version) " +
-                "VALUES (?, ?, ?, ?, ?,  ?, ?)";
-
-
-        Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
-        String apiVersionId = (String) map.get("apiVersionId");
-        String hostId = (String) map.get("hostId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
-        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
-        try {
-            try (PreparedStatement statement = conn.prepareStatement(updateApiVersion)) {
-                statement.setString(1, (String) map.get("spec"));
-                statement.setString(2, (String) event.get(Constants.USER));
-                statement.setObject(3, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-                statement.setLong(4, newAggregateVersion);
-                statement.setObject(5, UUID.fromString(hostId));
-                statement.setObject(6, UUID.fromString(apiVersionId));
-                statement.setLong(7, oldAggregateVersion);
-
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    if (queryServiceVersionExists(conn, (String)event.get(Constants.HOST), apiVersionId)) {
-                        throw new ConcurrencyException("Optimistic concurrency conflict for apiVersionId " + apiVersionId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
-                    } else {
-                        throw new SQLException("No record found to update for apiVersionId " + apiVersionId + ".");
-                    }
-                }
-            }
-            // delete endpoints for the api version. the api_endpoint_scope_t will be deleted by the cascade.
-            try (PreparedStatement statement = conn.prepareStatement(deleteEndpoint)) {
-                statement.setObject(1, UUID.fromString((String) map.get("hostId")));
-                statement.setObject(2, UUID.fromString(apiVersionId));
-                statement.setLong(3, oldAggregateVersion);
-                statement.executeUpdate();
-            }
-            // insert endpoints
-            List<Map<String, Object>> endpoints = (List<Map<String, Object>>) map.get("endpoints");
-            for (Map<String, Object> endpoint : endpoints) {
-                try (PreparedStatement statement = conn.prepareStatement(insertEndpoint)) {
-                    statement.setObject(1, UUID.fromString((String) map.get("hostId")));
-                    statement.setObject(2, UUID.fromString((String) endpoint.get("endpointId")));
-                    statement.setObject(3, UUID.fromString(apiVersionId));
-                    statement.setString(4, (String) endpoint.get("endpoint"));
-
-                    if (endpoint.get("httpMethod") == null)
-                        statement.setNull(5, NULL);
-                    else
-                        statement.setString(5, ((String) endpoint.get("httpMethod")).toLowerCase().trim());
-
-                    if (endpoint.get("endpointPath") == null)
-                        statement.setNull(6, NULL);
-                    else
-                        statement.setString(6, (String) endpoint.get("endpointPath"));
-
-                    if (endpoint.get("endpointName") == null)
-                        statement.setNull(7, NULL);
-                    else
-                        statement.setString(7, (String) endpoint.get("endpointName"));
-
-                    if (endpoint.get("endpointDesc") == null)
-                        statement.setNull(8, NULL);
-                    else
-                        statement.setString(8, (String) endpoint.get("endpointDesc"));
-
-                    statement.setString(9, (String) event.get(Constants.USER));
-                    statement.setObject(10, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-                    statement.setLong(11, newAggregateVersion);
-                    statement.executeUpdate();
-                }
-                // insert scopes
-                List<String> scopes = (List<String>) endpoint.get("scopes");
-                if (scopes != null && !scopes.isEmpty()) {
-                    for (String scope : scopes) {
-                        String[] scopeDesc = scope.split(":");
-                        try (PreparedStatement statement = conn.prepareStatement(insertScope)) {
-                            statement.setObject(1, UUID.fromString((String) map.get("hostId")));
-                            statement.setObject(2, UUID.fromString((String) endpoint.get("endpointId")));
-                            statement.setString(3, scopeDesc[0]);
-                            if (scopeDesc.length == 1)
-                                statement.setNull(4, NULL);
-                            else
-                                statement.setString(4, scopeDesc[1]);
-                            statement.setString(5, (String) event.get(Constants.USER));
-                            statement.setObject(6, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-                            statement.setLong(7, newAggregateVersion);
-                            statement.executeUpdate();
-                        }
-                    }
-                }
-            }
-
-        } catch (SQLException e) {
-            logger.error("SQLException during updateServiceSpec for id {} (old: {}) -> (new: {}): {}", apiVersionId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
-        } catch (Exception e) {
-            logger.error("Exception during updateServiceSpec for id {} (old: {}) -> (new: {}): {}", apiVersionId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
-        }
-    }
-    */
-
     @Override
     public void updateApiVersionSpec(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql =
+        final String sqlUpdateApiVersion =
                 """
                 UPDATE api_version_t
                 SET spec = ?,
@@ -1925,6 +1367,79 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                   AND api_version_id = ?
                   AND aggregate_version < ?
                 """; // <<< CRITICAL: Added aggregate_version < ? to enforce monotonicity (OCC/IDM)
+        final String sqlDeactivateEndpoint =
+                """
+                UPDATE api_endpoint_t
+                SET active = FALSE,
+                update_user = ?,
+                update_ts = ?
+                WHERE host_id = ?
+                AND api_version_id = ?
+                """;
+        final String sqlDeactivateScope =
+                """
+                UPDATE api_endpoint_scope_t
+                SET active = FALSE,
+                update_user = ?,
+                update_ts = ?
+                WHERE host_id = ?
+                AND endpoint_id IN
+                (
+                    SELECT endpoint_id
+                    FROM api_endpoint_t
+                    WHERE host_id = ?
+                    AND api_version_id = ?
+                )
+                """;
+
+        final String sqlEndpoint =
+                """
+                INSERT INTO api_endpoint_t (
+                    host_id,
+                    endpoint_id,
+                    api_version_id,
+                    endpoint,
+                    http_method,
+                    endpoint_path,
+                    endpoint_name,
+                    endpoint_desc,
+                    update_user,
+                    update_ts,
+                    active
+                ) VALUES (?,? ,?, ?, ?,  ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (host_id, endpoint_id) DO UPDATE
+                SET api_version_id = EXCLUDED.api_version_id,
+                    endpoint = EXCLUDED.endpoint,
+                    http_method = EXCLUDED.http_method,
+                    endpoint_path = EXCLUDED.endpoint
+                    endpoint_name = EXCLUDED.endpoint_name,
+                    endpoint_desc = EXCLUDED.endpoint_desc,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    active = TRUE
+                    -- OCC/IDM: Only update if the endpoint is soft-deleted.
+                    WHERE active = FALSE
+                """;
+
+        final String sqlScope =
+                """
+                INSERT INTO api_endpoint_scope_t (
+                    host_id,
+                    endpoint_id,
+                    scope,
+                    scope_desc,
+                    update_user,
+                    update_ts,
+                    active
+                ) VALUES (?, ?, ?, ?, ?,  ?, TRUE)
+                ON CONFLICT (host_id, endpoint_id, scope) DO UPDATE
+                SET scope_desc = EXCLUDED.scope_desc,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    active = TRUE
+                    -- OCC/IDM: Only update if the endpoint scope is soft-deleted.
+                    WHERE active = FALSE
+                """;
 
         // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
         Map<String, Object> map = SqlUtil.extractEventData(event);
@@ -1933,7 +1448,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
         String apiVersionId = (String)map.get("apiVersionId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+        try (PreparedStatement statement = conn.prepareStatement(sqlUpdateApiVersion)) {
             // SET values (10 dynamic values + active = TRUE in SQL)
             int i = 1;
             if (map.containsKey("spec")) {
@@ -1955,6 +1470,81 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
                 logger.warn("Update skipped for hostId {} apiVersionId {} aggregateVersion {}. Record not found or a newer/same version already exists.", hostId, apiVersionId, newAggregateVersion);
             }
+
+            List<Map<String, Object>> endpoints = (List<Map<String, Object>>) map.get("endpoints");
+            if (endpoints != null && !endpoints.isEmpty()) {
+                // deactivate endpoints for the api version.
+                try (PreparedStatement statementDelete = conn.prepareStatement(sqlDeactivateEndpoint)) {
+                    statementDelete.setObject(1, UUID.fromString((String) map.get("hostId")));
+                    statementDelete.setObject(2, UUID.fromString(apiVersionId));
+                    statementDelete.setString(3, (String) event.get(Constants.USER));
+                    statementDelete.setObject(4, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                    statementDelete.executeUpdate();
+                }
+                // deactivate scopes for the api version.
+                try (PreparedStatement statementDelete = conn.prepareStatement(sqlDeactivateScope)) {
+                    statementDelete.setObject(1, UUID.fromString((String) map.get("hostId")));
+                    statementDelete.setObject(2, UUID.fromString((String) map.get("hostId")));
+                    statementDelete.setObject(3, UUID.fromString(apiVersionId));
+                    statementDelete.setString(4, (String) event.get(Constants.USER));
+                    statementDelete.setObject(5, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                    statementDelete.executeUpdate();
+                }
+
+                // insert or update endpoints
+                for (Map<String, Object> endpoint : endpoints) {
+                    try (PreparedStatement statementInsert = conn.prepareStatement(sqlEndpoint)) {
+                        statementInsert.setObject(1, UUID.fromString((String) map.get("hostId")));
+                        statementInsert.setObject(2, UUID.fromString((String) endpoint.get("endpointId")));
+                        statementInsert.setObject(3, UUID.fromString(apiVersionId));
+                        statementInsert.setString(4, (String) endpoint.get("endpoint"));
+
+                        if (endpoint.get("httpMethod") == null)
+                            statementInsert.setNull(5, NULL);
+                        else
+                            statementInsert.setString(5, ((String) endpoint.get("httpMethod")).toLowerCase().trim());
+
+                        if (endpoint.get("endpointPath") == null)
+                            statementInsert.setNull(6, NULL);
+                        else
+                            statementInsert.setString(6, (String) endpoint.get("endpointPath"));
+
+                        if (endpoint.get("endpointName") == null)
+                            statementInsert.setNull(7, NULL);
+                        else
+                            statementInsert.setString(7, (String) endpoint.get("endpointName"));
+
+                        if (endpoint.get("endpointDesc") == null)
+                            statementInsert.setNull(8, NULL);
+                        else
+                            statementInsert.setString(8, (String) endpoint.get("endpointDesc"));
+
+                        statementInsert.setString(9, (String) event.get(Constants.USER));
+                        statementInsert.setObject(10, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                        statementInsert.executeUpdate();
+                    }
+                    // insert or update scopes
+                    List<String> scopes = (List<String>) endpoint.get("scopes");
+                    if (scopes != null && !scopes.isEmpty()) {
+                        for (String scope : scopes) {
+                            String[] scopeDesc = scope.split(":");
+                            try (PreparedStatement statementScope = conn.prepareStatement(sqlScope)) {
+                                statementScope.setObject(1, UUID.fromString((String) map.get("hostId")));
+                                statementScope.setObject(2, UUID.fromString((String) endpoint.get("endpointId")));
+                                statementScope.setString(3, scopeDesc[0]);
+                                if (scopeDesc.length == 1)
+                                    statementScope.setNull(4, NULL);
+                                else
+                                    statementScope.setString(4, scopeDesc[1]);
+                                statementScope.setString(5, (String) event.get(Constants.USER));
+                                statementScope.setObject(6, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                                statementScope.executeUpdate();
+                            }
+                        }
+                    }
+                }
+            }
+
         } catch (SQLException e) {
             logger.error("SQLException during updateServiceVersion for hostId {} apiVersionId {} aggregateVersion {}: {}", hostId, apiVersionId, newAggregateVersion, e.getMessage(), e);
             throw e;
@@ -1962,6 +1552,29 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
             logger.error("Exception during updateServiceVersion for hostId {} apiVersionId {} aggregateVersion {}: {}", hostId, apiVersionId, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
+    }
+
+    @Override
+    public Map<String, Object> getEndpointIdMap(String hostId, String apiVersionId) {
+        String sql = "SELECT endpoint_id, endpoint FROM api_endpoint_t WHERE host_id = ? AND api_version_id = ?";
+        Map<String, Object> map = new HashMap<>();
+        try (Connection connection = ds.getConnection();
+            PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setObject(1, UUID.fromString(hostId));
+            preparedStatement.setObject(2, UUID.fromString(apiVersionId));
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    String endpointId = resultSet.getString("endpoint_id");
+                    String endpoint = resultSet.getString("endpoint");
+                    map.put(endpoint, endpointId);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+        }
+        return map;
     }
 
     @Override

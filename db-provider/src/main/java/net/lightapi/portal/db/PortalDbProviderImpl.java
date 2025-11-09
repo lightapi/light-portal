@@ -165,6 +165,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public Result<String> getApiById(String hostId, String apiId) { return apiServicePersistence.getApiById(hostId, apiId); }
     @Override public Result<String> getApiVersionById(String hostId, String apiVersionId) { return apiServicePersistence.getApiVersionById(hostId, apiVersionId); }
     @Override public String queryApiVersionId(String hostId, String apiId, String apiVersion) { return apiServicePersistence.queryApiVersionId(hostId, apiId, apiVersion); }
+    @Override public Map<String, Object> getEndpointIdMap(String hostId, String apiVersionId) { return apiServicePersistence.getEndpointIdMap(hostId, apiVersionId); }
 
     @Override public void createApiVersion(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.createApiVersion(connection, event); }
     @Override public void updateApiVersion(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.updateApiVersion(connection, event); }
