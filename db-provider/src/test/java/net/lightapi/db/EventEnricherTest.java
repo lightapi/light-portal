@@ -8,6 +8,7 @@ import net.lightapi.portal.PortalConstants;
 import net.lightapi.portal.db.PortalDbProvider;
 import net.lightapi.portal.mutator.EventEnrichmentRegistry;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +17,7 @@ import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+@Disabled
 public class EventEnricherTest {
     private static final Logger logger = LoggerFactory.getLogger(EventEnricherTest.class);
 

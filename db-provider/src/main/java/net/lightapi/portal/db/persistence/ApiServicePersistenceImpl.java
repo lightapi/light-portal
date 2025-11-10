@@ -713,7 +713,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
                 WHERE api_version_t.aggregate_version < EXCLUDED.aggregate_version
-                AND active = FALSE
+                AND api_version_t.active = FALSE
                 """;
 
         final String sqlEndpoint =
@@ -735,14 +735,14 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 SET api_version_id = EXCLUDED.api_version_id,
                     endpoint = EXCLUDED.endpoint,
                     http_method = EXCLUDED.http_method,
-                    endpoint_path = EXCLUDED.endpoint
+                    endpoint_path = EXCLUDED.endpoint,
                     endpoint_name = EXCLUDED.endpoint_name,
                     endpoint_desc = EXCLUDED.endpoint_desc,
                     update_user = EXCLUDED.update_user,
                     update_ts = EXCLUDED.update_ts,
                     active = TRUE
                     -- OCC/IDM: Only update if the endpoint is soft-deleted.
-                    WHERE active = FALSE
+                    WHERE api_endpoint_t.active = FALSE
                 """;
 
         final String sqlScope =
@@ -762,7 +762,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                     update_ts = EXCLUDED.update_ts,
                     active = TRUE
                     -- OCC/IDM: Only update if the endpoint scope is soft-deleted.
-                    WHERE active = FALSE
+                    WHERE api_endpoint_scope_t.active = FALSE
                 """;
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
@@ -953,14 +953,14 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 SET api_version_id = EXCLUDED.api_version_id,
                     endpoint = EXCLUDED.endpoint,
                     http_method = EXCLUDED.http_method,
-                    endpoint_path = EXCLUDED.endpoint
+                    endpoint_path = EXCLUDED.endpoint,
                     endpoint_name = EXCLUDED.endpoint_name,
                     endpoint_desc = EXCLUDED.endpoint_desc,
                     update_user = EXCLUDED.update_user,
                     update_ts = EXCLUDED.update_ts,
                     active = TRUE
                     -- OCC/IDM: Only update if the endpoint is soft-deleted.
-                    WHERE active = FALSE
+                    WHERE api_endpoint_t.active = FALSE
                 """;
 
         final String sqlScope =
@@ -980,7 +980,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                     update_ts = EXCLUDED.update_ts,
                     active = TRUE
                     -- OCC/IDM: Only update if the endpoint scope is soft-deleted.
-                    WHERE active = FALSE
+                    WHERE api_endpoint_scope_t.active = FALSE
                 """;
 
         // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
@@ -1051,26 +1051,26 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
             if (endpoints != null && !endpoints.isEmpty()) {
                 // deactivate endpoints for the api version.
                 try (PreparedStatement statementDelete = conn.prepareStatement(sqlDeactivateEndpoint)) {
-                    statementDelete.setObject(1, UUID.fromString((String) map.get("hostId")));
-                    statementDelete.setObject(2, UUID.fromString(apiVersionId));
-                    statementDelete.setString(3, (String) event.get(Constants.USER));
-                    statementDelete.setObject(4, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                    statementDelete.setString(1, (String) event.get(Constants.USER));
+                    statementDelete.setObject(2, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                    statementDelete.setObject(3, UUID.fromString(hostId));
+                    statementDelete.setObject(4, UUID.fromString(apiVersionId));
                     statementDelete.executeUpdate();
                 }
                 // deactivate scopes for the api version.
                 try (PreparedStatement statementDelete = conn.prepareStatement(sqlDeactivateScope)) {
-                    statementDelete.setObject(1, UUID.fromString((String) map.get("hostId")));
-                    statementDelete.setObject(2, UUID.fromString((String) map.get("hostId")));
-                    statementDelete.setObject(3, UUID.fromString(apiVersionId));
-                    statementDelete.setString(4, (String) event.get(Constants.USER));
-                    statementDelete.setObject(5, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                    statementDelete.setString(1, (String) event.get(Constants.USER));
+                    statementDelete.setObject(2, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                    statementDelete.setObject(3, UUID.fromString((String) map.get("hostId")));
+                    statementDelete.setObject(4, UUID.fromString((String) map.get("hostId")));
+                    statementDelete.setObject(5, UUID.fromString(apiVersionId));
                     statementDelete.executeUpdate();
                 }
 
                 // insert or update endpoints
                 for (Map<String, Object> endpoint : endpoints) {
                     try (PreparedStatement statementInsert = conn.prepareStatement(sqlEndpoint)) {
-                        statementInsert.setObject(1, UUID.fromString((String) map.get("hostId")));
+                        statementInsert.setObject(1, UUID.fromString(hostId));
                         statementInsert.setObject(2, UUID.fromString((String) endpoint.get("endpointId")));
                         statementInsert.setObject(3, UUID.fromString(apiVersionId));
                         statementInsert.setString(4, (String) endpoint.get("endpoint"));
@@ -1204,19 +1204,19 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
             }
             // deactivate endpoints for the api version.
             try (PreparedStatement statementDelete = conn.prepareStatement(sqlDeactivateEndpoint)) {
-                statementDelete.setObject(1, UUID.fromString((String) map.get("hostId")));
-                statementDelete.setObject(2, UUID.fromString(apiVersionId));
-                statementDelete.setString(3, (String) event.get(Constants.USER));
-                statementDelete.setObject(4, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                statementDelete.setString(1, (String) event.get(Constants.USER));
+                statementDelete.setObject(2, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                statementDelete.setObject(3, UUID.fromString((String) map.get("hostId")));
+                statementDelete.setObject(4, UUID.fromString(apiVersionId));
                 statementDelete.executeUpdate();
             }
             // deactivate scopes for the api version.
             try (PreparedStatement statementDelete = conn.prepareStatement(sqlDeactivateScope)) {
-                statementDelete.setObject(1, UUID.fromString((String) map.get("hostId")));
-                statementDelete.setObject(2, UUID.fromString((String) map.get("hostId")));
-                statementDelete.setObject(3, UUID.fromString(apiVersionId));
-                statementDelete.setString(4, (String) event.get(Constants.USER));
-                statementDelete.setObject(5, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                statementDelete.setString(1, (String) event.get(Constants.USER));
+                statementDelete.setObject(2, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                statementDelete.setObject(3, UUID.fromString((String) map.get("hostId")));
+                statementDelete.setObject(4, UUID.fromString((String) map.get("hostId")));
+                statementDelete.setObject(5, UUID.fromString(apiVersionId));
                 statementDelete.executeUpdate();
             }
         } catch (SQLException e) {
@@ -1312,8 +1312,8 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
         String sql =
                 """
                 SELECT host_id, api_version_id, api_id, api_version, api_type,
-                service_id, api_version_desc, spec_link, spec,\s
-                update_user, update_ts, aggregate_version
+                service_id, api_version_desc, spec_link, spec,
+                update_user, update_ts, aggregate_version, active
                 FROM api_version_t
                 WHERE host_id = ? AND api_id = ?
                 ORDER BY api_version
@@ -1339,6 +1339,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts", OffsetDateTime.class));
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     serviceVersions.add(map);
                 }
             }
@@ -1411,14 +1412,14 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 SET api_version_id = EXCLUDED.api_version_id,
                     endpoint = EXCLUDED.endpoint,
                     http_method = EXCLUDED.http_method,
-                    endpoint_path = EXCLUDED.endpoint
+                    endpoint_path = EXCLUDED.endpoint,
                     endpoint_name = EXCLUDED.endpoint_name,
                     endpoint_desc = EXCLUDED.endpoint_desc,
                     update_user = EXCLUDED.update_user,
                     update_ts = EXCLUDED.update_ts,
                     active = TRUE
                     -- OCC/IDM: Only update if the endpoint is soft-deleted.
-                    WHERE active = FALSE
+                    WHERE api_endpoint_t.active = FALSE
                 """;
 
         final String sqlScope =
@@ -1438,7 +1439,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                     update_ts = EXCLUDED.update_ts,
                     active = TRUE
                     -- OCC/IDM: Only update if the endpoint scope is soft-deleted.
-                    WHERE active = FALSE
+                    WHERE api_endpoint_scope_t.active = FALSE
                 """;
 
         // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
@@ -1475,19 +1476,19 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
             if (endpoints != null && !endpoints.isEmpty()) {
                 // deactivate endpoints for the api version.
                 try (PreparedStatement statementDelete = conn.prepareStatement(sqlDeactivateEndpoint)) {
-                    statementDelete.setObject(1, UUID.fromString((String) map.get("hostId")));
-                    statementDelete.setObject(2, UUID.fromString(apiVersionId));
-                    statementDelete.setString(3, (String) event.get(Constants.USER));
-                    statementDelete.setObject(4, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                    statementDelete.setString(1, (String) event.get(Constants.USER));
+                    statementDelete.setObject(2, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                    statementDelete.setObject(3, UUID.fromString((String) map.get("hostId")));
+                    statementDelete.setObject(4, UUID.fromString(apiVersionId));
                     statementDelete.executeUpdate();
                 }
                 // deactivate scopes for the api version.
                 try (PreparedStatement statementDelete = conn.prepareStatement(sqlDeactivateScope)) {
-                    statementDelete.setObject(1, UUID.fromString((String) map.get("hostId")));
-                    statementDelete.setObject(2, UUID.fromString((String) map.get("hostId")));
-                    statementDelete.setObject(3, UUID.fromString(apiVersionId));
-                    statementDelete.setString(4, (String) event.get(Constants.USER));
-                    statementDelete.setObject(5, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                    statementDelete.setString(1, (String) event.get(Constants.USER));
+                    statementDelete.setObject(2, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                    statementDelete.setObject(3, UUID.fromString((String) map.get("hostId")));
+                    statementDelete.setObject(4, UUID.fromString((String) map.get("hostId")));
+                    statementDelete.setObject(5, UUID.fromString(apiVersionId));
                     statementDelete.executeUpdate();
                 }
 
@@ -1671,7 +1672,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
         Result<String> result = null;
         String sql =
                 """
-                    SELECT s.host_id, s.endpoint_id, e.endpoint, s.scope, s.scope_desc, s.aggregate_version
+                    SELECT s.host_id, s.endpoint_id, e.endpoint, s.scope, s.scope_desc, s.aggregate_version, s.active
                     FROM api_endpoint_scope_t s
                     INNER JOIN api_endpoint_t e ON e.host_id = s.host_id AND e.endpoint_id = s.endpoint_id
                     WHERE s.host_id = ?
@@ -1694,6 +1695,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                     map.put("scope", resultSet.getString("scope"));
                     map.put("scopeDesc", resultSet.getString("scope_desc"));
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     scopes.add(map);
                 }
             }
