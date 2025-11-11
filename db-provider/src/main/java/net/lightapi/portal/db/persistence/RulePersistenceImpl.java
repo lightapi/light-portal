@@ -36,6 +36,7 @@ public class RulePersistenceImpl implements RulePersistence {
         this.notificationService = notificationService;
     }
 
+    /*
     @Override
     public void createRule(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String insertRule =
@@ -120,6 +121,126 @@ public class RulePersistenceImpl implements RulePersistence {
             throw e;
         }
     }
+    */
+
+    @Override
+    public void createRule(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // Use UPSERT based on the Primary Key (rule_id): INSERT ON CONFLICT DO UPDATE
+        // This handles:
+        // 1. First time insert (no conflict).
+        // 2. Re-creation (conflict on rule_id) -> UPDATE the existing soft-deleted row (setting active=TRUE and new version).
+
+        final String sql =
+                """
+                INSERT INTO rule_t (
+                    rule_id,
+                    host_id,
+                    rule_name,
+                    rule_version,
+                    rule_type,
+                    rule_group,
+                    rule_desc,
+                    rule_body,
+                    rule_owner,
+                    common,
+                    update_user,
+                    update_ts,
+                    aggregate_version,
+                    active
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (rule_id) DO UPDATE
+                SET host_id = EXCLUDED.host_id,
+                    rule_name = EXCLUDED.rule_name,
+                    rule_version = EXCLUDED.rule_version,
+                    rule_type = EXCLUDED.rule_type,
+                    rule_group = EXCLUDED.rule_group,
+                    rule_desc = EXCLUDED.rule_desc,
+                    rule_body = EXCLUDED.rule_body,
+                    rule_owner = EXCLUDED.rule_owner,
+                    common = EXCLUDED.common,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                -- OCC/IDM: Only update if the incoming event is newer
+                WHERE rule_t.aggregate_version < EXCLUDED.aggregate_version
+                """;
+
+        // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+
+        String ruleId = (String)map.get("ruleId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            // INSERT values (13 placeholders + active=TRUE in SQL, total 13 dynamic values)
+            int i = 1;
+            // 1: rule_id
+            statement.setString(i++, ruleId);
+
+            // 2: host_id
+            String hostId = (String)map.get("hostId");
+            if (hostId != null && !hostId.isBlank()) {
+                statement.setObject(i++, UUID.fromString(hostId));
+            } else {
+                statement.setNull(i++, Types.OTHER);
+            }
+
+            // 3: rule_name
+            statement.setString(i++, (String)map.get("ruleName"));
+            // 4: rule_version
+            statement.setString(i++, (String)map.get("ruleVersion"));
+            // 5: rule_type
+            statement.setString(i++, (String)map.get("ruleType"));
+
+            // 6: rule_group
+            if (map.containsKey("ruleGroup")) {
+                statement.setString(i++, (String)map.get("ruleGroup"));
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+
+            // 7: rule_desc
+            if (map.containsKey("ruleDesc")) {
+                statement.setString(i++, (String)map.get("ruleDesc"));
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+
+            // 8: rule_body
+            statement.setString(i++, (String)map.get("ruleBody"));
+            // 9: rule_owner
+            statement.setString(i++, (String)map.get("ruleOwner"));
+
+            // 10: common
+            String common = (String)map.get("common");
+            if (common != null && !common.isBlank()) {
+                statement.setString(i++, common);
+            } else {
+                statement.setString(i++, "N"); // Default to 'N' based on table DDL
+            }
+
+            // 11: update_user
+            statement.setString(i++, (String)event.get(Constants.USER));
+            // 12: update_ts
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 13: aggregate_version
+            statement.setLong(i++, newAggregateVersion);
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // count=0 means the ON CONFLICT clause was hit, BUT the WHERE clause (aggregate_version < EXCLUDED.aggregate_version) failed.
+                // This is the desired idempotent/out-of-order protection behavior. Log and ignore.
+                logger.warn("Creation/Reactivation skipped for ruleId {} aggregateVersion {}. A newer or same version already exists.", ruleId, newAggregateVersion);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during createRule for ruleId {} aggregateVersion {}: {}", ruleId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createRule for ruleId {} aggregateVersion {}: {}", ruleId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
 
     private boolean queryRuleExists(Connection conn, String ruleId) throws SQLException {
         final String sql =
@@ -134,6 +255,7 @@ public class RulePersistenceImpl implements RulePersistence {
         }
     }
 
+    /*
     @Override
     public void updateRule(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String updateRule =
@@ -269,7 +391,115 @@ public class RulePersistenceImpl implements RulePersistence {
             throw e;
         }
     }
+    */
 
+    @Override
+    public void updateRule(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
+        // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
+        // We explicitly set active = TRUE as an UPDATE event implies the rule should be active.
+        final String sql =
+                """
+                UPDATE rule_t
+                SET host_id = ?,
+                    rule_name = ?,
+                    rule_version = ?,
+                    rule_type = ?,
+                    rule_group = ?,
+                    rule_desc = ?,
+                    rule_body = ?,
+                    rule_owner = ?,
+                    common = ?,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?,
+                    active = TRUE
+                WHERE rule_id = ?
+                  AND aggregate_version < ?
+                """; // <<< CRITICAL: Added aggregate_version < ? to enforce monotonicity (OCC/IDM)
+
+        // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+
+        String ruleId = (String)map.get("ruleId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            // SET values (12 dynamic values + active = TRUE in SQL)
+            int i = 1;
+
+            // 1: host_id
+            String hostId = (String)map.get("hostId");
+            if (hostId != null && !hostId.isBlank()) {
+                statement.setObject(i++, UUID.fromString(hostId));
+            } else {
+                statement.setNull(i++, Types.OTHER);
+            }
+
+            // 2: rule_name
+            statement.setString(i++, (String)map.get("ruleName"));
+            // 3: rule_version
+            statement.setString(i++, (String)map.get("ruleVersion"));
+            // 4: rule_type
+            statement.setString(i++, (String)map.get("ruleType"));
+
+            // 5: rule_group
+            if (map.containsKey("ruleGroup")) {
+                statement.setString(i++, (String)map.get("ruleGroup"));
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+
+            // 6: rule_desc
+            if (map.containsKey("ruleDesc")) {
+                statement.setString(i++, (String)map.get("ruleDesc"));
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+
+            // 7: rule_body
+            statement.setString(i++, (String)map.get("ruleBody"));
+            // 8: rule_owner
+            statement.setString(i++, (String)map.get("ruleOwner"));
+
+            // 9: common
+            String common = (String)map.get("common");
+            if (common != null && !common.isBlank()) {
+                statement.setString(i++, common);
+            } else {
+                statement.setString(i++, "N"); // Default to 'N' based on table DDL
+            }
+
+            // 10: update_user
+            statement.setString(i++, (String)event.get(Constants.USER));
+            // 11: update_ts
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 12: aggregate_version
+            statement.setLong(i++, newAggregateVersion);
+
+            // WHERE conditions (2 placeholders)
+            // 13: rule_id (PK)
+            statement.setString(i++, ruleId);
+            // 14: aggregate_version < ? (new version for OCC/IDM check)
+            statement.setLong(i++, newAggregateVersion);
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // If 0 rows updated, it means the record was either not found
+                // OR aggregate_version >= newAggregateVersion (OCC/IDM check failed).
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Update skipped for ruleId {} aggregateVersion {}. Record not found or a newer/same version already exists.", ruleId, newAggregateVersion);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during updateRule for ruleId {} aggregateVersion {}: {}", ruleId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updateRule for ruleId {} aggregateVersion {}: {}", ruleId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    /*
     @Override
     public void deleteRule(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String deleteRule = "DELETE from rule_t WHERE rule_id = ? AND aggregate_version = ?";
@@ -300,6 +530,61 @@ public class RulePersistenceImpl implements RulePersistence {
             throw e;
         }
     }
+    */
+
+    @Override
+    public void deleteRule(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // Use UPDATE to implement Soft Delete (setting active = FALSE).
+        // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
+        final String sql =
+                """
+                UPDATE rule_t
+                SET active = FALSE,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?
+                WHERE rule_id = ?
+                  AND aggregate_version < ?
+                """; // <<< CRITICAL: Added aggregate_version < ? to enforce monotonicity (OCC/IDM)
+
+        // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+
+        String ruleId = (String)map.get("ruleId");
+        // A delete event represents a state change, so it should have a new, incremented version.
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            // SET values (3 placeholders)
+            // 1: update_user
+            statement.setString(1, (String)event.get(Constants.USER));
+            // 2: update_ts
+            statement.setObject(2, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 3: aggregate_version (the new version)
+            statement.setLong(3, newAggregateVersion);
+
+            // WHERE conditions (2 placeholders)
+            // 4: rule_id
+            statement.setString(4, ruleId);
+            // 5: aggregate_version < ? (new version for OCC/IDM check)
+            statement.setLong(5, newAggregateVersion);
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // If 0 rows updated, it means:
+                // 1. The record was not found (already deleted or never existed).
+                // 2. The OCC/IDM check failed (aggregate_version >= newAggregateVersion).
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Soft delete skipped for ruleId {} aggregateVersion {}. Record not found or a newer/same version already exists.", ruleId, newAggregateVersion);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during deleteRule for ruleId {} aggregateVersion {}: {}", ruleId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deleteRule for ruleId {} aggregateVersion {}: {}", ruleId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
 
     @Override
     public Result<List<Map<String, Object>>> queryRuleByGroup(String groupId) {
@@ -307,7 +592,7 @@ public class RulePersistenceImpl implements RulePersistence {
         String sql =
                 """
                 SELECT rule_id, host_id, rule_name, rule_version, rule_type, rule_group,
-                rule_desc, rule_body, rule_owner, update_user, update_ts, aggregate_version
+                rule_desc, rule_body, rule_owner, update_user, update_ts, aggregate_version, active
                 FROM rule_t WHERE rule_group = ?
                 ORDER BY update_ts DESC
                 """;
@@ -330,6 +615,7 @@ public class RulePersistenceImpl implements RulePersistence {
                         map.put("updateUser", resultSet.getString("update_user"));
                         map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                         map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                        map.put("active", resultSet.getBoolean("active"));
                         list.add(map);
                     }
                 }
@@ -433,7 +719,7 @@ public class RulePersistenceImpl implements RulePersistence {
                 """
                 SELECT rule_id, host_id, rule_name, rule_version,
                 rule_type, rule_desc, rule_body, rule_owner,
-                update_user, update_ts, aggregate_version
+                update_user, update_ts, aggregate_version, active
                 FROM rule_t WHERE rule_id = ?
                 """;
         try (final Connection conn = ds.getConnection()) {
@@ -453,6 +739,7 @@ public class RulePersistenceImpl implements RulePersistence {
                         map.put("updateUser", resultSet.getString("update_user"));
                         map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                         map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                        map.put("active", resultSet.getBoolean("active"));
                     }
                 }
             }

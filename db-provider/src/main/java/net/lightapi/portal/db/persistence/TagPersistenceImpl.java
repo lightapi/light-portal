@@ -40,42 +40,82 @@ public class TagPersistenceImpl implements TagPersistence {
 
     @Override
     public void createTag(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // Use UPSERT based on the Primary Key (tag_id): INSERT ON CONFLICT DO UPDATE
+        // This handles:
+        // 1. First time insert (no conflict).
+        // 2. Re-creation (conflict on tag_id) -> UPDATE the existing soft-deleted row (setting active=TRUE and new version).
+
         final String sql =
                 """
-                INSERT INTO tag_t(host_id, tag_id, entity_type, tag_name,
-                tag_desc, update_user, update_ts, aggregate_version)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO tag_t(
+                    host_id,
+                    tag_id,
+                    entity_type,
+                    tag_name,
+                    tag_desc,
+                    update_user,
+                    update_ts,
+                    aggregate_version,
+                    active
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (tag_id) DO UPDATE
+                SET host_id = EXCLUDED.host_id,
+                    entity_type = EXCLUDED.entity_type,
+                    tag_name = EXCLUDED.tag_name,
+                    tag_desc = EXCLUDED.tag_desc,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                -- OCC/IDM: Only update if the incoming event is newer
+                WHERE tag_t.aggregate_version < EXCLUDED.aggregate_version
                 """;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+
+        // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        // Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String)map.get("hostId");
         String tagId = (String) map.get("tagId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            String hostId = (String)map.get("hostId");
+            // INSERT values (8 placeholders + active=TRUE in SQL, total 8 dynamic values)
+            int i = 1;
+
+            // 1: host_id
             if (hostId != null && !hostId.isEmpty()) {
-                statement.setObject(1, UUID.fromString(hostId));
+                statement.setObject(i++, UUID.fromString(hostId));
             } else {
-                statement.setNull(1, Types.OTHER);
+                statement.setNull(i++, Types.OTHER);
             }
 
-            statement.setObject(2, UUID.fromString(tagId)); // Required
-            statement.setString(3, (String)map.get("entityType")); // Required
-            statement.setString(4, (String)map.get("tagName")); // Required
+            // 2: tag_id
+            statement.setObject(i++, UUID.fromString(tagId)); // Required
+            // 3: entity_type
+            statement.setString(i++, (String)map.get("entityType")); // Required
+            // 4: tag_name
+            statement.setString(i++, (String)map.get("tagName")); // Required
 
+            // 5: tag_desc
             String tagDesc = (String)map.get("tagDesc");
             if (tagDesc != null && !tagDesc.isBlank()) {
-                statement.setString(5, tagDesc);
+                statement.setString(i++, tagDesc);
             } else {
-                statement.setNull(5, Types.VARCHAR);
+                statement.setNull(i++, Types.VARCHAR);
             }
 
-            statement.setString(6, (String)event.get(Constants.USER));
-            statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(8, newAggregateVersion);
+            // 6: update_user
+            statement.setString(i++, (String)event.get(Constants.USER));
+            // 7: update_ts
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 8: aggregate_version
+            statement.setLong(i++, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("Failed during createTag for tagId %s with aggregateVersion %d", tagId, newAggregateVersion));
+                // count=0 means the ON CONFLICT clause was hit, BUT the WHERE clause (aggregate_version < EXCLUDED.aggregate_version) failed.
+                // This is the desired idempotent/out-of-order protection behavior. Log and ignore.
+                logger.warn("Creation/Reactivation skipped for tagId {} aggregateVersion {}. A newer or same version already exists.", tagId, newAggregateVersion);
             }
         } catch (SQLException e) {
             logger.error("SQLException during createTag for tagId {} aggregateVersion {}: {}", tagId, newAggregateVersion, e.getMessage(), e);
@@ -86,87 +126,312 @@ public class TagPersistenceImpl implements TagPersistence {
         }
     }
 
-    private boolean queryTagExists(Connection conn, String tagId) throws SQLException {
-        final String sql =
-                """
-                SELECT COUNT(*) FROM tag_t WHERE tag_id = ?
-                """;
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
-            pst.setObject(1, UUID.fromString(tagId));
-            try (ResultSet rs = pst.executeQuery()) {
-                return rs.next() && rs.getInt(1) > 0;
-            }
-        }
-    }
-
     @Override
     public void updateTag(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
+        // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
+        // We explicitly set active = TRUE as an UPDATE event implies the tag should be active.
         final String sql =
                 """
-               UPDATE tag_t
-               SET tag_name = ?, tag_desc = ?, update_user = ?, update_ts = ?, aggregate_version = ?
-               WHERE tag_id = ? AND aggregate_version = ?
-               """;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+                UPDATE tag_t
+                SET tag_name = ?,
+                    tag_desc = ?,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?,
+                    active = TRUE
+                WHERE tag_id = ?
+                  AND aggregate_version < ?
+                """; // <<< CRITICAL: Changed aggregate_version = ? to aggregate_version < ? to enforce monotonicity (OCC/IDM)
+
+        // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        // Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
         String tagId = (String) map.get("tagId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setString(1, (String)map.get("tagName"));
+            // SET values (5 dynamic values + active = TRUE in SQL)
+            int i = 1;
+            // 1: tag_name
+            statement.setString(i++, (String)map.get("tagName"));
+            // 2: tag_desc
             String tagDesc = (String)map.get("tagDesc");
             if (tagDesc != null && !tagDesc.isBlank()) {
-                statement.setString(2, tagDesc);
+                statement.setString(i++, tagDesc);
             } else {
-                statement.setNull(2, Types.VARCHAR);
+                statement.setNull(i++, Types.VARCHAR);
             }
-            statement.setString(3, (String)event.get(Constants.USER));
-            statement.setObject(4, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(5, newAggregateVersion);
-            statement.setObject(6, UUID.fromString(tagId));
-            statement.setLong(7, oldAggregateVersion);
+            // 3: update_user
+            statement.setString(i++, (String)event.get(Constants.USER));
+            // 4: update_ts
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 5: aggregate_version
+            statement.setLong(i++, newAggregateVersion);
+
+            // WHERE conditions (2 placeholders)
+            // 6: tag_id
+            statement.setObject(i++, UUID.fromString(tagId));
+            // 7: aggregate_version < ? (new version for OCC/IDM check)
+            statement.setLong(i++, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryTagExists(conn, tagId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during updateTag for tagId " + tagId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
-                } else {
-                    throw new SQLException("No record found during updateTag for tagId " + tagId + ".");
-                }
+                // If 0 rows updated, it means the record was either not found
+                // OR aggregate_version >= newAggregateVersion (OCC/IDM check failed).
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Update skipped for tagId {} aggregateVersion {}. Record not found or a newer/same version already exists.", tagId, newAggregateVersion);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during updateTag for tagId {} (old: {}) -> (new: {}): {}", tagId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during updateTag for tagId {} aggregateVersion {}: {}", tagId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateTag for tagId {} (old: {}) -> (new: {}): {}", tagId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during updateTag for tagId {} aggregateVersion {}: {}", tagId, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
     public void deleteTag(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM tag_t WHERE tag_id = ? AND aggregate_version = ?";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String tagId = (String) map.get("tagId"); // For logging/exceptions
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        // Use UPDATE to implement Soft Delete (setting active = FALSE).
+        // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
+        final String sql =
+                """
+                UPDATE tag_t
+                SET active = FALSE,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?
+                WHERE tag_id = ?
+                  AND aggregate_version < ?
+                """; // <<< CRITICAL: Added aggregate_version < ? to enforce monotonicity (OCC/IDM)
+
+        // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        // Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String tagId = (String) map.get("tagId");
+        // A delete event represents a state change, so it should have a new, incremented version.
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(tagId));
-            statement.setLong(2, oldAggregateVersion);
+            // SET values (3 placeholders)
+            // 1: update_user
+            statement.setString(1, (String)event.get(Constants.USER));
+            // 2: update_ts
+            statement.setObject(2, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 3: aggregate_version (the new version)
+            statement.setLong(3, newAggregateVersion);
+
+            // WHERE conditions (2 placeholders)
+            // 4: tag_id
+            statement.setObject(4, UUID.fromString(tagId));
+            // 5: aggregate_version < ? (new version for OCC/IDM check)
+            statement.setLong(5, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryTagExists(conn, tagId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteTag for tagId " + tagId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
-                } else {
-                    throw new SQLException("No record found during deleteTag for tagId " + tagId + ". It might have been already deleted.");
-                }
+                // If 0 rows updated, it means:
+                // 1. The record was not found (already deleted or never existed).
+                // 2. The OCC/IDM check failed (aggregate_version >= newAggregateVersion).
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Soft delete skipped for tagId {} aggregateVersion {}. Record not found or a newer/same version already exists.", tagId, newAggregateVersion);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during deleteTag for tagId {} aggregateVersion {}: {}", tagId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during deleteTag for tagId {} aggregateVersion {}: {}", tagId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteTag for tagId {} aggregateVersion {}: {}", tagId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during deleteTag for tagId {} aggregateVersion {}: {}", tagId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public void createEntityTag(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // Use UPSERT based on the Primary Key (entity_id, entity_type, tag_id): INSERT ON CONFLICT DO UPDATE
+        // This handles:
+        // 1. First time insert (no conflict).
+        // 2. Re-creation (conflict on entity_id, entity_type, tag_id) -> UPDATE the existing soft-deleted row (setting active=TRUE and new version).
+
+        final String sql =
+                """
+                INSERT INTO entity_tag_t (
+                    entity_id,
+                    entity_type,
+                    tag_id,
+                    update_user,
+                    update_ts,
+                    aggregate_version,
+                    active
+                ) VALUES (?, ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (entity_id, entity_type, tag_id) DO UPDATE
+                SET update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                -- OCC/IDM: Only update if the incoming event is newer
+                WHERE entity_tag_t.aggregate_version < EXCLUDED.aggregate_version
+                """;
+
+        // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+
+        String entityId = (String)map.get("entityId");
+        String entityType = (String)map.get("entityType");
+        String tagId = (String)map.get("tagId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            // INSERT values (6 placeholders + active=TRUE in SQL, total 6 dynamic values)
+            int i = 1;
+            // 1: entity_id
+            statement.setObject(i++, UUID.fromString(entityId));
+            // 2: entity_type
+            statement.setString(i++, entityType);
+            // 3: tag_id
+            statement.setObject(i++, UUID.fromString(tagId));
+
+            // 4: update_user
+            statement.setString(i++, (String)event.get(Constants.USER));
+            // 5: update_ts
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 6: aggregate_version
+            statement.setLong(i++, newAggregateVersion);
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // count=0 means the ON CONFLICT clause was hit, BUT the WHERE clause (aggregate_version < EXCLUDED.aggregate_version) failed.
+                // This is the desired idempotent/out-of-order protection behavior. Log and ignore.
+                logger.warn("Creation/Reactivation skipped for entityId {} entityType {} tagId {} aggregateVersion {}. A newer or same version already exists.", entityId, entityType, tagId, newAggregateVersion);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during createEntityTag for entityId {} entityType {} tagId {} aggregateVersion {}: {}", entityId, entityType, tagId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createEntityTag for entityId {} entityType {} tagId {} aggregateVersion {}: {}", entityId, entityType, tagId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public void updateEntityTag(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
+        // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
+        // We explicitly set active = TRUE as an UPDATE event implies the assignment should be active.
+        final String sql =
+                """
+                UPDATE entity_tag_t
+                SET update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?,
+                    active = TRUE
+                WHERE entity_id = ?
+                  AND entity_type = ?
+                  AND tag_id = ?
+                  AND aggregate_version < ?
+                """; // <<< CRITICAL: Added aggregate_version < ? to enforce monotonicity (OCC/IDM)
+
+        // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+
+        String entityId = (String)map.get("entityId");
+        String entityType = (String)map.get("entityType");
+        String tagId = (String)map.get("tagId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            // SET values (3 dynamic values + active = TRUE in SQL)
+            int i = 1;
+            // 1: update_user
+            statement.setString(i++, (String)event.get(Constants.USER));
+            // 2: update_ts
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 3: aggregate_version
+            statement.setLong(i++, newAggregateVersion);
+
+            // WHERE conditions (4 placeholders)
+            // 4: entity_id
+            statement.setObject(i++, UUID.fromString(entityId));
+            // 5: entity_type
+            statement.setString(i++, entityType);
+            // 6: tag_id
+            statement.setObject(i++, UUID.fromString(tagId));
+            // 7: aggregate_version < ? (new version for OCC/IDM check)
+            statement.setLong(i++, newAggregateVersion);
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // If 0 rows updated, it means the record was either not found
+                // OR aggregate_version >= newAggregateVersion (OCC/IDM check failed).
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Update skipped for entityId {} entityType {} tagId {} aggregateVersion {}. Record not found or a newer/same version already exists.", entityId, entityType, tagId, newAggregateVersion);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during updateEntityTag for entityId {} entityType {} tagId {} aggregateVersion {}: {}", entityId, entityType, tagId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updateEntityTag for entityId {} entityType {} tagId {} aggregateVersion {}: {}", entityId, entityType, tagId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public void deleteEntityTag(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // Use UPDATE to implement Soft Delete (setting active = FALSE).
+        // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
+        final String sql =
+                """
+                UPDATE entity_tag_t
+                SET active = FALSE,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?
+                WHERE entity_id = ?
+                  AND entity_type = ?
+                  AND tag_id = ?
+                  AND aggregate_version < ?
+                """; // <<< CRITICAL: Added aggregate_version < ? to enforce monotonicity (OCC/IDM)
+
+        // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+
+        String entityId = (String)map.get("entityId");
+        String entityType = (String)map.get("entityType");
+        String tagId = (String)map.get("tagId");
+        // A delete event represents a state change, so it should have a new, incremented version.
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            // SET values (3 placeholders)
+            // 1: update_user
+            statement.setString(1, (String)event.get(Constants.USER));
+            // 2: update_ts
+            statement.setObject(2, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 3: aggregate_version (the new version)
+            statement.setLong(3, newAggregateVersion);
+
+            // WHERE conditions (4 placeholders)
+            // 4: entity_id
+            statement.setObject(4, UUID.fromString(entityId));
+            // 5: entity_type
+            statement.setString(5, entityType);
+            // 6: tag_id
+            statement.setObject(6, UUID.fromString(tagId));
+            // 7: aggregate_version < ? (new version for OCC/IDM check)
+            statement.setLong(7, newAggregateVersion);
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // If 0 rows updated, it means:
+                // 1. The record was not found (already deleted or never existed).
+                // 2. The OCC/IDM check failed (aggregate_version >= newAggregateVersion).
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Soft delete skipped for entityId {} entityType {} tagId {} aggregateVersion {}. Record not found or a newer/same version already exists.", entityId, entityType, tagId, newAggregateVersion);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during deleteEntityTag for entityId {} entityType {} tagId {} aggregateVersion {}: {}", entityId, entityType, tagId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deleteEntityTag for entityId {} entityType {} tagId {} aggregateVersion {}: {}", entityId, entityType, tagId, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }

@@ -10,6 +10,9 @@ public interface CategoryPersistence {
     void createCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void createEntityCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void updateEntityCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void deleteEntityCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getCategory(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> getCategoryLabel(String hostId);
     Result<String> getCategoryById(String categoryId);

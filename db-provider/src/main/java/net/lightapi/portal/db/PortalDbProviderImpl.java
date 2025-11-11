@@ -424,6 +424,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void createCategory(Connection connection, Map<String, Object> event) throws SQLException, Exception { categoryPersistence.createCategory(connection, event); }
     @Override public void updateCategory(Connection connection, Map<String, Object> event) throws SQLException, Exception { categoryPersistence.updateCategory(connection, event); }
     @Override public void deleteCategory(Connection connection, Map<String, Object> event) throws SQLException, Exception { categoryPersistence.deleteCategory(connection, event); }
+    @Override public void createEntityCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception { categoryPersistence.createEntityCategory(conn, event); }
+    @Override public void updateEntityCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception { categoryPersistence.updateEntityCategory(conn, event); }
+    @Override public void deleteEntityCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception { categoryPersistence.deleteEntityCategory(conn, event); }
     @Override public Result<String> getCategory(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return categoryPersistence.getCategory(offset, limit, filters, globalFilter, sorting, hostId); }
     @Override public Result<String> getCategoryLabel(String hostId) { return categoryPersistence.getCategoryLabel(hostId); }
     @Override public Result<String> getCategoryById(String categoryId) { return categoryPersistence.getCategoryById(categoryId); }
@@ -435,6 +438,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void createTag(Connection connection, Map<String, Object> event) throws SQLException, Exception { tagPersistence.createTag(connection, event); }
     @Override public void updateTag(Connection connection, Map<String, Object> event) throws SQLException, Exception { tagPersistence.updateTag(connection, event); }
     @Override public void deleteTag(Connection connection, Map<String, Object> event) throws SQLException, Exception { tagPersistence.deleteTag(connection, event); }
+    @Override public void createEntityTag(Connection conn, Map<String, Object> event) throws SQLException, Exception { tagPersistence.createEntityTag(conn, event); }
+    @Override public void updateEntityTag(Connection conn, Map<String, Object> event) throws SQLException, Exception { tagPersistence.updateEntityTag(conn, event); }
+    @Override public void deleteEntityTag(Connection conn, Map<String, Object> event) throws SQLException, Exception { tagPersistence.deleteEntityTag(conn, event); }
     @Override public Result<String> getTag(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return tagPersistence.getTag(offset, limit, filters, globalFilter, sorting, hostId); }
     @Override public Result<String> getTagLabel(String hostId) { return tagPersistence.getTagLabel(hostId); }
     @Override public Result<String> getTagById(String tagId) { return tagPersistence.getTagById(tagId); }

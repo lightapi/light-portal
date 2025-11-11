@@ -516,6 +516,10 @@ public interface PortalDbProvider extends DbProvider {
     void createCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void createEntityCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void updateEntityCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void deleteEntityCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+
     Result<String> getCategory(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> getCategoryLabel(String hostId);
     Result<String> getCategoryById(String categoryId);
@@ -537,6 +541,11 @@ public interface PortalDbProvider extends DbProvider {
     void createTag(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateTag(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteTag(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+
+    void createEntityTag(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void updateEntityTag(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void deleteEntityTag(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+
     Result<String> getTag(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> getTagLabel(String hostId);
     Result<String> getTagById(String tagId);

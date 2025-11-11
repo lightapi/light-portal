@@ -41,140 +41,225 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
 
     @Override
     public void createSchedule(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "INSERT INTO schedule_t(schedule_id, host_id, schedule_name, frequency_unit, frequency_time, " +
-                "start_ts, event_topic, event_type, event_data, update_user, update_ts, aggregate_version) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        // Use UPSERT based on the Primary Key (schedule_id): INSERT ON CONFLICT DO UPDATE
+        // This handles:
+        // 1. First time insert (no conflict).
+        // 2. Re-creation (conflict on schedule_id) -> UPDATE the existing soft-deleted row (setting active=TRUE and new version).
+
+        final String sql =
+                """
+                INSERT INTO schedule_t(
+                    schedule_id,
+                    host_id,
+                    schedule_name,
+                    frequency_unit,
+                    frequency_time,
+                    start_ts,
+                    event_topic,
+                    event_type,
+                    event_data,
+                    update_user,
+                    update_ts,
+                    aggregate_version,
+                    active
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (schedule_id) DO UPDATE
+                SET host_id = EXCLUDED.host_id,
+                    schedule_name = EXCLUDED.schedule_name,
+                    frequency_unit = EXCLUDED.frequency_unit,
+                    frequency_time = EXCLUDED.frequency_time,
+                    start_ts = EXCLUDED.start_ts,
+                    event_topic = EXCLUDED.event_topic,
+                    event_type = EXCLUDED.event_type,
+                    event_data = EXCLUDED.event_data,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                -- OCC/IDM: Only update if the incoming event is newer
+                WHERE schedule_t.aggregate_version < EXCLUDED.aggregate_version
+                """;
+
+        // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        // Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
         String scheduleId = (String) map.get("scheduleId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            // INSERT values (12 placeholders + active=TRUE in SQL, total 12 dynamic values)
+            int i = 1;
 
-            // 1. schedule_id (Required)
-            statement.setObject(1, UUID.fromString(scheduleId));
-            // 2. host_id (Required - from event metadata)
-            statement.setObject(2, UUID.fromString((String)map.get("hostId")));
+            // 1: schedule_id (Required)
+            statement.setObject(i++, UUID.fromString(scheduleId));
+            // 2: host_id (Required - from event data)
+            statement.setObject(i++, UUID.fromString((String)map.get("hostId")));
             // 3. schedule_name (Required)
-            statement.setString(3, (String)map.get("scheduleName"));
+            statement.setString(i++, (String)map.get("scheduleName"));
             // 4. frequency_unit (Required)
-            statement.setString(4, (String)map.get("frequencyUnit"));
+            statement.setString(i++, (String)map.get("frequencyUnit"));
             // 5. frequency_time (Required, Integer)
-            statement.setInt(5, ((Number) map.get("frequencyTime")).intValue());
-            statement.setObject(6, OffsetDateTime.parse((String)map.get("startTs")));
-            // 6. event_topic (Required)
-            statement.setString(7, (String)map.get("eventTopic"));
-            // 7. event_type (Required)
-            statement.setString(8, (String)map.get("eventType"));
-            // 8. event_data (Required, TEXT - assuming JSON stored as string)
-            statement.setString(9, (String)map.get("eventData"));
+            statement.setInt(i++, ((Number) map.get("frequencyTime")).intValue());
 
-            // 9. update_user (From event metadata)
-            statement.setString(10, (String)event.get(Constants.USER));
+            // 6. start_ts (Required)
+            statement.setObject(i++, OffsetDateTime.parse((String)map.get("startTs")));
 
-            // 10. update_ts (From event metadata)
-            statement.setObject(11, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            // 11. aggregate_version
-            statement.setLong(12, newAggregateVersion);
+            // 7. event_topic (Required)
+            statement.setString(i++, (String)map.get("eventTopic"));
+            // 8. event_type (Required)
+            statement.setString(i++, (String)map.get("eventType"));
+            // 9. event_data (Required, TEXT - assuming JSON stored as string)
+            statement.setString(i++, (String)map.get("eventData"));
+
+            // 10. update_user (From event metadata)
+            statement.setString(i++, (String)event.get(Constants.USER));
+            // 11. update_ts (From event metadata)
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 12. aggregate_version
+            statement.setLong(i++, newAggregateVersion);
 
             // Execute insert
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("Failed during createSchedule for scheduleId%s with aggregateVersion %d", scheduleId, newAggregateVersion));
+                // count=0 means the ON CONFLICT clause was hit, BUT the WHERE clause (aggregate_version < EXCLUDED.aggregate_version) failed.
+                // This is the desired idempotent/out-of-order protection behavior. Log and ignore.
+                logger.warn("Creation/Reactivation skipped for scheduleId {} aggregateVersion {}. A newer or same version already exists.", scheduleId, newAggregateVersion);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during createClient for scheduleId {} aggregateVersion {}: {}", scheduleId, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during createSchedule for scheduleId {} aggregateVersion {}: {}", scheduleId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createClient for scheduleId {} aggregateVersion {}: {}", scheduleId, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during createSchedule for scheduleId {} aggregateVersion {}: {}", scheduleId, newAggregateVersion, e.getMessage(), e);
             throw e;
-        }
-    }
-
-    private boolean queryScheduleExists(Connection conn, String scheduleId) throws SQLException {
-        final String sql =
-                """
-                SELECT COUNT(*) FROM schedule_t WHERE schedule_id = ?
-                """;
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
-            pst.setObject(1, UUID.fromString(scheduleId));
-            try (ResultSet rs = pst.executeQuery()) {
-                return rs.next() && rs.getInt(1) > 0;
-            }
         }
     }
 
     @Override
     public void updateSchedule(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        // SQL statement for updating schedule_t
-        // Assuming host_id might not be typically updated, focusing on schedule details
+        // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
+        // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
+        // We explicitly set active = TRUE as an UPDATE event implies the schedule should be active.
         final String sql =
                 """
-                UPDATE schedule_t SET schedule_name = ?, frequency_unit = ?, frequency_time = ?,
-                start_ts = ?, event_topic = ?, event_type = ?, event_data = ?,
-                update_user = ?, update_ts = ?, aggregate_version = ?
-                WHERE schedule_id = ? AND aggregate_version = ?
-                """;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+                UPDATE schedule_t
+                SET schedule_name = ?,
+                    frequency_unit = ?,
+                    frequency_time = ?,
+                    start_ts = ?,
+                    event_topic = ?,
+                    event_type = ?,
+                    event_data = ?,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?,
+                    active = TRUE
+                WHERE schedule_id = ?
+                  AND aggregate_version < ?
+                """; // <<< CRITICAL: Changed aggregate_version = ? to aggregate_version < ? to enforce monotonicity (OCC/IDM)
+
+        // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        // Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
         String scheduleId = (String) map.get("scheduleId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setString(1, (String)map.get("scheduleName"));
-            statement.setString(2, (String)map.get("frequencyUnit"));
-            statement.setInt(3, ((Number) map.get("frequencyTime")).intValue());
-            statement.setObject(4, OffsetDateTime.parse((String)map.get("startTs")));
-            statement.setString(5, (String)map.get("eventTopic"));
-            statement.setString(6, (String)map.get("eventType"));
-            statement.setString(7, (String)map.get("eventData"));
-            statement.setString(8, (String)event.get(Constants.USER));
-            statement.setObject(9, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(10, newAggregateVersion);
-            statement.setObject(11, UUID.fromString(scheduleId));
-            statement.setLong(12, oldAggregateVersion);
+            // SET values (10 dynamic values + active = TRUE in SQL)
+            int i = 1;
+            // 1: schedule_name
+            statement.setString(i++, (String)map.get("scheduleName"));
+            // 2: frequency_unit
+            statement.setString(i++, (String)map.get("frequencyUnit"));
+            // 3: frequency_time
+            statement.setInt(i++, ((Number) map.get("frequencyTime")).intValue());
+            // 4: start_ts
+            statement.setObject(i++, OffsetDateTime.parse((String)map.get("startTs")));
+            // 5: event_topic
+            statement.setString(i++, (String)map.get("eventTopic"));
+            // 6: event_type
+            statement.setString(i++, (String)map.get("eventType"));
+            // 7: event_data
+            statement.setString(i++, (String)map.get("eventData"));
+            // 8: update_user
+            statement.setString(i++, (String)event.get(Constants.USER));
+            // 9: update_ts
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 10: aggregate_version
+            statement.setLong(i++, newAggregateVersion);
+
+            // WHERE conditions (2 placeholders)
+            // 11: schedule_id
+            statement.setObject(i++, UUID.fromString(scheduleId));
+            // 12: aggregate_version < ? (new version for OCC/IDM check)
+            statement.setLong(i++, newAggregateVersion);
 
             // Execute update
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryScheduleExists(conn, scheduleId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during updateSchedule for scheduleId " + scheduleId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
-                } else {
-                    throw new SQLException("No record found during updateSchedule for scheduleId " + scheduleId + ".");
-                }
+                // If 0 rows updated, it means the record was either not found
+                // OR aggregate_version >= newAggregateVersion (OCC/IDM check failed).
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Update skipped for scheduleId {} aggregateVersion {}. Record not found or a newer/same version already exists.", scheduleId, newAggregateVersion);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during updateClient for scheduleId {} (old: {}) -> (new: {}): {}", scheduleId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during updateSchedule for scheduleId {} aggregateVersion {}: {}", scheduleId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateClient for scheduleId {} (old: {}) -> (new: {}): {}", scheduleId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during updateSchedule for scheduleId {} aggregateVersion {}: {}", scheduleId, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
     public void deleteSchedule(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        // SQL statement for deleting from schedule_t
-        final String sql = "DELETE FROM schedule_t WHERE schedule_id = ? AND aggregate_version = ?";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        // Use UPDATE to implement Soft Delete (setting active = FALSE).
+        // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
+        final String sql =
+                """
+                UPDATE schedule_t
+                SET active = FALSE,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?
+                WHERE schedule_id = ?
+                  AND aggregate_version < ?
+                """; // <<< CRITICAL: Added aggregate_version < ? to enforce monotonicity (OCC/IDM)
+
+        // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        // Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
         String scheduleId = (String) map.get("scheduleId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        // A delete event represents a state change, so it should have a new, incremented version.
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(scheduleId));
-            statement.setLong(2, oldAggregateVersion);
+            // SET values (3 placeholders)
+            // 1: update_user
+            statement.setString(1, (String)event.get(Constants.USER));
+            // 2: update_ts
+            statement.setObject(2, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 3: aggregate_version (the new version)
+            statement.setLong(3, newAggregateVersion);
+
+            // WHERE conditions (2 placeholders)
+            // 4: schedule_id
+            statement.setObject(4, UUID.fromString(scheduleId));
+            // 5: aggregate_version < ? (new version for OCC/IDM check)
+            statement.setLong(5, newAggregateVersion);
+
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryScheduleExists(conn, scheduleId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteSchedule for scheduleId " + scheduleId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
-                } else {
-                    throw new SQLException("No record found during deleteSchedule for scheduleId " + scheduleId + ". It might have been already deleted.");
-                }
+                // If 0 rows updated, it means:
+                // 1. The record was not found (already deleted or never existed).
+                // 2. The OCC/IDM check failed (aggregate_version >= newAggregateVersion).
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Soft delete skipped for scheduleId {} aggregateVersion {}. Record not found or a newer/same version already exists.", scheduleId, newAggregateVersion);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during deleteSchedule for scheduleId {} aggregateVersion {}: {}", scheduleId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during deleteSchedule for scheduleId {} aggregateVersion {}: {}", scheduleId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteSchedule for scheduleId {} aggregateVersion {}: {}", scheduleId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during deleteSchedule for scheduleId {} aggregateVersion {}: {}", scheduleId, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
