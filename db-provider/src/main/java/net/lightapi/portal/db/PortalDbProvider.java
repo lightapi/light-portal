@@ -118,6 +118,7 @@ public interface PortalDbProvider extends DbProvider {
 
     // AuthProvider
     Result<Map<String, Object>> queryProviderById(String providerId);
+    String queryProviderByName(String hostId, String providerName);
     Result<String> queryProvider(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     void createAuthProvider(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void rotateAuthProvider(Connection conn, Map<String, Object> event) throws SQLException, Exception;

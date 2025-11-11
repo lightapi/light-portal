@@ -33,6 +33,7 @@ public interface AuthPersistence {
     void deleteAuthProvider(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void rotateAuthProvider(Connection conn, Map<String, Object> event) throws SQLException, Exception; // Treated as an update operation
     Result<Map<String, Object>> queryProviderById(String providerId);
+    String queryProviderByName(String hostId, String providerName);
     Result<String> queryProvider(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> queryProviderKey(String providerId);
     Result<Map<String, Object>> queryCurrentProviderKey(String providerId);

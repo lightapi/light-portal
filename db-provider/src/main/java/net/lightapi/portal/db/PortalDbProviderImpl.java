@@ -138,6 +138,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void deleteAuthProvider(Connection connection, Map<String, Object> event) throws SQLException, Exception { authPersistence.deleteAuthProvider(connection, event); }
     @Override public void rotateAuthProvider(Connection connection, Map<String, Object> event) throws SQLException, Exception { authPersistence.rotateAuthProvider(connection, event); }
     @Override public Result<Map<String, Object>> queryProviderById(String providerId) { return authPersistence.queryProviderById(providerId); }
+    @Override public String queryProviderByName(String hostId, String providerName) { return authPersistence.queryProviderByName(hostId, providerName); }
     @Override public Result<String> queryProvider(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return authPersistence.queryProvider(offset, limit, filters, globalFilter, sorting, hostId); }
     @Override public Result<String> queryProviderKey(String providerId) { return authPersistence.queryProviderKey(providerId); }
     @Override public Result<Map<String, Object>> queryCurrentProviderKey(String providerId) { return authPersistence.queryCurrentProviderKey(providerId); }

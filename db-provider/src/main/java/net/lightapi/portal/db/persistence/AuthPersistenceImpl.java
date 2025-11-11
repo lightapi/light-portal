@@ -747,115 +747,158 @@ public class AuthPersistenceImpl implements AuthPersistence {
      */
     @Override
     public void createAuthProvider(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+
+        // Use UPSERT based on the Primary Key (provider_id): INSERT ON CONFLICT DO UPDATE
+        // This handles:
+        // 1. First time insert (no conflict).
+        // 2. Re-creation (conflict on provider_id) -> UPDATE the existing soft-deleted row (setting active=TRUE and new version).
+
         final String sql =
                 """
-                INSERT INTO auth_provider_t(host_id, provider_id, provider_name, provider_desc,
-                operation_owner, delivery_owner, jwk, update_user, update_ts, aggregate_version)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO auth_provider_t (
+                    provider_id,
+                    host_id,
+                    provider_name,
+                    provider_desc,
+                    operation_owner,
+                    delivery_owner,
+                    jwk,
+                    update_user,
+                    update_ts,
+                    aggregate_version,
+                    active
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (provider_id) DO UPDATE
+                SET host_id = EXCLUDED.host_id,
+                    provider_name = EXCLUDED.provider_name,
+                    provider_desc = EXCLUDED.provider_desc,
+                    operation_owner = EXCLUDED.operation_owner,
+                    delivery_owner = EXCLUDED.delivery_owner,
+                    jwk = EXCLUDED.jwk,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                -- OCC/IDM: Only update if the incoming event is newer
+                WHERE auth_provider_t.active = FALSE
+                AND auth_provider_t.aggregate_version < EXCLUDED.aggregate_version
                 """;
-        Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
-        String providerId = (String) map.get("providerId");
+
+        // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+
+        String providerId = (String)map.get("providerId");
+        String hostId = (String)map.get("hostId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString((String) map.get("hostId")));
-            statement.setString(2, providerId);
-            statement.setString(3, (String) map.get("providerName"));
+            // INSERT values (10 placeholders + active=TRUE in SQL, total 10 dynamic values)
+            int i = 1;
+            // 1: provider_id
+            statement.setString(i++, providerId);
+            // 2: host_id
+            statement.setObject(i++, UUID.fromString(hostId));
+            // 3: provider_name
+            statement.setString(i++, (String)map.get("providerName"));
 
+            // 4: provider_desc
             if (map.containsKey("providerDesc")) {
-                statement.setString(4, (String) map.get("providerDesc"));
+                statement.setString(i++, (String)map.get("providerDesc"));
             } else {
-                statement.setNull(4, Types.VARCHAR);
+                statement.setNull(i++, Types.VARCHAR);
             }
+
+            // 5: operation_owner
             if (map.containsKey("operationOwner")) {
-                statement.setObject(5, UUID.fromString((String) map.get("operationOwner")));
+                statement.setObject(i++, UUID.fromString((String)map.get("operationOwner")));
             } else {
-                statement.setNull(5, Types.OTHER);
+                statement.setNull(i++, Types.OTHER);
             }
+
+            // 6: delivery_owner
             if (map.containsKey("deliveryOwner")) {
-                statement.setObject(6, UUID.fromString((String) map.get("deliveryOwner")));
+                statement.setObject(i++, UUID.fromString((String)map.get("deliveryOwner")));
             } else {
-                statement.setNull(6, Types.OTHER);
+                statement.setNull(i++, Types.OTHER);
             }
-            if (map.containsKey("jwk")) {
-                statement.setString(7, (String) map.get("jwk"));
-            } else {
-                statement.setNull(7, Types.VARCHAR);
-            }
-            statement.setString(8, (String) event.get(Constants.USER));
-            statement.setObject(9, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-            statement.setLong(10, newAggregateVersion);
+
+            // 7: jwk
+            statement.setString(i++, (String)map.get("jwk")); // Required
+
+            // 8: update_user
+            statement.setString(i++, (String)event.get(Constants.USER));
+            // 9: update_ts
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 10: aggregate_version
+            statement.setLong(i++, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert the auth provider " + providerId + " with aggregate version " + newAggregateVersion);
-            }
-
-            // Insert keys into auth_provider_key_t
-            String keySql =
+                // count=0 means the ON CONFLICT clause was hit, BUT the WHERE clause (aggregate_version < EXCLUDED.aggregate_version) failed.
+                // This is the desired idempotent/out-of-order protection behavior. Log and ignore.
+                logger.warn("Creation/Reactivation skipped for providerId {} aggregateVersion {}. A newer or same version already exists.", providerId, newAggregateVersion);
+            } else {
+                // Insert keys into auth_provider_key_t
+                String keySql =
                     """
-                    INSERT INTO auth_provider_key_t(provider_id, kid, public_key, private_key, key_type, update_user, update_ts, aggregate_version)
-                    VALUES (?, ?, ?, ?, ?,  ?, ?, ?)
+                    INSERT INTO auth_provider_key_t(provider_id, kid, public_key, private_key, key_type, update_user, update_ts)
+                    VALUES (?, ?, ?, ?, ?,  ?, ?)
                     """;
 
-            try (PreparedStatement keyStatement = conn.prepareStatement(keySql)) {
-                Map<String, Object> keys = (Map<String, Object>) map.get("keys");
+                try (PreparedStatement keyStatement = conn.prepareStatement(keySql)) {
+                    Map<String, Object> keys = (Map<String, Object>) map.get("keys");
 
-                keyStatement.setString(1, providerId);
+                    keyStatement.setString(1, providerId);
 
-                Map<String, Object> lcMap = (Map<String, Object>) keys.get("LC");
-                // add long live current key
-                keyStatement.setString(2, (String) lcMap.get("kid"));
-                keyStatement.setString(3, (String) lcMap.get("publicKey"));
-                keyStatement.setString(4, (String) lcMap.get("privateKey"));
-                keyStatement.setString(5, "LC");
-                keyStatement.setString(6, (String) event.get(Constants.USER));
-                keyStatement.setObject(7, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-                keyStatement.setLong(8, newAggregateVersion);
-                keyStatement.executeUpdate();
+                    Map<String, Object> lcMap = (Map<String, Object>) keys.get("LC");
+                    // add long live current key
+                    keyStatement.setString(2, (String) lcMap.get("kid"));
+                    keyStatement.setString(3, (String) lcMap.get("publicKey"));
+                    keyStatement.setString(4, (String) lcMap.get("privateKey"));
+                    keyStatement.setString(5, (String) lcMap.get("keyType"));
+                    keyStatement.setString(6, (String) event.get(Constants.USER));
+                    keyStatement.setObject(7, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                    keyStatement.executeUpdate();
 
-                // add long live previous key
-                Map<String, Object> lpMap = (Map<String, Object>) keys.get("LP");
-                keyStatement.setString(2, (String) lpMap.get("kid"));
-                keyStatement.setString(3, (String) lpMap.get("publicKey"));
-                keyStatement.setString(4, (String) lpMap.get("privateKey"));
-                keyStatement.setString(5, "LP");
-                keyStatement.setString(6, (String) event.get(Constants.USER));
-                keyStatement.setObject(7, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-                keyStatement.setLong(8, newAggregateVersion);
-                keyStatement.executeUpdate();
+                    // add long live previous key
+                    Map<String, Object> lpMap = (Map<String, Object>) keys.get("LP");
+                    keyStatement.setString(2, (String) lpMap.get("kid"));
+                    keyStatement.setString(3, (String) lpMap.get("publicKey"));
+                    keyStatement.setString(4, (String) lpMap.get("privateKey"));
+                    keyStatement.setString(5, (String) lpMap.get("keyType"));
+                    keyStatement.setString(6, (String) event.get(Constants.USER));
+                    keyStatement.setObject(7, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                    keyStatement.executeUpdate();
 
-                // add token current key
-                Map<String, Object> tcMap = (Map<String, Object>) keys.get("TC");
-                keyStatement.setString(2, (String) tcMap.get("kid"));
-                keyStatement.setString(3, (String) tcMap.get("publicKey"));
-                keyStatement.setString(4, (String) tcMap.get("privateKey"));
-                keyStatement.setString(5, "TC");
-                keyStatement.setString(6, (String) event.get(Constants.USER));
-                keyStatement.setObject(7, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-                keyStatement.setLong(8, newAggregateVersion);
-                keyStatement.executeUpdate();
+                    // add token current key
+                    Map<String, Object> tcMap = (Map<String, Object>) keys.get("TC");
+                    keyStatement.setString(2, (String) tcMap.get("kid"));
+                    keyStatement.setString(3, (String) tcMap.get("publicKey"));
+                    keyStatement.setString(4, (String) tcMap.get("privateKey"));
+                    keyStatement.setString(5, (String) tcMap.get("keyType"));
+                    keyStatement.setString(6, (String) event.get(Constants.USER));
+                    keyStatement.setObject(7, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                    keyStatement.executeUpdate();
 
-                // add token previous key
-                Map<String, Object> tpMap = (Map<String, Object>) keys.get("TP");
-                keyStatement.setString(2, (String) tpMap.get("kid"));
-                keyStatement.setString(3, (String) tpMap.get("publicKey"));
-                keyStatement.setString(4, (String) tpMap.get("privateKey"));
-                keyStatement.setString(5, "TP");
-                keyStatement.setString(6, (String) event.get(Constants.USER));
-                keyStatement.setObject(7, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-                keyStatement.setLong(8, newAggregateVersion);
-                keyStatement.executeUpdate();
-
-            } catch (SQLException ex) {
-                logger.error("SQLException during createAuthProvider key insert for provider id {}: {}", providerId, ex.getMessage(), ex);
-                throw new SQLException("Failed to insert the auth provider key with provider id " + providerId, ex);
+                    // add token previous key
+                    Map<String, Object> tpMap = (Map<String, Object>) keys.get("TP");
+                    keyStatement.setString(2, (String) tpMap.get("kid"));
+                    keyStatement.setString(3, (String) tpMap.get("publicKey"));
+                    keyStatement.setString(4, (String) tpMap.get("privateKey"));
+                    keyStatement.setString(5, (String) tpMap.get("keyType"));
+                    keyStatement.setString(6, (String) event.get(Constants.USER));
+                    keyStatement.setObject(7, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                    keyStatement.executeUpdate();
+                } catch (SQLException ex) {
+                    logger.error("SQLException during createAuthProvider key insert for provider id {}: {}", providerId, ex.getMessage(), ex);
+                    throw new SQLException("Failed to insert the auth provider key with provider id " + providerId, ex);
+                }
             }
         } catch (SQLException e) {
-            logger.error("SQLException during createAuthProvider for id {}: {}", providerId, e.getMessage(), e);
+            logger.error("SQLException during createAuthProvider for providerId {} aggregateVersion {}: {}", providerId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createAuthProvider for id {}: {}", providerId, e.getMessage(), e);
+            logger.error("Exception during createAuthProvider for providerId {} aggregateVersion {}: {}", providerId, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -866,10 +909,10 @@ public class AuthPersistenceImpl implements AuthPersistence {
         final String sqlJwk = "UPDATE auth_provider_t SET jwk = ?, update_user = ?, update_ts = ?, aggregate_version = ?, active = TRUE" +
                 "WHERE provider_id = ? AND aggregate_version < ?";
         // insert the new key into auth_provider_key_t
-        final String sqlInsert = "INSERT INTO auth_provider_key_t(provider_id, kid, public_key, private_key, key_type, update_user, update_ts, aggregate_version) " +
+        final String sqlInsert = "INSERT INTO auth_provider_key_t(provider_id, kid, public_key, private_key, key_type, update_user, update_ts) " +
                 "VALUES (?, ?, ?, ?, ?,  ?, ?, ?)";
         // update the existing key in auth_provider_key_t
-        final String sqlUpdate = "UPDATE auth_provider_key_t SET key_type = ?, update_user = ?, update_ts = ?, aggregate_version = ?" +
+        final String sqlUpdate = "UPDATE auth_provider_key_t SET key_type = ?, update_user = ?, update_ts = ?" +
                 "WHERE provider_id = ? AND kid = ?";
         // delete the old key from auth_provider_key_t
         final String sqlDelete = "DELETE FROM auth_provider_key_t WHERE provider_id = ? AND kid = ?";
@@ -903,7 +946,6 @@ public class AuthPersistenceImpl implements AuthPersistence {
                 statementInsert.setString(5, (String) insertMap.get("keyType"));
                 statementInsert.setString(6, (String) event.get(Constants.USER));
                 statementInsert.setObject(7, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-                statementInsert.setLong(8, newAggregateVersion);
 
                 count = statementInsert.executeUpdate();
                 if (count == 0) {
@@ -915,9 +957,8 @@ public class AuthPersistenceImpl implements AuthPersistence {
                 statementUpdate.setString(1, (String) updateMap.get("keyType"));
                 statementUpdate.setString(2, (String) event.get(Constants.USER));
                 statementUpdate.setObject(3, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-                statementUpdate.setLong(4, newAggregateVersion);
-                statementUpdate.setString(5, providerId);
-                statementUpdate.setString(6, (String) updateMap.get("kid"));
+                statementUpdate.setString(4, providerId);
+                statementUpdate.setString(5, (String) updateMap.get("kid"));
                 count = statementUpdate.executeUpdate();
                 if (count == 0) {
                     throw new SQLException("Failed to update the auth provider key with provider id " + providerId);
@@ -943,81 +984,148 @@ public class AuthPersistenceImpl implements AuthPersistence {
 
     @Override
     public void updateAuthProvider(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
+        // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
+        // We explicitly set active = TRUE as an UPDATE event implies the auth provider should be active.
         final String sql =
                 """
-                UPDATE auth_provider_t SET provider_name = ?, provider_desc = ?, operation_owner = ?,
-                delivery_owner = ?, update_user = ?, update_ts = ?, aggregate_version = ?, active = TRUE
-                WHERE host_id = ? AND provider_id = ? AND aggregate_version < ?
-                """;
-        Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
-        String providerId = (String) map.get("providerId");
-        String hostId = (String) map.get("hostId");
+                UPDATE auth_provider_t
+                SET host_id = ?,
+                    provider_name = ?,
+                    provider_desc = ?,
+                    operation_owner = ?,
+                    delivery_owner = ?,
+                    jwk = ?,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?,
+                    active = TRUE
+                WHERE provider_id = ?
+                  AND aggregate_version < ?
+                """; // <<< CRITICAL: Added aggregate_version < ? to enforce monotonicity (OCC/IDM)
+
+        // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+
+        String providerId = (String)map.get("providerId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setString(1, (String) map.get("providerName"));
+            // SET values (9 dynamic values + active = TRUE in SQL)
+            int i = 1;
+
+            // 1: host_id
+            String hostId = (String)map.get("hostId");
+            statement.setObject(i++, UUID.fromString(hostId)); // Required
+
+            // 2: provider_name
+            statement.setString(i++, (String)map.get("providerName")); // Required
+
+            // 3: provider_desc
             if (map.containsKey("providerDesc")) {
-                statement.setString(2, (String) map.get("providerDesc"));
+                statement.setString(i++, (String)map.get("providerDesc"));
             } else {
-                statement.setNull(2, Types.VARCHAR);
+                statement.setNull(i++, Types.VARCHAR);
             }
+
+            // 4: operation_owner
             if (map.containsKey("operationOwner")) {
-                statement.setObject(3, UUID.fromString((String) map.get("operationOwner")));
+                statement.setObject(i++, UUID.fromString((String)map.get("operationOwner")));
             } else {
-                statement.setNull(3, Types.OTHER);
+                statement.setNull(i++, Types.OTHER);
             }
+
+            // 5: delivery_owner
             if (map.containsKey("deliveryOwner")) {
-                statement.setObject(4, UUID.fromString((String) map.get("deliveryOwner")));
+                statement.setObject(i++, UUID.fromString((String)map.get("deliveryOwner")));
             } else {
-                statement.setNull(4, Types.OTHER);
+                statement.setNull(i++, Types.OTHER);
             }
-            statement.setString(5, (String) event.get(Constants.USER));
-            statement.setObject(6, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-            statement.setLong(7, newAggregateVersion);
-            statement.setObject(8, UUID.fromString(hostId));
-            statement.setString(9, providerId);
-            statement.setLong(10, newAggregateVersion);
+
+            // 6: jwk
+            statement.setString(i++, (String)map.get("jwk")); // Required
+
+            // 7: update_user
+            statement.setString(i++, (String)event.get(Constants.USER));
+            // 8: update_ts
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 9: aggregate_version
+            statement.setLong(i++, newAggregateVersion);
+
+            // WHERE conditions (2 placeholders)
+            // 10: provider_id (PK)
+            statement.setString(i++, providerId);
+            // 11: aggregate_version < ? (new version for OCC/IDM check)
+            statement.setLong(i++, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                // If 0 rows updated, it means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // If 0 rows updated, it means the record was either not found
+                // OR aggregate_version >= newAggregateVersion (OCC/IDM check failed).
                 // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
-                logger.warn("updateAuthProvider skipped for hostId {} providerId {} aggregateVersion {}. Record not found or a newer version already exists.", hostId, providerId, newAggregateVersion);
+                logger.warn("Update skipped for providerId {} aggregateVersion {}. Record not found or a newer/same version already exists.", providerId, newAggregateVersion);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during updateAuthProvider for hostId {} providerId {} aggregateVersion  {}: {}", hostId, providerId, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during updateAuthProvider for providerId {} aggregateVersion {}: {}", providerId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateAuthProvider for hostId {} providerId {} aggregateVersion {}: {}", hostId, providerId, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during updateAuthProvider for providerId {} aggregateVersion {}: {}", providerId, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
+
     @Override
     public void deleteAuthProvider(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // Use UPDATE to implement Soft Delete (setting active = FALSE).
+        // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
                 """
-                UPDATE auth_provider_t SET active = FALSE, update_user = ?, update_ts = ?, aggregate_version = ?
-                WHERE host_id = ? AND provider_id = ? AND aggregate_version < ?
-                """;
-        Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
-        String hostId = (String)map.get("hostId");
-        String providerId = (String) map.get("providerId");
+                UPDATE auth_provider_t
+                SET active = FALSE,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?
+                WHERE provider_id = ?
+                  AND aggregate_version < ?
+                """; // <<< CRITICAL: Added aggregate_version < ? to enforce monotonicity (OCC/IDM)
+
+        // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+
+        String providerId = (String)map.get("providerId");
+        // A delete event represents a state change, so it should have a new, incremented version.
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setString(1, (String) event.get(Constants.USER));
-            statement.setObject(2, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-            statement.setLong(3, newAggregateVersion );
-            statement.setObject(4, UUID.fromString(hostId));
-            statement.setString(5, providerId);
-            // WHERE monotonicity check: use the new version as the check value
-            statement.setLong(6, newAggregateVersion); // Condition is WHERE aggregate_version < newAggregateVersion
+            // SET values (3 placeholders)
+            // 1: update_user
+            statement.setString(1, (String)event.get(Constants.USER));
+            // 2: update_ts
+            statement.setObject(2, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 3: aggregate_version (the new version)
+            statement.setLong(3, newAggregateVersion);
+
+            // WHERE conditions (2 placeholders)
+            // 4: provider_id
+            statement.setString(4, providerId);
+            // 5: aggregate_version < ? (new version for OCC/IDM check)
+            statement.setLong(5, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                // If 0 rows updated, it means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // If 0 rows updated, it means:
+                // 1. The record was not found (already deleted or never existed).
+                // 2. The OCC/IDM check failed (aggregate_version >= newAggregateVersion).
                 // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
-                logger.warn("Deletion skipped for hostId {} providerId {} aggregateVersion {}. Record not found or a newer version already exists.", hostId, providerId, newAggregateVersion);
+                logger.warn("Soft delete skipped for providerId {} aggregateVersion {}. Record not found or a newer/same version already exists.", providerId, newAggregateVersion);
+            } else {
+                // delete all keys from auth_provider_key_t
+                String sqlDelete = "DELETE FROM auth_provider_key_t WHERE provider_id = ?";
+                try (PreparedStatement statementDelete = conn.prepareStatement(sqlDelete)) {
+                    statementDelete.setString(1, providerId);
+                    statementDelete.executeUpdate();
+                }
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteAuthProvider for providerId {} aggregateVersion {}: {}", providerId, newAggregateVersion, e.getMessage(), e);
@@ -1788,6 +1896,34 @@ public class AuthPersistenceImpl implements AuthPersistence {
     }
 
     @Override
+    public String queryProviderByName(String hostId, String providerName) {
+        final String sql =
+                """
+                SELECT provider_id
+                FROM auth_provider_t
+                WHERE host_id = ? AND provider_name = ?
+                """;
+        String providerId = null;
+        try (final Connection conn = ds.getConnection()) {
+            Map<String, Object> map = new HashMap<>();
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setObject(1, UUID.fromString(hostId));
+                statement.setString(2, providerName);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        providerId = resultSet.getString("provider_id");
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+        }
+        return providerId;
+    }
+
+    @Override
     public Result<String> queryProvider(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
@@ -1864,8 +2000,8 @@ public class AuthPersistenceImpl implements AuthPersistence {
     public Result<Map<String, Object>> queryCurrentProviderKey(String providerId) {
         final String queryConfigById =
                 """
-                SELECT provider_id, kid, public_key, private_key,\s
-                key_type, update_user, update_ts, aggregate_version
+                SELECT provider_id, kid, public_key, private_key,
+                key_type, update_user, update_ts
                 FROM auth_provider_key_t
                 WHERE provider_id = ? AND key_type = 'TC'
                 """;
@@ -1883,7 +2019,6 @@ public class AuthPersistenceImpl implements AuthPersistence {
                         map.put("keyType", resultSet.getString("key_type"));
                         map.put("updateUser", resultSet.getString("update_user"));
                         map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
-                        map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     }
                 }
             }
@@ -1906,7 +2041,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
         final String queryConfigById =
                 """
                 SELECT provider_id, kid, public_key, private_key,
-                key_type, update_user, update_ts, aggregate_version
+                key_type, update_user, update_ts
                 FROM auth_provider_key_t
                 WHERE provider_id = ? AND key_type = 'LC'
                 """;
@@ -1924,7 +2059,6 @@ public class AuthPersistenceImpl implements AuthPersistence {
                         map.put("keyType", resultSet.getString("key_type"));
                         map.put("updateUser", resultSet.getString("update_user"));
                         map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
-                        map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     }
                 }
             }
