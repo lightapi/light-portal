@@ -187,6 +187,10 @@ public class PortalConstants {
     public static final String AUTH_PROVIDER_ROTATED_EVENT = "AuthProviderRotatedEvent";
     public static final String AUTH_PROVIDER_UPDATED_EVENT = "AuthProviderUpdatedEvent";
     public static final String AUTH_PROVIDER_DELETED_EVENT = "AuthProviderDeletedEvent";
+    public static final String AUTH_PROVIDER_API_CREATED_EVENT = "AuthProviderApiCreatedEvent";
+    public static final String AUTH_PROVIDER_API_DELETED_EVENT = "AuthProviderApiDeletedEvent";
+    public static final String AUTH_PROVIDER_CLIENT_CREATED_EVENT = "AuthProviderClientCreatedEvent";
+    public static final String AUTH_PROVIDER_CLIENT_DELETED_EVENT = "AuthProviderClientDeletedEvent";
 
     // --- Product Version Events ---
     public static final String PRODUCT_VERSION_CREATED_EVENT = "ProductVersionCreatedEvent";
@@ -326,6 +330,8 @@ public class PortalConstants {
     public static final String AGGREGATE_AUTH_CODE = "AuthCode";
     public static final String AGGREGATE_CLIENT = "Client";
     public static final String AGGREGATE_AUTH_PROVIDER = "AuthProvider";
+    public static final String AGGREGATE_AUTH_PROVIDER_API = "AuthProviderApi";
+    public static final String AGGREGATE_AUTH_PROVIDER_CLIENT = "AuthProviderClient";
     public static final String AGGREGATE_AUTH_REFRESH_TOKEN = "AuthRefreshToken";
     public static final String AGGREGATE_AUTH_REF_TOKEN = "AuthRefToken";
 

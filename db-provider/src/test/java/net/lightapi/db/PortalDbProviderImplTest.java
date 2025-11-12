@@ -453,4 +453,16 @@ public class PortalDbProviderImplTest {
         dbProvider.updateApiVersionSpec(conn, map);
     }
 
+    @Test
+    void testGetProviderClient() {
+        Result<String> result = dbProvider.queryAuthProviderClient(0, 10,
+                "[{\"id\":\"providerId\",\"value\":\"AZZRJE52eXu3t1hseacnGQ\"},{\"id\":\"active\",\"value\":true}]", null, null,
+                "01964b05-552a-7c4b-9184-6857e7f3dc5f");
+        if(result.isFailure()) {
+            System.out.println(result.getError());
+        } else {
+            System.out.println(result.getResult());
+        }
+    }
+
 }

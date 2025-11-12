@@ -118,6 +118,7 @@ public interface PortalDbProvider extends DbProvider {
 
     // AuthProvider
     Result<Map<String, Object>> queryProviderById(String providerId);
+    Result<String> getProviderIdLabel(String hostId);
     String queryProviderByName(String hostId, String providerName);
     Result<String> queryProvider(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     void createAuthProvider(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -127,6 +128,15 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> queryProviderKey(String providerId);
     Result<Map<String, Object>> queryCurrentProviderKey(String providerId);
     Result<Map<String, Object>> queryLongLiveProviderKey(String providerId);
+    void createAuthProviderApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void updateAuthProviderApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void deleteAuthProviderApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    Result<String> queryAuthProviderApi(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
+
+    void createAuthProviderClient(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void updateAuthProviderClient(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void deleteAuthProviderClient(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    Result<String> queryAuthProviderClient(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
 
     // App
     Result<String> queryApp(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
@@ -145,6 +155,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> getClientById(String hostId, String clientId);
     Result<String> queryClientByProviderClientId(String providerId, String clientId);
     Result<String> queryClientByHostAppId(String host, String applicationId);
+    Result<String> getClientIdLabel(String hostId);
 
     // Service
     void createApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;

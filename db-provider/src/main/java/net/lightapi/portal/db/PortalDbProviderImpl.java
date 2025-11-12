@@ -133,16 +133,28 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public Result<String> getClientById(String hostId, String clientId) { return authPersistence.getClientById(hostId, clientId); }
     @Override public Result<String> queryClientByProviderClientId(String providerId, String clientId) { return authPersistence.queryClientByProviderClientId(providerId, clientId); }
     @Override public Result<String> queryClientByHostAppId(String host_id, String appId) { return authPersistence.queryClientByHostAppId(host_id, appId); }
+    @Override public Result<String> getClientIdLabel(String hostId) { return authPersistence.getClientIdLabel(hostId); }
     @Override public void createAuthProvider(Connection connection, Map<String, Object> event) throws SQLException, Exception { authPersistence.createAuthProvider(connection, event); }
     @Override public void updateAuthProvider(Connection connection, Map<String, Object> event) throws SQLException, Exception { authPersistence.updateAuthProvider(connection, event); }
     @Override public void deleteAuthProvider(Connection connection, Map<String, Object> event) throws SQLException, Exception { authPersistence.deleteAuthProvider(connection, event); }
     @Override public void rotateAuthProvider(Connection connection, Map<String, Object> event) throws SQLException, Exception { authPersistence.rotateAuthProvider(connection, event); }
     @Override public Result<Map<String, Object>> queryProviderById(String providerId) { return authPersistence.queryProviderById(providerId); }
+    @Override public Result<String> getProviderIdLabel(String hostId) { return authPersistence.getProviderIdLabel(hostId); }
     @Override public String queryProviderByName(String hostId, String providerName) { return authPersistence.queryProviderByName(hostId, providerName); }
     @Override public Result<String> queryProvider(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return authPersistence.queryProvider(offset, limit, filters, globalFilter, sorting, hostId); }
     @Override public Result<String> queryProviderKey(String providerId) { return authPersistence.queryProviderKey(providerId); }
     @Override public Result<Map<String, Object>> queryCurrentProviderKey(String providerId) { return authPersistence.queryCurrentProviderKey(providerId); }
     @Override public Result<Map<String, Object>> queryLongLiveProviderKey(String providerId) { return authPersistence.queryLongLiveProviderKey(providerId); }
+    @Override public void createAuthProviderApi(Connection conn, Map<String, Object> event) throws SQLException, Exception { authPersistence.createAuthProviderApi(conn, event); }
+    @Override public void updateAuthProviderApi(Connection conn, Map<String, Object> event) throws SQLException, Exception { authPersistence.updateAuthProviderApi(conn, event); }
+    @Override public void deleteAuthProviderApi(Connection conn, Map<String, Object> event) throws SQLException, Exception { authPersistence.deleteAuthProviderApi(conn, event); }
+    @Override public Result<String> queryAuthProviderApi(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return authPersistence.queryAuthProviderApi(offset, limit, filters, globalFilter, sorting, hostId); }
+
+    @Override public void createAuthProviderClient(Connection conn, Map<String, Object> event) throws SQLException, Exception { authPersistence.createAuthProviderClient(conn, event); }
+    @Override public void updateAuthProviderClient(Connection conn, Map<String, Object> event) throws SQLException, Exception { authPersistence.updateAuthProviderClient(conn, event); }
+    @Override public void deleteAuthProviderClient(Connection conn, Map<String, Object> event) throws SQLException, Exception { authPersistence.deleteAuthProviderClient(conn, event); }
+    @Override public Result<String> queryAuthProviderClient(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return authPersistence.queryAuthProviderClient(offset, limit, filters, globalFilter, sorting, hostId); }
+
     @Override public void createAuthCode(Connection connection, Map<String, Object> event) throws SQLException, Exception { authPersistence.createAuthCode(connection, event); }
     @Override public void deleteAuthCode(Connection connection, Map<String, Object> event) throws SQLException, Exception { authPersistence.deleteAuthCode(connection, event); }
     @Override public Result<String> queryAuthCode(String authCode) { return authPersistence.queryAuthCode(authCode); }

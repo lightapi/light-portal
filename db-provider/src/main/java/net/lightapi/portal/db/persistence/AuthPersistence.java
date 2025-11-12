@@ -26,6 +26,7 @@ public interface AuthPersistence {
     Result<String> getClientById(String hostId, String clientId);
     Result<String> queryClientByProviderClientId(String providerId, String clientId);
     Result<String> queryClientByHostAppId(String host_id, String appId);
+    Result<String> getClientIdLabel(String hostId);
 
     // AuthProvider
     void createAuthProvider(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -33,11 +34,22 @@ public interface AuthPersistence {
     void deleteAuthProvider(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void rotateAuthProvider(Connection conn, Map<String, Object> event) throws SQLException, Exception; // Treated as an update operation
     Result<Map<String, Object>> queryProviderById(String providerId);
+    Result<String> getProviderIdLabel(String hostId);
     String queryProviderByName(String hostId, String providerName);
     Result<String> queryProvider(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> queryProviderKey(String providerId);
     Result<Map<String, Object>> queryCurrentProviderKey(String providerId);
     Result<Map<String, Object>> queryLongLiveProviderKey(String providerId);
+
+    void createAuthProviderApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void updateAuthProviderApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void deleteAuthProviderApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    Result<String> queryAuthProviderApi(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
+
+    void createAuthProviderClient(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void updateAuthProviderClient(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void deleteAuthProviderClient(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    Result<String> queryAuthProviderClient(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
 
     // AuthCode
     void createAuthCode(Connection conn, Map<String, Object> event) throws SQLException, Exception;

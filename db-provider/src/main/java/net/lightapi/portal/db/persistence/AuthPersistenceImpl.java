@@ -1141,7 +1141,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
         Result<String> result = null;
         String sql =
                 """
-                SELECT provider_id, kid, public_key, private_key, key_type, update_user, update_ts, aggregate_version
+                SELECT provider_id, kid, public_key, private_key, key_type, update_user, update_ts
                 FROM auth_provider_key_t
                 WHERE provider_id = ?
                 """;
@@ -1162,7 +1162,6 @@ public class AuthPersistenceImpl implements AuthPersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     // handling date properly
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
-                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     providerKeys.add(map);
                 }
             }
@@ -1170,6 +1169,532 @@ public class AuthPersistenceImpl implements AuthPersistence {
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public void createAuthProviderApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // Use UPSERT based on the Primary Key (host_id, api_id, provider_id): INSERT ON CONFLICT DO UPDATE
+        // This handles:
+        // 1. First time insert (no conflict).
+        // 2. Re-creation (conflict on PK) -> UPDATE the existing soft-deleted row (setting active=TRUE and new version).
+
+        final String sql =
+                """
+                INSERT INTO auth_provider_api_t (
+                    host_id,
+                    api_id,
+                    provider_id,
+                    update_user,
+                    update_ts,
+                    aggregate_version,
+                    active
+                ) VALUES (?, ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (host_id, api_id, provider_id) DO UPDATE
+                SET update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                -- OCC/IDM: Only update if the incoming event is newer
+                WHERE auth_provider_api_t.aggregate_version < EXCLUDED.aggregate_version
+                """;
+
+        // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+
+        String hostId = (String)map.get("hostId");
+        String apiId = (String)map.get("apiId");
+        String providerId = (String)map.get("providerId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            // INSERT values (6 placeholders + active=TRUE in SQL, total 6 dynamic values)
+            int i = 1;
+            // 1: host_id (PK part)
+            statement.setObject(i++, UUID.fromString(hostId));
+            // 2: api_id (PK part)
+            statement.setString(i++, apiId);
+            // 3: provider_id (PK part)
+            statement.setString(i++, providerId);
+
+            // 4: update_user
+            statement.setString(i++, (String)event.get(Constants.USER));
+            // 5: update_ts
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 6: aggregate_version
+            statement.setLong(i++, newAggregateVersion);
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // count=0 means the ON CONFLICT clause was hit, BUT the WHERE clause (aggregate_version < EXCLUDED.aggregate_version) failed.
+                // This is the desired idempotent/out-of-order protection behavior. Log and ignore.
+                logger.warn("Creation/Reactivation skipped for hostId {} apiId {} providerId {} aggregateVersion {}. A newer or same version already exists.", hostId, apiId, providerId, newAggregateVersion);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during createAuthProviderApi for hostId {} apiId {} providerId {} aggregateVersion {}: {}", hostId, apiId, providerId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createAuthProviderApi for hostId {} apiId {} providerId {} aggregateVersion {}: {}", hostId, apiId, providerId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public void updateAuthProviderApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
+        // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
+        // We explicitly set active = TRUE as an UPDATE event implies the assignment should be active.
+        final String sql =
+                """
+                UPDATE auth_provider_api_t
+                SET update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?,
+                    active = TRUE
+                WHERE host_id = ?
+                  AND api_id = ?
+                  AND provider_id = ?
+                  AND aggregate_version < ?
+                """; // <<< CRITICAL: Added aggregate_version < ? to enforce monotonicity (OCC/IDM)
+
+        // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+
+        String hostId = (String)map.get("hostId");
+        String apiId = (String)map.get("apiId");
+        String providerId = (String)map.get("providerId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            // SET values (3 dynamic values + active = TRUE in SQL)
+            int i = 1;
+            // 1: update_user
+            statement.setString(i++, (String)event.get(Constants.USER));
+            // 2: update_ts
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 3: aggregate_version
+            statement.setLong(i++, newAggregateVersion);
+
+            // WHERE conditions (4 placeholders)
+            // 4: host_id (PK part)
+            statement.setObject(i++, UUID.fromString(hostId));
+            // 5: api_id (PK part)
+            statement.setString(i++, apiId);
+            // 6: provider_id (PK part)
+            statement.setString(i++, providerId);
+            // 7: aggregate_version < ? (new version for OCC/IDM check)
+            statement.setLong(i++, newAggregateVersion);
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // If 0 rows updated, it means the record was either not found
+                // OR aggregate_version >= newAggregateVersion (OCC/IDM check failed).
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Update skipped for hostId {} apiId {} providerId {} aggregateVersion {}. Record not found or a newer/same version already exists.", hostId, apiId, providerId, newAggregateVersion);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during updateAuthProviderApi for hostId {} apiId {} providerId {} aggregateVersion {}: {}", hostId, apiId, providerId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updateAuthProviderApi for hostId {} apiId {} providerId {} aggregateVersion {}: {}", hostId, apiId, providerId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public void deleteAuthProviderApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // Use UPDATE to implement Soft Delete (setting active = FALSE).
+        // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
+        final String sql =
+                """
+                UPDATE auth_provider_api_t
+                SET active = FALSE,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?
+                WHERE host_id = ?
+                  AND api_id = ?
+                  AND provider_id = ?
+                  AND aggregate_version < ?
+                """; // <<< CRITICAL: Added aggregate_version < ? to enforce monotonicity (OCC/IDM)
+
+        // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+
+        String hostId = (String)map.get("hostId");
+        String apiId = (String)map.get("apiId");
+        String providerId = (String)map.get("providerId");
+        // A delete event represents a state change, so it should have a new, incremented version.
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            // SET values (3 placeholders)
+            // 1: update_user
+            statement.setString(1, (String)event.get(Constants.USER));
+            // 2: update_ts
+            statement.setObject(2, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 3: aggregate_version (the new version)
+            statement.setLong(3, newAggregateVersion);
+
+            // WHERE conditions (4 placeholders)
+            // 4: host_id (PK part)
+            statement.setObject(4, UUID.fromString(hostId));
+            // 5: api_id (PK part)
+            statement.setString(5, apiId);
+            // 6: provider_id (PK part)
+            statement.setString(6, providerId);
+            // 7: aggregate_version < ? (new version for OCC/IDM check)
+            statement.setLong(7, newAggregateVersion);
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // If 0 rows updated, it means:
+                // 1. The record was not found (already deleted or never existed).
+                // 2. The OCC/IDM check failed (aggregate_version >= newAggregateVersion).
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Soft delete skipped for hostId {} apiId {} providerId {} aggregateVersion {}. Record not found or a newer/same version already exists.", hostId, apiId, providerId, newAggregateVersion);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during deleteAuthProviderApi for hostId {} apiId {} providerId {} aggregateVersion {}: {}", hostId, apiId, providerId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deleteAuthProviderApi for hostId {} apiId {} providerId {} aggregateVersion {}: {}", hostId, apiId, providerId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public Result<String> queryAuthProviderApi(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+        Result<String> result = null;
+
+        // Assuming helper methods parseJsonList, dynamicFilter, globalFilter, dynamicSorting,
+        // populateParameters, JsonMapper, Success, Failure, Status, SQL_EXCEPTION, GENERIC_EXCEPTION,
+        // and Constants are available in the scope.
+        List<Map<String, Object>> filters = SqlUtil.parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = SqlUtil.parseJsonList(sortingJson);
+
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                host_id, api_id, provider_id, aggregate_version,
+                active, update_user, update_ts
+                FROM auth_provider_api_t
+                WHERE host_id = ? AND active = TRUE
+                """;
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
+
+        String[] searchColumns = {"api_id"};
+        // Note: Dynamic filtering assumes a column prefix 't.' might be needed if joins were present,
+        // but it's simpler to assume it works without prefix or adjusts internally based on the template.
+        String sqlBuilder = s + SqlUtil.dynamicFilter(Arrays.asList("host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+                SqlUtil.globalFilter(globalFilter, searchColumns, parameters) +
+                SqlUtil.dynamicSorting("provider_id, api_id", sorting, null) +
+                "\nLIMIT ? OFFSET ?";
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        int total = 0;
+        List<Map<String, Object>> authProviderApis = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            SqlUtil.populateParameters(preparedStatement, parameters);
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("apiId", resultSet.getString("api_id"));
+                    map.put("providerId", resultSet.getString("provider_id"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    authProviderApis.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("authProviderApis", authProviderApis);
+            result = Success.of(JsonMapper.toJson(resultMap)); // Assuming JsonMapper and Success are available
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage())); // Assuming Status and exception constants are available
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public void createAuthProviderClient(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // Use UPSERT based on the Primary Key (host_id, client_id, provider_id): INSERT ON CONFLICT DO UPDATE
+        // This handles:
+        // 1. First time insert (no conflict).
+        // 2. Re-creation (conflict on PK) -> UPDATE the existing soft-deleted row (setting active=TRUE and new version).
+
+        final String sql =
+                """
+                INSERT INTO auth_provider_client_t (
+                    host_id,
+                    client_id,
+                    provider_id,
+                    update_user,
+                    update_ts,
+                    aggregate_version,
+                    active
+                ) VALUES (?, ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (host_id, client_id, provider_id) DO UPDATE
+                SET update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                -- OCC/IDM: Only update if the incoming event is newer
+                WHERE auth_provider_client_t.aggregate_version < EXCLUDED.aggregate_version
+                """;
+
+        // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+
+        String hostId = (String)map.get("hostId");
+        String clientId = (String)map.get("clientId");
+        String providerId = (String)map.get("providerId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            // INSERT values (6 placeholders + active=TRUE in SQL, total 6 dynamic values)
+            int i = 1;
+            // 1: host_id (PK part)
+            statement.setObject(i++, UUID.fromString(hostId));
+            // 2: client_id (PK part)
+            statement.setObject(i++, UUID.fromString(clientId));
+            // 3: provider_id (PK part)
+            statement.setString(i++, providerId);
+
+            // 4: update_user
+            statement.setString(i++, (String)event.get(Constants.USER));
+            // 5: update_ts
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 6: aggregate_version
+            statement.setLong(i++, newAggregateVersion);
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // count=0 means the ON CONFLICT clause was hit, BUT the WHERE clause (aggregate_version < EXCLUDED.aggregate_version) failed.
+                // This is the desired idempotent/out-of-order protection behavior. Log and ignore.
+                logger.warn("Creation/Reactivation skipped for hostId {} clientId {} providerId {} aggregateVersion {}. A newer or same version already exists.", hostId, clientId, providerId, newAggregateVersion);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during createAuthProviderClient for hostId {} clientId {} providerId {} aggregateVersion {}: {}", hostId, clientId, providerId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createAuthProviderClient for hostId {} clientId {} providerId {} aggregateVersion {}: {}", hostId, clientId, providerId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public void updateAuthProviderClient(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
+        // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
+        // We explicitly set active = TRUE as an UPDATE event implies the assignment should be active.
+        final String sql =
+                """
+                UPDATE auth_provider_client_t
+                SET update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?,
+                    active = TRUE
+                WHERE host_id = ?
+                  AND client_id = ?
+                  AND provider_id = ?
+                  AND aggregate_version < ?
+                """; // <<< CRITICAL: Added aggregate_version < ? to enforce monotonicity (OCC/IDM)
+
+        // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+
+        String hostId = (String)map.get("hostId");
+        String clientId = (String)map.get("clientId");
+        String providerId = (String)map.get("providerId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            // SET values (3 dynamic values + active = TRUE in SQL)
+            int i = 1;
+            // 1: update_user
+            statement.setString(i++, (String)event.get(Constants.USER));
+            // 2: update_ts
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 3: aggregate_version
+            statement.setLong(i++, newAggregateVersion);
+
+            // WHERE conditions (4 placeholders)
+            // 4: host_id (PK part)
+            statement.setObject(i++, UUID.fromString(hostId));
+            // 5: client_id (PK part)
+            statement.setObject(i++, UUID.fromString(clientId));
+            // 6: provider_id (PK part)
+            statement.setString(i++, providerId);
+            // 7: aggregate_version < ? (new version for OCC/IDM check)
+            statement.setLong(i++, newAggregateVersion);
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // If 0 rows updated, it means the record was either not found
+                // OR aggregate_version >= newAggregateVersion (OCC/IDM check failed).
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Update skipped for hostId {} clientId {} providerId {} aggregateVersion {}. Record not found or a newer/same version already exists.", hostId, clientId, providerId, newAggregateVersion);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during updateAuthProviderClient for hostId {} clientId {} providerId {} aggregateVersion {}: {}", hostId, clientId, providerId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updateAuthProviderClient for hostId {} clientId {} providerId {} aggregateVersion {}: {}", hostId, clientId, providerId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public void deleteAuthProviderClient(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // Use UPDATE to implement Soft Delete (setting active = FALSE).
+        // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
+        final String sql =
+                """
+                UPDATE auth_provider_client_t
+                SET active = FALSE,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?
+                WHERE host_id = ?
+                  AND client_id = ?
+                  AND provider_id = ?
+                  AND aggregate_version < ?
+                """; // <<< CRITICAL: Added aggregate_version < ? to enforce monotonicity (OCC/IDM)
+
+        // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+
+        String hostId = (String)map.get("hostId");
+        String clientId = (String)map.get("clientId");
+        String providerId = (String)map.get("providerId");
+        // A delete event represents a state change, so it should have a new, incremented version.
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            // SET values (3 placeholders)
+            // 1: update_user
+            statement.setString(1, (String)event.get(Constants.USER));
+            // 2: update_ts
+            statement.setObject(2, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 3: aggregate_version (the new version)
+            statement.setLong(3, newAggregateVersion);
+
+            // WHERE conditions (4 placeholders)
+            // 4: host_id (PK part)
+            statement.setObject(4, UUID.fromString(hostId));
+            // 5: client_id (PK part)
+            statement.setObject(5, UUID.fromString(clientId));
+            // 6: provider_id (PK part)
+            statement.setString(6, providerId);
+            // 7: aggregate_version < ? (new version for OCC/IDM check)
+            statement.setLong(7, newAggregateVersion);
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // If 0 rows updated, it means:
+                // 1. The record was not found (already deleted or never existed).
+                // 2. The OCC/IDM check failed (aggregate_version >= newAggregateVersion).
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Soft delete skipped for hostId {} clientId {} providerId {} aggregateVersion {}. Record not found or a newer/same version already exists.", hostId, clientId, providerId, newAggregateVersion);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during deleteAuthProviderClient for hostId {} clientId {} providerId {} aggregateVersion {}: {}", hostId, clientId, providerId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deleteAuthProviderClient for hostId {} clientId {} providerId {} aggregateVersion {}: {}", hostId, clientId, providerId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public Result<String> queryAuthProviderClient(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+        Result<String> result = null;
+
+        // Assuming helper methods parseJsonList, dynamicFilter, globalFilter, dynamicSorting,
+        // populateParameters, JsonMapper, Success, Failure, Status, SQL_EXCEPTION, GENERIC_EXCEPTION,
+        // and Constants are available in the scope.
+        List<Map<String, Object>> filters = SqlUtil.parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = SqlUtil.parseJsonList(sortingJson);
+
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                host_id, client_id, provider_id, aggregate_version,
+                active, update_user, update_ts
+                FROM auth_provider_client_t
+                WHERE host_id = ? AND active = TRUE
+                """;
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
+
+        String[] searchColumns = {"provider_id"};
+
+        // Note: Dynamic filtering/sorting columns changed to match table structure.
+        String sqlBuilder = s + SqlUtil.dynamicFilter(Arrays.asList("host_id", "client_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+                SqlUtil.globalFilter(globalFilter, searchColumns, parameters) +
+                SqlUtil.dynamicSorting("provider_id, client_id", sorting, null) +
+                "\nLIMIT ? OFFSET ?";
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        int total = 0;
+        List<Map<String, Object>> authProviderClients = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection(); // Assuming ds.getConnection() is available
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            SqlUtil.populateParameters(preparedStatement, parameters);
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("clientId", resultSet.getObject("client_id", UUID.class));
+                    map.put("providerId", resultSet.getString("provider_id"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    authProviderClients.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("authProviderClients", authProviderClients);
+            result = Success.of(JsonMapper.toJson(resultMap)); // Assuming JsonMapper and Success are available
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage())); // Assuming Status and exception constants are available
         } catch (Exception e) {
             logger.error("Exception:", e);
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
@@ -1362,6 +1887,33 @@ public class AuthPersistenceImpl implements AuthPersistence {
             resultMap.put("clients", clients);
             result = Success.of(JsonMapper.toJson(resultMap));
 
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getClientIdLabel(String hostId) {
+        Result<String> result = null;
+        String sql = "SELECT client_id, client_name FROM auth_client_t WHERE host_id = ?";
+        List<Map<String, Object>> labels = new ArrayList<>();
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setObject(1, UUID.fromString(hostId));
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", resultSet.getString("client_id"));
+                    map.put("label", resultSet.getString("client_name"));
+                    labels.add(map);
+                }
+            }
+            result = Success.of(JsonMapper.toJson(labels));
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
@@ -1885,6 +2437,33 @@ public class AuthPersistenceImpl implements AuthPersistence {
                 result = Failure.of(new Status(OBJECT_NOT_FOUND, "auth provider", providerId));
             else
                 result = Success.of(map);
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getProviderIdLabel(String hostId) {
+        Result<String> result = null;
+        String sql = "SELECT provider_id, provider_name FROM auth_provider_t WHERE host_id = ?";
+        List<Map<String, Object>> labels = new ArrayList<>();
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setObject(1, UUID.fromString(hostId));
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", resultSet.getString("provider_id"));
+                    map.put("label", resultSet.getString("provider_name"));
+                    labels.add(map);
+                }
+            }
+            result = Success.of(JsonMapper.toJson(labels));
         } catch (SQLException e) {
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
