@@ -535,6 +535,8 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
 
     @Override
     public void switchUserHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // in normal case, we should have another event to turn off the current host, however, this is not a sure thing. Chances are there
+        // is no current host for the user yet. So this update is on the best effort basis.
         final String deactivateCurrentUserHost =
                 """
                 UPDATE user_host_t
@@ -549,11 +551,10 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                 UPDATE user_host_t
                 SET current = true,
                 update_user = ?,
-                update_ts = ?,
-                aggregate_version = ?
+                update_ts = ?
                 WHERE user_id = ?
-                AND aggregate_version = ?
                 AND host_id = ?
+                AND aggregate_version < ?
                 """;
         final String updateEmployeeHost =
                 """
@@ -574,11 +575,11 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
 
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)map.get("hostId");
-        String userId = (String)event.get(Constants.USER);
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        String userId = (String)map.get("userId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
         String updateTs = (String) event.get(CloudEventV1.TIME);
 
+        // the update is for other record and the aggregate_version is not increasing.
         try (PreparedStatement statement = conn.prepareStatement(deactivateCurrentUserHost)) {
             statement.setString(1, userId);
             statement.setObject(2, OffsetDateTime.parse(updateTs));
@@ -587,30 +588,26 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
             if (count > 0) {
                 logger.debug("Deactivated {} current host(s) for user {}", count, userId);
             }
-            // There is a chance that there is no current host for the user, so there is concurrency check here.
         } catch (SQLException e) {
-            logger.error("SQLException during switchHost for hostId {} userId {} (old: {}) -> (new: {}): {}", hostId, userId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during switchHost for hostId {} userId {} aggregateVersion {}: {}", hostId, userId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during switchHost for hoarIs {} userId {} (old: {}) -> (new: {}): {}", hostId, userId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during switchHost for hoarIs {} userId {} aggregateVersion {}: {}", hostId, userId, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
         try (PreparedStatement activateStmt = conn.prepareStatement(activateNewHost)) {
             activateStmt.setString(1, userId);
             activateStmt.setObject(2, OffsetDateTime.parse(updateTs));
-            activateStmt.setLong(3, newAggregateVersion);
-            activateStmt.setObject(4, UUID.fromString(userId));
-            activateStmt.setLong(5, oldAggregateVersion);
-            activateStmt.setObject(6, UUID.fromString(hostId));
+            activateStmt.setObject(3, UUID.fromString(userId));
+            activateStmt.setObject(4, UUID.fromString(hostId));
+            activateStmt.setLong(5, newAggregateVersion);
 
             int activateCount = activateStmt.executeUpdate();
 
             if (activateCount == 0) {
-                if (queryUserHostExists(conn, hostId, userId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during switchHost for hostId " + hostId + " userId " + userId + ". Expected version " + oldAggregateVersion + " but found a different version.");
-                } else {
-                    throw new SQLException("No record found during switchHost for hostId " + hostId + " userId " + userId + ".");
-                }
+                // If 0 rows updated, it means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("switchUserHost skipped for hostId {} userId {} aggregateVersion {}. Record not found or a newer version already exists.", hostId, userId, newAggregateVersion);
             } else {
                 // User switched to a new hostId. Update the employee_t and customer_t
                 try (PreparedStatement updateEmployeeHostStmt = conn.prepareStatement(updateEmployeeHost)) {
@@ -636,26 +633,11 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
             }
             logger.debug("Activated host {} for user {}", hostId, userId);
         } catch (SQLException e) {
-            logger.error("SQLException during switchHost for hostId {} userId {} (old: {}) -> (new: {}): {}", hostId, userId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during switchHost for hostId {} userId {} aggregateVersion {}: {}", hostId, userId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during switchHost for hostId {} userId {} (old: {}) -> (new: {}): {}", hostId, userId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during switchHost for hostId {} userId {} aggregateVersion {}: {}", hostId, userId, newAggregateVersion, e.getMessage(), e);
             throw e;
-        }
-    }
-
-    // detect if there is an entry of host_id and user_id mapping in user_host_t table.
-    private boolean queryUserHostExists(Connection conn, String hostId, String userId) throws SQLException {
-        final String sql =
-                """
-                SELECT COUNT(*) FROM user_host_t WHERE host_id = ? AND user_id = ?
-                """;
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
-            pst.setObject(1, UUID.fromString(hostId));
-            pst.setObject(2, UUID.fromString(userId));
-            try (ResultSet rs = pst.executeQuery()) {
-                return rs.next() && rs.getInt(1) > 0;
-            }
         }
     }
 
