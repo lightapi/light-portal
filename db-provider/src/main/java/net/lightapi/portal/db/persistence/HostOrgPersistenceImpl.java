@@ -554,8 +554,10 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                 update_ts = ?
                 WHERE user_id = ?
                 AND host_id = ?
-                AND aggregate_version < ?
                 """;
+        // <<< CRITICAL: It does not care about aggregate_version comparison as the record here might not have the corresponding event
+        // in the event_store_t to look up the aggregate_version in the case that the record is created during onboard or create user.
+
         final String updateEmployeeHost =
                 """
                 UPDATE employee_t
@@ -600,7 +602,6 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
             activateStmt.setObject(2, OffsetDateTime.parse(updateTs));
             activateStmt.setObject(3, UUID.fromString(userId));
             activateStmt.setObject(4, UUID.fromString(hostId));
-            activateStmt.setLong(5, newAggregateVersion);
 
             int activateCount = activateStmt.executeUpdate();
 
@@ -657,8 +658,11 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                     active = TRUE,
                     update_user = EXCLUDED.update_user,
                     update_ts = EXCLUDED.update_ts
-                WHERE user_host_t.aggregate_version < EXCLUDED.aggregate_version
-                """; // <<< CRITICAL: Added WHERE to enforce monotonicity
+                WHERE user_host_t.active = FALSE
+                """;
+        // <<< CRITICAL: Only check the active flag here. does not care about aggregate_version as
+        // the record here might not have the corresponding event in the event_store_t to look up
+        // the aggregate_version in the case that the record is created during onboard or create user.
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
         String hostId = (String)map.get("hostId");
@@ -705,8 +709,11 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
         final String softDeleteUserHostSql =
                 """
                 UPDATE user_host_t SET active = false, update_user = ?, update_ts = ?, aggregate_version = ?
-                WHERE host_id = ? AND user_id = ? AND aggregate_version < ?
-                """; // <<< CRITICAL: Changed from DELETE to UPDATE, and used aggregate_version < ?
+                WHERE host_id = ? AND user_id = ?
+                """;
+        // <<< CRITICAL: It does not care about aggregate_version comparison as the record here might not have
+        // the corresponding event in the event_store_t to look up the aggregate_version in the case that the
+        // record is created during onboard or create user.
 
         Map<String, Object> map = SqlUtil.extractEventData(event); // Assuming extractEventData is the helper to get PortalConstants.DATA
         String hostId = (String) map.get("hostId");
@@ -732,9 +739,6 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
 
             // 5. user_id (in WHERE clause)
             statement.setObject(i++, UUID.fromString(userId));
-
-            // 6. aggregate_version (MONOTONICITY check in WHERE clause)
-            statement.setLong(i, newAggregateVersion); // Condition: WHERE aggregate_version < newAggregateVersion
 
             int count = statement.executeUpdate();
             if (count == 0) {
