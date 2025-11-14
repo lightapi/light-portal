@@ -1302,7 +1302,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     @Override
     public Result<String> getConfigEnvironment(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
-        final Map<String, String> columnMap = Map.of(
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "ep.host_id",
                 "environment", "ep.environment",
                 "configId", "c.config_id",
@@ -1311,8 +1311,11 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 "propertyName", "p.property_name",
                 "propertyValue", "ep.property_value",
                 "updateUser", "ep.update_user",
-                "updateTs", "ep.update_ts"
-        );
+                "updateTs", "ep.update_ts",
+                "aggregateVersion", "ep.aggregate_version"
+        ));
+        columnMap.put("active", "ep.active");
+
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
 
@@ -1320,7 +1323,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 SELECT COUNT(*) OVER () AS total,
                 ep.host_id, ep.environment, c.config_id, c.config_name,
                 ep.property_id, p.property_name, ep.property_value,
-                ep.update_user, ep.update_ts, ep.aggregate_version
+                ep.update_user, ep.update_ts, ep.aggregate_version, ep.active
                 FROM environment_property_t ep
                 JOIN config_property_t p ON ep.property_id = p.property_id
                 JOIN config_t c ON p.config_id = c.config_id
@@ -1330,7 +1333,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-        String[] searchColumns = {"c.config_name", "p.property_name"};
+        String[] searchColumns = {"c.config_name", "p.property_name", "ep.propertyValue"};
         String sqlBuilder = s + dynamicFilter(Arrays.asList("ep.host_id", "c.config_id", "ep.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("ep.environment, c.config_id, p.display_order", sorting, columnMap) +
@@ -1365,7 +1368,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
-
+                    map.put("active", resultSet.getBoolean("active"));
                     configEnvironments.add(map);
                 }
             }
@@ -1389,10 +1392,11 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     public Result<String> getConfigEnvironmentById(String hostId, String environmentId, String propertyId) {
         final String sql =
                 """
-                SELECT host_id, environment, property_id, property_value,
-                aggregate_version, active, update_user, update_ts
-                FROM environment_property_t
-                WHERE host_id = ? AND environment = ? AND property_id = ?
+                SELECT ep.host_id, ep.environment, p.config_id, ep.property_id, ep.property_value,
+                ep.aggregate_version, ep.active, ep.update_user, ep.update_ts
+                FROM environment_property_t ep
+                JOIN config_property_t p ON ep.property_id = p.property_id
+                WHERE ep.host_id = ? AND ep.environment = ? AND ep.property_id = ?
                 """;
         Result<String> result;
         Map<String, Object> map = new HashMap<>();
@@ -1411,6 +1415,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 if (resultSet.next()) {
                     map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("environment", resultSet.getString("environment"));
+                    map.put("configId", resultSet.getObject("config_id", UUID.class));
                     map.put("propertyId", resultSet.getObject("property_id", UUID.class));
                     map.put("propertyValue", resultSet.getString("property_value"));
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
