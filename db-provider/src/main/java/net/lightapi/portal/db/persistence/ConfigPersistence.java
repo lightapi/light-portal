@@ -27,60 +27,70 @@ public interface ConfigPersistence {
     Result<String> getPropertyIdLabel(String configId);
     Result<String> getPropertyIdApiAppLabel(String configId, String resourceType);
     String queryPropertyId(String configName, String propertyName);
+    Result<String> getPropertyById(String propertyId);
 
     // EnvironmentProperty
     void createConfigEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateConfigEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteConfigEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getConfigEnvironment(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
+    Result<String> getConfigEnvironmentById(String hostId, String environmentId, String propertyId);
 
     // InstanceProperty (was ConfigInstance)
     void createConfigInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateConfigInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteConfigInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getConfigInstance(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
+    Result<String> getConfigInstanceById(String hostId, String instanceId, String propertyId);
 
     // InstanceApiProperty (was ConfigInstanceApi)
     void createConfigInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateConfigInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteConfigInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getConfigInstanceApi(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
+    Result<String> getConfigInstanceApiById(String hostId, String instanceApiId, String propertyId);
 
     // InstanceAppProperty (was ConfigInstanceApp)
     void createConfigInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateConfigInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteConfigInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getConfigInstanceApp(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
+    Result<String> getConfigInstanceAppById(String hostId, String instanceAppId, String propertyId);
 
     // InstanceAppApiProperty (was ConfigInstanceAppApi)
     void createConfigInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateConfigInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteConfigInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getConfigInstanceAppApi(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
+    Result<String> getConfigInstanceAppApiById(String hostId, String instanceAppId, String instanceApiId, String propertyId);
 
     // DeploymentInstanceProperty (was ConfigDeploymentInstance)
     void createConfigDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateConfigDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteConfigDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getConfigDeploymentInstance(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
+    Result<String> getConfigDeploymentInstanceById(String hostId, String deploymentInstanceId, String propertyId);
 
     // ProductProperty (was ConfigProduct)
     void createConfigProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateConfigProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteConfigProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getConfigProduct(int offset, int limit, String filters, String globalFilter, String sorting);
+    Result<String> getConfigProductById(String productId, String propertyId);
 
     // ProductVersionProperty (was ConfigProductVersion)
     void createConfigProductVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateConfigProductVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteConfigProductVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getConfigProductVersion(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
+    Result<String> getConfigProductVersionById(String hostId, String productVersionId, String propertyId);
 
     // InstanceFile (was ConfigInstanceFile)
     void createConfigInstanceFile(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateConfigInstanceFile(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteConfigInstanceFile(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getConfigInstanceFile(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
+    Result<String> getConfigInstanceFileById(String hostId, String instanceFileId);
 
     // Snapshot
     void commitConfigInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception; // Applied pattern

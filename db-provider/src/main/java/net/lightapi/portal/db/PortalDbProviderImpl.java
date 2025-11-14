@@ -235,6 +235,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public Result<String> getConfigProperty(int offset, int limit, String filters, String globalFilter, String sorting) { return configPersistence.getConfigProperty(offset, limit, filters, globalFilter, sorting); }
     @Override public Result<String> queryConfigPropertyById(String configId) { return configPersistence.queryConfigPropertyById(configId); }
     @Override public String queryPropertyId(String configName, String propertyName) { return configPersistence.queryPropertyId(configName, propertyName); }
+    @Override public Result<String> getPropertyById(String propertyId) { return configPersistence.getPropertyById(propertyId); }
     @Override public Result<String> queryConfigPropertyByPropertyId(String configId, String propertyId) { return configPersistence.queryConfigPropertyByPropertyId(configId, propertyId); }
     @Override public Result<String> getPropertyIdLabel(String configId) { return configPersistence.getPropertyIdLabel(configId); }
     @Override public Result<String> getPropertyIdApiAppLabel(String configId, String resourceType) { return configPersistence.getPropertyIdApiAppLabel(configId, resourceType); }
@@ -242,38 +243,47 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void updateConfigEnvironment(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.updateConfigEnvironment(connection, event); }
     @Override public void deleteConfigEnvironment(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.deleteConfigEnvironment(connection, event); }
     @Override public Result<String> getConfigEnvironment(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return configPersistence.getConfigEnvironment(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getConfigEnvironmentById(String hostId, String environmentId, String propertyId) { return configPersistence.getConfigEnvironmentById(hostId, environmentId, propertyId); }
     @Override public void createConfigInstance(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.createConfigInstance(connection, event); }
     @Override public void updateConfigInstance(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.updateConfigInstance(connection, event); }
     @Override public void deleteConfigInstance(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.deleteConfigInstance(connection, event); }
     @Override public Result<String> getConfigInstance(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return configPersistence.getConfigInstance(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getConfigInstanceById(String hostId, String instanceId, String propertyId) { return configPersistence.getConfigInstanceById(hostId, instanceId, propertyId); }
     @Override public void createConfigInstanceApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.createConfigInstanceApi(connection, event); }
     @Override public void updateConfigInstanceApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.updateConfigInstanceApi(connection, event); }
     @Override public void deleteConfigInstanceApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.deleteConfigInstanceApi(connection, event); }
     @Override public Result<String> getConfigInstanceApi(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return configPersistence.getConfigInstanceApi(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getConfigInstanceApiById(String hostId, String instanceApiId, String propertyId) { return configPersistence.getConfigInstanceApiById(hostId, instanceApiId, propertyId); }
     @Override public void createConfigInstanceApp(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.createConfigInstanceApp(connection, event); }
     @Override public void updateConfigInstanceApp(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.updateConfigInstanceApp(connection, event); }
     @Override public void deleteConfigInstanceApp(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.deleteConfigInstanceApp(connection, event); }
     @Override public Result<String> getConfigInstanceApp(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return configPersistence.getConfigInstanceApp(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getConfigInstanceAppById(String hostId, String instanceAppId, String propertyId) { return configPersistence.getConfigInstanceAppById(hostId, instanceAppId, propertyId); }
     @Override public void createConfigInstanceAppApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.createConfigInstanceAppApi(connection, event); }
     @Override public void updateConfigInstanceAppApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.updateConfigInstanceAppApi(connection, event); }
     @Override public void deleteConfigInstanceAppApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.deleteConfigInstanceAppApi(connection, event); }
     @Override public Result<String> getConfigInstanceAppApi(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return configPersistence.getConfigInstanceAppApi(offset, limit,filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getConfigInstanceAppApiById(String hostId, String instanceAppId, String instanceApiId, String propertyId) { return configPersistence.getConfigInstanceAppApiById(hostId, instanceAppId, instanceApiId, propertyId); }
     @Override public void createConfigDeploymentInstance(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.createConfigDeploymentInstance(connection, event); }
     @Override public void updateConfigDeploymentInstance(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.updateConfigDeploymentInstance(connection, event); }
     @Override public void deleteConfigDeploymentInstance(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.deleteConfigDeploymentInstance(connection, event); }
     @Override public Result<String> getConfigDeploymentInstance(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return configPersistence.getConfigDeploymentInstance(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getConfigDeploymentInstanceById(String hostId, String deploymentInstanceId, String propertyId) { return configPersistence.getConfigDeploymentInstanceById(hostId, deploymentInstanceId, propertyId); }
     @Override public void createConfigProduct(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.createConfigProduct(connection, event); }
     @Override public void updateConfigProduct(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.updateConfigProduct(connection, event); }
     @Override public void deleteConfigProduct(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.deleteConfigProduct(connection, event); }
     @Override public Result<String> getConfigProduct(int offset, int limit, String filters, String globalFilter, String sorting) { return configPersistence.getConfigProduct(offset, limit, filters, globalFilter, sorting); }
+    @Override public Result<String> getConfigProductById(String productId, String propertyId) { return configPersistence.getConfigProductById(productId, propertyId); }
     @Override public void createConfigProductVersion(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.createConfigProductVersion(connection, event); }
     @Override public void updateConfigProductVersion(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.updateConfigProductVersion(connection, event); }
     @Override public void deleteConfigProductVersion(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.deleteConfigProductVersion(connection, event); }
     @Override public Result<String> getConfigProductVersion(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return configPersistence.getConfigProductVersion(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getConfigProductVersionById(String hostId, String productVersionId, String propertyId) { return configPersistence.getConfigProductVersionById(hostId, productVersionId, propertyId); }
     @Override public void createConfigInstanceFile(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.createConfigInstanceFile(connection, event); }
     @Override public void updateConfigInstanceFile(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.updateConfigInstanceFile(connection, event); }
     @Override public void deleteConfigInstanceFile(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.deleteConfigInstanceFile(connection, event); }
     @Override public Result<String> getConfigInstanceFile(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return configPersistence.getConfigInstanceFile(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getConfigInstanceFileById(String hostId, String instanceFileId) { return configPersistence.getConfigInstanceFileById(hostId, instanceFileId); }
     @Override public void commitConfigInstance(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.commitConfigInstance(connection, event); }
     @Override public void rollbackConfigInstance(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.rollbackConfigInstance(connection, event); }
 

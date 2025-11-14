@@ -237,12 +237,14 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> queryConfigPropertyById(String configId);
     Result<String> queryConfigPropertyByPropertyId(String configId, String propertyId);
     String queryPropertyId(String configName, String propertyName);
+    Result<String> getPropertyById(String propertyId);
 
     // EnvironmentProperty
     void createConfigEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateConfigEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteConfigEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getConfigEnvironment(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
+    Result<String> getConfigEnvironmentById(String hostId, String environmentId, String propertyId);
 
     // InstanceApiProperty
     void createInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -268,6 +270,7 @@ public interface PortalDbProvider extends DbProvider {
     void updateConfigInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteConfigInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getConfigInstanceApi(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
+    Result<String> getConfigInstanceApiById(String hostId, String instanceApiId, String propertyId);
 
     // InstanceApp
     void createInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -281,12 +284,14 @@ public interface PortalDbProvider extends DbProvider {
     void updateConfigInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteConfigInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getConfigInstanceApp(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
+    Result<String> getConfigInstanceAppById(String hostId, String instanceAppId, String propertyId);
 
     // ConfigInstanceAppApi (should be InstanceAppApiProperty config)
     void createConfigInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateConfigInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteConfigInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getConfigInstanceAppApi(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
+    Result<String> getConfigInstanceAppApiById(String hostId, String instanceAppId, String instanceApiId, String propertyId);
 
     // InstanceProperty (was ConfigInstance)
     void createConfigInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -295,30 +300,35 @@ public interface PortalDbProvider extends DbProvider {
     void commitConfigInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void rollbackConfigInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception; // Changed signature
     Result<String> getConfigInstance(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
+    Result<String> getConfigInstanceById(String hostId, String instanceId, String propertyId);
 
     // InstanceFile (was ConfigInstanceFile)
     void createConfigInstanceFile(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateConfigInstanceFile(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteConfigInstanceFile(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getConfigInstanceFile(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
+    Result<String> getConfigInstanceFileById(String hostId, String instanceFileId);
 
     // DeploymentInstanceProperty (was ConfigDeploymentInstance)
     void createConfigDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateConfigDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteConfigDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getConfigDeploymentInstance(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
+    Result<String> getConfigDeploymentInstanceById(String hostId, String deploymentInstanceId, String propertyId);
 
     // ProductProperty (was ConfigProduct)
     void createConfigProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateConfigProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteConfigProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getConfigProduct(int offset, int limit, String filters, String globalFilter, String sorting);
+    Result<String> getConfigProductById(String productId, String propertyId);
 
     // ProductVersionProperty (was ConfigProductVersion)
     void createConfigProductVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateConfigProductVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteConfigProductVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getConfigProductVersion(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
+    Result<String> getConfigProductVersionById(String hostId, String productVersionId, String propertyId);
 
     // Rule
     void createRule(Connection conn, Map<String, Object> event) throws SQLException, Exception;

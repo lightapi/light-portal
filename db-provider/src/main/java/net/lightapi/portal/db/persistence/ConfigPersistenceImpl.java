@@ -333,7 +333,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         final String queryConfigById =
                 """
                 SELECT config_id, config_name, config_phase, config_type, light4j_version,
-                class_path, config_desc, update_user, update_ts, aggregate_version
+                class_path, config_desc, update_user, update_ts, aggregate_version, active
                 FROM config_t WHERE config_id = ?
                 """;
         Result<String> result;
@@ -356,6 +356,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     config.put("updateUser", resultSet.getString("update_user"));
                     config.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     config.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    config.put("active", resultSet.getBoolean("active"));
                     result = Success.of(JsonMapper.toJson(config));
                 } else {
                     result = Failure.of(new Status(OBJECT_NOT_FOUND, "config", configId));
@@ -562,6 +563,55 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             logger.error("Exception:", e);
         }
         return propertyId;
+    }
+
+    @Override
+    public Result<String> getPropertyById(String propertyId) {
+        final String sql =
+                """
+                SELECT config_id, property_id, property_name, property_type, light4j_version,
+                display_order, required, property_desc, property_value, value_type, resource_type,
+                update_user, update_ts, aggregate_version, active
+                FROM config_property_t WHERE property_id = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        try (Connection conn = ds.getConnection();
+            PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(propertyId));
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("configId", resultSet.getObject("config_id", UUID.class));
+                    map.put("propertyId", resultSet.getObject("property_id", UUID.class));
+                    map.put("propertyName", resultSet.getString("property_name"));
+                    map.put("propertyType", resultSet.getString("property_type"));
+                    map.put("light4jVersion", resultSet.getString("light4j_version"));
+                    map.put("displayOrder", resultSet.getInt("display_order"));
+                    map.put("required", resultSet.getBoolean("required"));
+                    map.put("propertyDesc", resultSet.getString("property_desc"));
+                    map.put("propertyValue", resultSet.getString("property_value"));
+                    map.put("valueType", resultSet.getString("value_type"));
+                    map.put("resourceType", resultSet.getString("resource_type"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "property", propertyId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
     }
 
     /**
@@ -1332,6 +1382,55 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         return result;
     }
 
+    @Override
+    public Result<String> getConfigEnvironmentById(String hostId, String environmentId, String propertyId) {
+        final String sql =
+                """
+                SELECT host_id, environment, property_id, property_value,
+                aggregate_version, active, update_user, update_ts
+                FROM environment_property_t
+                WHERE host_id = ? AND environment = ? AND property_id = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + environmentId + ":" + propertyId;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            // Set WHERE clause parameters
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setString(2, environmentId);
+            statement.setObject(3, UUID.fromString(propertyId));
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("environment", resultSet.getString("environment"));
+                    map.put("propertyId", resultSet.getObject("property_id", UUID.class));
+                    map.put("propertyValue", resultSet.getString("property_value"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    // Assuming OBJECT_NOT_FOUND and Status are available
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "environment_property", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
     /**
      * Creates or reactivates an instance_api_property_t record using an idempotent UPSERT pattern.
      * This method implements:
@@ -1672,6 +1771,55 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         return result;
     }
 
+    @Override
+    public Result<String> getConfigInstanceApiById(String hostId, String instanceApiId, String propertyId) {
+        final String sql =
+                """
+                SELECT host_id, instance_api_id, property_id, property_value,
+                aggregate_version, active, update_user, update_ts
+                FROM instance_api_property_t
+                WHERE host_id = ? AND instance_api_id = ? AND property_id = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + instanceApiId + ":" + propertyId;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            // Set WHERE clause parameters
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(instanceApiId));
+            statement.setObject(3, UUID.fromString(propertyId));
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceApiId", resultSet.getObject("instance_api_id", UUID.class));
+                    map.put("propertyId", resultSet.getObject("property_id", UUID.class));
+                    map.put("propertyValue", resultSet.getString("property_value"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "instance_api_property", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
     /**
      * Creates or reactivates an instance_app_property_t record using an idempotent UPSERT pattern.
      * This method implements:
@@ -2006,6 +2154,54 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         } catch (Exception e) {
             logger.error("Exception:", e);
             result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getConfigInstanceAppById(String hostId, String instanceAppId, String propertyId) {
+        final String sql =
+                """
+                SELECT host_id, instance_app_id, property_id, property_value,
+                aggregate_version, active, update_user, update_ts
+                FROM instance_app_property_t
+                WHERE host_id = ? AND instance_app_id = ? AND property_id = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + instanceAppId + ":" + propertyId;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(instanceAppId));
+            statement.setObject(3, UUID.fromString(propertyId));
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceAppId", resultSet.getObject("instance_app_id", UUID.class));
+                    map.put("propertyId", resultSet.getObject("property_id", UUID.class));
+                    map.put("propertyValue", resultSet.getString("property_value"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "instance_app_property", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
         return result;
     }
@@ -2364,6 +2560,56 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         } catch (Exception e) {
             logger.error("Exception:", e);
             result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getConfigInstanceAppApiById(String hostId, String instanceAppId, String instanceApiId, String propertyId) {
+        final String sql =
+                """
+                SELECT host_id, instance_app_id, instance_api_id, property_id, property_value,
+                aggregate_version, active, update_user, update_ts
+                FROM instance_app_api_property_t
+                WHERE host_id = ? AND instance_app_id = ? AND instance_api_id = ? AND property_id = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + instanceAppId + ":" + instanceApiId + ":" + propertyId;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(instanceAppId));
+            statement.setObject(3, UUID.fromString(instanceApiId));
+            statement.setObject(4, UUID.fromString(propertyId));
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceAppId", resultSet.getObject("instance_app_id", UUID.class));
+                    map.put("instanceApiId", resultSet.getObject("instance_api_id", UUID.class));
+                    map.put("propertyId", resultSet.getObject("property_id", UUID.class));
+                    map.put("propertyValue", resultSet.getString("property_value"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "instance_app_api_property", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
         return result;
     }
@@ -3549,6 +3795,55 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         return result;
     }
 
+    @Override
+    public Result<String> getConfigInstanceById(String hostId, String instanceId, String propertyId) {
+        final String sql =
+                """
+                SELECT host_id, instance_id, property_id, property_value,
+                aggregate_version, active, update_user, update_ts
+                FROM instance_property_t
+                WHERE host_id = ? AND instance_id = ? AND property_id = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + instanceId + ":" + propertyId;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            // Set WHERE clause parameters
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(instanceId));
+            statement.setObject(3, UUID.fromString(propertyId));
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
+                    map.put("propertyId", resultSet.getObject("property_id", UUID.class));
+                    map.put("propertyValue", resultSet.getString("property_value"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "instance_property", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
     /**
      * Creates or reactivates an instance_file_t record using an idempotent UPSERT pattern.
      * This method implements:
@@ -3896,6 +4191,57 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     }
 
     @Override
+    public Result<String> getConfigInstanceFileById(String hostId, String instanceFileId) {
+        final String sql =
+                """
+                SELECT host_id, instance_file_id, instance_id, file_type, file_name, file_value,
+                file_desc, expiration_ts, aggregate_version, active, update_user, update_ts
+                FROM instance_file_t
+                WHERE host_id = ? AND instance_file_id = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + instanceFileId;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(instanceFileId));
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceFileId", resultSet.getObject("instance_file_id", UUID.class));
+                    map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
+                    map.put("fileType", resultSet.getString("file_type"));
+                    map.put("fileName", resultSet.getString("file_name"));
+                    map.put("fileValue", resultSet.getString("file_value"));
+                    map.put("fileDesc", resultSet.getString("file_desc"));
+                    map.put("expirationTs", resultSet.getObject("expiration_ts") != null ? resultSet.getObject("expiration_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "instance_file", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
     public void createConfigDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         // Use UPSERT based on the Primary Key (host_id, deployment_instance_id, property_id): INSERT ON CONFLICT DO UPDATE
         // This handles:
@@ -4212,6 +4558,54 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     }
 
     @Override
+    public Result<String> getConfigDeploymentInstanceById(String hostId, String deploymentInstanceId, String propertyId) {
+        final String sql =
+                """
+                SELECT host_id, deployment_instance_id, property_id, property_value,
+                aggregate_version, active, update_user, update_ts
+                FROM deployment_instance_property_t
+                WHERE host_id = ? AND deployment_instance_id = ? AND property_id = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + deploymentInstanceId + ":" + propertyId;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(deploymentInstanceId));
+            statement.setObject(3, UUID.fromString(propertyId));
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("deploymentInstanceId", resultSet.getObject("deployment_instance_id", UUID.class));
+                    map.put("propertyId", resultSet.getObject("property_id", UUID.class));
+                    map.put("propertyValue", resultSet.getString("property_value"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "deployment_instance_property", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
     public void createConfigProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         // Use UPSERT based on the Primary Key (product_id, property_id): INSERT ON CONFLICT DO UPDATE
         // This handles:
@@ -4490,6 +4884,52 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         } catch (Exception e) {
             logger.error("Exception:", e);
             result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getConfigProductById(String productId, String propertyId) {
+        final String sql =
+                """
+                SELECT product_id, property_id, property_value,
+                aggregate_version, active, update_user, update_ts
+                FROM product_property_t
+                WHERE product_id = ? AND property_id = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = productId + ":" + propertyId;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setString(1, productId);
+            statement.setObject(2, UUID.fromString(propertyId));
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("productId", resultSet.getString("product_id"));
+                    map.put("propertyId", resultSet.getObject("property_id", UUID.class));
+                    map.put("propertyValue", resultSet.getString("property_value"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "product_property", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
         return result;
     }
@@ -4796,6 +5236,54 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         } catch (Exception e) {
             logger.error("Exception:", e);
             result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getConfigProductVersionById(String hostId, String productVersionId, String propertyId) {
+        final String sql =
+                """
+                SELECT host_id, product_version_id, property_id, property_value,
+                aggregate_version, active, update_user, update_ts
+                FROM product_version_property_t
+                WHERE host_id = ? AND product_version_id = ? AND property_id = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + productVersionId + ":" + propertyId;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(productVersionId));
+            statement.setObject(3, UUID.fromString(propertyId));
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("productVersionId", resultSet.getObject("product_version_id", UUID.class));
+                    map.put("propertyId", resultSet.getObject("property_id", UUID.class));
+                    map.put("propertyValue", resultSet.getString("property_value"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "product_version_property", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
         return result;
     }
