@@ -883,6 +883,8 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         columnMap.put("updateTs", "cp.update_ts");
         columnMap.put("aggregateVersion", "cp.aggregate_version");
         columnMap.put("configName", "c.config_name");
+        columnMap.put("active", "cp.active");
+
 
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -937,6 +939,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
 
                     configProperties.add(map);
                 }
