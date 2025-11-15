@@ -1590,8 +1590,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 "endpoint", "e.endpoint",
                 "httpMethod", "e.http_method",
                 "endpointPath", "e.endpoint_path",
-                "endpointDesc", "e.endpoint_desc",
-                "aggregateVersion", "e.aggregate_version"
+                "endpointDesc", "e.endpoint_desc"
         ));
         columnMap.put("active", "e.active");
         columnMap.put("updateUser", "e.update_user");
@@ -1605,8 +1604,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 SELECT COUNT(*) OVER () AS total,
                 e.host_id, e.endpoint_id, e.api_version_id, v.api_id,
                 v.api_version, e.endpoint, e.http_method, e.endpoint_path,
-                e.endpoint_desc, e.aggregate_version,
-                e.active, e.update_user, e.update_ts
+                e.endpoint_desc, e.active, e.update_user, e.update_ts
                 FROM api_endpoint_t e
                 INNER JOIN api_version_t v ON e.api_version_id = v.api_version_id
                 WHERE e.host_id = ?
@@ -1646,7 +1644,6 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                     map.put("httpMethod", resultSet.getString("http_method"));
                     map.put("endpointPath", resultSet.getString("endpoint_path"));
                     map.put("endpointDesc", resultSet.getString("endpoint_desc"));
-                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts", OffsetDateTime.class));
                     map.put("active", resultSet.getBoolean("active"));
@@ -1672,7 +1669,8 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
         Result<String> result = null;
         String sql =
                 """
-                    SELECT s.host_id, s.endpoint_id, e.endpoint, s.scope, s.scope_desc, s.aggregate_version, s.active
+                    SELECT s.host_id, s.endpoint_id, e.endpoint, s.scope,
+                    s.scope_desc, s.active, s.update_user, s.update_ts
                     FROM api_endpoint_scope_t s
                     INNER JOIN api_endpoint_t e ON e.host_id = s.host_id AND e.endpoint_id = s.endpoint_id
                     WHERE s.host_id = ?
@@ -1694,8 +1692,9 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                     map.put("endpoint", resultSet.getString("endpoint"));
                     map.put("scope", resultSet.getString("scope"));
                     map.put("scopeDesc", resultSet.getString("scope_desc"));
-                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts", OffsetDateTime.class));
                     scopes.add(map);
                 }
             }

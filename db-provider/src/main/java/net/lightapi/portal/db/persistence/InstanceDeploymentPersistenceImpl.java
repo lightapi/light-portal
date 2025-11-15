@@ -1996,12 +1996,12 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 INNER JOIN api_version_t av ON av.api_version_id = ia.api_version_id
                 WHERE ia.host_id = ?
                 """;
-        if(instanceId != null) sql += " AND ia.instance_id = ?";
+        if(instanceId != null && !instanceId.isEmpty()) sql += " AND ia.instance_id = ?";
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
             preparedStatement.setObject(1, UUID.fromString(hostId));
-            if(instanceId != null) {
+            if(instanceId != null && !instanceId.isEmpty()) {
                 preparedStatement.setObject(2, UUID.fromString(instanceId));
             }
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -3014,14 +3014,14 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                         INNER JOIN instance_t i ON i.instance_id = ia.instance_id
                         WHERE ia.host_id = ?
                 """;
-        if(instanceId != null) {
+        if(instanceId != null && !instanceId.isEmpty()) {
             sql += " AND ia.instance_id = ?";
         }
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
             preparedStatement.setObject(1, UUID.fromString(hostId));
-            if(instanceId != null) {
+            if(instanceId != null && !instanceId.isEmpty()) {
                 preparedStatement.setObject(2, UUID.fromString(instanceId));
             }
             try (ResultSet resultSet = preparedStatement.executeQuery()) {

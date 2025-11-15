@@ -644,7 +644,8 @@ public class RulePersistenceImpl implements RulePersistence {
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
-                host_id, rule_id, rule_name, rule_version, rule_type, rule_group, rule_desc, rule_body, rule_owner,
+                host_id, rule_id, rule_name, rule_version, rule_type,
+                rule_group, rule_desc, rule_body, rule_owner,
                 update_user, update_ts, aggregate_version, active
                 FROM rule_t
                 WHERE
@@ -662,7 +663,7 @@ public class RulePersistenceImpl implements RulePersistence {
         String[] searchColumns = {"rule_name", "rule_desc"};
         String sqlBuilder = s + dynamicFilter(Arrays.asList("host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
-                dynamicSorting("product_id, product_version", sorting, null) +
+                dynamicSorting("rule_id, rule_version", sorting, null) +
                 "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);

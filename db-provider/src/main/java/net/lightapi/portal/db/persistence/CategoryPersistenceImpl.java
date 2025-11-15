@@ -499,7 +499,7 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
             cat.category_id, cat.host_id, cat.entity_type,
             cat.category_name, cat.category_desc, cat.parent_category_id,
             cat.sort_order, cat.update_user, cat.update_ts, cat.active,
-            cat.aggregate_version, parent_cat.category_name AS parent_category_name,
+            cat.aggregate_version, parent_cat.category_name AS parent_category_name
             FROM category_t cat
             LEFT JOIN category_t parent_cat ON cat.parent_category_id = parent_cat.category_id
             WHERE

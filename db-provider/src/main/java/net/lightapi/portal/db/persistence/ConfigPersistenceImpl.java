@@ -4816,7 +4816,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         Result<String> result = null;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "productId", "pp.product_id",
-                "configId", "p.configId",
+                "configId", "p.config_id",
                 "propertyId", "pp.property_id",
                 "propertyName", "p.property_name",
                 "propertyValue", "pp.property_value",
@@ -4833,7 +4833,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             """
                 SELECT COUNT(*) OVER () AS total,
                 pp.product_id, p.config_id, pp.property_id, p.property_name, pp.property_value,
-                pp.update_user, pp.update_ts, c.config_name, pp.aggregate_version
+                pp.update_user, pp.update_ts, c.config_name, pp.aggregate_version, pp.active
                 FROM product_property_t pp
                 INNER JOIN config_property_t p ON p.property_id = pp.property_id
                 INNER JOIN config_t c ON p.config_id = c.config_id
@@ -4876,7 +4876,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getInt("aggregate_version"));
-
+                    map.put("active", resultSet.getBoolean("active"));
                     productProperties.add(map);
                 }
             }
