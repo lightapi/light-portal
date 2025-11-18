@@ -20,6 +20,7 @@ public interface InstanceDeploymentPersistence {
     void promoteInstance(Connection conn, Map<String, Object> event) throws Exception;
     Result<String> getInstance(int offset, int limit, String filters, String globalFilter, String sortin, String hostId);
     Result<String> getInstanceLabel(String hostId);
+    Result<String> getInstanceById(String hostId, String instanceId);
 
     // InstanceApi
     void createInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -27,12 +28,14 @@ public interface InstanceDeploymentPersistence {
     void deleteInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getInstanceApi(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> getInstanceApiLabel(String hostId, String instanceId);
+    Result<String> getInstanceApiById(String hostId, String instanceApiId);
 
     // InstanceApiPathPrefix
     void createInstanceApiPathPrefix(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateInstanceApiPathPrefix(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteInstanceApiPathPrefix(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getInstanceApiPathPrefix(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
+    Result<String> getInstanceApiPathPrefixById(String hostId, String instanceApiId, String pathPrefix);
 
     // InstanceApp
     void createInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -40,12 +43,14 @@ public interface InstanceDeploymentPersistence {
     void deleteInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getInstanceApp(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> getInstanceAppLabel(String hostId, String instanceId);
+    Result<String> getInstanceAppById(String hostId, String instanceAppId);
 
     // InstanceAppApi
     void createInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getInstanceAppApi(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
+    Result<String> getInstanceAppApiById(String hostId, String instanceAppId, String instanceApiId);
 
     // ProductVersion
     void createProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception; // Renamed from createProductVersion in original
@@ -85,6 +90,7 @@ public interface InstanceDeploymentPersistence {
     void deletePipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getPipeline(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> getPipelineLabel(String hostId);
+    Result<String> getPipelineById(String hostId, String pipelineId);
 
     // Platform
     void createPlatform(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -92,6 +98,7 @@ public interface InstanceDeploymentPersistence {
     void deletePlatform(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getPlatform(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> getPlatformLabel(String hostId);
+    Result<String> getPlatformById(String hostId, String platformId);
 
     // DeploymentInstance
     void createDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -100,6 +107,7 @@ public interface InstanceDeploymentPersistence {
     Result<String> getDeploymentInstance(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> getDeploymentInstancePipeline(String hostId, String instanceId, String systemEnv, String runtimeEnv);
     Result<String> getDeploymentInstanceLabel(String hostId, String instanceId);
+    Result<String> getDeploymentInstanceById(String hostId, String deploymentInstanceId);
 
     // Deployment
     void createDeployment(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -108,4 +116,5 @@ public interface InstanceDeploymentPersistence {
     void updateDeploymentStatus(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteDeployment(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getDeployment(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
+    Result<String> getDeploymentById(String hostId, String deploymentId);
 }

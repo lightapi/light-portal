@@ -219,7 +219,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             """
                 SELECT COUNT(*) OVER () AS total,
                 host_id, role_id, role_desc, update_user,
-                update_ts, aggregate_version
+                update_ts, aggregate_version, active
                 FROM role_t
                 WHERE host_id = ?
             """;
@@ -262,6 +262,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     roles.add(map);
                 }
             }
@@ -279,6 +280,51 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
 
+        return result;
+    }
+
+    @Override
+    public Result<String> getRoleById(String hostId, String roleId) {
+        final String sql =
+                """
+                SELECT host_id, role_id, role_desc, aggregate_version, active, update_user, update_ts
+                FROM role_t
+                WHERE host_id = ? AND role_id = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + roleId;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setString(2, roleId);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("roleId", resultSet.getString("role_id"));
+                    map.put("roleDesc", resultSet.getString("role_desc"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "role", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
         return result;
     }
 
@@ -330,14 +376,16 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 "updateTs", "rp.update_ts"
         ));
 
+        columnMap.put("active", "rp.active");
+
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
 
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
-                r.host_id, r.role_id, av.api_version_id, av.api_id, av.api_version,
-                rp.endpoint_id, ae.endpoint, rp.aggregate_version, rp.update_user, rp.update_ts
+                r.host_id, r.role_id, av.api_version_id, av.api_id, av.api_version, rp.endpoint_id,
+                ae.endpoint, rp.aggregate_version, rp.update_user, rp.update_ts, rp.active
                 FROM role_permission_t rp
                 JOIN role_t r ON r.role_id = rp.role_id
                 JOIN api_endpoint_t ae ON rp.host_id = ae.host_id AND rp.endpoint_id = ae.endpoint_id
@@ -381,6 +429,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("active", resultSet.getBoolean("active"));
                     rolePermissions.add(map);
                 }
             }
@@ -418,6 +467,8 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         columnMap.put("firstName", "u.first_name");
         columnMap.put("lastName", "u.last_name");
         columnMap.put("managerId", "e.manager_id");
+        columnMap.put("active", "r.active");
+
 
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -427,7 +478,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 SELECT COUNT(*) OVER () AS total,
                 r.host_id, r.role_id, r.start_ts, r.end_ts,
                 r.aggregate_version, r.update_user, r.update_ts,
-                u.user_id, u.email, u.user_type,
+                u.user_id, u.email, u.user_type, r.active
                 CASE
                     WHEN u.user_type = 'C' THEN c.customer_id
                     WHEN u.user_type = 'E' THEN e.employee_id
@@ -486,6 +537,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("active", resultSet.getBoolean("active"));
                     roleUsers.add(map);
                 }
             }
@@ -504,6 +556,55 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
         return result;
 
+    }
+
+    @Override
+    public Result<String> getRoleUserById(String hostId, String roleId, String userId) {
+        final String sql =
+                """
+                SELECT host_id, role_id, user_id, start_ts, end_ts,
+                aggregate_version, active, update_user, update_ts
+                FROM role_user_t
+                WHERE host_id = ? AND role_id = ? AND user_id = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + roleId + ":" + userId;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setString(2, roleId);
+            statement.setObject(3, UUID.fromString(userId));
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("roleId", resultSet.getString("role_id"));
+                    map.put("userId", resultSet.getObject("user_id", UUID.class));
+                    map.put("startTs", resultSet.getObject("start_ts") != null ? resultSet.getObject("start_ts", OffsetDateTime.class) : null);
+                    map.put("endTs", resultSet.getObject("end_ts") != null ? resultSet.getObject("end_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "role_user", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
     }
 
     @Override
@@ -855,6 +956,8 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         columnMap.put("updateUser", "p.update_user");
         columnMap.put("updateTs", "p.update_ts");
         columnMap.put("aggregateVersion", "p.aggregate_version");
+        columnMap.put("active", "p.active");
+
 
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -863,7 +966,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 """
                 SELECT COUNT(*) OVER () AS total, r.host_id, r.role_id, p.endpoint_id, ae.endpoint,
                 av.api_version_id, av.api_id, av.api_version, p.col_name, p.operator, p.col_value,
-                p.update_user, p.update_ts, p.aggregate_version
+                p.update_user, p.update_ts, p.aggregate_version, p.active
                 FROM role_row_filter_t p
                 JOIN role_t r ON r.host_id = p.host_id AND r.role_id = p.role_id
                 JOIN api_endpoint_t ae ON ae.host_id = p.host_id AND ae.endpoint_id = p.endpoint_id
@@ -912,6 +1015,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("colName", resultSet.getString("col_name"));
                     map.put("operator", resultSet.getString("operator"));
                     map.put("colValue", resultSet.getString("col_value"));
+                    map.put("active", resultSet.getBoolean("active"));
                     roleRowFilters.add(map);
                 }
             }
@@ -928,6 +1032,57 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
 
+        return result;
+    }
+
+    @Override
+    public Result<String> getRoleRowFilterById(String hostId, String roleId, String endpointId, String colName) {
+        final String sql =
+                """
+                SELECT host_id, role_id, endpoint_id, col_name, operator, col_value,
+                aggregate_version, active, update_user, update_ts
+                FROM role_row_filter_t
+                WHERE host_id = ? AND role_id = ? AND endpoint_id = ? AND col_name = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + roleId + ":" + endpointId + ":" + colName;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setString(2, roleId);
+            statement.setObject(3, UUID.fromString(endpointId));
+            statement.setString(4, colName);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("roleId", resultSet.getString("role_id"));
+                    map.put("endpointId", resultSet.getObject("endpoint_id", UUID.class));
+                    map.put("colName", resultSet.getString("col_name"));
+                    map.put("operator", resultSet.getString("operator"));
+                    map.put("colValue", resultSet.getString("col_value"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "role_row_filter", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
         return result;
     }
 
@@ -1162,6 +1317,8 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 "updateTs", "rcf.update_ts"
         ));
         columnMap.put("aggregateVersion", "rcf.aggregate_version");
+        columnMap.put("active", "rcf.active");
+
 
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -1171,7 +1328,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 SELECT COUNT(*) OVER () AS total,
                 r.host_id, r.role_id, av.api_version_id, av.api_id, av.api_version,
                 ae.endpoint_id, ae.endpoint, rcf.columns, rcf.aggregate_version,
-                rcf.update_user, rcf.update_ts
+                rcf.update_user, rcf.update_ts, rcf.active
                 FROM role_col_filter_t rcf
                 JOIN role_t r ON r.role_id = rcf.role_id
                 JOIN api_endpoint_t ae ON rcf.host_id = ae.host_id AND rcf.endpoint_id = ae.endpoint_id
@@ -1217,6 +1374,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("apiVersion", resultSet.getString("api_version"));
                     map.put("endpoint", resultSet.getString("endpoint"));
                     map.put("columns", resultSet.getString("columns"));
+                    map.put("active", resultSet.getBoolean("active"));
                     roleColFilters.add(map);
                 }
             }
@@ -1233,6 +1391,54 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
 
+        return result;
+    }
+
+    @Override
+    public Result<String> getRoleColFilterById(String hostId, String roleId, String endpointId) {
+        final String sql =
+                """
+                SELECT host_id, role_id, endpoint_id, columns,
+                aggregate_version, active, update_user, update_ts
+                FROM role_col_filter_t
+                WHERE host_id = ? AND role_id = ? AND endpoint_id = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + roleId + ":" + endpointId;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setString(2, roleId);
+            statement.setObject(3, UUID.fromString(endpointId));
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("roleId", resultSet.getString("role_id"));
+                    map.put("endpointId", resultSet.getObject("endpoint_id", UUID.class));
+                    map.put("columns", resultSet.getString("columns"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "role_col_filter", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
         return result;
     }
 
@@ -1635,7 +1841,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             """
             SELECT COUNT(*) OVER () AS total,
             host_id, group_id, group_desc, update_user,
-            update_ts, aggregate_version
+            update_ts, aggregate_version, active
             FROM group_t
             WHERE host_id = ?
             """;
@@ -1672,6 +1878,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     groups.add(map);
                 }
             }
@@ -1683,6 +1890,51 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
         } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getGroupById(String hostId, String groupId) {
+        final String sql =
+                """
+                SELECT host_id, group_id, group_desc, aggregate_version, active, update_user, update_ts
+                FROM group_t
+                WHERE host_id = ? AND group_id = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + groupId;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setString(2, groupId);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("groupId", resultSet.getString("group_id"));
+                    map.put("groupDesc", resultSet.getString("group_desc"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "group", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
             logger.error("Exception:", e);
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
@@ -1736,6 +1988,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 "updateUser", "gp.update_user",
                 "updateTs", "gp.update_ts"
         ));
+        columnMap.put("active", "gp.active");
 
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -1744,7 +1997,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             """
                 SELECT COUNT(*) OVER () AS total,
                 gp.host_id, gp.group_id, av.api_id, av.api_version, av.api_version_id, ae.endpoint_id,
-                ae.endpoint, gp.aggregate_version, gp.update_user, gp.update_ts
+                ae.endpoint, gp.aggregate_version, gp.update_user, gp.update_ts, gp.active
                 FROM group_permission_t gp
                 JOIN group_t g ON gp.group_id = g.group_id
                 JOIN api_endpoint_t ae ON gp.host_id = ae.host_id AND gp.endpoint_id = ae.endpoint_id
@@ -1791,6 +2044,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("active", resultSet.getBoolean("active"));
                     groupPermissions.add(map);
                 }
             }
@@ -1831,6 +2085,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         columnMap.put("firstName", "u.first_name");
         columnMap.put("lastName", "u.last_name");
         columnMap.put("managerId", "e.manager_id");
+        columnMap.put("active", "g.active");
 
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -1840,7 +2095,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 SELECT COUNT(*) OVER () AS total,
                 g.host_id, g.group_id, g.start_ts, g.end_ts,
                 g.aggregate_version, g.update_user, g.update_ts,
-                u.user_id, u.email, u.user_type,
+                u.user_id, u.email, u.user_type, g.active
                 CASE
                     WHEN u.user_type = 'C' THEN c.customer_id
                     WHEN u.user_type = 'E' THEN e.employee_id
@@ -1899,6 +2154,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     groupUsers.add(map);
                 }
             }
@@ -1917,6 +2173,55 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
         return result;
 
+    }
+
+    @Override
+    public Result<String> getGroupUserById(String hostId, String groupId, String userId) {
+        final String sql =
+                """
+                SELECT host_id, group_id, user_id, start_ts, end_ts,
+                aggregate_version, active, update_user, update_ts
+                FROM group_user_t
+                WHERE host_id = ? AND group_id = ? AND user_id = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + groupId + ":" + userId;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setString(2, groupId);
+            statement.setObject(3, UUID.fromString(userId));
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("groupId", resultSet.getString("group_id"));
+                    map.put("userId", resultSet.getObject("user_id", UUID.class));
+                    map.put("startTs", resultSet.getObject("start_ts") != null ? resultSet.getObject("start_ts", OffsetDateTime.class) : null);
+                    map.put("endTs", resultSet.getObject("end_ts") != null ? resultSet.getObject("end_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "group_user", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
     }
 
     @Override
@@ -2288,6 +2593,8 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         columnMap.put("updateUser", "p.update_user");
         columnMap.put("updateTs", "p.update_ts");
         columnMap.put("aggregateVersion", "p.aggregate_version");
+        columnMap.put("active", "p.active");
+
 
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -2296,7 +2603,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             """
             SELECT COUNT(*) OVER () AS total, g.host_id, g.group_id, p.endpoint_id, ae.endpoint,
             av.api_version_id, av.api_id, av.api_version, p.col_name, p.operator, p.col_value,
-            p.update_user, p.update_ts, p.aggregate_version
+            p.update_user, p.update_ts, p.aggregate_version, p.active
             FROM group_row_filter_t p
             JOIN group_t g ON g.host_id = p.host_id AND g.group_id = p.group_id
             JOIN api_endpoint_t ae ON ae.host_id = p.host_id AND ae.endpoint_id = p.endpoint_id
@@ -2344,6 +2651,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     groupRowFilters.add(map);
                 }
             }
@@ -2360,6 +2668,57 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
 
+        return result;
+    }
+
+    @Override
+    public Result<String> getGroupRowFilterById(String hostId, String groupId, String endpointId, String colName) {
+        final String sql =
+                """
+                SELECT host_id, group_id, endpoint_id, col_name, operator, col_value,
+                aggregate_version, active, update_user, update_ts
+                FROM group_row_filter_t
+                WHERE host_id = ? AND group_id = ? AND endpoint_id = ? AND col_name = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + groupId + ":" + endpointId + ":" + colName;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setString(2, groupId);
+            statement.setObject(3, UUID.fromString(endpointId));
+            statement.setString(4, colName);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("groupId", resultSet.getString("group_id"));
+                    map.put("endpointId", resultSet.getObject("endpoint_id", UUID.class));
+                    map.put("colName", resultSet.getString("col_name"));
+                    map.put("operator", resultSet.getString("operator"));
+                    map.put("colValue", resultSet.getString("col_value"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "group_row_filter", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
         return result;
     }
 
@@ -2598,6 +2957,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 "updateTs", "cf.update_ts"
         ));
         columnMap.put("aggregateVersion", "cf.aggregate_version");
+        columnMap.put("active", "cf.active");
 
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -2606,7 +2966,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             """
             SELECT COUNT(*) OVER () AS total,
             g.host_id, g.group_id, av.api_version_id, av.api_id, av.api_version,
-            ae.endpoint_id, ae.endpoint, cf.columns, cf.aggregate_version,
+            ae.endpoint_id, ae.endpoint, cf.columns, cf.aggregate_version, cf.active
             cf.update_user, cf.update_ts
             FROM group_col_filter_t cf
             JOIN group_t g ON g.group_id = cf.group_id
@@ -2653,6 +3013,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     groupColFilters.add(map);
                 }
             }
@@ -2669,6 +3030,54 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
 
+        return result;
+    }
+
+    @Override
+    public Result<String> getGroupColFilterById(String hostId, String groupId, String endpointId) {
+        final String sql =
+                """
+                SELECT host_id, group_id, endpoint_id, columns,
+                aggregate_version, active, update_user, update_ts
+                FROM group_col_filter_t
+                WHERE host_id = ? AND group_id = ? AND endpoint_id = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + groupId + ":" + endpointId;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setString(2, groupId);
+            statement.setObject(3, UUID.fromString(endpointId));
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("groupId", resultSet.getString("group_id"));
+                    map.put("endpointId", resultSet.getObject("endpoint_id", UUID.class));
+                    map.put("columns", resultSet.getString("columns"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "group_col_filter", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
         return result;
     }
 
@@ -3113,7 +3522,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             """
             SELECT COUNT(*) OVER () AS total,
             host_id, position_id, position_desc, inherit_to_ancestor, inherit_to_sibling,
-            update_user, update_ts, aggregate_version
+            update_user, update_ts, aggregate_version, active
             FROM position_t
             WHERE host_id = ?
             """;
@@ -3151,6 +3560,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     positions.add(map);
                 }
             }
@@ -3162,6 +3572,54 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
         } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getPositionById(String hostId, String positionId) {
+        final String sql =
+                """
+                SELECT host_id, position_id, position_desc, inherit_to_ancestor, inherit_to_sibling,
+                aggregate_version, active, update_user, update_ts
+                FROM position_t
+                WHERE host_id = ? AND position_id = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + positionId;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setString(2, positionId);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("positionId", resultSet.getString("position_id"));
+                    map.put("positionDesc", resultSet.getString("position_desc"));
+                    map.put("inheritToAncestor", resultSet.getString("inherit_to_ancestor"));
+                    map.put("inheritToSibling", resultSet.getString("inherit_to_sibling"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "position", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
             logger.error("Exception:", e);
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
@@ -3217,6 +3675,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         ));
         columnMap.put("inheritToAncestor", "p.inherit_to_ancestor");
         columnMap.put("inheritToSibling", "p.inherit_to_sibling");
+        columnMap.put("active", "pp.active");
 
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -3226,7 +3685,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 SELECT COUNT(*) OVER () AS total,
                 pp.host_id, pp.position_id, p.inherit_to_ancestor, p.inherit_to_sibling,
                 av.api_version_id, av.api_id, av.api_version, ae.endpoint_id, ae.endpoint,
-                pp.aggregate_version, pp.update_user, pp.update_ts
+                pp.aggregate_version, pp.update_user, pp.update_ts, pp.active
                 FROM position_permission_t pp
                 JOIN position_t p ON pp.position_id = p.position_id
                 JOIN api_endpoint_t ae ON pp.host_id = ae.host_id AND pp.endpoint_id = ae.endpoint_id
@@ -3274,6 +3733,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("active", resultSet.getBoolean("active"));
                     positionPermissions.add(map);
                 }
             }
@@ -3314,6 +3774,8 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         columnMap.put("lastName", "u.last_name");
         columnMap.put("managerId", "e.manager_id");
         columnMap.put("positionType", "ep.position_type");
+        columnMap.put("active", "ep.active");
+
 
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -3325,7 +3787,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 ep.start_ts, ep.end_ts, u.user_id,
                 ep.aggregate_version, ep.update_user, ep.update_ts,
                 u.email, u.user_type, e.employee_id AS entity_id,
-                e.manager_id, u.first_name, u.last_name
+                e.manager_id, u.first_name, u.last_name, ep.active
                 FROM user_t u
                 INNER JOIN
                     employee_t e ON u.user_id = e.user_id AND u.user_type = 'E'
@@ -3373,6 +3835,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     positionUsers.add(map);
                 }
             }
@@ -3392,6 +3855,58 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
 
     }
+
+    @Override
+    public Result<String> getPositionUserById(String hostId, String positionId, String employeeId) {
+        final String sql =
+                """
+                SELECT host_id, employee_id, position_id, position_type, start_ts, end_ts,
+                aggregate_version, active, update_user, update_ts
+                FROM employee_position_t
+                WHERE host_id = ? AND position_id = ? AND employee_id = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + positionId + ":" + employeeId;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setString(2, positionId);
+            // Assuming employee_id in the DB is a UUID/VARCHAR that can be set by the employeeId parameter
+            statement.setString(3, employeeId);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("employeeId", resultSet.getString("employee_id"));
+                    map.put("positionId", resultSet.getString("position_id"));
+                    map.put("positionType", resultSet.getString("position_type"));
+                    map.put("startTs", resultSet.getObject("start_ts") != null ? resultSet.getObject("start_ts", OffsetDateTime.class) : null);
+                    map.put("endTs", resultSet.getObject("end_ts") != null ? resultSet.getObject("end_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "employee_position", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
     @Override
     public void createPositionPermission(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
@@ -3774,6 +4289,8 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         columnMap.put("updateUser", "p.update_user");
         columnMap.put("updateTs", "p.update_ts");
         columnMap.put("aggregateVersion", "p.aggregate_version");
+        columnMap.put("active", "p.active");
+
 
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -3782,7 +4299,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             """
             SELECT COUNT(*) OVER () AS total, o.host_id, o.position_id, p.endpoint_id, ae.endpoint,
             av.api_version_id, av.api_id, av.api_version, p.col_name, p.operator, p.col_value,
-            p.update_user, p.update_ts, p.aggregate_version
+            p.update_user, p.update_ts, p.aggregate_version, p.active
             FROM position_row_filter_t p
             JOIN position_t o ON o.host_id = p.host_id AND o.position_id = p.position_id
             JOIN api_endpoint_t ae ON ae.host_id = p.host_id AND ae.endpoint_id = p.endpoint_id
@@ -3830,6 +4347,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     positionRowFilters.add(map);
                 }
             }
@@ -3842,6 +4360,57 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
         } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getPositionRowFilterById(String hostId, String positionId, String endpointId, String colName) {
+        final String sql =
+                """
+                SELECT host_id, position_id, endpoint_id, col_name, operator, col_value,
+                aggregate_version, active, update_user, update_ts
+                FROM position_row_filter_t
+                WHERE host_id = ? AND position_id = ? AND endpoint_id = ? AND col_name = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + positionId + ":" + endpointId + ":" + colName;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setString(2, positionId);
+            statement.setObject(3, UUID.fromString(endpointId));
+            statement.setString(4, colName);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("positionId", resultSet.getString("position_id"));
+                    map.put("endpointId", resultSet.getObject("endpoint_id", UUID.class));
+                    map.put("colName", resultSet.getString("col_name"));
+                    map.put("operator", resultSet.getString("operator"));
+                    map.put("colValue", resultSet.getString("col_value"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "position_row_filter", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
             logger.error("Exception:", e);
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
@@ -4083,6 +4652,8 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 "updateTs", "cf.update_ts"
         ));
         columnMap.put("aggregateVersion", "cf.aggregate_version");
+        columnMap.put("active", "cf.active");
+
 
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -4092,7 +4663,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             SELECT COUNT(*) OVER () AS total,
             o.host_id, o.position_id, av.api_version_id, av.api_id, av.api_version,
             ae.endpoint_id, ae.endpoint, cf.columns, cf.aggregate_version,
-            cf.update_user, cf.update_ts
+            cf.update_user, cf.update_ts, cf.active
             FROM position_col_filter_t cf
             JOIN position_t o ON o.position_id = cf.position_id
             JOIN api_endpoint_t ae ON cf.host_id = ae.host_id AND cf.endpoint_id = ae.endpoint_id
@@ -4138,6 +4709,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     positionColFilters.add(map);
                 }
             }
@@ -4150,6 +4722,54 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
         } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getPositionColFilterById(String hostId, String positionId, String endpointId) {
+        final String sql =
+                """
+                SELECT host_id, position_id, endpoint_id, columns,
+                aggregate_version, active, update_user, update_ts
+                FROM position_col_filter_t
+                WHERE host_id = ? AND position_id = ? AND endpoint_id = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + positionId + ":" + endpointId;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setString(2, positionId);
+            statement.setObject(3, UUID.fromString(endpointId));
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("positionId", resultSet.getString("position_id"));
+                    map.put("endpointId", resultSet.getObject("endpoint_id", UUID.class));
+                    map.put("columns", resultSet.getString("columns"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "position_col_filter", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
             logger.error("Exception:", e);
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
@@ -4580,7 +5200,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             """
             SELECT COUNT(*) OVER () AS total,
             host_id, attribute_id, attribute_type, attribute_desc,
-            update_user, update_ts, aggregate_version
+            update_user, update_ts, aggregate_version, active
             FROM attribute_t
             WHERE host_id = ?
             """;
@@ -4616,6 +5236,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     attributes.add(map);
                 }
             }
@@ -4628,6 +5249,53 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
         } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getAttributeById(String hostId, String attributeId) {
+        final String sql =
+                """
+                SELECT host_id, attribute_id, attribute_type, attribute_desc,
+                aggregate_version, active, update_user, update_ts
+                FROM attribute_t
+                WHERE host_id = ? AND attribute_id = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + attributeId;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setString(2, attributeId);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("attributeId", resultSet.getString("attribute_id"));
+                    map.put("attributeType", resultSet.getString("attribute_type"));
+                    map.put("attributeDesc", resultSet.getString("attribute_desc"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "attribute", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
             logger.error("Exception:", e);
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
@@ -4683,6 +5351,8 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         ));
         columnMap.put("aggregateVersion", "ap.aggregate_version");
         columnMap.put("updateTs", "ap.update_ts");
+        columnMap.put("active", "ap.active");
+
 
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -4692,7 +5362,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 SELECT COUNT(*) OVER () AS total,
                 ap.host_id, ap.attribute_id, a.attribute_type, ap.attribute_value,
                 av.api_version_id, av.api_id, av.api_version, ap.endpoint_id, ae.endpoint,
-                ap.aggregate_version, ap.update_user, ap.update_ts
+                ap.aggregate_version, ap.update_user, ap.update_ts, ap.active
                 FROM attribute_permission_t ap
                 JOIN attribute_t a ON ap.attribute_id = a.attribute_id
                 JOIN api_endpoint_t ae ON ap.host_id = ae.host_id AND ap.endpoint_id = ae.endpoint_id
@@ -4740,6 +5410,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    map.put("active", resultSet.getBoolean("active"));
                     attributePermissions.add(map);
                 }
             }
@@ -4758,6 +5429,54 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
         return result;
 
+    }
+
+    @Override
+    public Result<String> getAttributePermissionById(String hostId, String attributeId, String endpointId) {
+        final String sql =
+                """
+                SELECT host_id, attribute_id, endpoint_id, attribute_value,
+                aggregate_version, active, update_user, update_ts
+                FROM attribute_permission_t
+                WHERE host_id = ? AND attribute_id = ? AND endpoint_id = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + attributeId + ":" + endpointId;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setString(2, attributeId);
+            statement.setObject(3, UUID.fromString(endpointId));
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("attributeId", resultSet.getString("attribute_id"));
+                    map.put("endpointId", resultSet.getObject("endpoint_id", UUID.class));
+                    map.put("attributeValue", resultSet.getString("attribute_value"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "attribute_permission", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
     }
 
     @Override
@@ -4781,6 +5500,8 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         columnMap.put("managerId", "e.manager_id");
         columnMap.put("attributeType", "at.attribute_type");
         columnMap.put("attributeValue", "a.attribute_value");
+        columnMap.put("active", "a.active");
+
 
 
 
@@ -4799,7 +5520,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     WHEN u.user_type = 'E' THEN e.employee_id
                     ELSE NULL -- Handle other cases if needed
                 END AS entity_id,
-                e.manager_id, u.first_name, u.last_name
+                e.manager_id, u.first_name, u.last_name, a.active
                 FROM user_t u
                 LEFT JOIN
                     customer_t c ON u.user_id = c.user_id AND u.user_type = 'C'
@@ -4855,6 +5576,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     attributeUsers.add(map);
                 }
             }
@@ -4873,6 +5595,56 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
         return result;
 
+    }
+
+    @Override
+    public Result<String> getAttributeUserById(String hostId, String attributeId, String userId) {
+        final String sql =
+                """
+                SELECT host_id, attribute_id, user_id, attribute_value, start_ts, end_ts,
+                aggregate_version, active, update_user, update_ts
+                FROM attribute_user_t
+                WHERE host_id = ? AND attribute_id = ? AND user_id = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + attributeId + ":" + userId;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setString(2, attributeId);
+            statement.setObject(3, UUID.fromString(userId));
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("attributeId", resultSet.getString("attribute_id"));
+                    map.put("userId", resultSet.getObject("user_id", UUID.class));
+                    map.put("attributeValue", resultSet.getString("attribute_value"));
+                    map.put("startTs", resultSet.getObject("start_ts") != null ? resultSet.getObject("start_ts", OffsetDateTime.class) : null);
+                    map.put("endTs", resultSet.getObject("end_ts") != null ? resultSet.getObject("end_ts", OffsetDateTime.class) : null);
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "attribute_user", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
     }
 
     @Override
@@ -5329,6 +6101,8 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         columnMap.put("updateUser", "p.update_user");
         columnMap.put("updateTs", "p.update_ts");
         columnMap.put("aggregateVersion", "p.aggregate_version");
+        columnMap.put("active", "p.active");
+
 
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -5338,7 +6112,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 SELECT COUNT(*) OVER () AS total, a.host_id, a.attribute_id, a.attribute_type,\s
                 p.attribute_value, p.endpoint_id, ae.endpoint,
                 av.api_version_id, av.api_id, av.api_version, p.col_name, p.operator, p.col_value,
-                p.update_user, p.update_ts, p.aggregate_version
+                p.update_user, p.update_ts, p.aggregate_version, p.active
                 FROM attribute_row_filter_t p
                 JOIN attribute_t a ON a.host_id = p.host_id AND a.attribute_id = p.attribute_id
                 JOIN api_endpoint_t ae ON ae.host_id = p.host_id AND ae.endpoint_id = p.endpoint_id
@@ -5388,6 +6162,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     attributeRowFilters.add(map);
                 }
             }
@@ -5404,6 +6179,58 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
 
+        return result;
+    }
+
+    @Override
+    public Result<String> getAttributeRowFilterById(String hostId, String attributeId, String endpointId, String colName) {
+        final String sql =
+                """
+                SELECT host_id, attribute_id, endpoint_id, attribute_value, col_name, operator, col_value,
+                aggregate_version, active, update_user, update_ts
+                FROM attribute_row_filter_t
+                WHERE host_id = ? AND attribute_id = ? AND endpoint_id = ? AND col_name = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + attributeId + ":" + endpointId + ":" + colName;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setString(2, attributeId);
+            statement.setObject(3, UUID.fromString(endpointId));
+            statement.setString(4, colName);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("attributeId", resultSet.getString("attribute_id"));
+                    map.put("endpointId", resultSet.getObject("endpoint_id", UUID.class));
+                    map.put("attributeValue", resultSet.getString("attribute_value"));
+                    map.put("colName", resultSet.getString("col_name"));
+                    map.put("operator", resultSet.getString("operator"));
+                    map.put("colValue", resultSet.getString("col_value"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "attribute_row_filter", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
         return result;
     }
 
@@ -5652,6 +6479,8 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         columnMap.put("updateUser", "cf.update_user");
         columnMap.put("updateTs", "cf.update_ts");
         columnMap.put("aggregateVersion", "rcf.aggregate_version");
+        columnMap.put("active", "cf.active");
+
 
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -5661,7 +6490,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             SELECT COUNT(*) OVER () AS total,
             a.host_id, a.attribute_id, a.attribute_type, cf.attribute_value,
             av.api_version_id, av.api_id, av.api_version, ae.endpoint_id, ae.endpoint, cf.columns, cf.aggregate_version,
-            cf.update_user, cf.update_ts
+            cf.update_user, cf.update_ts, cf.active
             FROM attribute_col_filter_t cf
             JOIN attribute_t a ON a.attribute_id = cf.attribute_id
             JOIN api_endpoint_t ae ON cf.host_id = ae.host_id AND cf.endpoint_id = ae.endpoint_id
@@ -5709,6 +6538,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     attributeColFilters.add(map);
                 }
             }
@@ -5725,6 +6555,55 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
 
+        return result;
+    }
+
+    @Override
+    public Result<String> getAttributeColFilterById(String hostId, String attributeId, String endpointId) {
+        final String sql =
+                """
+                SELECT host_id, attribute_id, endpoint_id, attribute_value, columns,
+                aggregate_version, active, update_user, update_ts
+                FROM attribute_col_filter_t
+                WHERE host_id = ? AND attribute_id = ? AND endpoint_id = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + attributeId + ":" + endpointId;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setString(2, attributeId);
+            statement.setObject(3, UUID.fromString(endpointId));
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("attributeId", resultSet.getString("attribute_id"));
+                    map.put("endpointId", resultSet.getObject("endpoint_id", UUID.class));
+                    map.put("attributeValue", resultSet.getString("attribute_value"));
+                    map.put("columns", resultSet.getString("columns"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "attribute_col_filter", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
         return result;
     }
 
@@ -5934,4 +6813,5 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             logger.error("Exception during deleteAttributeColFilter for hostId {} attributeId {} endpointId {} aggregateVersion {}: {}", hostId, attributeId, endpointId, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
-    }}
+    }
+}
