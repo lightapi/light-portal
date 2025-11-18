@@ -478,7 +478,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 SELECT COUNT(*) OVER () AS total,
                 r.host_id, r.role_id, r.start_ts, r.end_ts,
                 r.aggregate_version, r.update_user, r.update_ts,
-                u.user_id, u.email, u.user_type, r.active
+                u.user_id, u.email, u.user_type, r.active,
                 CASE
                     WHEN u.user_type = 'C' THEN c.customer_id
                     WHEN u.user_type = 'E' THEN e.employee_id

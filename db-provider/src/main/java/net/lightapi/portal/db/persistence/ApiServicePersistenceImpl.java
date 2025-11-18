@@ -648,8 +648,12 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     @Override
     public Result<String> queryEndpointLabel(String hostId, String apiVersionId) {
         Result<String> result = null;
-        String sql = "SELECT endpoint_id, endpoint FROM api_endpoint_t WHERE host_id = ? AND api_version_id = ?";
         List<Map<String, Object>> labels = new ArrayList<>();
+        if(apiVersionId == null || apiVersionId.isEmpty()) {
+            // return an empty array in the case apiVersionId is not selected in the form.
+            return Success.of(JsonMapper.toJson(labels));
+        }
+        String sql = "SELECT endpoint_id, endpoint FROM api_endpoint_t WHERE host_id = ? AND api_version_id = ?";
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
             preparedStatement.setObject(1, UUID.fromString(hostId));
