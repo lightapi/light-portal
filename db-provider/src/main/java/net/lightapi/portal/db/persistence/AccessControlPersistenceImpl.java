@@ -2095,7 +2095,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 SELECT COUNT(*) OVER () AS total,
                 g.host_id, g.group_id, g.start_ts, g.end_ts,
                 g.aggregate_version, g.update_user, g.update_ts,
-                u.user_id, u.email, u.user_type, g.active
+                u.user_id, u.email, u.user_type, g.active,
                 CASE
                     WHEN u.user_type = 'C' THEN c.customer_id
                     WHEN u.user_type = 'E' THEN e.employee_id
@@ -2966,7 +2966,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             """
             SELECT COUNT(*) OVER () AS total,
             g.host_id, g.group_id, av.api_version_id, av.api_id, av.api_version,
-            ae.endpoint_id, ae.endpoint, cf.columns, cf.aggregate_version, cf.active
+            ae.endpoint_id, ae.endpoint, cf.columns, cf.aggregate_version, cf.active,
             cf.update_user, cf.update_ts
             FROM group_col_filter_t cf
             JOIN group_t g ON g.group_id = cf.group_id
@@ -3792,7 +3792,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 INNER JOIN
                     employee_t e ON u.user_id = e.user_id AND u.user_type = 'E'
                 INNER JOIN
-                    employee_position_t ep ON ep.employee_id = e.employee_id
+                    user_position_t ep ON ep.user_id = u.user_id
                 WHERE ep.host_id = ?
             """;
 
@@ -3804,6 +3804,9 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("ep.position_id, u.user_id", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
+
+        parameters.add(limit);
+        parameters.add(offset);
 
         if(logger.isTraceEnabled()) logger.trace("queryPositionUser sql: {}", sqlBuilder);
         int total = 0;
@@ -3824,8 +3827,8 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("positionId", resultSet.getString("position_id"));
                     map.put("positionType", resultSet.getString("position_type"));
-                    map.put("startTs", resultSet.getDate("start_ts"));
-                    map.put("endTs", resultSet.getString("end_ts"));
+                    map.put("startTs", resultSet.getObject("start_ts") != null ? resultSet.getObject("start_ts", OffsetDateTime.class) : null);
+                    map.put("endTs", resultSet.getObject("end_ts") != null ? resultSet.getObject("end_ts", OffsetDateTime.class) : null);
                     map.put("userId", resultSet.getObject("user_id", UUID.class));
                     map.put("entityId", resultSet.getString("entity_id"));
                     map.put("email", resultSet.getString("email"));
@@ -3857,18 +3860,18 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> getPositionUserById(String hostId, String positionId, String employeeId) {
+    public Result<String> getPositionUserById(String hostId, String positionId, String userId) {
         final String sql =
                 """
-                SELECT host_id, employee_id, position_id, position_type, start_ts, end_ts,
+                SELECT host_id, user_id, position_id, position_type, start_ts, end_ts,
                 aggregate_version, active, update_user, update_ts
-                FROM employee_position_t
-                WHERE host_id = ? AND position_id = ? AND employee_id = ?
+                FROM user_position_t
+                WHERE host_id = ? AND position_id = ? AND user_id = ?
                 """;
         Result<String> result;
         Map<String, Object> map = new HashMap<>();
 
-        String searchId = hostId + ":" + positionId + ":" + employeeId;
+        String searchId = hostId + ":" + positionId + ":" + userId;
 
         try (Connection conn = ds.getConnection();
              PreparedStatement statement = conn.prepareStatement(sql)) {
@@ -3876,12 +3879,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             statement.setObject(1, UUID.fromString(hostId));
             statement.setString(2, positionId);
             // Assuming employee_id in the DB is a UUID/VARCHAR that can be set by the employeeId parameter
-            statement.setString(3, employeeId);
+            statement.setObject(3, UUID.fromString(userId));
 
             try (ResultSet resultSet = statement.executeQuery()) {
                 if (resultSet.next()) {
                     map.put("hostId", resultSet.getObject("host_id", UUID.class));
-                    map.put("employeeId", resultSet.getString("employee_id"));
+                    map.put("userId", resultSet.getObject("user_id", UUID.class));
                     map.put("positionId", resultSet.getString("position_id"));
                     map.put("positionType", resultSet.getString("position_type"));
                     map.put("startTs", resultSet.getObject("start_ts") != null ? resultSet.getObject("start_ts", OffsetDateTime.class) : null);
@@ -3893,7 +3896,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
                     result = Success.of(JsonMapper.toJson(map));
                 } else {
-                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "employee_position", searchId));
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "user_position", searchId));
                 }
             }
 
@@ -4041,15 +4044,14 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
-        // 2. Re-creation (conflict on host_id, employee_id, position_id) -> UPDATE the existing soft-deleted row (setting active=TRUE and new version).
-        // Note: Assuming 'userId' in the event maps to 'employee_id' in the database.
+        // 2. Re-creation (conflict on host_id, user_id, position_id) -> UPDATE the existing soft-deleted row (setting active=TRUE and new version).
         // position_type is hardcoded to 'P' (Primary/Own position) for a create event.
 
         final String sql =
                 """
-                INSERT INTO employee_position_t (
+                INSERT INTO user_position_t (
                     host_id,
-                    employee_id,
+                    user_id,
                     position_id,
                     position_type,
                     start_ts,
@@ -4059,7 +4061,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     aggregate_version,
                     active
                 ) VALUES (?, ?, ?, 'P', ?, ?, ?, ?, ?, TRUE)
-                ON CONFLICT (host_id, employee_id, position_id) DO UPDATE
+                ON CONFLICT (host_id, user_id, position_id) DO UPDATE
                 SET start_ts = EXCLUDED.start_ts,
                     end_ts = EXCLUDED.end_ts,
                     update_user = EXCLUDED.update_user,
@@ -4067,7 +4069,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
-                WHERE employee_position_t.aggregate_version < EXCLUDED.aggregate_version
+                WHERE user_position_t.aggregate_version < EXCLUDED.aggregate_version
                 """;
 
         // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -4076,14 +4078,14 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
         String hostId = (String)map.get("hostId");
         String positionId = (String)map.get("positionId");
-        String userId = (String)map.get("userId"); // Maps to employee_id
+        String userId = (String)map.get("userId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             // INSERT values (8 placeholders in VALUES clause)
             // 1: host_id
             statement.setObject(1, UUID.fromString(hostId));
-            // 2: employee_id (from userId)
+            // 2: user_id
             statement.setObject(2, UUID.fromString(userId));
             // 3: position_id
             statement.setString(3, positionId);
@@ -4132,7 +4134,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         // Assuming this update is only for the directly assigned position ('P').
         final String sql =
                 """
-                UPDATE employee_position_t
+                UPDATE user_position_t
                 SET start_ts = ?,
                     end_ts = ?,
                     update_user = ?,
@@ -4141,7 +4143,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     active = TRUE
                 WHERE host_id = ?
                   AND position_id = ?
-                  AND employee_id = ? -- Mapped from 'userId' in the event
+                  AND user_id = ?
                   AND position_type = 'P' -- Assuming only primary assignments are updated via this method
                   AND aggregate_version < ?
                 """; // <<< CRITICAL: Changed aggregate_version = ? to aggregate_version < ? to enforce monotonicity (OCC/IDM)
@@ -4152,7 +4154,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
         String hostId = (String)map.get("hostId");
         String positionId = (String)map.get("positionId");
-        String userId = (String)map.get("userId"); // Maps to employee_id
+        String userId = (String)map.get("userId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
@@ -4185,7 +4187,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             statement.setObject(6, UUID.fromString(hostId));
             // 7: position_id
             statement.setString(7, positionId);
-            // 8: employee_id (from userId)
+            // 8: user_id
             statement.setObject(8, UUID.fromString(userId));
             // position_type = 'P' (hardcoded in SQL)
             // 9: aggregate_version < ? (new version for OCC/IDM check)
@@ -4213,14 +4215,14 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
                 """
-                UPDATE employee_position_t
+                UPDATE user_position_t
                 SET active = FALSE,
                     update_user = ?,
                     update_ts = ?,
                     aggregate_version = ?
                 WHERE host_id = ?
                   AND position_id = ?
-                  AND employee_id = ?  -- Mapped from 'userId' in the event
+                  AND user_id = ?
                   AND position_type = 'P' -- Assuming delete is only for the primary assignment
                   AND aggregate_version < ?
                 """; // <<< CRITICAL: Added aggregate_version < ? to enforce monotonicity (OCC/IDM)
@@ -4231,7 +4233,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
         String hostId = (String)map.get("hostId");
         String positionId = (String)map.get("positionId");
-        String userId = (String)map.get("userId"); // Maps to employee_id
+        String userId = (String)map.get("userId");
         // A delete event represents a state change, so it should have a new, incremented version.
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
@@ -4249,7 +4251,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             statement.setObject(4, UUID.fromString(hostId));
             // 5: position_id
             statement.setString(5, positionId);
-            // 6: employee_id (from userId)
+            // 6: user_id
             statement.setObject(6, UUID.fromString(userId));
             // 7: aggregate_version < ? (new version for OCC/IDM check)
             statement.setLong(7, newAggregateVersion);
@@ -5565,8 +5567,8 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     map.put("attributeId", resultSet.getString("attribute_id"));
                     map.put("attributeType", resultSet.getString("attribute_type"));
                     map.put("attributeValue", resultSet.getString("attribute_value"));
-                    map.put("startTs", resultSet.getDate("start_ts"));
-                    map.put("endTs", resultSet.getString("end_ts"));
+                    map.put("startTs", resultSet.getObject("start_ts") != null ? resultSet.getObject("start_ts", OffsetDateTime.class) : null);
+                    map.put("endTs", resultSet.getObject("end_ts") != null ? resultSet.getObject("end_ts", OffsetDateTime.class) : null);
                     map.put("userId", resultSet.getObject("user_id", UUID.class));
                     map.put("entityId", resultSet.getString("entity_id"));
                     map.put("email", resultSet.getString("email"));
