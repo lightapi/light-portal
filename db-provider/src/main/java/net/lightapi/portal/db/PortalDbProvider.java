@@ -533,6 +533,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> getPipeline(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> getPipelineLabel(String hostId);
     Result<String> getPipelineById(String hostId, String pipelineId);
+    String getPipelineId(String hostId, String platformId, String pipelineName, String pipelineVersion);
 
     // Platform
     void createPlatform(Connection conn, Map<String, Object> event) throws SQLException, Exception;

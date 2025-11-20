@@ -5127,6 +5127,29 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
+    public String getPipelineId(String hostId, String platformId, String pipelineName, String pipelineVersion) {
+        final String sql = "SELECT pipeline_id FROM pipeline_t WHERE host_id = ? AND platform_id = ? AND pipeline_name = ? AND pipeline_version = ?";
+        String pipelineId = null;
+        try (Connection connection = ds.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(platformId));
+            statement.setString(3, pipelineName);
+            statement.setString(4, pipelineVersion);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if(resultSet.next()){
+                    pipelineId = resultSet.getString(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+        }
+        return pipelineId;
+    }
+
+    @Override
     public Result<String> getPipelineLabel(String hostId) {
         Result<String> result = null;
         String sql = "SELECT pipeline_id, pipeline_name, pipeline_version FROM pipeline_t WHERE host_id = ?";

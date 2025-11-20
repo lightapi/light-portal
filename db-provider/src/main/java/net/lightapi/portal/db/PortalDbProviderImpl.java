@@ -348,6 +348,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public Result<String> getPipeline(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return instanceDeploymentPersistence.getPipeline(offset, limit, filters, globalFilter, sorting, hostId); }
     @Override public Result<String> getPipelineLabel(String hostId) { return instanceDeploymentPersistence.getPipelineLabel(hostId); }
     @Override public Result<String> getPipelineById(String hostId, String pipelineId) { return instanceDeploymentPersistence.getPipelineById(hostId, pipelineId); }
+    @Override public String getPipelineId(String hostId, String platformId, String pipelineName, String pipelineVersion) { return instanceDeploymentPersistence.getPipelineId(hostId, platformId, pipelineName, pipelineVersion); }
     @Override public void createPlatform(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.createPlatform(connection, event); }
     @Override public void updatePlatform(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.updatePlatform(connection, event); }
     @Override public void deletePlatform(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.deletePlatform(connection, event); }
