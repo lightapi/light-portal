@@ -5253,6 +5253,27 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         }
     }
 
+    @Override
+    public String getPlatformId(String hostId, String platformName, String platformVersion) {
+        final String sql = "SELECT platform_id FROM platform_t WHERE host_id = ? AND platform_name = ? AND platform_version = ?";
+        String platformId = null;
+        try (Connection connection = ds.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setString(2, platformName);
+            statement.setString(3, platformVersion);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if(resultSet.next()){
+                    platformId = resultSet.getString(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+        }
+        return platformId;
+    }
 
     /**
      * Updates a platform_t record using an idempotent/monotonic pattern.

@@ -99,6 +99,7 @@ public interface InstanceDeploymentPersistence {
     Result<String> getPlatform(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> getPlatformLabel(String hostId);
     Result<String> getPlatformById(String hostId, String platformId);
+    String getPlatformId(String hostId, String platformName, String platformVersion);
 
     // DeploymentInstance
     void createDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception;
