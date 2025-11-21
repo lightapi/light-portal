@@ -298,6 +298,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public Result<String> getInstance(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return instanceDeploymentPersistence.getInstance(offset, limit, filters, globalFilter, sorting, hostId); }
     @Override public Result<String> getInstanceLabel(String hostId) { return instanceDeploymentPersistence.getInstanceLabel(hostId); }
     @Override public Result<String> getInstanceById(String hostId, String instanceId) { return instanceDeploymentPersistence.getInstanceById(hostId, instanceId); }
+    @Override public String getInstanceId(String hostId, String serviceId, String environment, String productVersionId) { return instanceDeploymentPersistence.getInstanceId(hostId, serviceId, environment, productVersionId); }
+
     @Override public void createInstanceApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.createInstanceApi(connection, event); }
     @Override public void updateInstanceApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.updateInstanceApi(connection, event); }
     @Override public void deleteInstanceApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.deleteInstanceApi(connection, event); }

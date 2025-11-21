@@ -525,6 +525,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> getInstance(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> getInstanceLabel(String hostId);
     Result<String> getInstanceById(String hostId, String instanceId);
+    String getInstanceId(String hostId, String serviceId, String environment, String productVersionId);
 
     // Pipeline
     void createPipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception;

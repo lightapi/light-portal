@@ -43,7 +43,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     public InstanceDeploymentPersistenceImpl(NotificationService notificationService) {
         this.notificationService = notificationService;
     }
-
+    /*
     @Override
     public void createInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql =
@@ -207,7 +207,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         }
         upsertPlatformProductInstanceProperties(hostId,instanceId,properties,user);
     }
-
+    */
     private Result<String> fetchReferenceData(String hostId, String[] tableNames) {
         Result<String> result = null;
         String sql = """
@@ -370,132 +370,372 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         }
     }
 
-    private boolean queryInstanceExists(Connection conn, String hostId, String instanceId) throws SQLException {
-        final String sql =
-                """
-                SELECT COUNT(*) FROM instance_t WHERE host_id = ? AND instance_id = ?
-                """;
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
-            pst.setObject(1, UUID.fromString(hostId));
-            pst.setObject(2, UUID.fromString(instanceId));
-            try (ResultSet rs = pst.executeQuery()) {
-                return rs.next() && rs.getInt(1) > 0;
-            }
-        }
-    }
-
     @Override
-    public void updateInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // Use UPSERT based on the Primary Key (host_id, instance_id): INSERT ON CONFLICT DO UPDATE
+        // This handles:
+        // 1. First time insert (no conflict).
+        // 2. Re-creation (conflict on PK) -> UPDATE the existing soft-deleted row (setting active=TRUE and new version).
+
         final String sql =
                 """
-                UPDATE instance_t SET instance_name = ?,
-                current = ?, environment = ?, service_desc = ?, instance_desc = ?,
-                zone = ?, region = ?, lob = ?, resource_name = ?, business_name = ?,
-                topic_classification = ?, update_user = ?, update_ts = ?, aggregate_version = ?
-                WHERE host_id = ? and instance_id = ? AND aggregate_version = ? and product_version_id = ? and service_id = ? and env_tag = ?
+                INSERT INTO instance_t(
+                    host_id, instance_id, instance_name, product_version_id, service_id,
+                    current, readonly, environment, service_desc, instance_desc,
+                    zone, region, lob, resource_name, business_name,
+                    env_tag, topic_classification, update_user, update_ts, aggregate_version, active
+                ) VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (host_id, instance_id) DO UPDATE
+                SET instance_name = EXCLUDED.instance_name,
+                    product_version_id = EXCLUDED.product_version_id,
+                    service_id = EXCLUDED.service_id,
+                    current = EXCLUDED.current,
+                    readonly = EXCLUDED.readonly,
+                    environment = EXCLUDED.environment,
+                    service_desc = EXCLUDED.service_desc,
+                    instance_desc = EXCLUDED.instance_desc,
+                    zone = EXCLUDED.zone,
+                    region = EXCLUDED.region,
+                    lob = EXCLUDED.lob,
+                    resource_name = EXCLUDED.resource_name,
+                    business_name = EXCLUDED.business_name,
+                    env_tag = EXCLUDED.env_tag,
+                    topic_classification = EXCLUDED.topic_classification,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                -- OCC/IDM: Only update if the incoming event is newer
+                WHERE instance_t.aggregate_version < EXCLUDED.aggregate_version
                 """;
+
+        // SQL to unset 'current' flag for other instances of the same service_id/host_id
         final String sqlUpdateCurrent =
                 """
-                UPDATE instance_t SET current = false
+                UPDATE instance_t SET current = false, update_user = ?, update_ts = ?
                 WHERE host_id = ?
                 AND service_id = ?
                 AND instance_id != ?
                 """;
 
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
+        // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        // Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String)map.get("hostId"); // Getting hostId from map data, consistent with other methods
         String instanceId = (String)map.get("instanceId");
         String serviceId = (String)map.get("serviceId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        final String user = (String) event.get(Constants.USER);
+        final OffsetDateTime updateTs = OffsetDateTime.parse((String) event.get(CloudEventV1.TIME));
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+        Boolean current = (Boolean)map.get("current");
+
+        // Determine the boolean value to be inserted/updated for 'current'
+        boolean isCurrent = current != null ? current : false;
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setString(1, (String)map.get("instanceName"));
-            Boolean current = (Boolean)map.get("current");
-            if (current != null) {
-                statement.setBoolean(2, current);
+            // INSERT values (20 placeholders + active=TRUE in SQL, total 20 dynamic values)
+            int i = 1;
+            // 1: host_id
+            statement.setObject(i++, UUID.fromString(hostId));
+            // 2: instance_id
+            statement.setObject(i++, UUID.fromString(instanceId));
+            // 3: instance_name
+            statement.setString(i++, (String)map.get("instanceName"));
+            // 4: product_version_id
+            statement.setObject(i++, UUID.fromString((String)map.get("productVersionId")));
+            // 5: service_id
+            statement.setString(i++, serviceId);
+            // 6: current
+            statement.setBoolean(i++, isCurrent);
+            // 7: readonly
+            Boolean readonly = (Boolean)map.get("readonly");
+            if (readonly != null) {
+                statement.setBoolean(i++, readonly);
             } else {
-                statement.setNull(2, Types.BOOLEAN);
+                statement.setNull(i++, Types.BOOLEAN);
             }
+            // 8: environment
             String environment = (String)map.get("environment");
             if (environment != null && !environment.isEmpty()) {
-                statement.setString(3, environment);
+                statement.setString(i++, environment);
             } else {
-                statement.setNull(3, Types.VARCHAR);
+                statement.setNull(i++, Types.VARCHAR);
             }
+            // 9: service_desc
             String serviceDesc = (String)map.get("serviceDesc");
             if (serviceDesc != null && !serviceDesc.isEmpty()) {
-                statement.setString(4, serviceDesc);
+                statement.setString(i++, serviceDesc);
             } else {
-                statement.setNull(4, Types.VARCHAR);
+                statement.setNull(i++, Types.VARCHAR);
             }
+            // 10: instance_desc
             String instanceDesc = (String)map.get("instanceDesc");
-            if (instanceDesc != null && !instanceDesc.isEmpty()) {
-                statement.setString(5, instanceDesc);
+            if(instanceDesc != null && !instanceDesc.isEmpty()) {
+                statement.setString(i++, instanceDesc);
             } else {
-                statement.setNull(5, Types.VARCHAR);
+                statement.setNull(i++, Types.VARCHAR);
             }
+            // 11: zone
             String zone = (String)map.get("zone");
-            if (zone != null && !zone.isEmpty()) {
-                statement.setString(6, zone);
+            if(zone != null && !zone.isEmpty()) {
+                statement.setString(i++, zone);
             } else {
-                statement.setNull(6, Types.VARCHAR);
+                statement.setNull(i++, Types.VARCHAR);
             }
+            // 12: region
             String region = (String)map.get("region");
-            if (region != null && !region.isEmpty()) {
-                statement.setString(7, region);
+            if(region != null && !region.isEmpty()) {
+                statement.setString(i++, region);
             } else {
-                statement.setNull(7, Types.VARCHAR);
+                statement.setNull(i++, Types.VARCHAR);
             }
+            // 13: lob
             String lob = (String)map.get("lob");
-            if (lob != null && !lob.isEmpty()) {
-                statement.setString(8, lob);
+            if(lob != null && !lob.isEmpty()) {
+                statement.setString(i++, lob);
             } else {
-                statement.setNull(8, Types.VARCHAR);
+                statement.setNull(i++, Types.VARCHAR);
             }
+            // 14: resource_name
             String resourceName = (String)map.get("resourceName");
-            if (resourceName != null && !resourceName.isEmpty()) {
-                statement.setString(9, resourceName);
+            if(resourceName != null && !resourceName.isEmpty()) {
+                statement.setString(i++, resourceName);
             } else {
-                statement.setNull(9, Types.VARCHAR);
+                statement.setNull(i++, Types.VARCHAR);
             }
+            // 15: business_name
             String businessName = (String)map.get("businessName");
-            if (businessName != null && !businessName.isEmpty()) {
-                statement.setString(10, businessName);
+            if(businessName != null && !businessName.isEmpty()) {
+                statement.setString(i++, businessName);
             } else {
-                statement.setNull(10, Types.VARCHAR);
+                statement.setNull(i++, Types.VARCHAR);
             }
-            String topicClassification = (String)map.get("topicClassification");
-            if (topicClassification != null && !topicClassification.isEmpty()) {
-                statement.setString(11, topicClassification);
-            } else {
-                statement.setNull(11, Types.VARCHAR);
-            }
-            statement.setString(12, (String)event.get(Constants.USER));
-            statement.setObject(13, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(14, newAggregateVersion);
-            statement.setObject(15, UUID.fromString(hostId));
-            statement.setObject(16, UUID.fromString(instanceId));
-            statement.setLong(17, oldAggregateVersion);
-            statement.setObject(18, UUID.fromString((String) map.get("productVersionId")));
-            statement.setString(19, serviceId);
+            // 16: env_tag
             String envTag = (String)map.get("envTag");
-            statement.setString(20, envTag);
+            if(envTag != null && !envTag.isEmpty()) {
+                statement.setString(i++, envTag);
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+            // 17: topic_classification
+            String topicClassification = (String)map.get("topicClassification");
+            if(topicClassification != null && !topicClassification.isEmpty()) {
+                statement.setString(i++, topicClassification);
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+
+            // 18: update_user
+            statement.setString(i++, user);
+            // 19: update_ts
+            statement.setObject(i++, updateTs);
+            // 20: aggregate_version
+            statement.setLong(i++, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryInstanceExists(conn, hostId, instanceId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during updateInstance for hostId " + hostId + " instanceId " + instanceId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
-                } else {
-                    throw new SQLException("No record found during updateInstance for hostId " + hostId + " instanceId " + instanceId + ".");
+                // A count of 0 is a valid, idempotent outcome.
+                logger.warn("Creation/Reactivation skipped for hostId {} instanceId {} aggregateVersion {}. A newer or same version already exists.", hostId, instanceId, newAggregateVersion);
+            }
+
+            // If the incoming event marks this instance as current (or the existing current flag was updated/re-inserted as true),
+            // ensure all others are set to false (original business logic).
+            if(isCurrent) {
+                try (PreparedStatement statementUpdate = conn.prepareStatement(sqlUpdateCurrent)) {
+                    statementUpdate.setString(1, user);
+                    statementUpdate.setObject(2, updateTs);
+                    statementUpdate.setObject(3, UUID.fromString(hostId));
+                    statementUpdate.setString(4, serviceId);
+                    statementUpdate.setObject(5, UUID.fromString(instanceId));
+                    statementUpdate.executeUpdate();
                 }
             }
+        } catch (SQLException e) {
+            logger.error("SQLException during createInstance for hostId {} instanceId {} aggregateVersion {}: {}", hostId, instanceId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createInstance for hostId {} instanceId {} aggregateVersion {}: {}", hostId, instanceId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public void updateInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // We will attempt to update the record IF the incoming event is newer than the current projection version.
+        // We also explicitly set active = TRUE (reactivation).
+        final String sql =
+                """
+                UPDATE instance_t
+                SET instance_name = ?,
+                    product_version_id = ?,
+                    service_id = ?,
+                    current = ?,
+                    readonly = ?,
+                    environment = ?,
+                    service_desc = ?,
+                    instance_desc = ?,
+                    zone = ?,
+                    region = ?,
+                    lob = ?,
+                    resource_name = ?,
+                    business_name = ?,
+                    env_tag = ?,
+                    topic_classification = ?,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?,
+                    active = TRUE
+                WHERE host_id = ?
+                  AND instance_id = ?
+                  AND aggregate_version < ?
+                """; // <<< CRITICAL: Changed '= ?' to '< ?' in the WHERE clause AND simplified WHERE to PK only
+
+        // SQL to unset 'current' flag for other instances of the same service_id/host_id (Original logic)
+        final String sqlUpdateCurrent =
+                """
+                UPDATE instance_t SET current = false, update_user = ?, update_ts = ?
+                WHERE host_id = ?
+                AND service_id = ?
+                AND instance_id != ?
+                """;
+
+        // Assuming SqlUtil.extractEventData(event) is the helper to get PortalConstants.DATA
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+
+        String hostId = (String)map.get("hostId"); // Getting hostId from map data, consistent with other methods
+        String instanceId = (String)map.get("instanceId");
+        String serviceId = (String)map.get("serviceId");
+        final String user = (String) event.get(Constants.USER);
+        final OffsetDateTime updateTs = OffsetDateTime.parse((String) event.get(CloudEventV1.TIME));
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+        Boolean current = (Boolean)map.get("current");
+
+        // Determine the boolean value to be inserted/updated for 'current'
+        boolean isCurrent = current != null ? current : false;
+        // Determine the boolean value for 'readonly' (Default FALSE in DDL, check payload)
+        Boolean readonly = (Boolean)map.getOrDefault("readonly", Boolean.FALSE);
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            // SET values (18 dynamic values + active = TRUE in SQL)
+            int i = 1;
+
+            // 1: instance_name
+            statement.setString(i++, (String)map.get("instanceName"));
+            // 2: product_version_id
+            statement.setObject(i++, UUID.fromString((String)map.get("productVersionId")));
+            // 3: service_id
+            statement.setString(i++, serviceId);
+            // 4: current
+            statement.setBoolean(i++, isCurrent);
+            // 5: readonly
+            statement.setBoolean(i++, readonly);
+            // 6: environment
+            String environment = (String)map.get("environment");
+            if (environment != null && !environment.isEmpty()) {
+                statement.setString(i++, environment);
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+            // 7: service_desc
+            String serviceDesc = (String)map.get("serviceDesc");
+            if (serviceDesc != null && !serviceDesc.isEmpty()) {
+                statement.setString(i++, serviceDesc);
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+            // 8: instance_desc
+            String instanceDesc = (String)map.get("instanceDesc");
+            if(instanceDesc != null && !instanceDesc.isEmpty()) {
+                statement.setString(i++, instanceDesc);
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+            // 9: zone
+            String zone = (String)map.get("zone");
+            if(zone != null && !zone.isEmpty()) {
+                statement.setString(i++, zone);
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+            // 10: region
+            String region = (String)map.get("region");
+            if(region != null && !region.isEmpty()) {
+                statement.setString(i++, region);
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+            // 11: lob
+            String lob = (String)map.get("lob");
+            if(lob != null && !lob.isEmpty()) {
+                statement.setString(i++, lob);
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+            // 12: resource_name
+            String resourceName = (String)map.get("resourceName");
+            if(resourceName != null && !resourceName.isEmpty()) {
+                statement.setString(i++, resourceName);
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+            // 13: business_name
+            String businessName = (String)map.get("businessName");
+            if(businessName != null && !businessName.isEmpty()) {
+                statement.setString(i++, businessName);
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+            // 14: env_tag
+            String envTag = (String)map.get("envTag");
+            if(envTag != null && !envTag.isEmpty()) {
+                statement.setString(i++, envTag);
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+            // 15: topic_classification
+            String topicClassification = (String)map.get("topicClassification");
+            if(topicClassification != null && !topicClassification.isEmpty()) {
+                statement.setString(i++, topicClassification);
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+
+            // 16: update_user
+            statement.setString(i++, user);
+            // 17: update_ts
+            statement.setObject(i++, updateTs);
+            // 18: aggregate_version (NEW version in SET clause)
+            statement.setLong(i++, newAggregateVersion);
+
+            // WHERE clause parameters
+            // 19: host_id
+            statement.setObject(i++, UUID.fromString(hostId));
+            // 20: instance_id
+            statement.setObject(i++, UUID.fromString(instanceId));
+            // 21: aggregate_version (MONOTONICITY check in WHERE clause)
+            statement.setLong(i, newAggregateVersion); // Condition: WHERE aggregate_version < newAggregateVersion
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // count=0 means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Update skipped for hostId {} instanceId {} (old: {}) -> (new: {}). Record not found or a newer version already exists.", hostId, instanceId, oldAggregateVersion, newAggregateVersion);
+            }
+
             // try to update current to false for others if current is true.
-            if(current != null && current) {
+            if(isCurrent && count > 0) { // Only run if the main update actually happened
                 try (PreparedStatement statementUpdate = conn.prepareStatement(sqlUpdateCurrent)) {
-                    statementUpdate.setObject(1, UUID.fromString(hostId));
-                    statementUpdate.setString(2, serviceId);
-                    statementUpdate.setObject(3, UUID.fromString(instanceId));
+                    // 1: update_user
+                    statementUpdate.setString(1, user);
+                    // 2: update_ts
+                    statementUpdate.setObject(2, updateTs);
+                    // 3: host_id
+                    statementUpdate.setObject(3, UUID.fromString(hostId));
+                    // 4: service_id
+                    statementUpdate.setString(4, serviceId);
+                    // 5: instance_id (the one we just set to current=true)
+                    statementUpdate.setObject(5, UUID.fromString(instanceId));
                     statementUpdate.executeUpdate();
                 }
             }
@@ -510,85 +750,193 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
     @Override
     public void deleteInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM instance_t WHERE host_id = ? AND instance_id = ? AND aggregate_version = ?";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
-        String instanceId = (String)map.get("instanceId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        // Use UPDATE to implement Soft Delete (setting active = FALSE).
+        // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
+        final String softDeleteSql =
+                """
+                UPDATE instance_t
+                SET active = FALSE,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?
+                WHERE host_id = ?
+                  AND instance_id = ?
+                  AND aggregate_version < ?
+                """; // <<< CRITICAL: Changed from DELETE to UPDATE, and used aggregate_version < ?
 
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(instanceId));
+        // Map retrieval (from event constants and data map)
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String)map.get("hostId"); // Getting hostId from map data, consistent with other methods
+        String instanceId = (String)map.get("instanceId");
+
+        // newAggregateVersion is the version of the incoming Delete event (the target version).
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event); // For logging
+
+        try (PreparedStatement statement = conn.prepareStatement(softDeleteSql)) {
+            int i = 1;
+
+            // 1. update_user
+            statement.setString(i++, (String)event.get(Constants.USER));
+
+            // 2. update_ts
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+            // 3. aggregate_version (NEW version in SET clause)
+            statement.setLong(i++, newAggregateVersion);
+
+            // 4. host_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(hostId));
+
+            // 5. instance_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(instanceId));
+
+            // 6. aggregate_version (MONOTONICITY check in WHERE clause)
+            statement.setLong(i, newAggregateVersion); // Condition: WHERE aggregate_version < newAggregateVersion
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryInstanceExists(conn, hostId, instanceId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteInstance for hostId " + hostId + " instanceId " + instanceId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
-                } else {
-                    throw new SQLException("No record found during deleteInstance for hostId " + hostId + " instanceId " + instanceId + ". It might have been already deleted.");
-                }
+                // If 0 rows updated, it means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("deleteInstance skipped for hostId {} instanceId {} (old: {}) -> (new: {}). Record not found or a newer version already exists.", hostId, instanceId, oldAggregateVersion, newAggregateVersion);
             }
+            // NO THROW on count == 0. The method is now idempotent.
+
         } catch (SQLException e) {
-            logger.error("SQLException during deleteInstance for hostId {} instanceId {} aggregateVersion {}: {}", hostId, instanceId, oldAggregateVersion, e.getMessage(), e);
-            throw e;
+            logger.error("SQLException during deleteInstance for hostId {} instanceId {} (old: {}) -> (new: {}): {}", hostId, instanceId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw SQLException
         } catch (Exception e) {
-            logger.error("Exception during deleteInstance for hostId {} instanceId {} aggregateVersion {}: {}", hostId, instanceId, oldAggregateVersion, e.getMessage(), e);
-            throw e;
+            logger.error("Exception during deleteInstance for hostId {} instanceId {} (old: {}) -> (new: {}): {}", hostId, instanceId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw generic Exception
         }
     }
 
     @Override
     public void lockInstance(Connection conn, Map<String, Object> event) throws Exception {
-        String sql = "UPDATE instance_t SET readonly = true, aggregate_version = ? " +
-            "WHERE host_id = ? AND instance_id = ? AND aggregate_version = ?";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
+        // We attempt to lock the record (set readonly = TRUE) IF the incoming event is newer than the current projection version.
+        // We also explicitly set active = TRUE (assuming a lock event implies the instance is active).
+        final String sql =
+                """
+                UPDATE instance_t
+                SET readonly = TRUE,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?,
+                    active = TRUE
+                WHERE host_id = ?
+                  AND instance_id = ?
+                  AND aggregate_version < ?
+                """; // <<< CRITICAL: Changed '= ?' to '< ?' in the WHERE clause AND added update_user/update_ts/active=TRUE
+
+        Map<String, Object> map = SqlUtil.extractEventData(event); // Assuming extractEventData is the helper to get PortalConstants.DATA
+        String hostId = (String)map.get("hostId");
         String instanceId = (String)map.get("instanceId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
-        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setLong(1, SqlUtil.getNewAggregateVersion(event));
-            pstmt.setObject(2, UUID.fromString(hostId));
-            pstmt.setObject(3, UUID.fromString(instanceId));
-            pstmt.setLong(4, oldAggregateVersion);
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event); // For logging context
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event); // The new version from the event
 
-            int affectedRows = pstmt.executeUpdate();
-            if (affectedRows == 0) {
-                throw new SQLException("Locking instance failed, no rows affected.");
+        final String user = (String) event.get(Constants.USER);
+        final OffsetDateTime updateTs = OffsetDateTime.parse((String) event.get(CloudEventV1.TIME));
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            int i = 1;
+
+            // 1. update_user
+            statement.setString(i++, user);
+
+            // 2. update_ts
+            statement.setObject(i++, updateTs);
+
+            // 3. aggregate_version (NEW version in SET clause)
+            statement.setLong(i++, newAggregateVersion);
+
+            // 4. host_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(hostId));
+
+            // 5. instance_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(instanceId));
+
+            // 6. aggregate_version (MONOTONICITY check in WHERE clause)
+            statement.setLong(i, newAggregateVersion); // Condition: WHERE aggregate_version < newAggregateVersion
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // count=0 means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("lockInstance skipped for hostId {} instanceId {} (old: {}) -> (new: {}). Record not found or a newer version already exists.", hostId, instanceId, oldAggregateVersion, newAggregateVersion);
             }
+            // NO THROW on count == 0. The method is now idempotent.
+
         } catch (SQLException e) {
-            logger.error("SQLException during lockInstance for hostId {} instanceId {} aggregateVersion {}: {}", hostId, instanceId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during lockInstance for hostId {} instanceId {} (old: {}) -> (new: {}): {}", hostId, instanceId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during lockInstance for hostId {} instanceId {} aggregateVersion {}: {}", hostId, instanceId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during lockInstance for hostId {} instanceId {} (old: {}) -> (new: {}): {}", hostId, instanceId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
     public void unlockInstance(Connection conn, Map<String, Object> event) throws Exception {
-        String sql = "UPDATE instance_t SET readonly = false, aggregate_version = ? " +
-            "WHERE host_id = ? AND instance_id = ? AND aggregate_version = ?";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
+        // We attempt to unlock the record (set readonly = FALSE) IF the incoming event is newer than the current projection version.
+        // We also explicitly set active = TRUE (assuming an unlock event implies the instance is active).
+        final String sql =
+                """
+                UPDATE instance_t
+                SET readonly = FALSE,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?,
+                    active = TRUE
+                WHERE host_id = ?
+                  AND instance_id = ?
+                  AND aggregate_version < ?
+                """; // <<< CRITICAL: Changed '= ?' to '< ?' in the WHERE clause AND added update_user/update_ts/active=TRUE
+
+        Map<String, Object> map = SqlUtil.extractEventData(event); // Assuming extractEventData is the helper to get PortalConstants.DATA
+        String hostId = (String)map.get("hostId");
         String instanceId = (String)map.get("instanceId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
-        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setLong(1, SqlUtil.getNewAggregateVersion(event));
-            pstmt.setObject(2, UUID.fromString(hostId));
-            pstmt.setObject(3, UUID.fromString(instanceId));
-            pstmt.setLong(4, oldAggregateVersion);
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event); // For logging context
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event); // The new version from the event
 
-            int affectedRows = pstmt.executeUpdate();
-            if (affectedRows == 0) {
-                throw new SQLException("Unlocking instance failed, no rows affected.");
+        final String user = (String) event.get(Constants.USER);
+        final OffsetDateTime updateTs = OffsetDateTime.parse((String) event.get(CloudEventV1.TIME));
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            int i = 1;
+
+            // 1. update_user
+            statement.setString(i++, user);
+
+            // 2. update_ts
+            statement.setObject(i++, updateTs);
+
+            // 3. aggregate_version (NEW version in SET clause)
+            statement.setLong(i++, newAggregateVersion);
+
+            // 4. host_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(hostId));
+
+            // 5. instance_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(instanceId));
+
+            // 6. aggregate_version (MONOTONICITY check in WHERE clause)
+            statement.setLong(i, newAggregateVersion); // Condition: WHERE aggregate_version < newAggregateVersion
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // count=0 means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("unlockInstance skipped for hostId {} instanceId {} (old: {}) -> (new: {}). Record not found or a newer version already exists.", hostId, instanceId, oldAggregateVersion, newAggregateVersion);
             }
+            // NO THROW on count == 0. The method is now idempotent.
+
         } catch (SQLException e) {
-            logger.error("SQLException during unlockInstance for hostId {} instanceId {} aggregateVersion {}: {}", hostId, instanceId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during unlockInstance for hostId {} instanceId {} (old: {}) -> (new: {}): {}", hostId, instanceId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during unlockInstance for hostId {} instanceId {} aggregateVersion {}: {}", hostId, instanceId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during unlockInstance for hostId {} instanceId {} (old: {}) -> (new: {}): {}", hostId, instanceId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -1653,6 +2001,29 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
         return result;
+    }
+
+    @Override
+    public String getInstanceId(String hostId, String serviceId, String environment, String productVersionId) {
+        final String sql = "SELECT instance_id FROM instance_t WHERE host_id = ? AND service_id = ? AND environment = ? AND product_version_id = ?";
+        String instanceId = null;
+        try (Connection connection = ds.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setString(2, serviceId);
+            statement.setString(3, environment);
+            statement.setObject(4, UUID.fromString(productVersionId));
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if(resultSet.next()){
+                    instanceId = resultSet.getString(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+        }
+        return instanceId;
     }
 
     @Override
@@ -6523,7 +6894,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 "updateTs", "d.update_ts"
         ));
         columnMap.put("aggregateVersion", "d.aggregate_version");
-        columnMap.put("updateUser", "d.active");
+        columnMap.put("active", "d.active");
 
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
