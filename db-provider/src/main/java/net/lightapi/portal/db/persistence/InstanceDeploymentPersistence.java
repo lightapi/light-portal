@@ -21,7 +21,7 @@ public interface InstanceDeploymentPersistence {
     Result<String> getInstance(int offset, int limit, String filters, String globalFilter, String sortin, String hostId);
     Result<String> getInstanceLabel(String hostId);
     Result<String> getInstanceById(String hostId, String instanceId);
-    String getInstanceId(String hostId, String serviceId, String environment, String productVersionId);
+    String getInstanceId(String hostId, String serviceId, String envTag, String productVersionId);
 
     // InstanceApi
     void createInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -111,6 +111,7 @@ public interface InstanceDeploymentPersistence {
     Result<String> getDeploymentInstancePipeline(String hostId, String instanceId, String systemEnv, String runtimeEnv);
     Result<String> getDeploymentInstanceLabel(String hostId, String instanceId);
     Result<String> getDeploymentInstanceById(String hostId, String deploymentInstanceId);
+    String getDeploymentInstanceId(String hostId, String instanceId, String serviceId);
 
     // Deployment
     void createDeployment(Connection conn, Map<String, Object> event) throws SQLException, Exception;

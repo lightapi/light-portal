@@ -298,7 +298,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public Result<String> getInstance(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return instanceDeploymentPersistence.getInstance(offset, limit, filters, globalFilter, sorting, hostId); }
     @Override public Result<String> getInstanceLabel(String hostId) { return instanceDeploymentPersistence.getInstanceLabel(hostId); }
     @Override public Result<String> getInstanceById(String hostId, String instanceId) { return instanceDeploymentPersistence.getInstanceById(hostId, instanceId); }
-    @Override public String getInstanceId(String hostId, String serviceId, String environment, String productVersionId) { return instanceDeploymentPersistence.getInstanceId(hostId, serviceId, environment, productVersionId); }
+    @Override public String getInstanceId(String hostId, String serviceId, String envTag, String productVersionId) { return instanceDeploymentPersistence.getInstanceId(hostId, serviceId, envTag, productVersionId); }
 
     @Override public void createInstanceApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.createInstanceApi(connection, event); }
     @Override public void updateInstanceApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.updateInstanceApi(connection, event); }
@@ -366,6 +366,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public Result<String> getDeploymentInstanceById(String hostId, String deploymentInstanceId) { return instanceDeploymentPersistence.getDeploymentInstanceById(hostId, deploymentInstanceId); }
     @Override public Result<String> getDeploymentInstancePipeline(String hostId, String instanceId, String systemEnv, String runtimeEnv) { return instanceDeploymentPersistence.getDeploymentInstancePipeline(hostId, instanceId, systemEnv, runtimeEnv); }
     @Override public Result<String> getDeploymentInstanceLabel(String hostId, String instanceId) { return instanceDeploymentPersistence.getDeploymentInstanceLabel(hostId, instanceId); }
+    @Override public String getDeploymentInstanceId(String hostId, String instanceId, String serviceId) { return instanceDeploymentPersistence.getDeploymentInstanceId(hostId, instanceId, serviceId); }
     @Override public void createDeployment(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.createDeployment(connection, event); }
     @Override public void updateDeployment(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.updateDeployment(connection, event); }
     @Override public void updateDeploymentJobId(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.updateDeploymentJobId(connection, event); }

@@ -13,13 +13,10 @@ import com.networknt.utility.Constants;
 import com.networknt.utility.UuidUtil;
 import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.PortalConstants;
-import net.lightapi.portal.db.ConcurrencyException;
 import net.lightapi.portal.db.PortalDbProvider;
 import net.lightapi.portal.db.model.DbConsumablePromotableInstance;
 import net.lightapi.portal.db.util.NotificationService;
 import net.lightapi.portal.db.util.SqlUtil;
-import net.lightapi.portal.validation.FilterCriterion;
-import net.lightapi.portal.validation.SortCriterion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -2004,15 +2001,30 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public String getInstanceId(String hostId, String serviceId, String environment, String productVersionId) {
-        final String sql = "SELECT instance_id FROM instance_t WHERE host_id = ? AND service_id = ? AND environment = ? AND product_version_id = ?";
+    public String getInstanceId(String hostId, String serviceId, String envTag, String productVersionId) {
+        // Dynamic SQL based on whether envTag is NULL
+        final String sql;
+        if (envTag == null) {
+            sql = "SELECT instance_id FROM instance_t WHERE host_id = ? AND service_id = ? AND env_tag IS NULL AND product_version_id = ?";
+        } else {
+            sql = "SELECT instance_id FROM instance_t WHERE host_id = ? AND service_id = ? AND env_tag = ? AND product_version_id = ?";
+        }
+
         String instanceId = null;
         try (Connection connection = ds.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setObject(1, UUID.fromString(hostId));
             statement.setString(2, serviceId);
-            statement.setString(3, environment);
-            statement.setObject(4, UUID.fromString(productVersionId));
+
+            // Only set the envTag parameter if it's not NULL
+            if (envTag != null) {
+                statement.setString(3, envTag);
+            }
+
+            // Adjust parameter index for product_version_id based on whether envTag was set
+            int productVersionParamIndex = (envTag == null) ? 3 : 4;
+            statement.setObject(productVersionParamIndex, UUID.fromString(productVersionId));
+
             try (ResultSet resultSet = statement.executeQuery()) {
                 if(resultSet.next()){
                     instanceId = resultSet.getString(1);
@@ -4555,7 +4567,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 "updateTs", "pvp.update_ts",
                 "aggregateVersion", "pvp.aggregate_version"
         ));
-        columnMap.put("active", "a.app_name");
+        columnMap.put("active", "pvp.active");
 
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -6402,6 +6414,28 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
         return result;
+    }
+
+    @Override
+    public String getDeploymentInstanceId(String hostId, String instanceId, String serviceId) {
+        final String sql = "SELECT deployment_instance_id FROM deployment_instance_t WHERE host_id = ? AND instance_id = ? AND service_id = ?";
+        String deploymentInstanceId = null;
+        try (Connection connection = ds.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(instanceId));
+            statement.setString(3, serviceId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if(resultSet.next()){
+                    deploymentInstanceId = resultSet.getString(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+        }
+        return deploymentInstanceId;
     }
 
     @Override
