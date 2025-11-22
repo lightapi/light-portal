@@ -301,24 +301,23 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public String getInstanceId(String hostId, String serviceId, String envTag, String productVersionId) { return instanceDeploymentPersistence.getInstanceId(hostId, serviceId, envTag, productVersionId); }
 
     @Override public void createInstanceApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.createInstanceApi(connection, event); }
-    @Override public void updateInstanceApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.updateInstanceApi(connection, event); }
     @Override public void deleteInstanceApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.deleteInstanceApi(connection, event); }
     @Override public Result<String> getInstanceApi(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return instanceDeploymentPersistence.getInstanceApi(offset, limit, filters, globalFilter, sorting, hostId); }
     @Override public Result<String> getInstanceApiLabel(String hostId, String instanceId) { return instanceDeploymentPersistence.getInstanceApiLabel(hostId, instanceId); }
     @Override public Result<String> getInstanceApiById(String hostId, String instanceApiId) { return instanceDeploymentPersistence.getInstanceApiById(hostId, instanceApiId); }
+    @Override public String getInstanceApiId(String hostId, String instanceId, String apiVersionId) { return instanceDeploymentPersistence.getInstanceApiId(hostId, instanceId, apiVersionId); }
     @Override public void createInstanceApiPathPrefix(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.createInstanceApiPathPrefix(connection, event); }
     @Override public void updateInstanceApiPathPrefix(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.updateInstanceApiPathPrefix(connection, event); }
     @Override public void deleteInstanceApiPathPrefix(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.deleteInstanceApiPathPrefix(connection, event); }
     @Override public Result<String> getInstanceApiPathPrefix(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return instanceDeploymentPersistence.getInstanceApiPathPrefix(offset, limit, filters, globalFilter, sorting, hostId); }
     @Override public Result<String> getInstanceApiPathPrefixById(String hostId, String instanceApiId, String pathPrefix) { return instanceDeploymentPersistence.getInstanceApiPathPrefixById(hostId, instanceApiId, pathPrefix); }
     @Override public void createInstanceApp(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.createInstanceApp(connection, event); }
-    @Override public void updateInstanceApp(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.updateInstanceApp(connection, event); }
     @Override public void deleteInstanceApp(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.deleteInstanceApp(connection, event); }
     @Override public Result<String> getInstanceApp(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return instanceDeploymentPersistence.getInstanceApp(offset, limit, filters, globalFilter, sorting, hostId); }
     @Override public Result<String> getInstanceAppById(String hostId, String instanceAppId) { return instanceDeploymentPersistence.getInstanceAppById(hostId, instanceAppId); }
+    @Override public String getInstanceAppId(String hostId, String instanceId, String appId, String appVersion) { return instanceDeploymentPersistence.getInstanceAppId(hostId, instanceId, appId, appVersion); }
     @Override public Result<String> getInstanceAppLabel(String hostId, String instanceId) { return instanceDeploymentPersistence.getInstanceAppLabel(hostId, instanceId); }
     @Override public void createInstanceAppApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.createInstanceAppApi(connection, event); }
-    @Override public void updateInstanceAppApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.updateInstanceAppApi(connection, event); }
     @Override public void deleteInstanceAppApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.deleteInstanceAppApi(connection, event); }
     @Override public Result<String> getInstanceAppApi(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return instanceDeploymentPersistence.getInstanceAppApi(offset, limit, filters, globalFilter, sorting, hostId); }
     @Override public Result<String> getInstanceAppApiById(String hostId, String instanceAppId, String instanceApiId) { return instanceDeploymentPersistence.getInstanceAppApiById(hostId, instanceAppId, instanceApiId); }

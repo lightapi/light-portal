@@ -248,11 +248,11 @@ public interface PortalDbProvider extends DbProvider {
 
     // InstanceApiProperty
     void createInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void updateInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getInstanceApi(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> getInstanceApiLabel(String hostId, String instanceId);
     Result<String> getInstanceApiById(String hostId, String instanceApiId);
+    String getInstanceApiId(String hostId, String instanceId, String apiVersionId);
 
     // InstanceApiPathPrefix
     void createInstanceApiPathPrefix(Connection conn, Map<String, Object> event) throws SQLException, Exception;
@@ -263,7 +263,6 @@ public interface PortalDbProvider extends DbProvider {
 
     // InstanceAppApi
     void createInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void updateInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getInstanceAppApi(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> getInstanceAppApiById(String hostId, String instanceAppId, String instanceApiId);
@@ -277,11 +276,11 @@ public interface PortalDbProvider extends DbProvider {
 
     // InstanceApp
     void createInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void updateInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getInstanceApp(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> getInstanceAppLabel(String hostId, String instanceId);
     Result<String> getInstanceAppById(String hostId, String instanceAppId);
+    String getInstanceAppId(String hostId, String instanceId, String appId, String appVersion);
 
     // ConfigInstanceApp (should be InstanceAppProperty config)
     void createConfigInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception;

@@ -2209,7 +2209,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             throw e;
         }
     }
-
+    /*
     @Override
     public void updateInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
@@ -2278,7 +2278,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             throw e;
         }
     }
-
+    */
     @Override
     public void deleteInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
@@ -2475,6 +2475,28 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
         return result;
+    }
+
+    @Override
+    public String getInstanceApiId(String hostId, String instanceId, String apiVersionId) {
+        final String sql = "SELECT instance_api_id FROM instance_api_t WHERE host_id = ? AND instance_id = ? AND api_version_id = ?";
+        String instanceApiId = null;
+        try (Connection connection = ds.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(instanceId));
+            statement.setObject(3, UUID.fromString(apiVersionId));
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if(resultSet.next()){
+                    instanceApiId = resultSet.getString(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+        }
+        return instanceApiId;
     }
 
     public Result<String> getInstanceApiLabel(String hostId, String instanceId) {
@@ -2957,6 +2979,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      * @throws SQLException If a database access error occurs.
      * @throws Exception    For other generic errors.
      */
+    /*
     @Override
     public void updateInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         // SQL statement updated to match the idempotent update pattern.
@@ -3017,7 +3040,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             throw e;
         }
     }
-
+    */
 
     /**
      * Performs a soft delete on an instance_app_api record using an idempotent/monotonic pattern.
@@ -3334,20 +3357,6 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         }
     }
 
-    private boolean queryInstanceAppExists(Connection conn, String hostId, String instanceAppId) throws SQLException {
-        final String sql =
-                """
-                SELECT COUNT(*) FROM instance_app_t WHERE host_id = ? AND instance_app_id = ?
-                """;
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
-            pst.setObject(1, UUID.fromString(hostId));
-            pst.setObject(2, UUID.fromString(instanceAppId));
-            try (ResultSet rs = pst.executeQuery()) {
-                return rs.next() && rs.getInt(1) > 0;
-            }
-        }
-    }
-
     /**
      * Updates an instance_app_t record using an idempotent/monotonic pattern.
      * This method implements:
@@ -3361,6 +3370,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      * @throws SQLException If a database access error occurs.
      * @throws Exception    For other generic errors.
      */
+    /*
     @Override
     public void updateInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         // SQL statement updated to match the idempotent update pattern.
@@ -3427,6 +3437,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             throw e;
         }
     }
+    */
 
     /**
      * Performs a soft delete on an instance_app_t record using an idempotent/monotonic pattern.
@@ -3636,6 +3647,29 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
         return result;
+    }
+
+    @Override
+    public String getInstanceAppId(String hostId, String instanceId, String appId, String appVersion) {
+        final String sql = "SELECT instance_app_id FROM instance_app_t WHERE host_id = ? AND instance_id = ? AND app_id = ? AND app_version = ?";
+        String instanceAppId = null;
+        try (Connection connection = ds.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(instanceId));
+            statement.setString(3, appId);
+            statement.setString(4, appVersion);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if(resultSet.next()){
+                    instanceAppId = resultSet.getString(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+        }
+        return instanceAppId;
     }
 
     public Result<String> getInstanceAppLabel(String hostId, String instanceId) {
@@ -4540,14 +4574,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 logger.warn("Pipeline soft-delete skipped for hostId {} productVersionId {} pipelineId {}. Record not found or a newer version already exists.", hostId, productVersionId, pipelineId);
             }
             // NO THROW on count == 0. The method is now idempotent.
-            notificationService.insertNotification(event, true, null); // Insert success notification
         } catch (SQLException e) {
             logger.error("SQLException during softDeleteProductVersionPipeline for productVersionId {} pipelineId {} new version {}: {}", productVersionId, pipelineId, newAggregateVersion, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage()); // Insert failure notification
             throw e; // Re-throw SQLException
         } catch (Exception e) {
             logger.error("Exception during softDeleteProductVersionPipeline for productVersionId {} pipelineId {} new version {}: {}", productVersionId, pipelineId, newAggregateVersion, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage()); // Insert failure notification
             throw e; // Re-throw generic Exception
         }
     }
@@ -4745,16 +4776,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 logger.warn("Config soft-delete skipped for hostId {} productVersionId {} configId {}. Record not found or a newer version already exists.", hostId, productVersionId, configId);
             }
             // NO THROW on count == 0. The method is now idempotent.
-            // Assuming notificationService is available in the current context
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
             logger.error("SQLException during softDeleteProductVersionConfig for hostId {} productVersionId {} configId {} new version {}: {}", hostId, productVersionId, configId, newAggregateVersion, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e; // Re-throw SQLException
         } catch (Exception e) {
             logger.error("Exception during softDeleteProductVersionConfig for hostId {} productVersionId {} configId {} new version {}: {}", hostId, productVersionId, configId, newAggregateVersion, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e; // Re-throw generic Exception
         }
     }
@@ -4947,16 +4973,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 logger.warn("Property soft-delete skipped for hostId {} productVersionId {} propertyId {}. Record not found or a newer version already exists.", hostId, productVersionId, propertyId);
             }
             // NO THROW on count == 0. The method is now idempotent.
-            // Assuming notificationService is available in the current context
-            notificationService.insertNotification(event, true, null);
-
         } catch (SQLException e) {
             logger.error("SQLException during softDeleteProductVersionConfigProperty for hostId {} productVersionId {} propertyId {} new version {}: {}", hostId, productVersionId, propertyId, newAggregateVersion, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e; // Re-throw SQLException
         } catch (Exception e) {
             logger.error("Exception during softDeleteProductVersionConfigProperty for hostId {} productVersionId {} propertyId {} new version {}: {}", hostId, productVersionId, propertyId, newAggregateVersion, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e; // Re-throw generic Exception
         }
     }
@@ -6749,20 +6770,14 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 logger.warn("Update of platformJobId skipped for Deployment with hostId {}, deploymentId {}. Record not found or a newer version already exists.",
                         hostId, deploymentId);
                 // We might not want to send a success notification if nothing happened.
-                // Depending on requirements, you could insert a "skipped" notification or do nothing.
-                notificationService.insertNotification(event, false, "Update skipped: A newer or same version already exists.");
-            } else {
-                notificationService.insertNotification(event, true, null);
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateDeploymentJobId for hostId {} deploymentId {}: {}",
                     hostId, deploymentId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         } catch (Exception e) {
             logger.error("Exception during updateDeploymentJobId for hostId {} deploymentId {}: {}",
                     hostId, deploymentId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
@@ -6823,20 +6838,14 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 // If 0 rows were updated, it's a valid idempotent outcome.
                 logger.warn("Update of deploymentStatus skipped for Deployment with hostId {}, deploymentId {}. Record not found or a newer version already exists.",
                         hostId, deploymentId);
-                // Send a "skipped" or "failed" notification as the desired state was not actively set by this event.
-                notificationService.insertNotification(event, false, "Update skipped: A newer or same version already exists.");
-            } else {
-                notificationService.insertNotification(event, true, null);
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateDeploymentStatus for hostId {} deploymentId {}: {}",
                     hostId, deploymentId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         } catch (Exception e) {
             logger.error("Exception during updateDeploymentStatus for hostId {} deploymentId {}: {}",
                     hostId, deploymentId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
