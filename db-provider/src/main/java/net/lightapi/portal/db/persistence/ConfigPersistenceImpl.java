@@ -4862,8 +4862,10 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 "updateUser", "pp.update_user",
                 "updateTs", "pp.update_ts",
                 "configName", "c.config_name",
-                "aggregateVersion", "pp.aggregate_version"
+                "aggregateVersion", "pp.aggregate_version",
+                "active", "pp.active"
         ));
+
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
 
