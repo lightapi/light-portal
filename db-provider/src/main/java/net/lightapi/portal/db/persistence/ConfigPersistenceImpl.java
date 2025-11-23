@@ -5220,7 +5220,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 """
                 SELECT COUNT(*) OVER () AS total,
                 pvp.host_id, pvp.product_version_id, pv.product_id, pv.product_version, p.config_id, pvp.property_id,
-                p.property_name, pvp.property_value, pvp.update_user, pvp.update_ts, pvp.active
+                p.property_name, pvp.property_value, pvp.update_user, pvp.update_ts, pvp.active,
                 c.config_name, pvp.aggregate_version
                 FROM product_version_property_t pvp
                 INNER JOIN product_version_t pv ON pv.product_version_id = pvp.product_version_id
