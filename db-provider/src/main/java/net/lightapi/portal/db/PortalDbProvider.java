@@ -238,6 +238,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> queryConfigPropertyByPropertyId(String configId, String propertyId);
     String queryPropertyId(String configName, String propertyName);
     Result<String> getPropertyById(String propertyId);
+    String getPropertyId(String configId, String propertyName);
 
     // EnvironmentProperty
     void createConfigEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception;

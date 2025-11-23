@@ -28,6 +28,7 @@ public interface ConfigPersistence {
     Result<String> getPropertyIdApiAppLabel(String configId, String resourceType);
     String queryPropertyId(String configName, String propertyName);
     Result<String> getPropertyById(String propertyId);
+    String getPropertyId(String configId, String propertyName);
 
     // EnvironmentProperty
     void createConfigEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception;

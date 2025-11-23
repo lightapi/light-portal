@@ -537,6 +537,12 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         return result;
     }
 
+    /**
+     * This is used in the import and configId is not available for enrichment.
+     * @param configName config name
+     * @param propertyName property name
+     * @return propertyId
+     */
     @Override
     public String queryPropertyId(String configName, String propertyName) {
         final String sql =
@@ -551,6 +557,39 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         try (Connection connection = ds.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, configName);
+            statement.setString(2, propertyName);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if(resultSet.next()){
+                    propertyId = resultSet.getString(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+        }
+        return propertyId;
+    }
+
+    /**
+     * This is used by the handler to query the propertyId in case the same property is deleted and added back.
+     * @param configId configId
+     * @param propertyName propertyName
+     * @return propertyId
+     */
+    @Override
+    public String getPropertyId(String configId, String propertyName) {
+        final String sql =
+                """
+                SELECT property_id
+                FROM config_property_t
+                WHERE config_id = ?
+                AND property_name = ?
+                """;
+        String propertyId = null;
+        try (Connection connection = ds.getConnection();
+            PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(configId));
             statement.setString(2, propertyName);
             try (ResultSet resultSet = statement.executeQuery()) {
                 if(resultSet.next()){

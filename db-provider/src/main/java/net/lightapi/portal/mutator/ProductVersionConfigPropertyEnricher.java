@@ -7,6 +7,10 @@ import com.networknt.service.SingletonServiceFactory;
 
 import java.util.Map;
 
+/**
+ * This is used to handle the generated events from the config schema during the build. As the configId and propertyId
+ * won't be available in the generated events, we need to enrich them based on the config name and property name only.
+ */
 public class ProductVersionConfigPropertyEnricher implements EventEnricher {
 
     public static PortalDbProvider dbProvider = (PortalDbProvider) SingletonServiceFactory.getBean(DbProvider.class);

@@ -236,6 +236,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public Result<String> queryConfigPropertyById(String configId) { return configPersistence.queryConfigPropertyById(configId); }
     @Override public String queryPropertyId(String configName, String propertyName) { return configPersistence.queryPropertyId(configName, propertyName); }
     @Override public Result<String> getPropertyById(String propertyId) { return configPersistence.getPropertyById(propertyId); }
+    @Override public String getPropertyId(String configId, String propertyName) { return configPersistence.getPropertyId(configId, propertyName); }
     @Override public Result<String> queryConfigPropertyByPropertyId(String configId, String propertyId) { return configPersistence.queryConfigPropertyByPropertyId(configId, propertyId); }
     @Override public Result<String> getPropertyIdLabel(String configId) { return configPersistence.getPropertyIdLabel(configId); }
     @Override public Result<String> getPropertyIdApiAppLabel(String configId, String resourceType) { return configPersistence.getPropertyIdApiAppLabel(configId, resourceType); }
