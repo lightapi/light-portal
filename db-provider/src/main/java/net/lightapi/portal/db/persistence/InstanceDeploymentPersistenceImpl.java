@@ -3573,7 +3573,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("instanceAppId", resultSet.getObject("instance_app_id", UUID.class));
                     map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
                     map.put("instanceName", resultSet.getString("instance_name"));
-                    map.put("productVersionId", resultSet.getObject("productVersionId", UUID.class));
+                    map.put("productVersionId", resultSet.getObject("product_version_id", UUID.class));
                     map.put("productId", resultSet.getString("product_id"));
                     map.put("productVersion", resultSet.getString("product_version"));
                     map.put("appId", resultSet.getString("app_id"));
