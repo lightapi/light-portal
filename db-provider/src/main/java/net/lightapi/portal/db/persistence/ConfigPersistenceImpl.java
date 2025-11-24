@@ -3759,6 +3759,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         columnMap.put("updateUser", "ip.update_user");
         columnMap.put("updateTs", "ip.update_ts");
         columnMap.put("aggregateVersion", "ip.aggregate_version");
+        columnMap.put("active", "ip.active");
 
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -3768,7 +3769,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 SELECT COUNT(*) OVER () AS total,
                 ip.host_id, ip.instance_id, i.instance_name, p.config_id, c.config_name, ip.property_id,
                 p.property_name, ip.property_value, p.required, p.property_desc, p.property_type, p.resource_type, p.value_type, c.config_type,
-                c.config_desc, c.class_path, ip.update_user, ip.update_ts, ip.aggregate_version
+                c.config_desc, c.class_path, ip.update_user, ip.update_ts, ip.aggregate_version, ip.active
                 FROM instance_property_t ip
                 INNER JOIN config_property_t p ON p.property_id = ip.property_id
                 INNER JOIN instance_t i ON i.instance_id = ip.instance_id
@@ -3823,6 +3824,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getInt("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     instanceProperties.add(map);
                 }
             }
@@ -5370,9 +5372,9 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                                 ELSE 'config_property'
                             END AS property_source_type,
                             CASE
-                                WHEN ep.property_value IS NOT NULL THEN COALESCE( ep.environment, '' )
-                                WHEN pvp.property_value IS NOT NULL THEN CONCAT( COALESCE( pv.product_id, '' ), '-', COALESCE( pv.product_version, '' ) )
-                                WHEN pp.property_value IS NOT NULL THEN COALESCE ( pp.product_id, '' )
+                                WHEN ep.property_value IS NOT NULL THEN COALESCE( ep.environment::text, '' )
+                                WHEN pvp.property_value IS NOT NULL THEN CONCAT( COALESCE( pv.product_id::text, '' ), '-', COALESCE( pv.product_version::text, '' ) )
+                                WHEN pp.property_value IS NOT NULL THEN COALESCE ( pp.product_id::text, '' )
                                 ELSE 'global'
                             END AS property_source
                         FROM config_property_t cp
@@ -5384,7 +5386,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     )
                     SELECT
                         COUNT(*) OVER () AS total,
-                        ac.host_id, ac.instance_id,
+                        aicp.host_id, aicp.instance_id,
                         c.config_id, c.config_name, c.config_phase, c.config_type, c.class_path, c.config_desc,
                         cp.property_id, cp.property_name, cp.property_type, cp.display_order, cp.required, cp.property_desc, cp.value_type, cp.resource_type,
                         pv.effective_property_value AS property_value, pv.property_source, pv.property_source_type
