@@ -5007,12 +5007,13 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             """
             SELECT COUNT(*) OVER () AS total,
             pvcp.host_id, pvcp.product_version_id, pv.product_id, pv.product_version,
-            cp.config_id, c.config_name, pvcp.property_id, cp.property_name, pvcp.update_user, pvcp.update_ts, pvcp.aggregate_version
+            cp.config_id, c.config_name, pvcp.property_id, cp.property_name,
+            pvcp.update_user, pvcp.update_ts, pvcp.aggregate_version, pvcp.active
             FROM product_version_config_property_t pvcp
             INNER JOIN product_version_t pv ON pv.host_id = pvcp.host_id AND pv.product_version_id = pvcp.product_version_id
             INNER JOIN config_property_t cp ON cp.property_id = pvcp.property_id
             INNER JOIN config_t c ON c.config_id = cp.config_id
-            WHERE pvcp.host = ?
+            WHERE pvcp.host_id = ?
             """;
 
         List<Object> parameters = new ArrayList<>();
