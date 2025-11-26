@@ -2117,10 +2117,10 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         columnMap.put("configType", "c.config_type");
         columnMap.put("configDesc", "c.config_desc");
         columnMap.put("classPath", "c.class_path");
-        columnMap.put("updateUser", "ia.update_user");
-        columnMap.put("updateTs", "ia.update_ts");
+        columnMap.put("updateUser", "iap.update_user");
+        columnMap.put("updateTs", "iap.update_ts");
         columnMap.put("aggregateVersion", "iap.aggregate_version");
-        columnMap.put("active", "ia.active");
+        columnMap.put("active", "iap.active");
 
 
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
@@ -2129,10 +2129,10 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
-                iap.host_id, iap.instance_app_id, ia.instance_id, i.instance_name, ia.app_id, ia.app_version, ia.active,
+                iap.host_id, iap.instance_app_id, ia.instance_id, i.instance_name, ia.app_id, ia.app_version, iap.active,
                 p.config_id, c.config_name, iap.property_id, p.property_name, iap.property_value, iap.aggregate_version,
                 p.required, p.property_desc, p.property_type, p.resource_type, p.value_type, c.config_type, c.config_desc, c.class_path,
-                ia.update_user, ia.update_ts
+                iap.update_user, iap.update_ts
                 FROM instance_app_t ia
                 INNER JOIN instance_t i ON ia.host_id =i.host_id AND ia.instance_id = i.instance_id
                 INNER JOIN instance_app_property_t iap ON ia.host_id = iap.host_id AND ia.instance_app_id = iap.instance_app_id

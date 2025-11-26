@@ -963,14 +963,15 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 UNION
                 -- InstanceAppApi
                 SELECT * FROM event_store_t WHERE aggregate_id::text IN ((SELECT instance_app_id::text FROM instance_app_t WHERE instance_id = ?)||'|'||(SELECT instance_api_id::text FROM instance_api_t WHERE instance_id = ?))
-                -- TODO add the following tables once the data is available for testing.
-                -- UNION
-                -- InstanceApiProperty
-                -- select * from event_store_t where aggregate_id::text IN (
-                -- UNION
-                -- InstanceAppProperty
-                -- UNION
-                -- InstanceAppApiProperty
+                UNION
+                -- ConfigInstanceApi
+                SELECT * FROM event_store_t WHERE aggregate_id::text IN (SELECT instance_api_id||'|'||property_id FROM instance_api_property_t WHERE instance_api_id::text IN (SELECT instance_api_id::text FROM instance_api_t WHERE instance_id = ?))
+                UNION
+                -- ConfigInstanceApp
+                SELECT * FROM event_store_t WHERE aggregate_id::text IN (SELECT instance_app_id||'|'||property_id FROM instance_app_property_t WHERE instance_app_id::text IN (SELECT instance_app_id::text FROM instance_app_t WHERE instance_id = ?))
+                UNION
+                -- ConfigInstanceAppApi
+                SELECT * FROM event_store_t WHERE aggregate_id::text IN (SELECT instance_app_id||'|'||instance_api_id||'|'||property_id FROM instance_app_api_property_t WHERE instance_api_id::text IN (SELECT instance_api_id::text FROM instance_api_t WHERE instance_id = ?))
             ) ORDER BY id
             """;
         try (PreparedStatement statement = conn.prepareStatement(s)) {
@@ -981,6 +982,9 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             statement.setObject(4, UUID.fromString(sourceInstanceId));
             statement.setObject(5, UUID.fromString(sourceInstanceId));
             statement.setObject(6, UUID.fromString(sourceInstanceId));
+            statement.setObject(7, UUID.fromString(sourceInstanceId));
+            statement.setObject(8, UUID.fromString(sourceInstanceId));
+            statement.setObject(9, UUID.fromString(sourceInstanceId));
 
             try (ResultSet resultSet = statement.executeQuery()) {
                 while (resultSet.next()) {

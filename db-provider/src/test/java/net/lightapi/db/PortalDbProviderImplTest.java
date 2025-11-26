@@ -51,11 +51,11 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testCloneInstance() throws Exception {
-        Map<String, Object> data = Map.of("sourceInstanceId", "019aa354-dfdb-738e-a02a-e75d8f9b81c3");
+        Map<String, Object> data = Map.of("sourceInstanceId", "019aad40-eaef-73d2-b557-9af202340706");
         Map<String, Object> instanceClonedEvent = createEvent(
                 "01964b05-552a-7c4b-9184-6857e7f3dc5f",
                 "01964b05-5532-7c79-8cde-191dcbd421b8",
-                "019aa354-dfdb-738e-a02a-e75d8f9b81c3",
+                "019aad40-eaef-73d2-b557-9af202340706",
                 "Instance",
                 1,
                 data);
