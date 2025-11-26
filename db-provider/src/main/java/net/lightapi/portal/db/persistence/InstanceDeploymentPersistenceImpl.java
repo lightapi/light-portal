@@ -942,26 +942,63 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     @Override
     public void cloneInstance(Connection conn, Map<String, Object> event) throws Exception {
         final Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
-        final String hostId = (String) event.get(Constants.HOST);
+        final String hostId = (String) map.get("hostId");
         final String sourceInstanceId = (String) map.get("sourceInstanceId");
         final String targetInstanceId = (String) map.get("targetInstanceId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
-        transact(
-            conn,
-            connection -> {
-                try {
-                    // increment the aggregate version of the target instance to lock it during the clone operation
-                    tryIncrementAggregateVersionOfInstance(conn, hostId, targetInstanceId, oldAggregateVersion, SqlUtil.getNewAggregateVersion(event));
-                    Map<UUID, UUID> idMapping = getIdMappingForClone(connection, hostId, sourceInstanceId);
-                    deleteDependentsOfTargetInstance(connection, hostId, targetInstanceId);
-                    cloneFirstLevelDependentsOfTargetInstance(connection, hostId, sourceInstanceId, targetInstanceId, idMapping);
-                    cloneSecondLevelDependentsOfTargetInstance(connection, hostId, sourceInstanceId, targetInstanceId, idMapping);
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
+        String s =
+            """
+            SELECT event_type, payload FROM (
+                -- Instance and ConfigInstance
+                SELECT * FROM event_store_t WHERE aggregate_id LIKE ?
+                UNION
+                -- InstanceApi
+                SELECT * FROM event_store_t WHERE aggregate_id::text IN (SELECT instance_api_id::text FROM instance_api_t WHERE instance_id = ?)
+                UNION
+                -- InstanceApiPathPrefix
+                SELECT * FROM event_store_t WHERE aggregate_id::text IN (SELECT instance_api_id||'|'||path_prefix FROM instance_api_path_prefix_t WHERE instance_api_id::text IN (SELECT instance_api_id::text FROM instance_api_t WHERE instance_id = ?))
+                UNION
+                -- InstanceApp
+                SELECT * FROM event_store_t WHERE aggregate_id::text IN (SELECT instance_app_id::text FROM instance_app_t WHERE instance_id = ?)
+                UNION
+                -- InstanceAppApi
+                SELECT * FROM event_store_t WHERE aggregate_id::text IN ((SELECT instance_app_id::text FROM instance_app_t WHERE instance_id = ?)||'|'||(SELECT instance_api_id::text FROM instance_api_t WHERE instance_id = ?))
+                -- TODO add the following tables once the data is available for testing.
+                -- UNION
+                -- InstanceApiProperty
+                -- select * from event_store_t where aggregate_id::text IN (
+                -- UNION
+                -- InstanceAppProperty
+                -- UNION
+                -- InstanceAppApiProperty
+            ) ORDER BY id
+            """;
+        try (PreparedStatement statement = conn.prepareStatement(s)) {
+            // Add wildcard to the parameter value
+            statement.setString(1, sourceInstanceId + "%");
+            statement.setObject(2, UUID.fromString(sourceInstanceId));
+            statement.setObject(3, UUID.fromString(sourceInstanceId));
+            statement.setObject(4, UUID.fromString(sourceInstanceId));
+            statement.setObject(5, UUID.fromString(sourceInstanceId));
+            statement.setObject(6, UUID.fromString(sourceInstanceId));
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    String eventType = resultSet.getString("event_type");
+                    String payload = resultSet.getString("payload");
+                    if(logger.isTraceEnabled()) logger.trace("eventType {} payload {}", eventType, payload);
                 }
             }
-        );
+        }
+        // For now, it just output the event type and payload. It will run replacement and enrichment logic like the import
+        // and then push the events back into the event_store_t and outbox_message_t tables for processing.
+
+        // The following promoteInstance will be updated accordingly and the difference is to output the json file to replay
+        // on another instance instead of pushing into the local database event store. The normal replacement and enrichment
+        // logic will be applied as normal export and import logic. The only difference is that all events in the event file
+        // are associated with a particular instance.
+
+        // Since the query will be shared by two events, we might extract it into another method for code sharing.
     }
 
     @SuppressWarnings("unchecked")

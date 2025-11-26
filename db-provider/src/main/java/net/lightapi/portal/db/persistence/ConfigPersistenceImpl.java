@@ -1711,15 +1711,16 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 "apiVersionId", "ia.api_version_id",
                 "apiId", "av.api_id",
                 "apiVersion", "av.api_version",
-                "active", "ia.active",
-                "updateUser", "ia.update_user"
+                "active", "iap.active",
+                "updateUser", "iap.update_user"
         ));
-        columnMap.put("updateTs", "ia.update_ts");
+        columnMap.put("updateTs", "iap.update_ts");
         columnMap.put("configId", "p.config_id");
         columnMap.put("configName", "c.config_name");
         columnMap.put("propertyId", "iap.property_id");
         columnMap.put("propertyName", "p.property_name");
         columnMap.put("propertyValue", "iap.property_value");
+        columnMap.put("aggregateVersion", "iap.aggregate_version");
         columnMap.put("required", "p.required");
         columnMap.put("propertyDesc", "p.property_desc");
         columnMap.put("propertyType", "p.property_type");
@@ -1735,8 +1736,8 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
-                iap.host_id, iap.instance_api_id, ia.instance_id, i.instance_name, ia.api_version_id, av.api_id, av.api_version, ia.active,
-                ia.update_user, ia.update_ts, p.config_id, c.config_name, iap.property_id, p.property_name, iap.property_value, iap.aggregate_version,
+                iap.host_id, iap.instance_api_id, ia.instance_id, i.instance_name, ia.api_version_id, av.api_id, av.api_version, iap.active,
+                iap.update_user, iap.update_ts, p.config_id, c.config_name, iap.property_id, p.property_name, iap.property_value, iap.aggregate_version,
                 p.required, p.property_desc, p.property_type, p.resource_type, p.value_type, c.config_type, c.config_desc, c.class_path
                 FROM instance_api_t ia
                 INNER JOIN api_version_t av ON av.api_version_id = ia.api_version_id
@@ -1799,6 +1800,8 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+
                     instanceApis.add(map);
                 }
             }
@@ -2117,6 +2120,8 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         columnMap.put("updateUser", "ia.update_user");
         columnMap.put("updateTs", "ia.update_ts");
         columnMap.put("aggregateVersion", "iap.aggregate_version");
+        columnMap.put("active", "ia.active");
+
 
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -2187,6 +2192,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     instanceApps.add(map);
                 }
             }
@@ -2489,12 +2495,12 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     public Result<String> getConfigInstanceAppApi(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
-                "hostId", "iap.host_id",
-                "instanceAppId", "iap.instance_app_id",
+                "hostId", "iaap.host_id",
+                "instanceAppId", "iaap.instance_app_id",
                 "instanceApiId", "iaap.instance_api_id",
                 "instanceId", "i.instance_id",
                 "instanceName", "i.instance_name",
-                "appId", "ia.app_id",
+                "appId", "iap.app_id",
                 "appVersion", "ia.app_version",
                 "apiVersionId", "iai.api_version_id",
                 "apiId", "av.api_id",
@@ -2502,9 +2508,9 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 ));
         columnMap.put("configId", "p.config_id");
         columnMap.put("configName", "c.config_name");
-        columnMap.put("propertyId", "iap.property_id");
+        columnMap.put("propertyId", "iaap.property_id");
         columnMap.put("propertyName", "p.property_name");
-        columnMap.put("propertyValue", "iap.property_value");
+        columnMap.put("propertyValue", "iaap.property_value");
         columnMap.put("required", "p.required");
         columnMap.put("propertyDesc", "p.property_desc");
         columnMap.put("propertyType", "p.property_type");
@@ -2513,9 +2519,11 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         columnMap.put("configType", "c.config_type");
         columnMap.put("configDesc", "c.config_desc");
         columnMap.put("classPath", "c.class_path");
-        columnMap.put("updateUser", "ia.update_user");
-        columnMap.put("updateTs", "ia.update_ts");
-        columnMap.put("aggregateVersion", "iap.aggregate_version");
+        columnMap.put("updateUser", "iaap.update_user");
+        columnMap.put("updateTs", "iaap.update_ts");
+        columnMap.put("aggregateVersion", "iaap.aggregate_version");
+        columnMap.put("active", "iaap.active");
+
 
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -2527,7 +2535,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 iai.api_version_id, av.api_id, av.api_version, p.config_id, c.config_name, iaap.property_id,
                 p.property_name, iaap.property_value, p.required, p.property_desc, p.property_type, p.resource_type, p.value_type,
                 c.config_type, c.config_desc, c.class_path,
-                iaap.update_user, iaap.update_ts, iaap.aggregate_version
+                iaap.update_user, iaap.update_ts, iaap.aggregate_version, iaap.active
                 FROM instance_app_t iap
                 INNER JOIN instance_t i ON iap.host_id =i.host_id AND iap.instance_id = i.instance_id
                 INNER JOIN instance_app_api_property_t iaap ON iaap.host_id = iap.host_id AND iaap.instance_app_id = iap.instance_app_id
@@ -2542,7 +2550,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         parameters.add(UUID.fromString(hostId));
 
         String[] searchColumns = {"i.instance_name", "c.config_name", "p.property_name", "p.property_desc", "c.config_desc"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("iaap.host_id", "iaap.instance_app_id", "iaap.instance_api_id", "ia.instance_id", "iai.api_version_id", "p.config_id", "iaap.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("iaap.host_id", "iaap.instance_app_id", "iaap.instance_api_id", "i.instance_id", "iai.api_version_id", "p.config_id", "iaap.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("iaap.host_id, i.instance_id, iap.app_id, iap.app_version, av.api_id, av.api_version, p.config_id, p.property_name", sorting, columnMap) +
                 // Pagination
@@ -2593,6 +2601,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     instanceAppApis.add(map);
                 }
             }
