@@ -296,36 +296,18 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
 
     @Override
     public void deleteOrg(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        // --- UPDATED SQL FOR SOFT DELETE + MONOTONICITY ---
-        // Updates the 'active' flag to FALSE and sets the new version IF the current DB version is older than the incoming event's version.
-        final String softDeleteOrgSql =
+        final String hardDeleteOrgSql =
                 """
-                UPDATE org_t SET active = false, update_user = ?, update_ts = ?, aggregate_version = ?
-                WHERE domain = ? AND aggregate_version < ?
-                """; // <<< CRITICAL: Changed from DELETE to UPDATE, and used aggregate_version < ?
+                DELETE FROM org_t WHERE domain = ? AND aggregate_version < ?
+                """;
 
-        Map<String, Object> map = SqlUtil.extractEventData(event); // Assuming extractEventData is the helper to get PortalConstants.DATA
-        String domain = (String)map.get("domain"); // The domain PK
-
-        // newAggregateVersion is the version of the incoming Delete event (the target version).
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String domain = (String)map.get("domain");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
-        try (PreparedStatement statement = conn.prepareStatement(softDeleteOrgSql)) {
+        try (PreparedStatement statement = conn.prepareStatement(hardDeleteOrgSql)) {
             int i = 1;
-
-            // 1. update_user
-            statement.setString(i++, (String)event.get(Constants.USER));
-
-            // 2. update_ts
-            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-
-            // 3. aggregate_version (NEW version in SET clause)
-            statement.setLong(i++, newAggregateVersion);
-
-            // 4. domain (in WHERE clause)
             statement.setString(i++, domain);
-
-            // 5. aggregate_version (MONOTONICITY check in WHERE clause)
             statement.setLong(i, newAggregateVersion); // Condition: WHERE aggregate_version < newAggregateVersion
 
             int count = statement.executeUpdate();
@@ -483,37 +465,19 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
 
     @Override
     public void deleteHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        // --- UPDATED SQL FOR SOFT DELETE + MONOTONICITY ---
-        // Updates the 'active' flag to FALSE and sets the new version IF the current DB version is older than the incoming event's version.
-        final String softDeleteHostSql =
+        final String hardDeleteHostSql =
                 """
-                UPDATE host_t SET active = false, update_user = ?, update_ts = ?, aggregate_version = ?
-                WHERE host_id = ? AND aggregate_version < ?
-                """; // <<< CRITICAL: Changed from DELETE to UPDATE, and used aggregate_version < ?
+                DELETE FROM host_t WHERE host_id = ? AND aggregate_version < ?
+                """;
 
-        Map<String, Object> map = SqlUtil.extractEventData(event); // Assuming extractEventData is the helper to get PortalConstants.DATA
+        Map<String, Object> map = SqlUtil.extractEventData(event);
         String hostId = (String) map.get("hostId");
-
-        // newAggregateVersion is the version of the incoming Delete event (the target version).
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
-        try (PreparedStatement statement = conn.prepareStatement(softDeleteHostSql)) {
+        try (PreparedStatement statement = conn.prepareStatement(hardDeleteHostSql)) {
             int i = 1;
-
-            // 1. update_user
-            statement.setString(i++, (String)event.get(Constants.USER));
-
-            // 2. update_ts
-            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-
-            // 3. aggregate_version (NEW version in SET clause)
-            statement.setLong(i++, newAggregateVersion);
-
-            // 4. host_id (in WHERE clause)
             statement.setObject(i++, UUID.fromString(hostId));
-
-            // 5. aggregate_version (MONOTONICITY check in WHERE clause)
-            statement.setLong(i, newAggregateVersion); // Condition: WHERE aggregate_version < newAggregateVersion
+            statement.setLong(i, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
