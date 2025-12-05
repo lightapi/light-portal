@@ -37,24 +37,11 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
 
     @Override
     public void createOrg(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        // --- UPDATED SQL FOR UPSERT ---
-        // This UPSERT handles:
-        // 1. First time insert (no conflict).
-        // 2. Re-creation/Update (conflict on domain) -> UPDATE existing row, respecting version monotonicity.
-        final String upsertOrg =
+        final String insertOrg =
                 """
                 INSERT INTO org_t (domain, org_name, org_desc, org_owner, aggregate_version, active, update_user, update_ts)
                 VALUES (?, ?, ?, ?, ?, TRUE, ?, ?)
-                ON CONFLICT (domain) DO UPDATE
-                SET org_name = EXCLUDED.org_name,
-                    org_desc = EXCLUDED.org_desc,
-                    org_owner = EXCLUDED.org_owner,
-                    aggregate_version = EXCLUDED.aggregate_version,
-                    active = TRUE,
-                    update_user = EXCLUDED.update_user,
-                    update_ts = EXCLUDED.update_ts
-                WHERE org_t.aggregate_version < EXCLUDED.aggregate_version
-                """; // <<< CRITICAL: Monotonicity check in WHERE clause
+                """;
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
         String domain = (String)map.get("domain");
@@ -62,11 +49,11 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         // Parameters 1-7 (7 placeholders in the VALUES clause, excluding the hardcoded TRUE for active)
-        try (PreparedStatement statement = conn.prepareStatement(upsertOrg)) {
+        try (PreparedStatement statement = conn.prepareStatement(insertOrg)) {
             // --- SET VALUES (1 to 7) ---
             int i = 1;
             statement.setString(i++, domain); // 1. domain (PK)
-            statement.setString(i++, (String)map.get("orgName")); // 2. org_name
+            statement.setString(i++, (String)map.get("orgName"));
 
             // 3. org_desc (Assuming it's required and present based on DDL NOT NULL)
             String orgDesc = (String)map.get("orgDesc");
@@ -98,126 +85,6 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
             throw e; // Re-throw for transaction management
         }
     }
-
-    /*
-    @Override
-    public void createOrg(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String insertOrg = "INSERT INTO org_t (domain, org_name, org_desc, org_owner, update_user, update_ts, aggregate_version) " +
-                "VALUES (?, ?, ?, ?, ?,  ?, ?)";
-        final String insertHost = "INSERT INTO host_t(host_id, domain, sub_domain, host_desc, host_owner, update_user, update_ts, aggregate_version) " +
-                "VALUES (?, ?, ?, ?, ?,  ?, ?, ?)";
-        final String insertRole = "INSERT INTO role_t (host_id, role_id, role_desc, update_user, update_ts, aggregate_version) " +
-                "VALUES (?, ?, ?, ?, ?,  ?)";
-        final String insertRoleUser = "INSERT INTO role_user_t (host_id, role_id, user_id, update_user, update_ts, aggregate_version) " +
-                "VALUES (?, ?, ?, ?, ?,  ?)";
-        final String updateUserHost = "UPDATE user_host_t SET host_id = ?, update_user = ?, update_ts = ? WHERE user_id = ?";
-
-        Map<String, Object> map = SqlUtil.extractEventData(event);
-        String domain = (String)map.get("domain");
-        String hostId = (String)map.get("hostId"); // enriched in the service.
-        String orgOwner = (String)map.get("orgOwner");
-        String hostOwner = (String)map.get("hostOwner");
-        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
-
-        try (PreparedStatement statement = conn.prepareStatement(insertOrg)) {
-            statement.setString(1, domain);
-            statement.setString(2, (String)map.get("orgName"));
-            statement.setString(3, (String)map.get("orgDesc"));
-            statement.setObject(4, UUID.fromString(orgOwner));
-            statement.setString(5, (String)event.get(Constants.USER));
-            statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(7, newAggregateVersion);
-            int count = statement.executeUpdate();
-            if (count == 0) {
-                throw new SQLException("Failed to insert the org " + domain);
-            }
-            try (PreparedStatement hostStatement = conn.prepareStatement(insertHost)) {
-                hostStatement.setObject(1, UUID.fromString(hostId));
-                hostStatement.setString(2, domain);
-                hostStatement.setString(3, (String)map.get("subDomain"));
-                hostStatement.setString(4, (String)map.get("hostDesc"));
-                hostStatement.setObject(5, UUID.fromString(hostOwner));
-                hostStatement.setString(6, (String)event.get(Constants.USER));
-                hostStatement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                hostStatement.setLong(8, newAggregateVersion);
-                hostStatement.executeUpdate();
-            }
-            // create user, org-admin and host-admin roles for the hostId by default.
-            try (PreparedStatement roleStatement = conn.prepareStatement(insertRole)) {
-                roleStatement.setObject(1, UUID.fromString(hostId));
-                roleStatement.setString(2, "user");
-                roleStatement.setString(3, "user role");
-                roleStatement.setString(4, (String)event.get(Constants.USER));
-                roleStatement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                roleStatement.setLong(6, newAggregateVersion);
-                roleStatement.executeUpdate();
-            }
-            try (PreparedStatement roleStatement = conn.prepareStatement(insertRole)) {
-                roleStatement.setObject(1, UUID.fromString(hostId));
-                roleStatement.setString(2, "org-admin");
-                roleStatement.setString(3, "org-admin role");
-                roleStatement.setString(4, (String)event.get(Constants.USER));
-                roleStatement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                roleStatement.setLong(6, newAggregateVersion);
-                roleStatement.executeUpdate();
-            }
-            try (PreparedStatement roleStatement = conn.prepareStatement(insertRole)) {
-                roleStatement.setObject(1, UUID.fromString(hostId));
-                roleStatement.setString(2, "host-admin");
-                roleStatement.setString(3, "host-admin role");
-                roleStatement.setString(4, (String)event.get(Constants.USER));
-                roleStatement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                roleStatement.setLong(6, newAggregateVersion);
-                roleStatement.executeUpdate();
-            }
-            // insert role user to user for the host
-            try (PreparedStatement roleUserStatement = conn.prepareStatement(insertRoleUser)) {
-                roleUserStatement.setObject(1, UUID.fromString(hostId));
-                roleUserStatement.setString(2, "user");
-                roleUserStatement.setObject(3, UUID.fromString(orgOwner));
-                roleUserStatement.setString(4, (String)event.get(Constants.USER));
-                roleUserStatement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                roleUserStatement.setLong(6, newAggregateVersion);
-                roleUserStatement.executeUpdate();
-            }
-            // insert role org-admin to user for the host
-            try (PreparedStatement roleUserStatement = conn.prepareStatement(insertRoleUser)) {
-                roleUserStatement.setObject(1, UUID.fromString(hostId));
-                roleUserStatement.setString(2, "org-admin");
-                roleUserStatement.setObject(3, UUID.fromString(orgOwner));
-                roleUserStatement.setString(4, (String)event.get(Constants.USER));
-                roleUserStatement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                roleUserStatement.setLong(6, newAggregateVersion);
-                roleUserStatement.executeUpdate();
-            }
-            // insert host-admin to user for the host
-            try (PreparedStatement roleUserStatement = conn.prepareStatement(insertRoleUser)) {
-                roleUserStatement.setObject(1, UUID.fromString(hostId));
-                roleUserStatement.setString(2, "host-admin");
-                roleUserStatement.setObject(3, UUID.fromString(hostOwner));
-                roleUserStatement.setString(4, (String)event.get(Constants.USER));
-                roleUserStatement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                roleUserStatement.setLong(6, newAggregateVersion);
-                roleUserStatement.executeUpdate();
-            }
-            // switch the current user to the hostId by updating to same user pointing to two hosts.
-            try (PreparedStatement userHostStatement = conn.prepareStatement(updateUserHost)) {
-                userHostStatement.setObject(1, UUID.fromString(hostId));
-                userHostStatement.setString(2, (String)event.get(Constants.USER));
-                userHostStatement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-                userHostStatement.setObject(4, UUID.fromString(orgOwner));
-
-                userHostStatement.executeUpdate();
-            }
-        } catch (SQLException e) {
-            logger.error("SQLException during createOrg for domain {} aggregateVersion {}: {}", domain, newAggregateVersion, e.getMessage(), e);
-            throw e;
-        } catch (Exception e) {
-            logger.error("Exception during createOrg for domain {} aggregateVersion {}: {}", domain, newAggregateVersion, e.getMessage(), e);
-            throw e;
-        }
-    }
-    */
 
     @Override
     public void updateOrg(Connection conn, Map<String, Object> event) throws SQLException, Exception {
@@ -329,26 +196,11 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
 
     @Override
     public void createHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        // Use UPSERT: INSERT ON CONFLICT DO UPDATE
-        // This handles:
-        // 1. First time insert (no conflict).
-        // 2. Re-creation/Update (conflict on host_id) -> UPDATE the existing row (setting active=TRUE and new version).
-
-        final String upsertHost =
+        final String insertHost =
                 """
                 INSERT INTO host_t (host_id, domain, sub_domain, host_desc, host_owner, update_user, update_ts, aggregate_version, active)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE)
-                ON CONFLICT (host_id) DO UPDATE
-                SET domain = EXCLUDED.domain,
-                    sub_domain = EXCLUDED.sub_domain,
-                    host_desc = EXCLUDED.host_desc,
-                    host_owner = EXCLUDED.host_owner,
-                    update_user = EXCLUDED.update_user,
-                    update_ts = EXCLUDED.update_ts,
-                    aggregate_version = EXCLUDED.aggregate_version,
-                    active = TRUE
-                WHERE host_t.aggregate_version < EXCLUDED.aggregate_version
-                """; // <<< CRITICAL: Added WHERE to ensure we only update if the incoming event is newer
+                """;
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
         String hostId = (String)map.get("hostId"); // enriched in the service.
@@ -357,7 +209,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         // Parameters 1-8 (8 placeholders in the VALUES clause)
-        try (PreparedStatement statement = conn.prepareStatement(upsertHost)) {
+        try (PreparedStatement statement = conn.prepareStatement(insertHost)) {
             // --- SET VALUES (1 to 8) ---
             int i = 1;
             statement.setObject(i++, UUID.fromString(hostId)); // 1. host_id (PK)
