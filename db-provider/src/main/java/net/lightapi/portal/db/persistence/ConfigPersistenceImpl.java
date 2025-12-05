@@ -8,8 +8,6 @@ import com.networknt.status.Status;
 import com.networknt.utility.Constants;
 import com.networknt.utility.UuidUtil;
 import io.cloudevents.core.v1.CloudEventV1;
-import net.lightapi.portal.PortalConstants;
-import net.lightapi.portal.db.ConcurrencyException;
 import net.lightapi.portal.db.PortalDbProvider;
 import net.lightapi.portal.db.util.NotificationService;
 import net.lightapi.portal.db.util.SqlUtil;
@@ -74,6 +72,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 WHERE config_t.aggregate_version < EXCLUDED.aggregate_version
+                AND config_t.active = FALSE
                 """;
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
@@ -692,6 +691,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 WHERE config_property_t.aggregate_version < EXCLUDED.aggregate_version
+                AND config_property_t.active = FALSE
                 """;
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
@@ -1150,6 +1150,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 WHERE environment_property_t.aggregate_version < EXCLUDED.aggregate_version
+                AND environment_property_t.active = FALSE
                 """;
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
@@ -1514,6 +1515,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 WHERE instance_api_property_t.aggregate_version < EXCLUDED.aggregate_version
+                AND instance_api_property_t.active = FALSE
                 """;
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
@@ -1906,6 +1908,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 WHERE instance_app_property_t.aggregate_version < EXCLUDED.aggregate_version
+                AND instance_app_property_t.active = FALSE
                 """;
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
@@ -2296,6 +2299,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 WHERE instance_app_api_property_t.aggregate_version < EXCLUDED.aggregate_version
+                AND instance_app_api_property_t.active = FALSE
                 """;
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
@@ -2706,6 +2710,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 WHERE instance_property_t.aggregate_version < EXCLUDED.aggregate_version
+                AND instance_property_t.active = FALSE
                 """;
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
@@ -3947,6 +3952,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 WHERE instance_file_t.aggregate_version < EXCLUDED.aggregate_version
+                AND instance_file_t.active = FALSE
                 """;
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
@@ -4326,6 +4332,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
                 WHERE deployment_instance_property_t.aggregate_version < EXCLUDED.aggregate_version
+                AND deployment_instance_property_t.active = FALSE
                 """;
 
         // Note: The original code retrieves hostId from event metadata/constants,
@@ -4689,6 +4696,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
                 WHERE product_property_t.aggregate_version < EXCLUDED.aggregate_version
+                AND product_property_t.active = FALSE
                 """;
 
         // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -5021,6 +5029,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
                 WHERE product_version_property_t.aggregate_version < EXCLUDED.aggregate_version
+                AND product_version_property_t.active = FALSE
                 """;
 
         // Note: The original code retrieves hostId from event metadata/constants,

@@ -6,8 +6,6 @@ import com.networknt.monad.Success;
 import com.networknt.status.Status;
 import com.networknt.utility.Constants;
 import io.cloudevents.core.v1.CloudEventV1;
-import net.lightapi.portal.PortalConstants;
-import net.lightapi.portal.db.ConcurrencyException;
 import net.lightapi.portal.db.PortalDbProvider;
 import net.lightapi.portal.db.util.NotificationService;
 import net.lightapi.portal.db.util.SqlUtil;
@@ -624,7 +622,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer AND the existing row was inactive (re-creation/idempotent).
-                WHERE role_permission_t.aggregate_version < EXCLUDED.aggregate_version
+                WHERE role_permission_t.aggregate_version < EXCLUDED.aggregate_version AND role_permission_t.active = FALSE
                 """;
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
@@ -744,7 +742,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
-                WHERE role_user_t.aggregate_version < EXCLUDED.aggregate_version
+                WHERE role_user_t.aggregate_version < EXCLUDED.aggregate_version AND role_user_t.active = FALSE
                 """;
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
@@ -1179,7 +1177,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
-                WHERE role_row_filter_t.aggregate_version < EXCLUDED.aggregate_version
+                WHERE role_row_filter_t.aggregate_version < EXCLUDED.aggregate_version AND role_row_filter_t.active = FALSE
                 """;
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
@@ -1468,7 +1466,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
-                WHERE role_col_filter_t.aggregate_version < EXCLUDED.aggregate_version
+                WHERE role_col_filter_t.aggregate_version < EXCLUDED.aggregate_version AND role_col_filter_t.active = FALSE
                 """;
 
         // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -1660,7 +1658,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
-                WHERE group_t.aggregate_version < EXCLUDED.aggregate_version
+                WHERE group_t.aggregate_version < EXCLUDED.aggregate_version AND group_t.active = FALSE
                 """;
 
         // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -2248,7 +2246,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
-                WHERE group_permission_t.aggregate_version < EXCLUDED.aggregate_version
+                WHERE group_permission_t.aggregate_version < EXCLUDED.aggregate_version AND group_permission_t.active = FALSE
                 """;
 
         // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -2373,7 +2371,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
-                WHERE group_user_t.aggregate_version < EXCLUDED.aggregate_version
+                WHERE group_user_t.aggregate_version < EXCLUDED.aggregate_version AND group_user_t.active = FALSE
                 """;
 
         // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -2751,7 +2749,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
-                WHERE group_row_filter_t.aggregate_version < EXCLUDED.aggregate_version
+                WHERE group_row_filter_t.aggregate_version < EXCLUDED.aggregate_version AND group_row_filter_t.active = FALSE
                 """;
 
         // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -3107,7 +3105,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
-                WHERE group_col_filter_t.aggregate_version < EXCLUDED.aggregate_version
+                WHERE group_col_filter_t.aggregate_version < EXCLUDED.aggregate_version AND group_col_filter_t.active = FALSE
                 """;
 
         // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -3310,7 +3308,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
-                WHERE position_t.aggregate_version < EXCLUDED.aggregate_version
+                WHERE position_t.aggregate_version < EXCLUDED.aggregate_version AND position_t.active = FALSE
                 """;
 
         // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -3934,7 +3932,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
-                WHERE position_permission_t.aggregate_version < EXCLUDED.aggregate_version
+                WHERE position_permission_t.aggregate_version < EXCLUDED.aggregate_version AND position_permission_t.active = FALSE
                 """;
 
         // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -4069,7 +4067,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
-                WHERE user_position_t.aggregate_version < EXCLUDED.aggregate_version
+                WHERE user_position_t.aggregate_version < EXCLUDED.aggregate_version AND user_position_t.active = FALSE
                 """;
 
         // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -4448,7 +4446,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
-                WHERE position_row_filter_t.aggregate_version < EXCLUDED.aggregate_version
+                WHERE position_row_filter_t.aggregate_version < EXCLUDED.aggregate_version AND position_row_filter_t.active = FALSE
                 """;
 
         // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -4804,7 +4802,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
-                WHERE position_col_filter_t.aggregate_version < EXCLUDED.aggregate_version
+                WHERE position_col_filter_t.aggregate_version < EXCLUDED.aggregate_version AND position_col_filter_t.active = FALSE
                 """;
 
         // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -5005,7 +5003,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
-                WHERE attribute_t.aggregate_version < EXCLUDED.aggregate_version
+                WHERE attribute_t.aggregate_version < EXCLUDED.aggregate_version AND attribute_t.active = FALSE
                 """;
 
         // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -5675,7 +5673,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
-                WHERE attribute_permission_t.aggregate_version < EXCLUDED.aggregate_version
+                WHERE attribute_permission_t.aggregate_version < EXCLUDED.aggregate_version AND attribute_permission_t.active = FALSE
                 """;
 
         // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -5877,7 +5875,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
-                WHERE attribute_user_t.aggregate_version < EXCLUDED.aggregate_version
+                WHERE attribute_user_t.aggregate_version < EXCLUDED.aggregate_version AND attribute_user_t.active = FALSE
                 """;
 
         // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -6267,7 +6265,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
-                WHERE attribute_row_filter_t.aggregate_version < EXCLUDED.aggregate_version
+                WHERE attribute_row_filter_t.aggregate_version < EXCLUDED.aggregate_version AND attribute_row_filter_t.active = FALSE
                 """;
 
         // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -6637,7 +6635,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
-                WHERE attribute_col_filter_t.aggregate_version < EXCLUDED.aggregate_version
+                WHERE attribute_col_filter_t.aggregate_version < EXCLUDED.aggregate_version AND attribute_col_filter_t.active = FALSE
                 """;
 
         // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);

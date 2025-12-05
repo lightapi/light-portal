@@ -262,7 +262,8 @@ public class AuthPersistenceImpl implements AuthPersistence {
                     update_ts = EXCLUDED.update_ts,
                     aggregate_version = EXCLUDED.aggregate_version
                 -- CRITICAL: Only update if the incoming event's version is newer
-                WHERE auth_client_t.aggregate_version < EXCLUDED.aggregate_version AND auth_client_t.active = FALSE
+                WHERE auth_client_t.aggregate_version < EXCLUDED.aggregate_version
+                AND auth_client_t.active = FALSE
                 """;
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
@@ -1201,6 +1202,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
                 WHERE auth_provider_api_t.aggregate_version < EXCLUDED.aggregate_version
+                AND auth_provider_api_t.active = FALSE
                 """;
 
         // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
@@ -1464,6 +1466,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
                 WHERE auth_provider_client_t.aggregate_version < EXCLUDED.aggregate_version
+                AND auth_provider_client_t.active = FALSE
                 """;
 
         // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.

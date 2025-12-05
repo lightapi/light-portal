@@ -164,6 +164,7 @@ public class RulePersistenceImpl implements RulePersistence {
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
                 WHERE rule_t.aggregate_version < EXCLUDED.aggregate_version
+                AND rule_t.active = FALSE
                 """;
 
         // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.

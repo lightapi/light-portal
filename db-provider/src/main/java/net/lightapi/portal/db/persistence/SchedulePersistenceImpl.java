@@ -78,6 +78,7 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
                 WHERE schedule_t.aggregate_version < EXCLUDED.aggregate_version
+                AND schedule_t.active = FALSE
                 """;
 
         // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);

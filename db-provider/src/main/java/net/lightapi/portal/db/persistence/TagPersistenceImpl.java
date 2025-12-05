@@ -69,6 +69,7 @@ public class TagPersistenceImpl implements TagPersistence {
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
                 WHERE tag_t.aggregate_version < EXCLUDED.aggregate_version
+                AND tag_t.active = FALSE
                 """;
 
         // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);

@@ -66,7 +66,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
-                WHERE api_t.aggregate_version < EXCLUDED.aggregate_version
+                WHERE api_t.aggregate_version < EXCLUDED.aggregate_version AND api_t.active = FALSE
                 """;
 
         // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -1843,6 +1843,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
                 WHERE api_endpoint_rule_t.aggregate_version < EXCLUDED.aggregate_version
+                AND api_endpoint_rule_t.active = FALSE
                 """;
 
         // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.

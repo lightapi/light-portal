@@ -329,6 +329,7 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
                 WHERE schema_t.aggregate_version < EXCLUDED.aggregate_version
+                AND schema_t.active = FALSE
                 """;
 
         // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.

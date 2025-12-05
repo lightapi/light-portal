@@ -404,6 +404,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
                 WHERE instance_t.aggregate_version < EXCLUDED.aggregate_version
+                AND instance_t.active = FALSE
                 """;
 
         // SQL to unset 'current' flag for other instances of the same service_id/host_id
@@ -2202,6 +2203,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     aggregate_version = EXCLUDED.aggregate_version
                 -- OCC/IDM: Only update if the incoming event is newer
                 WHERE instance_api_t.aggregate_version < EXCLUDED.aggregate_version
+                AND instance_api_t.active = FALSE
                 """;
 
         // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -2602,6 +2604,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
                 WHERE instance_api_path_prefix_t.aggregate_version < EXCLUDED.aggregate_version
+                AND instance_api_path_prefix_t.active = FALSE
                 """;
 
         // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -2963,6 +2966,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 WHERE instance_app_api_t.aggregate_version < EXCLUDED.aggregate_version
+                AND instance_app_api_t.active = FALSE
                 """;
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
@@ -3350,6 +3354,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 WHERE instance_app_t.aggregate_version < EXCLUDED.aggregate_version
+                AND instance_app_t.active = FALSE
                 """;
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
@@ -3777,6 +3782,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 WHERE product_version_t.aggregate_version < EXCLUDED.aggregate_version
+                AND product_version_t.active = FALSE
                 """;
 
         // --- 2. UPDATE SQL (To set all other versions of the same product to current = false) ---
@@ -4321,6 +4327,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     current = EXCLUDED.current,
                     active = TRUE
                 WHERE product_version_environment_t.aggregate_version < EXCLUDED.aggregate_version
+                AND product_version_environment_t.active = FALSE
                 """; // <<< CRITICAL: ON CONFLICT on the composite key and monotonicity check
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
@@ -4658,6 +4665,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 WHERE product_version_pipeline_t.aggregate_version < EXCLUDED.aggregate_version
+                AND product_version_pipeline_t.active = FALSE
                 """; // <<< CRITICAL: ON CONFLICT on the composite key and monotonicity check
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
@@ -4860,6 +4868,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 WHERE product_version_config_t.aggregate_version < EXCLUDED.aggregate_version
+                AND product_version_config_t.active = FALSE
                 """; // <<< CRITICAL: ON CONFLICT on the composite key and monotonicity check
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
@@ -5057,6 +5066,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 WHERE product_version_config_property_t.aggregate_version < EXCLUDED.aggregate_version
+                AND product_version_config_property_t.active = FALSE
                 """; // <<< CRITICAL: ON CONFLICT on the composite key and monotonicity check
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
@@ -5288,6 +5298,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 WHERE pipeline_t.aggregate_version < EXCLUDED.aggregate_version
+                AND pipeline_t.active = FALSE
                 """;
 
         // --- 2. UPDATE SQL (To set all other versions of the same pipeline to current = false) ---
@@ -5802,6 +5813,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 WHERE platform_t.aggregate_version < EXCLUDED.aggregate_version
+                AND platform_t.active = FALSE
                 """;
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
@@ -6250,6 +6262,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 WHERE deployment_instance_t.aggregate_version < EXCLUDED.aggregate_version
+                AND deployment_instance_t.active = FALSE
                 """;
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
@@ -6769,6 +6782,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
                 WHERE deployment_t.aggregate_version < EXCLUDED.aggregate_version
+                AND deployment_t.active = FALSE
                 """;
 
         Map<String, Object> map = SqlUtil.extractEventData(event);

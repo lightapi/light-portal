@@ -622,6 +622,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                     update_user = EXCLUDED.update_user,
                     update_ts = EXCLUDED.update_ts
                 WHERE user_host_t.active = FALSE
+                AND user_host_t.aggregate_version < EXCLUDED.aggregate_version
                 """;
         // <<< CRITICAL: Only check the active flag here. does not care about aggregate_version as
         // the record here might not have the corresponding event in the event_store_t to look up

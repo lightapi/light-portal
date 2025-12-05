@@ -73,6 +73,7 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
                 WHERE category_t.aggregate_version < EXCLUDED.aggregate_version
+                AND category_t.active = FALSE
                 """;
 
         // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -306,6 +307,7 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
                 WHERE entity_category_t.aggregate_version < EXCLUDED.aggregate_version
+                AND entity_category_t.active = FALSE
                 """;
 
         // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.

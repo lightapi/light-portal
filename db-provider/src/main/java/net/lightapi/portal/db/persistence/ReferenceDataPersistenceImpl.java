@@ -7,8 +7,6 @@ import com.networknt.monad.Success;
 import com.networknt.status.Status;
 import com.networknt.utility.Constants;
 import io.cloudevents.core.v1.CloudEventV1;
-import net.lightapi.portal.PortalConstants;
-import net.lightapi.portal.db.ConcurrencyException;
 import net.lightapi.portal.db.PortalDbProvider;
 import net.lightapi.portal.db.util.NotificationService;
 import net.lightapi.portal.db.util.SqlUtil;
@@ -66,6 +64,7 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
                     aggregate_version = EXCLUDED.aggregate_version
                 -- OCC/IDM: Only update if the incoming event is newer
                 WHERE ref_table_t.aggregate_version < EXCLUDED.aggregate_version
+                AND ref_table_t.active = FALSE
                 """;
 
         // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -481,6 +480,7 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
                     aggregate_version = EXCLUDED.aggregate_version
                 -- OCC/IDM: Only update if the incoming event is newer
                 WHERE ref_value_t.aggregate_version < EXCLUDED.aggregate_version
+                AND ref_value_t.active = FALSE
                 """;
 
         // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -933,6 +933,7 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
                 WHERE value_locale_t.aggregate_version < EXCLUDED.aggregate_version
+                AND value_locale_t.active = FALSE
                 """;
 
         // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -1227,6 +1228,7 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
                     active = TRUE
                 -- OCC/IDM: Only update if the incoming event is newer
                 WHERE relation_type_t.aggregate_version < EXCLUDED.aggregate_version
+                AND relation_type_t.active = FALSE
                 """;
 
         // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
@@ -1477,6 +1479,7 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
                     aggregate_version = EXCLUDED.aggregate_version
                 -- OCC/IDM: Only update if the incoming event is newer
                 WHERE relation_t.aggregate_version < EXCLUDED.aggregate_version
+                AND relation_t.active = FALSE
                 """;
 
         // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
