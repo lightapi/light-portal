@@ -510,7 +510,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 SELECT av.api_version_id, av.api_id, a.api_name, av.api_version
                 FROM api_version_t av, api_t a
                 WHERE av.api_id = a.api_id
-                AND av.host_id = ?
+                AND av.host_id = ? AND av.active = TRUE
                 """;
 
         List<Map<String, Object>> labels = new ArrayList<>();
@@ -539,7 +539,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     @Override
     public Result<String> queryApiLabel(String hostId) {
         Result<String> result = null;
-        String sql = "SELECT api_id, api_name FROM api_t WHERE host_id = ?";
+        String sql = "SELECT api_id, api_name FROM api_t WHERE host_id = ? AND active = TRUE";
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
@@ -619,7 +619,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     @Override
     public Result<String> queryApiVersionLabel(String hostId, String apiId) {
         Result<String> result = null;
-        String sql = "SELECT api_version FROM api_version_t WHERE host_id = ? AND api_id = ?";
+        String sql = "SELECT api_version FROM api_version_t WHERE host_id = ? AND api_id = ? AND active = TRUE";
         List<Map<String, Object>> versions = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
@@ -653,7 +653,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
             // return an empty array in the case apiVersionId is not selected in the form.
             return Success.of(JsonMapper.toJson(labels));
         }
-        String sql = "SELECT endpoint_id, endpoint FROM api_endpoint_t WHERE host_id = ? AND api_version_id = ?";
+        String sql = "SELECT endpoint_id, endpoint FROM api_endpoint_t WHERE host_id = ? AND api_version_id = ? AND active = TRUE";
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
             preparedStatement.setObject(1, UUID.fromString(hostId));
@@ -1765,59 +1765,6 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
 
     }
 
-    /*
-    @Override
-    public void createEndpointRule(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String insertUser =
-                """
-                INSERT INTO api_endpoint_rule_t (host_id, endpoint_id, rule_id,
-                update_user, update_ts, aggregate_version)
-                VALUES (
-                ?,
-                (SELECT e.endpoint_id
-                 FROM api_endpoint_t e
-                 JOIN api_version_t v ON e.host_id = v.host_id
-                                     AND e.api_version_id = v.api_version_id
-                 WHERE e.host_id = ?
-                   AND v.api_id = ?
-                   AND v.api_version = ?
-                   AND e.endpoint = ?
-                ),
-                ?,
-                ?,
-                ?
-                )
-                """;
-        Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
-        String endpoint = (String) map.get("endpoint");
-        String ruleId = (String) map.get("ruleId");
-        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
-
-        try (PreparedStatement statement = conn.prepareStatement(insertUser)) {
-            statement.setObject(1, UUID.fromString((String) event.get(Constants.HOST)));
-            statement.setObject(2, UUID.fromString((String) event.get(Constants.HOST)));
-            statement.setString(3, (String) map.get("apiId"));
-            statement.setString(4, (String) map.get("apiVersion"));
-            statement.setString(5, endpoint);
-            statement.setString(6, ruleId);
-            statement.setString(7, (String) event.get(Constants.USER));
-            statement.setObject(8, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-            statement.setLong(9, newAggregateVersion);
-            int count = statement.executeUpdate();
-            if (count == 0) {
-                throw new SQLException("Failed to insert endpoint " + endpoint + " rule " + ruleId + " with aggregate version " + newAggregateVersion + ".");
-            }
-        } catch (SQLException e) {
-            logger.error("SQLException during createEndpointRule for endpoint {} rule {} aggregateVersion {}: {}", endpoint, ruleId, newAggregateVersion, e.getMessage(), e);
-            throw e;
-        } catch (Exception e) {
-            logger.error("Exception during createEndpointRule for endpoint {} rule {} aggregateVersion {}: {}", endpoint, ruleId, newAggregateVersion, e.getMessage(), e);
-            throw e;
-        }
-    }
-
-     */
-
     @Override
     public void createApiEndpointRule(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
@@ -2424,7 +2371,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     @Override
     public Result<String> getServiceIdLabel(String hostId) {
         Result<String> result = null;
-        String sql = "SELECT service_id FROM api_version_t WHERE host_id =  ?";
+        String sql = "SELECT service_id FROM api_version_t WHERE host_id =  ? AND active = TRUE";
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {

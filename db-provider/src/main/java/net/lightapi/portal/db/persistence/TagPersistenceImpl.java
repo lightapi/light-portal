@@ -517,7 +517,7 @@ public class TagPersistenceImpl implements TagPersistence {
     @Override
     public Result<String> getTagLabel(String hostId) {
         Result<String> result = null;
-        String sql = "SELECT tag_id, tag_name FROM tag_t WHERE host_id = ? OR host_id IS NULL";
+        String sql = "SELECT tag_id, tag_name FROM tag_t WHERE (host_id = ? OR host_id IS NULL) AND active = TRUE";
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
@@ -646,7 +646,7 @@ public class TagPersistenceImpl implements TagPersistence {
                 """
                 SELECT tag_id, host_id, entity_type, tag_name, tag_desc, update_user, update_ts, aggregate_version
                 FROM tag_t
-                WHERE entity_type = ?
+                WHERE entity_type = ? AND active = TRUE
                 """;
 
         StringBuilder sqlBuilder = new StringBuilder(s);

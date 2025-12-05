@@ -343,7 +343,7 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
     public Result<String> getScheduleLabel(String hostId) {
         Result<String> result = null;
         // Select only the ID and name columns needed for labels, filter by host_id
-        final String sql = "SELECT schedule_id, schedule_name FROM schedule_t WHERE host_id = ? ORDER BY schedule_name";
+        final String sql = "SELECT schedule_id, schedule_name FROM schedule_t WHERE host_id = ? AND active = TRUE ORDER BY schedule_name";
         List<Map<String, Object>> labels = new ArrayList<>(); // Initialize list for labels
 
         try (Connection connection = ds.getConnection();

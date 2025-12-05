@@ -592,7 +592,7 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
     @Override
     public Result<String> getCategoryLabel(String hostId) {
         Result<String> result = null;
-        String sql = "SELECT category_id, category_name FROM category_t WHERE host_id = ? OR host_id IS NULL";
+        String sql = "SELECT category_id, category_name FROM category_t WHERE (host_id = ? OR host_id IS NULL) AND active = TRUE";
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
@@ -724,7 +724,7 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
                 SELECT category_id, host_id, entity_type, category_name, category_desc, parent_category_id,
                 sort_order, update_user, update_ts, aggregate_version
                 FROM category_t
-                WHERE entity_type = ?
+                WHERE active = TRUE AND entity_type = ?
                 """;
         StringBuilder sqlBuilder = new StringBuilder(s);
 
@@ -785,7 +785,7 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
                 SELECT cat.category_id, cat.host_id, cat.entity_type, cat.category_name, cat.category_desc, cat.parent_category_id,
                 cat.sort_order, cat.update_user, cat.update_ts, cat.aggregate_version
                 FROM category_t cat
-                WHERE cat.entity_type = ?
+                WHERE cat.active = TRUE AND cat.entity_type = ?
                 """;
         StringBuilder sqlBuilder = new StringBuilder(s);
 

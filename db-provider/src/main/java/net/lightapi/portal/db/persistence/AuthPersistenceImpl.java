@@ -207,7 +207,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
     @Override
     public Result<String> getAppIdLabel(String hostId) {
         Result<String> result = null;
-        String sql = "SELECT app_id, app_name FROM app_t WHERE host_id = ?";
+        String sql = "SELECT app_id, app_name FROM app_t WHERE host_id = ? AND active = TRUE";
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
@@ -1903,7 +1903,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
     @Override
     public Result<String> getClientIdLabel(String hostId) {
         Result<String> result = null;
-        String sql = "SELECT client_id, client_name FROM auth_client_t WHERE host_id = ?";
+        String sql = "SELECT client_id, client_name FROM auth_client_t WHERE host_id = ? AND active = TRUE";
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
@@ -2453,7 +2453,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
     @Override
     public Result<String> getProviderIdLabel(String hostId) {
         Result<String> result = null;
-        String sql = "SELECT provider_id, provider_name FROM auth_provider_t WHERE host_id = ?";
+        String sql = "SELECT provider_id, provider_name FROM auth_provider_t WHERE host_id = ? AND active = true";
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {

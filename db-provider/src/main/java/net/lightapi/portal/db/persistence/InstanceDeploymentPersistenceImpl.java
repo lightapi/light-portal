@@ -2149,7 +2149,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 SELECT i.instance_id, i.instance_name, pv.product_id, pv.product_version
                 FROM instance_t i
                 INNER JOIN product_version_t pv ON pv.product_version_id = i.product_version_id
-                WHERE i.host_id = ?
+                WHERE i.host_id = ? AND i.active = TRUE
                 """;
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
@@ -2550,7 +2550,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 FROM instance_api_t ia
                 INNER JOIN instance_t i ON i.instance_id = ia.instance_id
                 INNER JOIN api_version_t av ON av.api_version_id = ia.api_version_id
-                WHERE ia.host_id = ?
+                WHERE ia.host_id = ? AND ia.active = TRUE
                 """;
         if(instanceId != null && !instanceId.isEmpty()) sql += " AND ia.instance_id = ?";
         List<Map<String, Object>> labels = new ArrayList<>();
@@ -3725,7 +3725,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                         SELECT ia.instance_app_id, i.instance_name, ia.app_id, ia.app_version
                         FROM instance_app_t ia
                         INNER JOIN instance_t i ON i.instance_id = ia.instance_id
-                        WHERE ia.host_id = ?
+                        WHERE ia.host_id = ? AND ia.active = TRUE
                 """;
         if(instanceId != null && !instanceId.isEmpty()) {
             sql += " AND ia.instance_id = ?";
@@ -4187,7 +4187,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     @Override
     public Result<String> getProductIdLabel(String hostId) {
         Result<String> result = null;
-        String sql = "SELECT DISTINCT product_id FROM product_version_t WHERE host_id = ?";
+        String sql = "SELECT DISTINCT product_id FROM product_version_t WHERE host_id = ? AND active = TRUE";
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
@@ -4214,7 +4214,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     @Override
     public Result<String> getProductVersionLabel(String hostId, String productId) {
         Result<String> result = null;
-        String sql = "SELECT product_version FROM product_version_t WHERE host_id = ? AND product_id = ?";
+        String sql = "SELECT product_version FROM product_version_t WHERE host_id = ? AND product_id = ? AND active = TRUE";
         List<Map<String, Object>> versions = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
@@ -4243,7 +4243,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     @Override
     public Result<String> getProductVersionIdLabel(String hostId) {
         Result<String> result = null;
-        String sql = "SELECT DISTINCT product_version_id, product_id, product_version FROM product_version_t WHERE host_id = ?";
+        String sql = "SELECT DISTINCT product_version_id, product_id, product_version FROM product_version_t WHERE host_id = ? AND active = TRUE";
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
@@ -5744,7 +5744,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     @Override
     public Result<String> getPipelineLabel(String hostId) {
         Result<String> result = null;
-        String sql = "SELECT pipeline_id, pipeline_name, pipeline_version FROM pipeline_t WHERE host_id = ?";
+        String sql = "SELECT pipeline_id, pipeline_name, pipeline_version FROM pipeline_t WHERE host_id = ? AND active = TRUE";
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
@@ -6202,7 +6202,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     @Override
     public Result<String> getPlatformLabel(String hostId) {
         Result<String> result = null;
-        String sql = "SELECT platform_id, platform_name FROM platform_t WHERE host_id = ?";
+        String sql = "SELECT platform_id, platform_name FROM platform_t WHERE host_id = ? AND active = TRUE";
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
@@ -6722,8 +6722,8 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     @Override
     public Result<String> getDeploymentInstanceLabel(String hostId, String instanceId) {
         Result<String> result = null;
-        String sql = instanceId == null ? "SELECT deployment_instance_id, service_id FROM deployment_instance_t WHERE host_id = ?" :
-                "SELECT deployment_instance_id, service_id FROM deployment_instance_t WHERE host_id = ? AND instance_id = ?";
+        String sql = instanceId == null ? "SELECT deployment_instance_id, service_id FROM deployment_instance_t WHERE host_id = ? AND active = TRUE" :
+                "SELECT deployment_instance_id, service_id FROM deployment_instance_t WHERE host_id = ? AND instance_id = ? AND active = TRUE";
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {

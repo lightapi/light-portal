@@ -328,7 +328,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
     @Override
     public Result<String> queryRoleLabel(String hostId) {
-        final String sql = "SELECT role_id from role_t WHERE host_id = ?";
+        final String sql = "SELECT role_id from role_t WHERE host_id = ? AND active = TRUE";
         Result<String> result;
         try (final Connection conn = ds.getConnection()) {
             List<Map<String, Object>> list = new ArrayList<>();
@@ -1941,7 +1941,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
     @Override
     public Result<String> queryGroupLabel(String hostId) {
-        final String sql = "SELECT group_id from group_t WHERE host_id = ?";
+        final String sql = "SELECT group_id from group_t WHERE host_id = ? AND active = TRUE";
         Result<String> result;
         try (final Connection conn = ds.getConnection()) {
             List<Map<String, Object>> list = new ArrayList<>();
@@ -3626,7 +3626,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
     @Override
     public Result<String> queryPositionLabel(String hostId) {
-        final String sql = "SELECT position_id from position_t WHERE host_id = ?";
+        final String sql = "SELECT position_id from position_t WHERE host_id = ? AND active = TRUE";
         Result<String> result;
         try (final Connection conn = ds.getConnection()) {
             List<Map<String, Object>> list = new ArrayList<>();
@@ -5304,7 +5304,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
     @Override
     public Result<String> queryAttributeLabel(String hostId) {
-        final String sql = "SELECT attribute_id from attribute_t WHERE host_id = ?";
+        final String sql = "SELECT attribute_id from attribute_t WHERE host_id = ? AND active = TRUE";
         Result<String> result;
         try (final Connection conn = ds.getConnection()) {
             List<Map<String, Object>> list = new ArrayList<>();

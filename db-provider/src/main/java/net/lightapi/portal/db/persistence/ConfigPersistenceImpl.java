@@ -398,7 +398,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
     @Override
     public Result<String> getConfigIdLabel() {
-        final String sql = "SELECT config_id, config_name FROM config_t ORDER BY config_name";
+        final String sql = "SELECT config_id, config_name FROM config_t WHERE active = TRUE ORDER BY config_name";
         Result<String> result;
         try (final Connection conn = ds.getConnection()) {
             List<Map<String, Object>> list = new ArrayList<>();
@@ -435,6 +435,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 WHERE c.config_id = p.config_id
                 AND (p.value_type = 'map' or p.value_type = 'list')
                 AND p.resource_type LIKE ?
+                AND p.active = TRUE
                 ORDER BY config_name
                 """;
         Result<String> result;
@@ -467,7 +468,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
     @Override
     public Result<String> getPropertyIdLabel(String configId) {
-        final String sql = "SELECT property_id, property_name FROM config_property_t WHERE config_id = ? ORDER BY display_order";
+        final String sql = "SELECT property_id, property_name FROM config_property_t WHERE active = TRUE AND config_id = ? ORDER BY display_order";
         Result<String> result;
         try (final Connection conn = ds.getConnection()) {
             List<Map<String, Object>> list = new ArrayList<>();
@@ -505,6 +506,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 WHERE config_id = ?
                 AND (value_type = 'map' or value_type = 'list')
                 AND resource_type LIKE ?
+                AND active = TRUE
                 ORDER BY display_order
                 """;
         Result<String> result;
