@@ -496,8 +496,10 @@ public interface PortalDbProvider extends DbProvider {
 
     // ProductVersionEnvironment
     void createProductVersionEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void updateProductVersionEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteProductVersionEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<String> getProductVersionEnvironment(int offset, int limit, String filters, String globalFilter, String sorting,  String hostId);
+    Result<String> getProductVersionEnvironmentById(String hostId, String productVersionId, String systemEnv, String runtimeEnv);
 
     // ProductVersionPipeline
     void createProductVersionPipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception;

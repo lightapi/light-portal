@@ -4312,12 +4312,13 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         final String upsertSql =
                 """
                 INSERT INTO product_version_environment_t(host_id, product_version_id,
-                system_env, runtime_env, update_user, update_ts, aggregate_version, active)
-                VALUES (?, ?, ?, ?, ?, ?, ?, TRUE)
+                system_env, runtime_env, current, update_user, update_ts, aggregate_version, active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE)
                 ON CONFLICT (host_id, product_version_id, system_env, runtime_env) DO UPDATE
                 SET update_user = EXCLUDED.update_user,
                     update_ts = EXCLUDED.update_ts,
                     aggregate_version = EXCLUDED.aggregate_version,
+                    current = EXCLUDED.current,
                     active = TRUE
                 WHERE product_version_environment_t.aggregate_version < EXCLUDED.aggregate_version
                 """; // <<< CRITICAL: ON CONFLICT on the composite key and monotonicity check
@@ -4327,18 +4328,20 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         String productVersionId = (String)map.get("productVersionId");
         String systemEnv = (String)map.get("systemEnv");
         String runtimeEnv = (String)map.get("runtimeEnv");
+        Boolean current = (Boolean)map.getOrDefault("current", false);
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(upsertSql)) {
             int i = 1;
             // --- SET VALUES (1 to 7) ---
-            statement.setObject(i++, UUID.fromString(hostId)); // 1. host_id (Part of PK)
-            statement.setObject(i++, UUID.fromString(productVersionId)); // 2. product_version_id (Part of PK)
-            statement.setString(i++, systemEnv); // 3. system_env (Part of PK)
-            statement.setString(i++, runtimeEnv); // 4. runtime_env (Part of PK)
-            statement.setString(i++, (String)event.get(Constants.USER)); // 5. update_user
-            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME))); // 6. update_ts
-            statement.setLong(i++, newAggregateVersion); // 7. aggregate_version (New Version)
+            statement.setObject(i++, UUID.fromString(hostId));
+            statement.setObject(i++, UUID.fromString(productVersionId));
+            statement.setString(i++, systemEnv);
+            statement.setString(i++, runtimeEnv);
+            statement.setBoolean(i++, current);
+            statement.setString(i++, (String)event.get(Constants.USER));
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(i++, newAggregateVersion);
 
             // --- Execute UPSERT ---
             int count = statement.executeUpdate();
@@ -4355,6 +4358,88 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         } catch (Exception e) {
             logger.error("Exception during UPSERT for hostId {} productVersionId {} systemEnv {} runtimeEnv {} aggregateVersion {}: {}", hostId, productVersionId, systemEnv, runtimeEnv, newAggregateVersion, e.getMessage(), e);
             throw e; // Re-throw generic Exception
+        }
+    }
+
+    @Override
+    public void updateProductVersionEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // --- 1. PRIMARY UPDATE SQL (Updates the specific product version environment) ---
+        final String updateSql =
+                """
+                UPDATE product_version_environment_t
+                SET current = ?,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?,
+                    active = TRUE
+                WHERE host_id = ?
+                  AND product_version_id = ?
+                  AND system_env = ?
+                  AND runtime_env = ?
+                  AND aggregate_version < ?
+                """;
+
+        // --- 2. UPDATE SQL (To set all other versions of the same pipeline to current = false) ---
+        final String updateOthersSql =
+                """
+                UPDATE product_version_environment_t SET current = false, update_user = ?, update_ts = ?
+                WHERE host_id = ?
+                  AND product_version_id = ?
+                  AND system_env != ?
+                  AND runtime_env != ?
+                  AND current = TRUE
+                """;
+
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String) event.get(Constants.HOST);
+        String productVersionId = (String) map.get("productVersionId");
+        String systemEnv = (String) map.get("systemEnv");
+        String runtimeEnv = (String) map.get("runtimeEnv");
+        Boolean current = (Boolean) map.getOrDefault("current", false);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+        String updateUser = (String) event.get(Constants.USER);
+        OffsetDateTime updateTs = OffsetDateTime.parse((String) event.get(CloudEventV1.TIME));
+
+        try (PreparedStatement statement = conn.prepareStatement(updateSql)) {
+            int i = 1;
+            statement.setBoolean(i++, current);
+            statement.setString(i++, updateUser);
+            statement.setObject(i++, updateTs);
+            statement.setLong(i++, newAggregateVersion);
+
+            statement.setObject(i++, UUID.fromString(hostId));
+            statement.setObject(i++, UUID.fromString(productVersionId));
+            statement.setString(i++, systemEnv);
+            statement.setString(i++, runtimeEnv);
+            statement.setLong(i++, newAggregateVersion);
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                logger.warn("Update skipped for ProductVersionEnvironment with hostId {} productVersionId {} systemEnv {} runtimeEnv {} aggregateVersion {}. Record not found or a newer version already exists.",
+                        hostId, productVersionId, systemEnv, runtimeEnv, newAggregateVersion);
+            }
+
+            // --- STATE MANAGEMENT: Set others to current=false if this one is true ---
+            if (current && count > 0) {
+                try (PreparedStatement statementUpdate = conn.prepareStatement(updateOthersSql)) {
+                    int j = 1;
+                    statementUpdate.setString(j++, updateUser);
+                    statementUpdate.setObject(j++, updateTs);
+                    statementUpdate.setObject(j++, UUID.fromString(hostId));
+                    statementUpdate.setObject(j++, UUID.fromString(productVersionId));
+                    statementUpdate.setString(j++, systemEnv);
+                    statementUpdate.setString(j++, runtimeEnv);
+                    statementUpdate.executeUpdate();
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during updateProductVersionEnvironment for hostId {} productVersionId {} systemEnv {} runtimeEnv {} aggregateVersion {}: {}",
+                    hostId, productVersionId, systemEnv, runtimeEnv, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updateProductVersionEnvironment for hostId {} productVersionId {} systemEnv {} runtimeEnv {} aggregateVersion {}: {}",
+                    hostId, productVersionId, systemEnv, runtimeEnv, newAggregateVersion, e.getMessage(), e);
+            throw e;
         }
     }
 
@@ -4439,6 +4524,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 "aggregateVersion", "pve.aggregate_version",
                 "active", "pve.active"
         ));
+        columnMap.put("current", "pve.current");
 
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -4447,7 +4533,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 """
                 SELECT COUNT(*) OVER () AS total,
                 pve.host_id, pve.product_version_id, pv.product_id, pv.product_version,
-                pve.system_env, pve.runtime_env, pve.update_user,
+                pve.system_env, pve.runtime_env, pve.current, pve.update_user,
                 pve.update_ts, pve.aggregate_version, pve.active
                 FROM product_version_environment_t pve
                 INNER JOIN product_version_t pv ON pv.product_version_id = pve.product_version_id
@@ -4486,6 +4572,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("productVersion", resultSet.getString("product_version"));
                     map.put("systemEnv", resultSet.getString("system_env"));
                     map.put("runtimeEnv", resultSet.getString("runtime_env"));
+                    map.put("current", resultSet.getBoolean("current"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
@@ -4506,6 +4593,54 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         }
         return result;
 
+    }
+
+    @Override
+    public Result<String> getProductVersionEnvironmentById(String hostId, String productVersionId, String systemEnv, String runtimeEnv) {
+        final String sql =
+                """
+                SELECT host_id, product_version_id, system_env, runtime_env, current,
+                aggregate_version, active, update_user, update_ts
+                FROM product_version_environment_t
+                WHERE host_id = ? AND product_version_id = ? AND system_env = ? AND runtime_env = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + productVersionId + ":" + systemEnv + ":" + runtimeEnv;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(productVersionId));
+            statement.setString(3, systemEnv);
+            statement.setString(4, runtimeEnv);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("productVersionId", resultSet.getObject("product_version_id", UUID.class));
+                    map.put("systemEnv", resultSet.getString("system_env"));
+                    map.put("runtimeEnv", resultSet.getString("runtime_env"));
+                    map.put("current", resultSet.getBoolean("current"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "product version environment", searchId));
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
     }
 
     @Override

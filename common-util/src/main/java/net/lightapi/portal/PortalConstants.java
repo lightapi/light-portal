@@ -199,6 +199,7 @@ public class PortalConstants {
 
     // --- Product Version Environment Events ---
     public static final String PRODUCT_VERSION_ENVIRONMENT_CREATED_EVENT = "ProductVersionEnvironmentCreatedEvent";
+    public static final String PRODUCT_VERSION_ENVIRONMENT_UPDATED_EVENT = "ProductVersionEnvironmentUpdatedEvent";
     public static final String PRODUCT_VERSION_ENVIRONMENT_DELETED_EVENT = "ProductVersionEnvironmentDeletedEvent";
 
     // --- Product Version Pipeline Events ---
