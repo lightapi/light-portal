@@ -373,15 +373,15 @@ public class PortalDbProviderImplTest {
     }
 
     @Test
-    void testCommitConfigInstance() throws Exception {
+    void testCreateConfigSnapshot() throws Exception {
         Map<String, Object> map = Map.of("hostId", "01964b05-552a-7c4b-9184-6857e7f3dc5f",
-                "instanceId", "0196dbd4-3820-7be4-894a-078f311d0b49",
+                "instanceId", "019aad40-eaef-73d2-b557-9af202340706",
                 "snapshotType", "USER_SAVE",
                 "description", "Test with user save type",
                 "userId", "01964b05-5532-7c79-8cde-191dcbd421b8");
 
         Connection conn = SqlDbStartupHook.ds.getConnection();
-        dbProvider.commitConfigInstance(conn, map);
+        dbProvider.createConfigSnapshot(conn, map);
     }
 
     @Test

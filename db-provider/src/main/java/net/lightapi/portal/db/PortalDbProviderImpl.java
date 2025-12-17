@@ -285,8 +285,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void deleteConfigInstanceFile(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.deleteConfigInstanceFile(connection, event); }
     @Override public Result<String> getConfigInstanceFile(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return configPersistence.getConfigInstanceFile(offset, limit, filters, globalFilter, sorting, hostId); }
     @Override public Result<String> getConfigInstanceFileById(String hostId, String instanceFileId) { return configPersistence.getConfigInstanceFileById(hostId, instanceFileId); }
-    @Override public void commitConfigInstance(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.commitConfigInstance(connection, event); }
-    @Override public void rollbackConfigInstance(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.rollbackConfigInstance(connection, event); }
+    @Override public void createConfigSnapshot(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.createConfigSnapshot(connection, event); }
+    @Override public void updateConfigSnapshot(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.updateConfigSnapshot(connection, event); }
+    @Override public void deleteConfigSnapshot(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.deleteConfigSnapshot(connection, event); }
+    @Override public Result<String> getConfigSnapshot(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return configPersistence.getConfigSnapshot(offset, limit, filters, globalFilter, sorting, hostId); }
 
     // --- InstanceDeployment ---
     @Override public void createInstance(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.createInstance(connection, event); }

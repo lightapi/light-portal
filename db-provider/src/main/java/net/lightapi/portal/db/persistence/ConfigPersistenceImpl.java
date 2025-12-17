@@ -14,12 +14,7 @@ import net.lightapi.portal.db.util.SqlUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Types;
-import java.sql.Array;
+import java.sql.*;
 import java.time.OffsetDateTime;
 import java.util.*;
 
@@ -2900,17 +2895,196 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     }
 
     @Override
-    public void commitConfigInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-
+    public void createConfigSnapshot(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         // 1. Extract Input Parameters
         UUID hostId = UUID.fromString((String) event.get("hostId"));
         UUID instanceId = UUID.fromString((String) event.get("instanceId"));
         String snapshotType = (String) event.getOrDefault("snapshotType", "USER_SAVE");
         String description = (String) event.get("description");
-        UUID userId = UUID.fromString((String) event.get(Constants.USER));              // User who triggered the event
+        UUID userId = UUID.fromString((String)event.get("userId"));
         UUID deploymentId = event.get("deploymentId") != null ? UUID.fromString((String) event.get("deploymentId")) : null;
-
         UUID snapshotId = UuidUtil.getUUID();
+        String s = "{call commit_config_instance(?, ?, ?, ?, ?, ?, ?)}";
+
+        try ( CallableStatement stmt = conn.prepareCall(s)) {
+            stmt.setObject(1, hostId);
+            stmt.setObject(2, instanceId);
+            stmt.setString(3, snapshotType);
+            stmt.setString(4, description);
+            stmt.setObject(5, userId);
+            stmt.setObject(6, deploymentId);
+            stmt.setObject(7, snapshotId);
+
+            stmt.execute();
+        } catch (SQLException e) {
+            logger.error("SQLException during commitConfigInstance for hostId {} instanceId {}: {}", hostId, instanceId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during commitConfigInstance for hostId {} instanceId {}: {}", hostId, instanceId, e.getMessage(), e);
+            throw e;
+        }
+
+    }
+
+    @Override
+    public void updateConfigSnapshot(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+
+        String s =
+            """
+            UPDATE config_snapshot_t SET description = ? WHERE snapshot_id = ?
+            """;
+
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String description = (String) event.get("description");
+        String snapshotId = (String)event.get("snapshotId");
+
+        try (PreparedStatement statement = conn.prepareStatement(s)) {
+            statement.setString(1, description);
+            statement.setObject(2, UUID.fromString(snapshotId));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // If 0 rows were updated, it's a valid idempotent outcome.
+                logger.warn("Update skipped for updateConfigSnapshot with snapshotId {}. Record not found or a newer version already exists.", snapshotId);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during updateConfigSnapshot for snapshotId {}: {}",
+                    snapshotId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updateConfigSnapshot for snapshotId {}: {}",
+                    snapshotId, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public void deleteConfigSnapshot(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        String s =
+                """
+                DELETE FROM config_snapshot_t WHERE snapshot_id = ?
+                """;
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String snapshotId = (String)map.get("snapshotId");
+
+        try (PreparedStatement statement = conn.prepareStatement(s)) {
+            statement.setObject(1, UUID.fromString(snapshotId));
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // If 0 rows were updated, we log a warning and continue.
+                // This indicates the record was already deleted, never existed, or a newer version is already in the database.
+                // This is the expected behavior for an idempotent operation.
+                logger.warn("deleteConfigSnapshot skipped for snapshotId {}. Record not found or a newer version already exists.",
+                        snapshotId);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during deleteConfigSnapshot for snapshotId {}: {}",
+                    snapshotId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deleteConfigSnapshot for snapshotId {}: {}",
+                    snapshotId, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public Result<String> getConfigSnapshot(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+        Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "snapshotId", "snapshot_id",
+                "snapshotTs", "snapshot_ts",
+                "snapshotType", "snapshot_type",
+                "hostId", "host_id",
+                "instanceId", "instance_id",
+                "description", "description",
+                "userId", "user_id",
+                "deploymentId", "deployment_id",
+                "environment", "environment",
+                "productId", "product_id"
+        ));
+
+        columnMap.put("productVersion", "product_version");
+        columnMap.put("serviceId", "service_id");
+        columnMap.put("apiId", "api_id");
+        columnMap.put("apiVersion", "api_version");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                snapshot_id, snapshot_ts, snapshot_type, host_id, instance_id, description, user_id, deployment_id, environment,
+                product_id, product_version, service_id, api_id, api_version
+                FROM config_snapshot_t
+                WHERE host_id = ?
+                """;
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
+
+        String[] searchColumns = {"description"};
+        String sqlBuilder = s + dynamicFilter(Arrays.asList("snapshot_id", "host_id", "instance_id", "user_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("host_id, instance_id, snapshot_ts", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        if(logger.isTraceEnabled()) logger.trace("sql = {}", sqlBuilder);
+        int total = 0;
+        List<Map<String, Object>> snapshots = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+
+            populateParameters(preparedStatement, parameters);
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+
+                    map.put("snapshotId", resultSet.getObject("snapshot_id", UUID.class));
+                    map.put("snapshotTs", resultSet.getObject("snapshot_ts") != null ? resultSet.getObject("snapshot_ts", OffsetDateTime.class) : null);
+                    map.put("snapshotType", resultSet.getString("snapshot_type"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
+                    map.put("description", resultSet.getString("description"));
+                    map.put("userId", resultSet.getObject("user_id", UUID.class));
+                    map.put("deploymentId", resultSet.getObject("deployment_id", UUID.class));
+                    map.put("environment", resultSet.getString("environment"));
+                    map.put("productId", resultSet.getString("product_id"));
+                    map.put("productVersion", resultSet.getString("product_version"));
+                    map.put("serviceId", resultSet.getString("service_id"));
+                    map.put("apiId", resultSet.getString("api_id"));
+                    map.put("apiVersion", resultSet.getString("api_version"));
+                    snapshots.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("snapshots", snapshots);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+        }
+        return result;
+    }
+
+    /*
+    @Override
+    public void commitConfigInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
 
         try {
             // 2. Derive Scope IDs
@@ -2939,14 +3113,11 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             // Add others as needed
 
             logger.info("Successfully prepared config snapshot: {}", snapshotId);
-            notificationService.insertNotification(event, true, null); // Notify success after all operations in this method
         } catch (SQLException e) {
             logger.error("SQLException during snapshot creation for instance {}: {}", instanceId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         } catch (Exception e) { // Catch other potential errors (e.g., during scope derivation)
             logger.error("Exception during snapshot creation for instance {}: {}", instanceId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
             throw e;
         }
     }
@@ -3039,30 +3210,8 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                                                             WHERE jsonb_typeof(sub.property_value::jsonb) = 'array'
                                                           ), '[]'::jsonb)::text -- Requires subquery if ordering elements
                                  -- Subquery approach for ordering list elements by property timestamp:
-                                 /*
-                                  COALESCE(
-                                     (SELECT jsonb_agg(elem ORDER BY prop.update_ts)
-                                      FROM instance_app_api_property_t prop,
-                                           jsonb_array_elements(prop.property_value::jsonb) elem
-                                      WHERE prop.host_id = iaap.host_id
-                                        AND prop.instance_app_id = iaap.instance_app_id
-                                        AND prop.instance_api_id = iaap.instance_api_id
-                                        AND prop.property_id = iaap.property_id
-                                        AND jsonb_typeof(prop.property_value::jsonb) = 'array'
-                                     ), '[]'::jsonb
-                                  )::text
-                                 */
                                 ELSE MAX(iaap.property_value) -- For simple types, MAX can work if only one entry expected, otherwise need timestamp logic
                                 -- More robust for simple types: Pick latest based on timestamp
-                                /*
-                                 (SELECT property_value
-                                  FROM instance_app_api_property_t latest
-                                  WHERE latest.host_id = iaap.host_id
-                                    AND latest.instance_app_id = iaap.instance_app_id
-                                    AND latest.instance_api_id = iaap.instance_api_id
-                                    AND latest.property_id = iaap.property_id
-                                  ORDER BY latest.update_ts DESC LIMIT 1)
-                                */
                             END AS effective_value
                         FROM instance_app_api_property_t iaap
                         JOIN config_property_t cp ON iaap.property_id = cp.property_id
@@ -3272,6 +3421,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     // Helper to map priority back to source level name
     private String mapPriorityToSourceLevel(int priority) {
         return switch (priority) {
+            case 1 -> "deployment";
             case 10 -> "instance_app_api";
             case 20 -> "instance_api";
             case 30 -> "instance_app";
@@ -3426,6 +3576,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             ps.executeUpdate();
         }
     }
+    */
 
     // --- Helper method to find associated instance_api_ids ---
     private List<UUID> findRelevantInstanceApiIds(Connection conn, UUID hostId, UUID instanceId) throws SQLException {
@@ -3459,6 +3610,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         return ids;
     }
 
+    /*
     @Override
     public void rollbackConfigInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String DELETE_INSTANCE_PROPS_SQL = "DELETE FROM instance_property_t WHERE host_id = ? AND instance_id = ?";
@@ -3598,6 +3750,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             throw e;
         }
     }
+    */
 
     private void executeDelete(Connection conn, String sql, UUID hostId, UUID instanceId) throws SQLException {
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
