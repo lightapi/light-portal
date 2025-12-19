@@ -14,7 +14,7 @@ public interface TagPersistence {
     void updateEntityTag(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteEntityTag(Connection conn, Map<String, Object> event) throws SQLException, Exception;
 
-    Result<String> getTag(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
+    Result<String> getTag(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<String> getTagLabel(String hostId);
     Result<String> getTagById(String tagId);
     Result<String> getTagByName(String hostId, String tagName);

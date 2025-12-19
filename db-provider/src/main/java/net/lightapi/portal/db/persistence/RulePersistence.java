@@ -12,7 +12,7 @@ public interface RulePersistence {
     void updateRule(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteRule(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     Result<List<Map<String, Object>>> queryRuleByGroup(String groupId);
-    Result<String> queryRule(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
+    Result<String> queryRule(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<Map<String, Object>> queryRuleById(String ruleId);
     Result<String> queryRuleByType(String ruleType);
     Result<List<Map<String, Object>>> queryRuleByHostApiId(String hostId, String apiId, String apiVersion);

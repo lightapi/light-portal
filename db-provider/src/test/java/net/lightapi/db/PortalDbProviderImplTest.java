@@ -75,7 +75,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testGetRefTableNoHost() {
-        Result<String> result = dbProvider.getRefTable(0, 100, null, null, null, null);
+        Result<String> result = dbProvider.getRefTable(0, 100, null, null, null, true, null);
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
@@ -85,7 +85,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testGetRefTableWithFilters() {
-        Result<String> result = dbProvider.getRefTable(0, 100,"[{\"id\":\"tableName\",\"value\":\"env\"}]", null, null, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
+        Result<String> result = dbProvider.getRefTable(0, 100,"[{\"id\":\"tableName\",\"value\":\"env\"}]", null, null, true, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
@@ -95,7 +95,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testGetRefTableWithGlobalFilter() {
-        Result<String> result = dbProvider.getRefTable(0, 100,null, "env", null, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
+        Result<String> result = dbProvider.getRefTable(0, 100,null, "env", null, true,"01964b05-552a-7c4b-9184-6857e7f3dc5f");
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
@@ -105,7 +105,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testGetRefTableWithSorting() {
-        Result<String> result = dbProvider.getRefTable(0, 100,null, null, "[{\"id\":\"tableId\",\"desc\":false}]", "01964b05-552a-7c4b-9184-6857e7f3dc5f");
+        Result<String> result = dbProvider.getRefTable(0, 100,null, null, "[{\"id\":\"tableId\",\"desc\":false}]", true, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
@@ -115,7 +115,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testGetRefValueWithFilters() {
-        Result<String> result = dbProvider.getRefValue(0, 100,"[{\"id\":\"tableId\",\"value\":\"01964b05-552e-705a-a193-7a859347a9d5\"}]", null, null);
+        Result<String> result = dbProvider.getRefValue(0, 100,"[{\"id\":\"tableId\",\"value\":\"01964b05-552e-705a-a193-7a859347a9d5\"}]", null, null, true);
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
@@ -135,7 +135,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testQueryService() {
-        Result<String> result = dbProvider.queryApi(0, 2, null, null, null, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
+        Result<String> result = dbProvider.queryApi(0, 2, null, null, null, true, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
@@ -145,7 +145,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testQueryRule() {
-        Result<String> result = dbProvider.queryRule(0, 2, null, null, null, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
+        Result<String> result = dbProvider.queryRule(0, 2, null, null, null, true, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
@@ -161,7 +161,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     public void testQueryRole()  {
-        Result<String> result = dbProvider.queryRole(0, 4, null, null, null, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
+        Result<String> result = dbProvider.queryRole(0, 4, null, null, null, true, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
         if(result.isFailure()) {
             System.out.println(result.getError());
             fail();
@@ -176,7 +176,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     public void testQueryGroup() {
-        Result<String> result = dbProvider.queryGroup(0, 2, null, null, null,"01964b05-552a-7c4b-9184-6857e7f3dc5f");
+        Result<String> result = dbProvider.queryGroup(0, 2, null, null, null,true, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
         if(result.isFailure()) {
             System.out.println(result.getError());
             fail();
@@ -190,7 +190,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     public void testQueryPosition() {
-        Result<String> result = dbProvider.queryPosition(0, 2, null, null, null, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
+        Result<String> result = dbProvider.queryPosition(0, 2, null, null, null, true, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
         if(result.isFailure()) {
             System.out.println(result.getError());
             fail();
@@ -204,7 +204,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     public void testQueryAttribute() {
-        Result<String> result = dbProvider.queryAttribute(0, 2, null, null, null,"01964b05-552a-7c4b-9184-6857e7f3dc5f");
+        Result<String> result = dbProvider.queryAttribute(0, 2, null, null, null,true, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
         if(result.isFailure()) {
             System.out.println(result.getError());
             fail();
@@ -244,7 +244,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testListUserByHostId() {
-        Result<String> result = dbProvider.queryUserByHostId(0, 2, "[{\"id\":\"hostId\",\"value\":\"01964b05-552a-7c4b-9184-6857e7f3dc5f\"}]", null, null);
+        Result<String> result = dbProvider.queryUserByHostId(0, 2, "[{\"id\":\"hostId\",\"value\":\"01964b05-552a-7c4b-9184-6857e7f3dc5f\"}]", null, null, true);
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
@@ -254,7 +254,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testQueryApp() {
-        Result<String> result = dbProvider.queryApp(0, 2, "[{\"id\":\"active\",\"value\":false}]", null, null, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
+        Result<String> result = dbProvider.queryApp(0, 2, "[{\"id\":\"active\",\"value\":false}]", null, null, true, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
@@ -284,7 +284,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testGetProduct() {
-        Result<String> result = dbProvider.getProduct(0, 2, "[{\"id\":\"active\",\"value\":true}]", null, null, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
+        Result<String> result = dbProvider.getProduct(0, 2, "[{\"id\":\"active\",\"value\":true}]", null, null, true, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
@@ -294,7 +294,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testGetCategory() {
-        Result<String> result = dbProvider.getCategory(0, 2, null, null, null, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
+        Result<String> result = dbProvider.getCategory(0, 2, null, null, null, true, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
@@ -304,7 +304,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testGetCategoryWithoutHostId() {
-        Result<String> result = dbProvider.getCategory(0, 2, null, null, null, null);
+        Result<String> result = dbProvider.getCategory(0, 2, null, null, null, true,null);
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
@@ -364,7 +364,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testGetTag() {
-        Result<String> result = dbProvider.getTag(0, 2, null, null, null, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
+        Result<String> result = dbProvider.getTag(0, 2, null, null, null, true,"01964b05-552a-7c4b-9184-6857e7f3dc5f");
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {
@@ -471,7 +471,7 @@ public class PortalDbProviderImplTest {
     void testGetProviderClient() {
         Result<String> result = dbProvider.queryAuthProviderClient(0, 10,
                 "[{\"id\":\"providerId\",\"value\":\"AZZRJE52eXu3t1hseacnGQ\"},{\"id\":\"active\",\"value\":true}]", null, null,
-                "01964b05-552a-7c4b-9184-6857e7f3dc5f");
+                true, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
         if(result.isFailure()) {
             System.out.println(result.getError());
         } else {

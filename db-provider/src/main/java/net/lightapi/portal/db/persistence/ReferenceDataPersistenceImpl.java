@@ -273,7 +273,7 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
 
 
     @Override
-    public Result<String> getRefTable(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> getRefTable(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
 
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
@@ -294,8 +294,10 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
             s = s + " WHERE host_id IS NULL";
         }
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active);
         String[] searchColumns = {"table_name", "table_desc"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("table_id", "host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("table_id", "host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("table_name", sorting, null) +
                 "\nLIMIT ? OFFSET ?";
@@ -731,7 +733,7 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
     }
 
     @Override
-    public Result<String> getRefValue(int offset, int limit, String filtersJson, String globalFilter, String sortingJson) {
+    public Result<String> getRefValue(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active) {
         Result<String> result = null;
         final Map<String, String> columnMap = Map.of(
             "valueId", "v.value_id",
@@ -759,8 +761,10 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
 
         List<Object> parameters = new ArrayList<>();
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "v", "t");
         String[] searchColumns = {"t.table_name", "v.value_code", "v.value_desc"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("v.table_id", "v.value_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("v.table_id", "v.value_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("v.display_order, v.value_code", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -1121,7 +1125,7 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
 
 
     @Override
-    public Result<String> getRefLocale(int offset, int limit, String filtersJson, String globalFilter, String sortingJson) {
+    public Result<String> getRefLocale(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active) {
         Result<String> result = null;
         final Map<String, String> columnMap = Map.of(
                 "valueId", "l.value_id",
@@ -1146,8 +1150,10 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
 
         List<Object> parameters = new ArrayList<>();
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "l", "v");
         String[] searchColumns = {"v.value_code", "v.value_desc", "l.value_label"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("l.value_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("l.value_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("l.value_id, l.language", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -1387,7 +1393,7 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
 
 
     @Override
-    public Result<String> getRefRelationType(int offset, int limit, String filtersJson, String globalFilter, String sortingJson) {
+    public Result<String> getRefRelationType(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active) {
         Result<String> result = null;
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -1401,6 +1407,8 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
             """;
 
         List<Object> parameters = new ArrayList<>();
+
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active);
         String[] searchColumns = {"relation_name", "relation_desc"};
         String sqlBuilder = s + dynamicFilter(Arrays.asList("relation_id"), Arrays.asList(searchColumns), filters, null, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
@@ -1667,7 +1675,7 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
     }
 
     @Override
-    public Result<String> getRefRelation(int offset, int limit, String filtersJson, String globalFilter, String sortingJson) {
+    public Result<String> getRefRelation(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active) {
         Result<String> result = null;
         final Map<String, String> columnMap = Map.of(
                 "relationId", "r.relation_id",
@@ -1693,8 +1701,11 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
                 WHERE 1=1
             """;
         List<Object> parameters = new ArrayList<>();
+
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "r", "t", "v1", "v2");
         String[] searchColumns = {"t.relation_name", "v1.value_code", "v2.value_code"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("r.relation_id", "value_id_from", "value_id_to"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("r.relation_id", "value_id_from", "value_id_to"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("r.relation_id, r.value_id_from, r.value_id_to", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";

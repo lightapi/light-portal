@@ -14,7 +14,7 @@ public interface UserPersistence {
     Result<String> getUserById(String userId);
     Result<String> queryUserByTypeEntityId(String userType, String entityId);
     Result<String> queryUserByWallet(String cryptoType, String cryptoAddress);
-    Result<String> queryUserByHostId(int offset, int limit, String filters, String globalFilter, String sorting);
+    Result<String> queryUserByHostId(int offset, int limit, String filters, String globalFilter, String sorting, boolean active);
     Result<String> getHostsByUserId(String userId);
     Result<String> getHostLabelByUserId(String userId);
 

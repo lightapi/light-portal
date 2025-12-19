@@ -423,7 +423,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     }
 
     @Override
-    public Result<String> queryApi(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> queryApi(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -442,8 +442,10 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active);
         String[] searchColumns = {"api_id", "api_name", "api_desc"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("api_id", sorting, null) +
                 "\nLIMIT ? OFFSET ?";
@@ -1583,7 +1585,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     }
 
     @Override
-    public Result<String> queryApiEndpoint(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> queryApiEndpoint(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "e.host_id",
@@ -1617,8 +1619,10 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "e", "v");
         String[] searchColumns = {"e.endpoint", "e.endpoint_path", "e.endpoint_desc"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("e.host_id", "e.endpoint_id", "e.api_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("e.host_id", "e.endpoint_id", "e.api_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("e.endpoint", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";

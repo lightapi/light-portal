@@ -1933,7 +1933,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> getInstance(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> getInstance(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
 
         final Map<String, String> columnMap = new HashMap<>(Map.of(
@@ -1980,8 +1980,10 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "i", "pv");
         String[] searchColumns = {"i.instance_name", "i.service_desc", "i.instance_desc", "i.zone", "i.region", "i.lob", "i.resource_name", "i.business_name"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("i.host_id", "i.instance_id", "i.product_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("i.host_id", "i.instance_id", "i.product_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("i.instance_id", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -2381,7 +2383,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> getInstanceApi(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> getInstanceApi(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "ia.host_id",
@@ -2418,8 +2420,10 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "ia", "i", "pv", "av");
         String[] searchColumns = {"i.instance_name"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("ia.host_id", "ia.instance_api_id", "ia.instance_id", "ia.api_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("ia.host_id", "ia.instance_api_id", "ia.instance_id", "ia.api_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("instance_id, api_version_id", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -2787,7 +2791,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
 
     @Override
-    public Result<String> getInstanceApiPathPrefix(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> getInstanceApiPathPrefix(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "iapp.host_id",
@@ -2828,8 +2832,10 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "iapp", "iai", "i", "pv", "av", "ai");
         String[] searchColumns = {"i.instance_name", "iapp.path_prefix"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("iapp.host_id", "iapp.instance_api_id", "iai.instance_id", "iai.api_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("iapp.host_id", "iapp.instance_api_id", "iai.instance_id", "iai.api_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("iai.instance_id, iapp.instance_api_id, iapp.path_prefix", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -3163,7 +3169,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> getInstanceAppApi(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> getInstanceAppApi(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "iaa.host_id",
@@ -3208,8 +3214,10 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "iaa", "iap", "a", "iap", "iai", "i", "pv", "av", "ai");
         String[] searchColumns = {"i.instance_name"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("iaa.host_id", "iaa.instance_app_id", "iaa.instance_api_id", "iai.instance_id", "iai.api_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("iaa.host_id", "iaa.instance_app_id", "iaa.instance_api_id", "iai.instance_id", "iai.api_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("i.instance_name, iap.app_id, av.api_id", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -3557,7 +3565,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> getInstanceApp(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> getInstanceApp(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "ia.host_id",
@@ -3592,8 +3600,10 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "ia", "i", "pv");
         String[] searchColumns = {"i.instance_name"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("ia.host_id", "ia.instance_app_id", "ia.instance_id", "pv.product_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("ia.host_id", "ia.instance_app_id", "ia.instance_id", "pv.product_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("instance_id, app_id, app_version", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -4055,7 +4065,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> getProduct(int offset, int limit, String filtersJson, String globalFilter, String  sortingJson, String hostId) {
+    public Result<String> getProduct(int offset, int limit, String filtersJson, String globalFilter, String  sortingJson, boolean active, String hostId) {
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
 
@@ -4073,8 +4083,10 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active);
         String[] searchColumns = {"release_note", "version_desc", "org_desc"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("host_id", "product_version_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("host_id", "product_version_id"), Arrays.asList(searchColumns), filters, null, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("product_id, product_version", sorting, null) +
                 "\nLIMIT ? OFFSET ?";
@@ -4517,7 +4529,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
 
     @Override
-    public Result<String> getProductVersionEnvironment(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> getProductVersionEnvironment(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "pve.host_id",
@@ -4550,8 +4562,10 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "pve", "pv");
         String[] searchColumns = {"pve.system_env", "pve.runtime_env"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("pve.host_id", "pve.product_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("pve.host_id", "pve.product_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("pv.product_id, pv.product_version, pve.system_env, pve.runtime_env", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -4768,7 +4782,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> getProductVersionPipeline(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> getProductVersionPipeline(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "pvp.host_id",
@@ -4802,8 +4816,10 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "pvp", "pv", "p");
         String[] searchColumns = {"p.pipeline_name"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("pvp.host_id", "pvp.product_version_id", "pvp.pipeline_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("pvp.host_id", "pvp.product_version_id", "pvp.pipeline_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("pv.product_id, pv.product_version, p.pipeline_name, p.pipeline_version", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -4971,7 +4987,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> getProductVersionConfig(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> getProductVersionConfig(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "pvc.host_id",
                 "productVersionId", "pvc.product_version_id",
@@ -5001,8 +5017,10 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "pvc", "pv", "c");
         String[] searchColumns = {"c.config_name"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("pvc.host_id", "pvc.product_version_id", "pvc.config_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("pvc.host_id", "pvc.product_version_id", "pvc.config_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("pv.product_id, pv.product_version, c.config_name", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -5169,7 +5187,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> getProductVersionConfigProperty(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> getProductVersionConfigProperty(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "pvcp.host_id",
@@ -5205,8 +5223,10 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "pvcp", "pv", "cp", "c");
         String[] searchColumns = {"c.config_name", "cp.property_name"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("pvcp.host_id", "pvcp.product_version_id", "cp.config_id", "pvcp.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("pvcp.host_id", "pvcp.product_version_id", "cp.config_id", "pvcp.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("pv.product_id, pv.product_version, c.config_name, cp.property_name", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -5563,7 +5583,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> getPipeline(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> getPipeline(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
 
         final Map<String, String> columnMap = new HashMap<>(Map.of(
@@ -5604,8 +5624,10 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
         List<Object> parameters = new ArrayList<>();
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "p", "pf");
         String[] searchColumns = {"pf.platform_name", "p.pipeline_name", "p.endpoint"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("p.host_id", "p.pipeline_id", "p.platform_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("p.host_id", "p.pipeline_id", "p.platform_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("p.pipeline_id", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -6061,7 +6083,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
 
     @Override
-    public Result<String> getPlatform(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> getPlatform(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
 
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
@@ -6080,8 +6102,10 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active);
         String[] searchColumns = {"platform_name"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("host_id", "platform_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("host_id", "platform_id"), Arrays.asList(searchColumns), filters, null, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("platform_id", sorting, null) +
                 "\nLIMIT ? OFFSET ?";
@@ -6468,7 +6492,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
 
     @Override
-    public Result<String> getDeploymentInstance(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> getDeploymentInstance(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "di.host_id",
@@ -6507,8 +6531,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
+
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "di", "i", "p");
         String[] searchColumns = {"i.instance_name", "p.pipeline_name"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("di.host_id", "di.instance_id", "di.deployment_instance_id", "di.pipeline_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s +  activeClause +
+                dynamicFilter(Arrays.asList("di.host_id", "di.instance_id", "di.deployment_instance_id", "di.pipeline_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("di.host_id, di.deployment_instance_id", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -7113,7 +7140,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> getDeployment(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> getDeployment(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "d.host_id",
@@ -7147,8 +7174,10 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "d", "di");
         String[] searchColumns = {"di.service_id"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("d.host_id", "d.deployment_id", "d.deployment_instance_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("d.host_id", "d.deployment_id", "d.deployment_instance_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("d.deployment_id", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";

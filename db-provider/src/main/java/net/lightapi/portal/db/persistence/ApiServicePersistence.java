@@ -12,7 +12,7 @@ public interface ApiServicePersistence {
     void createApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> queryApi(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
+    Result<String> queryApi(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<String> queryApiLabel(String hostId);
     Result<String> getApiById(String hostId, String apiId);
 
@@ -29,7 +29,7 @@ public interface ApiServicePersistence {
     Map<String, Object> getEndpointIdMap(String hostId, String apiVersionId);
 
     // Service Endpoint
-    Result<String> queryApiEndpoint(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
+    Result<String> queryApiEndpoint(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<String> queryEndpointLabel(String hostId, String apiVersionId);
     Result<String> queryApiEndpointScope(String hostId, String endpointId);
 

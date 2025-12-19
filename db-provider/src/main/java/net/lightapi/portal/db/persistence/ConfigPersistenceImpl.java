@@ -253,7 +253,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     }
 
     @Override
-    public Result<String> getConfig(int offset, int limit, String filtersJson, String globalFilter, String sortingJson) {
+    public Result<String> getConfig(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active) {
         Result<String> result = null;
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -267,8 +267,11 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 """;
 
         List<Object> parameters = new ArrayList<>();
+
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active);
         String[] searchColumns = {"config_name", "config_desc"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("config_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("config_id"), Arrays.asList(searchColumns), filters, null, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("config_id", sorting, null) +
                 "\nLIMIT ? OFFSET ?";
@@ -900,7 +903,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     }
 
     @Override
-    public Result<String> getConfigProperty(int offset, int limit, String filtersJson, String globalFilter, String sortingJson) {
+    public Result<String> getConfigProperty(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active) {
         Result<String> result = null;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "configId", "cp.config_id",
@@ -937,8 +940,11 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 """;
 
         List<Object> parameters = new ArrayList<>();
+
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "cp", "c");
         String[] searchColumns = {"cp.property_name", "cp.property_desc", "c.config_name"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("cp.config_id", "cp.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("cp.config_id", "cp.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("cp.config_id, cp.display_order", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -1337,7 +1343,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     }
 
     @Override
-    public Result<String> getConfigEnvironment(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> getConfigEnvironment(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "ep.host_id",
@@ -1370,8 +1376,10 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "ep", "p", "c");
         String[] searchColumns = {"c.config_name", "p.property_name", "ep.propertyValue"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("ep.host_id", "c.config_id", "ep.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("ep.host_id", "c.config_id", "ep.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("ep.environment, c.config_id, p.display_order", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -1700,7 +1708,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     }
 
     @Override
-    public Result<String> getConfigInstanceApi(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> getConfigInstanceApi(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "iap.host_id",
@@ -1749,8 +1757,10 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "iap", "av", "i", "p", "c");
         String[] searchColumns = {"i.instance_name", "c.config_name", "p.property_name", "p.property_desc", "c.config_desc"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("iap.host_id", "iap.instance_api_id", "ia.instance_id", "ia.api_version_id", "p.config_id", "iap.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s +  activeClause +
+                dynamicFilter(Arrays.asList("iap.host_id", "iap.instance_api_id", "ia.instance_id", "ia.api_version_id", "p.config_id", "iap.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("iap.host_id, ia.instance_id, av.api_id, av.api_version, p.config_id, p.display_order", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -2094,7 +2104,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     }
 
     @Override
-    public Result<String> getConfigInstanceApp(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> getConfigInstanceApp(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "iap.host_id",
@@ -2144,8 +2154,10 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "iap", "ia", "i", "p", "c");
         String[] searchColumns = {"i.instance_name", "c.config_name", "p.property_name", "p.property_desc", "c.config_desc"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("iap.host_id", "iap.instance_app_id", "ia.instance_id", "p.config_id", "iap.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("iap.host_id", "iap.instance_app_id", "ia.instance_id", "p.config_id", "iap.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("iap.host_id, ia.instance_id, ia.app_id, ia.app_version, p.config_id, p.property_name", sorting, columnMap) +
                 // Pagination
@@ -2493,7 +2505,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     }
 
     @Override
-    public Result<String> getConfigInstanceAppApi(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> getConfigInstanceAppApi(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "iaap.host_id",
@@ -2550,8 +2562,10 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "iaap", "i", "iai", "av", "p", "c");
         String[] searchColumns = {"i.instance_name", "c.config_name", "p.property_name", "p.property_desc", "c.config_desc"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("iaap.host_id", "iaap.instance_app_id", "iaap.instance_api_id", "i.instance_id", "iai.api_version_id", "p.config_id", "iaap.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("iaap.host_id", "iaap.instance_app_id", "iaap.instance_api_id", "i.instance_id", "iai.api_version_id", "p.config_id", "iaap.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("iaap.host_id, i.instance_id, iap.app_id, iap.app_version, av.api_id, av.api_version, p.config_id, p.property_name", sorting, columnMap) +
                 // Pagination
@@ -2988,7 +3002,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     }
 
     @Override
-    public Result<String> getConfigSnapshot(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> getConfigSnapshot(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "snapshotId", "snapshot_id",
@@ -3022,8 +3036,10 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active);
         String[] searchColumns = {"description"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("snapshot_id", "host_id", "instance_id", "user_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("snapshot_id", "host_id", "instance_id", "user_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("host_id, instance_id, snapshot_ts", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -3905,7 +3921,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     }
 
     @Override
-    public Result<String> getConfigInstance(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> getConfigInstance(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "ip.host_id",
@@ -3949,8 +3965,10 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         parameters.add(UUID.fromString(hostId));
 
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "ip", "p", "i", "c");
         String[] searchColumns = {"i.instance_name", "c.config_name", "p.property_name", "p.property_desc", "c.config_desc"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("ip.host_id", "ip.instance_id", "p.config_id", "ip.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("ip.host_id", "ip.instance_id", "p.config_id", "ip.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("ip.host_id, ip.instance_id, p.config_id, p.display_order", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -4317,7 +4335,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     }
 
     @Override
-    public Result<String> getConfigInstanceFile(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> getConfigInstanceFile(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "ift.host_id",
@@ -4351,8 +4369,10 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "ift", "i");
         String[] searchColumns = {"i.instance_name", "ift.file_name", "ift.file_desc"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("ift.host_id", "ift.instance_file_id", "ift.instance_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("ift.host_id", "ift.instance_file_id", "ift.instance_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("ift.host_id, ift.instance_file_id, ift.instance_id", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -4674,7 +4694,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     }
 
     @Override
-    public Result<String> getConfigDeploymentInstance(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> getConfigDeploymentInstance(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "dip.host_id",
@@ -4716,8 +4736,10 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "dip", "di", "i", "cp", "c");
         String[] searchColumns = {"i.instance_name", "c.config_name", "cp.property_name"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("dip.host_id", "dip.deployment_instance_id", "di.instance_id", "cp.config_id", "dip.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("dip.host_id", "dip.deployment_instance_id", "di.instance_id", "cp.config_id", "dip.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("dip.host_id, di.service_id", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -5025,7 +5047,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     }
 
     @Override
-    public Result<String> getConfigProduct(int offset, int limit, String filtersJson, String globalFilter, String sortingJson) {
+    public Result<String> getConfigProduct(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active) {
         Result<String> result = null;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "productId", "pp.product_id",
@@ -5057,8 +5079,10 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
         List<Object> parameters = new ArrayList<>();
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "pp", "p", "c");
         String[] searchColumns = {"p.property_name", "c.config_name"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("p.config_id", "pp.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("p.config_id", "pp.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("pp.product_id, p.config_id, p.property_name", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -5369,7 +5393,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     }
 
     @Override
-    public Result<String> getConfigProductVersion(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> getConfigProductVersion(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "pvp.host_id",
@@ -5407,8 +5431,10 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "pvp", "pv", "p", "c");
         String[] searchColumns = {"p.property_name", "c.config_name"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("pvp.host_id", "pvp.product_version_id", "p.config_id", "pvp.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("pvp.host_id", "pvp.product_version_id", "p.config_id", "pvp.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("pvp.host_id, pv.product_id, pv.product_version, p.config_id, p.display_order", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";

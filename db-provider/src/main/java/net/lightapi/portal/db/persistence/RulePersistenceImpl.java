@@ -485,7 +485,7 @@ public class RulePersistenceImpl implements RulePersistence {
     }
 
     @Override
-    public Result<String> queryRule(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> queryRule(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
 
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
@@ -510,8 +510,10 @@ public class RulePersistenceImpl implements RulePersistence {
             s = s + " host_id IS NULL";
         }
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active);
         String[] searchColumns = {"rule_name", "rule_desc"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("rule_id, rule_version", sorting, null) +
                 "\nLIMIT ? OFFSET ?";

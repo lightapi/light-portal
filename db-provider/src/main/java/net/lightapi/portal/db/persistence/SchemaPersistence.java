@@ -9,7 +9,7 @@ public interface SchemaPersistence {
     void createSchema(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateSchema(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteSchema(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> getSchema(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
+    Result<String> getSchema(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<String> getSchemaLabel(String hostId);
     Result<String> getSchemaById(String schemaId);
     Result<String> getSchemaByCategoryId(String categoryId);

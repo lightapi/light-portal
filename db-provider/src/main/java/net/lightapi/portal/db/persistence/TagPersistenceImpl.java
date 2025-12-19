@@ -438,7 +438,7 @@ public class TagPersistenceImpl implements TagPersistence {
     }
 
     @Override
-    public Result<String> getTag(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> getTag(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -464,8 +464,10 @@ public class TagPersistenceImpl implements TagPersistence {
             s = s + "WHERE host_id IS NULL";
         }
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active);
         String[] searchColumns = {"tag_name", "tag_desc"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("host_id", "tag_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("host_id", "tag_id"), Arrays.asList(searchColumns), filters, null, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("tag_name", sorting, null) +
                 "\nLIMIT ? OFFSET ?";

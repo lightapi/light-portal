@@ -208,7 +208,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryRole(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> queryRole(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -225,9 +225,10 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active);
         String[] searchColumns = {"role_id", "role_desc"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("role_id", sorting, null) +
                 "\nLIMIT ? OFFSET ?";
@@ -359,7 +360,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryRolePermission(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> queryRolePermission(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "r.host_id",
@@ -394,8 +395,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        // Generate the active clause. 'rp' (role_permission_t) is the primary table, so pass it first.
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "rp", "r", "ae", "av");
+
         String[] searchColumns = {"r.role_id", "av.api_id", "ae.endpoint"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("r.host_id", "av.api_version_id", "rp.endpoint_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("r.host_id", "av.api_version_id", "rp.endpoint_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("r.role_id, av.api_id, av.api_version, ae.endpoint", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -447,7 +452,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryRoleUser(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> queryRoleUser(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "r.host_id",
@@ -496,9 +501,10 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "u", "c", "e", "r");
         String[] searchColumns = {"r.role_id", "u.email", "u.first_name", "u.last_name"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("r.host_id", "u.user_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("r.host_id", "u.user_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("r.role_id, u.user_id", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -937,7 +943,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
     @Override
-    public Result<String> queryRoleRowFilter(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> queryRoleRowFilter(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "r.host_id",
@@ -975,8 +981,10 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "p", "r", "ae", "av");
         String[] searchColumns = {"r.role_id", "ae.endpoint", "p.col_name", "p.col_value"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("r.host_id", "p.endpoint_id", "av.api_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("r.host_id", "p.endpoint_id", "av.api_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("p.role_id, av.api_id, av.api_version, ae.endpoint, p.col_name", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -1300,7 +1308,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
 
     @Override
-    public Result<String> queryRoleColFilter(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> queryRoleColFilter(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "r.host_id",
@@ -1337,8 +1345,10 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "rcf", "r", "ae", "av");
         String[] searchColumns = {"r.role_id", "ae.endpoint", "rcf.columns"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("r.host_id", "av.api_version_id", "ae.endpoint_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("r.host_id", "av.api_version_id", "ae.endpoint_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("r.role_id, av.api_id, av.api_version, ae.endpoint", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -1831,7 +1841,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryGroup(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> queryGroup(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -1847,8 +1857,10 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active);
         String[] searchColumns = {"group_id", "group_desc"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("group_id", sorting, null) +
                 "\nLIMIT ? OFFSET ?";
@@ -1972,7 +1984,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryGroupPermission(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> queryGroupPermission(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "gp.host_id",
@@ -2006,8 +2018,10 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "gp", "g", "ae", "av");
         String[] searchColumns = {"gp.group_id", "ae.endpoint"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("gp.host_id", "av.api_version_id", "ae.endpoint_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("gp.host_id", "av.api_version_id", "ae.endpoint_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("gp.group_id, av.api_id, av.api_version, ae.endpoint", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -2064,7 +2078,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryGroupUser(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> queryGroupUser(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
 
         final Map<String, String> columnMap = new HashMap<>(Map.of(
@@ -2114,8 +2128,10 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         parameters.add(UUID.fromString(hostId));
 
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "u", "c", "e", "g");
         String[] searchColumns = {"g.group_id", "u.email", "u.first_name", "u.last_name"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("g.host_id", "u.user_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("g.host_id", "u.user_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("g.group_id, u.user_id", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -2574,7 +2590,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryGroupRowFilter(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> queryGroupRowFilter(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "g.host_id",
@@ -2612,8 +2628,10 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "p", "g", "ae", "av");
         String[] searchColumns = {"g.group_id", "ae.endpoint", "p.col_name", "p.col_value"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("g.host_id", "p.endpoint_id", "av.api_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("g.host_id", "p.endpoint_id", "av.api_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("g.group_id, av.api_id, av.api_version, ae.endpoint, p.col_name, p.operator", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -2940,7 +2958,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryGroupColFilter(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> queryGroupColFilter(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "g.host_id",
@@ -2976,8 +2994,10 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "cf", "g", "ae", "av");
         String[] searchColumns = {"g.group_id", "ae.endpoint", "cf.columns"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("g.host_id", "av.api_version_id", "ae.endpoint_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("g.host_id", "av.api_version_id", "ae.endpoint_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("g.group_id, av.api_id, av.api_version, ae.endpoint", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -3511,7 +3531,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryPosition(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> queryPosition(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -3528,6 +3548,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active);
         String[] searchColumns = {"position_id", "position_desc"};
         String sqlBuilder = s + dynamicFilter(Arrays.asList("host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
@@ -3657,7 +3678,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryPositionPermission(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> queryPositionPermission(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "pp.host_id",
@@ -3694,8 +3715,10 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "pp", "p", "ae", "av");
         String[] searchColumns = {"pp.position_id", "ae.endpoint"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("pp.host_id", "av.api_version_id", "ae.endpoint_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("pp.host_id", "av.api_version_id", "ae.endpoint_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("pp.position_id, av.api_id, av.api_version, ae.endpoint", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -3753,7 +3776,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryPositionUser(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> queryPositionUser(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "ep.host_id",
@@ -3797,8 +3820,10 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "u", "e", "ep");
         String[] searchColumns = {"ep.position_id", "u.email", "u.first_name", "u.last_name"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("ep.host_id", "u.user_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("ep.host_id", "u.user_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("ep.position_id, u.user_id", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -4272,7 +4297,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryPositionRowFilter(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> queryPositionRowFilter(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "o.host_id",
@@ -4310,8 +4335,10 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "p", "o", "ae", "av");
         String[] searchColumns = {"o.position_id", "ae.endpoint", "p.col_name", "p.col_value"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("o.host_id", "p.endpoint_id", "av.api_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("o.host_id", "p.endpoint_id", "av.api_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("o.position_id, av.api_id, av.api_version, ae.endpoint, p.col_name, p.operator", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -4637,7 +4664,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryPositionColFilter(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> queryPositionColFilter(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "o.host_id",
@@ -4674,8 +4701,10 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "cf", "o", "ae", "av");
         String[] searchColumns = {"o.position_id", "ae.endpoint", "cf.columns"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("o.host_id", "av.api_version_id", "ae.endpoint_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("o.host_id", "av.api_version_id", "ae.endpoint_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("o.position_id, av.api_id, av.api_version, ae.endpoint", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -5191,7 +5220,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryAttribute(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> queryAttribute(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -5207,8 +5236,11 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
+
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active);
         String[] searchColumns = {"attribute_id", "attribute_desc"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("attribute_id", sorting, null) +
                 "\nLIMIT ? OFFSET ?";
@@ -5335,7 +5367,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryAttributePermission(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> queryAttributePermission(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "ap.host_id",
@@ -5373,8 +5405,10 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "ap", "a", "ae", "av");
         String[] searchColumns = {"ap.attribute_id", "ap.attribute_value", "ae.endpoint"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("ap.host_id", "av.api_version_id", "ap.endpoint_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("ap.host_id", "av.api_version_id", "ap.endpoint_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("ap.attribute_id, av.api_id, av.api_version, ae.endpoint", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -5480,7 +5514,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryAttributeUser(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> queryAttributeUser(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "a.host_id",
@@ -5536,8 +5570,10 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "u", "c", "e", "a", "at");
         String[] searchColumns = {"a.attribute_id", "a.attribute_value", "u.email", "u.first_name", "u.last_name"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("a.host_id", "u.user_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("a.host_id", "u.user_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("a.attribute_id, u.user_id", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -6082,7 +6118,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryAttributeRowFilter(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> queryAttributeRowFilter(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "a.host_id",
@@ -6123,8 +6159,10 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "p", "a", "ae", "av");
         String[] searchColumns = {"a.attribute_id", "p.attribute_value", "ae.endpoint", "p.col_name", "p.col_value"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("a.host_id", "p.endpoint_id", "av.api_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("a.host_id", "p.endpoint_id", "av.api_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("a.attribute_id, av.api_id, av.api_version, ae.endpoint, p.col_name, p.operator", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -6462,7 +6500,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public Result<String> queryAttributeColFilter(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> queryAttributeColFilter(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "a.host_id",
@@ -6501,8 +6539,10 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "cf", "a", "ae", "av");
         String[] searchColumns = {"a.attribute_id", "cf.attribute_value", "ae.endpoint", "cf.columns"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("a.host_id", "av.api_version_id", "ae.endpoint_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("a.host_id", "av.api_version_id", "ae.endpoint_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("a.attribute_id, av.api_id, av.api_version, ae.endpoint", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";

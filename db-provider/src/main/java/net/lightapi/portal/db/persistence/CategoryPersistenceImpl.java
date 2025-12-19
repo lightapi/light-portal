@@ -475,7 +475,7 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
     }
 
     @Override
-    public Result<String> getCategory(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> getCategory(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "cat.host_id",
@@ -516,8 +516,10 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
             s = s + "cat.host_id IS NULL";
         }
 
-        String[] searchColumns = {"cat.category_name", "cat.category_desc", "e.endpoint_desc"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("cat.host_id", "cat.category_id", "cat.parent_category_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "cat", "parent_cat");
+        String[] searchColumns = {"cat.category_name", "cat.category_desc"};
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("cat.host_id", "cat.category_id", "cat.parent_category_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("cat.category_name", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";

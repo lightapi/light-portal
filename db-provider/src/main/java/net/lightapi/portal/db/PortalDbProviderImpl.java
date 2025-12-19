@@ -63,27 +63,27 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void createRefTable(Connection connection, Map<String, Object> event) throws SQLException, Exception { referenceDataPersistence.createRefTable(connection, event); }
     @Override public void updateRefTable(Connection connection, Map<String, Object> event) throws SQLException, Exception { referenceDataPersistence.updateRefTable(connection, event); }
     @Override public void deleteRefTable(Connection connection, Map<String, Object> event) throws SQLException, Exception { referenceDataPersistence.deleteRefTable(connection, event); }
-    @Override public Result<String> getRefTable(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return referenceDataPersistence.getRefTable(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getRefTable(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return referenceDataPersistence.getRefTable(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getRefTableById(String tableId) { return referenceDataPersistence.getRefTableById(tableId); }
     @Override public Result<String> getRefTableLabel(String hostId) { return referenceDataPersistence.getRefTableLabel(hostId); }
     @Override public void createRefValue(Connection connection, Map<String, Object> event) throws SQLException, Exception { referenceDataPersistence.createRefValue(connection, event); }
     @Override public void updateRefValue(Connection connection, Map<String, Object> event) throws SQLException, Exception { referenceDataPersistence.updateRefValue(connection, event); }
     @Override public void deleteRefValue(Connection connection, Map<String, Object> event) throws SQLException, Exception { referenceDataPersistence.deleteRefValue(connection, event); }
-    @Override public Result<String> getRefValue(int offset, int limit, String filters, String globalFilter, String sorting) { return referenceDataPersistence.getRefValue(offset, limit, filters, globalFilter, sorting); }
+    @Override public Result<String> getRefValue(int offset, int limit, String filters, String globalFilter, String sorting, boolean active) { return referenceDataPersistence.getRefValue(offset, limit, filters, globalFilter, sorting, active); }
     @Override public Result<String> getRefValueById(String valueId) { return referenceDataPersistence.getRefValueById(valueId); }
     @Override public Result<String> getRefValueLabel(String tableId) { return referenceDataPersistence.getRefValueLabel(tableId); }
     @Override public void createRefLocale(Connection connection, Map<String, Object> event) throws SQLException, Exception { referenceDataPersistence.createRefLocale(connection, event); }
     @Override public void updateRefLocale(Connection connection, Map<String, Object> event) throws SQLException, Exception { referenceDataPersistence.updateRefLocale(connection, event); }
     @Override public void deleteRefLocale(Connection connection, Map<String, Object> event) throws SQLException, Exception { referenceDataPersistence.deleteRefLocale(connection, event); }
-    @Override public Result<String> getRefLocale(int offset, int limit, String filters, String globalFilter, String sorting) { return referenceDataPersistence.getRefLocale(offset, limit, filters, globalFilter, sorting); }
+    @Override public Result<String> getRefLocale(int offset, int limit, String filters, String globalFilter, String sorting, boolean active) { return referenceDataPersistence.getRefLocale(offset, limit, filters, globalFilter, sorting, active); }
     @Override public void createRefRelationType(Connection connection, Map<String, Object> event) throws SQLException, Exception { referenceDataPersistence.createRefRelationType(connection, event); }
     @Override public void updateRefRelationType(Connection connection, Map<String, Object> event) throws SQLException, Exception { referenceDataPersistence.updateRefRelationType(connection, event); }
     @Override public void deleteRefRelationType(Connection connection, Map<String, Object> event) throws SQLException, Exception { referenceDataPersistence.deleteRefRelationType(connection, event); }
-    @Override public Result<String> getRefRelationType(int offset, int limit, String filters, String globalFilter, String sorting) { return referenceDataPersistence.getRefRelationType(offset, limit, filters, globalFilter, sorting); }
+    @Override public Result<String> getRefRelationType(int offset, int limit, String filters, String globalFilter, String sorting, boolean active) { return referenceDataPersistence.getRefRelationType(offset, limit, filters, globalFilter, sorting, active); }
     @Override public void createRefRelation(Connection connection, Map<String, Object> event) throws SQLException, Exception { referenceDataPersistence.createRefRelation(connection, event); }
     @Override public void updateRefRelation(Connection connection, Map<String, Object> event) throws SQLException, Exception { referenceDataPersistence.updateRefRelation(connection, event); }
     @Override public void deleteRefRelation(Connection connection, Map<String, Object> event) throws SQLException, Exception { referenceDataPersistence.deleteRefRelation(connection, event); }
-    @Override public Result<String> getRefRelation(int offset, int limit, String filters, String globalFilter, String sorting) { return referenceDataPersistence.getRefRelation(offset, limit, filters, globalFilter, sorting); }
+    @Override public Result<String> getRefRelation(int offset, int limit, String filters, String globalFilter, String sorting, boolean active) { return referenceDataPersistence.getRefRelation(offset, limit, filters, globalFilter, sorting, active); }
     @Override public Result<String> getToValueCode(String relationName, String fromValueCode) { return referenceDataPersistence.getToValueCode(relationName, fromValueCode); };
 
     // --- User ---
@@ -93,7 +93,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public Result<String> getUserById(String userId) { return userPersistence.getUserById(userId); }
     @Override public Result<String> queryUserByTypeEntityId(String userType, String entityId) { return userPersistence.queryUserByTypeEntityId(userType, entityId); }
     @Override public Result<String> queryUserByWallet(String cryptoType, String cryptoAddress) { return userPersistence.queryUserByWallet(cryptoType, cryptoAddress); }
-    @Override public Result<String> queryUserByHostId(int offset, int limit, String filters, String globalFilter, String sorting) { return userPersistence.queryUserByHostId(offset, limit, filters, globalFilter, sorting); }
+    @Override public Result<String> queryUserByHostId(int offset, int limit, String filters, String globalFilter, String sorting, boolean active) { return userPersistence.queryUserByHostId(offset, limit, filters, globalFilter, sorting, active); }
     @Override public Result<String> getHostsByUserId(String userId) {return userPersistence.getHostsByUserId(userId); }
     @Override public Result<String> getHostLabelByUserId(String userId) {return userPersistence.getHostLabelByUserId(userId); }
     @Override public void createUser(Connection connection, Map<String, Object> event) throws SQLException, Exception { userPersistence.createUser(connection, event); }
@@ -122,13 +122,13 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void createApp(Connection connection, Map<String, Object> event) throws SQLException, Exception { authPersistence.createApp(connection, event); }
     @Override public void updateApp(Connection connection, Map<String, Object> event) throws SQLException, Exception { authPersistence.updateApp(connection, event); }
     @Override public void deleteApp(Connection connection, Map<String, Object> event) throws SQLException, Exception { authPersistence.deleteApp(connection, event); }
-    @Override public Result<String> queryApp(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return authPersistence.queryApp(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> queryApp(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return authPersistence.queryApp(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String>  queryAppById(java.lang.String hostId, java.lang.String appId) { return authPersistence.queryAppById(hostId, appId); }
     @Override public Result<String> getAppIdLabel(String hostId) { return authPersistence.getAppIdLabel(hostId); }
     @Override public void createClient(Connection connection, Map<String, Object> event) throws SQLException, Exception { authPersistence.createClient(connection, event); }
     @Override public void updateClient(Connection connection, Map<String, Object> event) throws SQLException, Exception { authPersistence.updateClient(connection, event); }
     @Override public void deleteClient(Connection connection, Map<String, Object> event) throws SQLException, Exception { authPersistence.deleteClient(connection, event); }
-    @Override public Result<String> queryClient(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return authPersistence.queryClient(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> queryClient(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return authPersistence.queryClient(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> queryClientByClientId(String clientId) { return authPersistence.queryClientByClientId(clientId); }
     @Override public Result<String> getClientById(String hostId, String clientId) { return authPersistence.getClientById(hostId, clientId); }
     @Override public Result<String> queryClientByProviderClientId(String providerId, String clientId) { return authPersistence.queryClientByProviderClientId(providerId, clientId); }
@@ -141,39 +141,39 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public Result<Map<String, Object>> queryProviderById(String providerId) { return authPersistence.queryProviderById(providerId); }
     @Override public Result<String> getProviderIdLabel(String hostId) { return authPersistence.getProviderIdLabel(hostId); }
     @Override public String queryProviderByName(String hostId, String providerName) { return authPersistence.queryProviderByName(hostId, providerName); }
-    @Override public Result<String> queryProvider(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return authPersistence.queryProvider(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> queryProvider(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return authPersistence.queryProvider(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> queryProviderKey(String providerId) { return authPersistence.queryProviderKey(providerId); }
     @Override public Result<Map<String, Object>> queryCurrentProviderKey(String providerId) { return authPersistence.queryCurrentProviderKey(providerId); }
     @Override public Result<Map<String, Object>> queryLongLiveProviderKey(String providerId) { return authPersistence.queryLongLiveProviderKey(providerId); }
     @Override public void createAuthProviderApi(Connection conn, Map<String, Object> event) throws SQLException, Exception { authPersistence.createAuthProviderApi(conn, event); }
     @Override public void updateAuthProviderApi(Connection conn, Map<String, Object> event) throws SQLException, Exception { authPersistence.updateAuthProviderApi(conn, event); }
     @Override public void deleteAuthProviderApi(Connection conn, Map<String, Object> event) throws SQLException, Exception { authPersistence.deleteAuthProviderApi(conn, event); }
-    @Override public Result<String> queryAuthProviderApi(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return authPersistence.queryAuthProviderApi(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> queryAuthProviderApi(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return authPersistence.queryAuthProviderApi(offset, limit, filters, globalFilter, sorting, active, hostId); }
 
     @Override public void createAuthProviderClient(Connection conn, Map<String, Object> event) throws SQLException, Exception { authPersistence.createAuthProviderClient(conn, event); }
     @Override public void updateAuthProviderClient(Connection conn, Map<String, Object> event) throws SQLException, Exception { authPersistence.updateAuthProviderClient(conn, event); }
     @Override public void deleteAuthProviderClient(Connection conn, Map<String, Object> event) throws SQLException, Exception { authPersistence.deleteAuthProviderClient(conn, event); }
-    @Override public Result<String> queryAuthProviderClient(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return authPersistence.queryAuthProviderClient(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> queryAuthProviderClient(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return authPersistence.queryAuthProviderClient(offset, limit, filters, globalFilter, sorting, active, hostId); }
 
     @Override public void createAuthCode(Connection connection, Map<String, Object> event) throws SQLException, Exception { authPersistence.createAuthCode(connection, event); }
     @Override public void deleteAuthCode(Connection connection, Map<String, Object> event) throws SQLException, Exception { authPersistence.deleteAuthCode(connection, event); }
     @Override public Result<String> queryAuthCode(String authCode) { return authPersistence.queryAuthCode(authCode); }
-    @Override public Result<String> getAuthCode(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return authPersistence.getAuthCode(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getAuthCode(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return authPersistence.getAuthCode(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public void createRefreshToken(Connection connection, Map<String, Object> event) throws SQLException, Exception { authPersistence.createRefreshToken(connection, event); }
     @Override public void deleteRefreshToken(Connection connection, Map<String, Object> event) throws SQLException, Exception { authPersistence.deleteRefreshToken(connection, event); }
-    @Override public Result<String> getRefreshToken(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return authPersistence.getRefreshToken(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getRefreshToken(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return authPersistence.getRefreshToken(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> queryRefreshToken(String refreshToken) { return authPersistence.queryRefreshToken(refreshToken); }
 
     @Override public void createRefToken(Connection connection, Map<String, Object> event) throws SQLException, Exception {authPersistence.createRefToken(connection, event); }
     @Override public void deleteRefToken(Connection connection, Map<String, Object> event) throws SQLException, Exception { authPersistence.deleteRefToken(connection, event); }
-    @Override public Result<String> getRefToken(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return authPersistence.getRefToken(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getRefToken(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return authPersistence.getRefToken(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> queryRefToken(String refToken) {return authPersistence.queryRefToken(refToken); };
 
     // --- ApiService ---
     @Override public void createApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.createApi(connection, event); }
     @Override public void updateApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.updateApi(connection, event); }
     @Override public void deleteApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.deleteApi(connection, event); }
-    @Override public Result<String> queryApi(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return apiServicePersistence.queryApi(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> queryApi(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return apiServicePersistence.queryApi(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> queryApiLabel(String hostId) { return apiServicePersistence.queryApiLabel(hostId); }
     @Override public Result<String> getApiById(String hostId, String apiId) { return apiServicePersistence.getApiById(hostId, apiId); }
     @Override public Result<String> getApiVersionById(String hostId, String apiVersionId) { return apiServicePersistence.getApiVersionById(hostId, apiVersionId); }
@@ -187,7 +187,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public Result<String> getApiVersionIdLabel(String hostId) { return apiServicePersistence.getApiVersionIdLabel(hostId); }
     @Override public Result<String> queryApiVersionLabel(String hostId, String apiId) { return apiServicePersistence.queryApiVersionLabel(hostId, apiId); }
     @Override public void updateApiVersionSpec(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.updateApiVersionSpec(connection, event); }
-    @Override public Result<String> queryApiEndpoint(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return apiServicePersistence.queryApiEndpoint(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> queryApiEndpoint(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return apiServicePersistence.queryApiEndpoint(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> queryEndpointLabel(String hostId, String apiVersionId) { return apiServicePersistence.queryEndpointLabel(hostId, apiVersionId); }
     @Override public Result<String> queryApiEndpointScope(String hostId, String endpointId) { return apiServicePersistence.queryApiEndpointScope(hostId, endpointId); }
     @Override public void createApiEndpointRule(Connection connection, Map<String, Object> event) throws SQLException, Exception { apiServicePersistence.createApiEndpointRule(connection, event); }
@@ -203,7 +203,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void createOrg(Connection connection, Map<String, Object> event) throws SQLException, Exception { hostOrgPersistence.createOrg(connection, event); }
     @Override public void updateOrg(Connection connection, Map<String, Object> event) throws SQLException, Exception { hostOrgPersistence.updateOrg(connection, event); }
     @Override public void deleteOrg(Connection connection, Map<String, Object> event) throws SQLException, Exception { hostOrgPersistence.deleteOrg(connection, event); }
-    @Override public Result<String> getOrg(int offset, int limit, String filters, String globalFilter, String sorting) { return hostOrgPersistence.getOrg(offset, limit, filters, globalFilter, sorting); }
+    @Override public Result<String> getOrg(int offset, int limit, String filters, String globalFilter, String sorting, boolean active) { return hostOrgPersistence.getOrg(offset, limit, filters, globalFilter, sorting, active); }
     @Override public void createHost(Connection connection, Map<String, Object> event) throws SQLException, Exception { hostOrgPersistence.createHost(connection, event); }
     @Override public void updateHost(Connection connection, Map<String, Object> event) throws SQLException, Exception { hostOrgPersistence.updateHost(connection, event); }
     @Override public void deleteHost(Connection connection, Map<String, Object> event) throws SQLException, Exception { hostOrgPersistence.deleteHost(connection, event); }
@@ -213,8 +213,8 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public Result<String> queryHostDomainById(String hostId) { return hostOrgPersistence.queryHostDomainById(hostId); }
     @Override public Result<String> queryHostById(String id) { return hostOrgPersistence.queryHostById(id); }
     @Override public Result<Map<String, Object>> queryHostByOwner(String owner) { return hostOrgPersistence.queryHostByOwner(owner); }
-    @Override public Result<String> getHost(int offset, int limit, String filters, String globalFilter, String sorting) { return hostOrgPersistence.getHost(offset, limit, filters, globalFilter, sorting); }
-    @Override public Result<String> getUserHost(int offset, int limit, String filters, String globalFilter, String sorting) { return hostOrgPersistence.getUserHost(offset, limit, filters, globalFilter, sorting); }
+    @Override public Result<String> getHost(int offset, int limit, String filters, String globalFilter, String sorting, boolean active) { return hostOrgPersistence.getHost(offset, limit, filters, globalFilter, sorting, active); }
+    @Override public Result<String> getUserHost(int offset, int limit, String filters, String globalFilter, String sorting, boolean active) { return hostOrgPersistence.getUserHost(offset, limit, filters, globalFilter, sorting, active); }
     @Override public Result<String> getHostByDomain(String domain, String subDomain, String hostDesc) { return hostOrgPersistence.getHostByDomain(domain, subDomain, hostDesc); }
     @Override public Result<String> getHostLabel() { return hostOrgPersistence.getHostLabel(); }
     @Override public Result<String> getOrgByDomain(String domain) { return hostOrgPersistence.getOrgByDomain(domain); }
@@ -224,7 +224,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void createConfig(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.createConfig(connection, event); }
     @Override public void updateConfig(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.updateConfig(connection, event); }
     @Override public void deleteConfig(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.deleteConfig(connection, event); }
-    @Override public Result<String> getConfig(int offset, int limit, String filters, String globalFilter, String sorting) { return configPersistence.getConfig(offset, limit, filters, globalFilter, sorting); }
+    @Override public Result<String> getConfig(int offset, int limit, String filters, String globalFilter, String sorting, boolean active) { return configPersistence.getConfig(offset, limit, filters, globalFilter, sorting, active); }
     @Override public Result<String> queryConfigById(String configId) { return configPersistence.queryConfigById(configId); }
     @Override public Result<String> getConfigIdLabel() { return configPersistence.getConfigIdLabel(); }
     @Override public String queryConfigId(String configName) { return configPersistence.queryConfigId(configName); }
@@ -232,7 +232,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void createConfigProperty(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.createConfigProperty(connection, event); }
     @Override public void updateConfigProperty(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.updateConfigProperty(connection, event); }
     @Override public void deleteConfigProperty(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.deleteConfigProperty(connection, event); }
-    @Override public Result<String> getConfigProperty(int offset, int limit, String filters, String globalFilter, String sorting) { return configPersistence.getConfigProperty(offset, limit, filters, globalFilter, sorting); }
+    @Override public Result<String> getConfigProperty(int offset, int limit, String filters, String globalFilter, String sorting, boolean active) { return configPersistence.getConfigProperty(offset, limit, filters, globalFilter, sorting, active); }
     @Override public Result<String> queryConfigPropertyById(String configId) { return configPersistence.queryConfigPropertyById(configId); }
     @Override public String queryPropertyId(String configName, String propertyName) { return configPersistence.queryPropertyId(configName, propertyName); }
     @Override public Result<String> getPropertyById(String propertyId) { return configPersistence.getPropertyById(propertyId); }
@@ -243,52 +243,52 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void createConfigEnvironment(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.createConfigEnvironment(connection, event); }
     @Override public void updateConfigEnvironment(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.updateConfigEnvironment(connection, event); }
     @Override public void deleteConfigEnvironment(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.deleteConfigEnvironment(connection, event); }
-    @Override public Result<String> getConfigEnvironment(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return configPersistence.getConfigEnvironment(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getConfigEnvironment(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return configPersistence.getConfigEnvironment(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getConfigEnvironmentById(String hostId, String environmentId, String propertyId) { return configPersistence.getConfigEnvironmentById(hostId, environmentId, propertyId); }
     @Override public void createConfigInstance(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.createConfigInstance(connection, event); }
     @Override public void updateConfigInstance(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.updateConfigInstance(connection, event); }
     @Override public void deleteConfigInstance(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.deleteConfigInstance(connection, event); }
-    @Override public Result<String> getConfigInstance(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return configPersistence.getConfigInstance(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getConfigInstance(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return configPersistence.getConfigInstance(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getConfigInstanceById(String hostId, String instanceId, String propertyId) { return configPersistence.getConfigInstanceById(hostId, instanceId, propertyId); }
     @Override public void createConfigInstanceApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.createConfigInstanceApi(connection, event); }
     @Override public void updateConfigInstanceApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.updateConfigInstanceApi(connection, event); }
     @Override public void deleteConfigInstanceApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.deleteConfigInstanceApi(connection, event); }
-    @Override public Result<String> getConfigInstanceApi(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return configPersistence.getConfigInstanceApi(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getConfigInstanceApi(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return configPersistence.getConfigInstanceApi(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getConfigInstanceApiById(String hostId, String instanceApiId, String propertyId) { return configPersistence.getConfigInstanceApiById(hostId, instanceApiId, propertyId); }
     @Override public void createConfigInstanceApp(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.createConfigInstanceApp(connection, event); }
     @Override public void updateConfigInstanceApp(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.updateConfigInstanceApp(connection, event); }
     @Override public void deleteConfigInstanceApp(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.deleteConfigInstanceApp(connection, event); }
-    @Override public Result<String> getConfigInstanceApp(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return configPersistence.getConfigInstanceApp(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getConfigInstanceApp(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return configPersistence.getConfigInstanceApp(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getConfigInstanceAppById(String hostId, String instanceAppId, String propertyId) { return configPersistence.getConfigInstanceAppById(hostId, instanceAppId, propertyId); }
     @Override public void createConfigInstanceAppApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.createConfigInstanceAppApi(connection, event); }
     @Override public void updateConfigInstanceAppApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.updateConfigInstanceAppApi(connection, event); }
     @Override public void deleteConfigInstanceAppApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.deleteConfigInstanceAppApi(connection, event); }
-    @Override public Result<String> getConfigInstanceAppApi(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return configPersistence.getConfigInstanceAppApi(offset, limit,filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getConfigInstanceAppApi(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return configPersistence.getConfigInstanceAppApi(offset, limit,filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getConfigInstanceAppApiById(String hostId, String instanceAppId, String instanceApiId, String propertyId) { return configPersistence.getConfigInstanceAppApiById(hostId, instanceAppId, instanceApiId, propertyId); }
     @Override public void createConfigDeploymentInstance(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.createConfigDeploymentInstance(connection, event); }
     @Override public void updateConfigDeploymentInstance(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.updateConfigDeploymentInstance(connection, event); }
     @Override public void deleteConfigDeploymentInstance(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.deleteConfigDeploymentInstance(connection, event); }
-    @Override public Result<String> getConfigDeploymentInstance(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return configPersistence.getConfigDeploymentInstance(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getConfigDeploymentInstance(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return configPersistence.getConfigDeploymentInstance(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getConfigDeploymentInstanceById(String hostId, String deploymentInstanceId, String propertyId) { return configPersistence.getConfigDeploymentInstanceById(hostId, deploymentInstanceId, propertyId); }
     @Override public void createConfigProduct(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.createConfigProduct(connection, event); }
     @Override public void updateConfigProduct(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.updateConfigProduct(connection, event); }
     @Override public void deleteConfigProduct(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.deleteConfigProduct(connection, event); }
-    @Override public Result<String> getConfigProduct(int offset, int limit, String filters, String globalFilter, String sorting) { return configPersistence.getConfigProduct(offset, limit, filters, globalFilter, sorting); }
+    @Override public Result<String> getConfigProduct(int offset, int limit, String filters, String globalFilter, String sorting, boolean active) { return configPersistence.getConfigProduct(offset, limit, filters, globalFilter, sorting, active); }
     @Override public Result<String> getConfigProductById(String productId, String propertyId) { return configPersistence.getConfigProductById(productId, propertyId); }
     @Override public void createConfigProductVersion(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.createConfigProductVersion(connection, event); }
     @Override public void updateConfigProductVersion(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.updateConfigProductVersion(connection, event); }
     @Override public void deleteConfigProductVersion(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.deleteConfigProductVersion(connection, event); }
-    @Override public Result<String> getConfigProductVersion(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return configPersistence.getConfigProductVersion(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getConfigProductVersion(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return configPersistence.getConfigProductVersion(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getConfigProductVersionById(String hostId, String productVersionId, String propertyId) { return configPersistence.getConfigProductVersionById(hostId, productVersionId, propertyId); }
     @Override public void createConfigInstanceFile(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.createConfigInstanceFile(connection, event); }
     @Override public void updateConfigInstanceFile(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.updateConfigInstanceFile(connection, event); }
     @Override public void deleteConfigInstanceFile(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.deleteConfigInstanceFile(connection, event); }
-    @Override public Result<String> getConfigInstanceFile(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return configPersistence.getConfigInstanceFile(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getConfigInstanceFile(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return configPersistence.getConfigInstanceFile(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getConfigInstanceFileById(String hostId, String instanceFileId) { return configPersistence.getConfigInstanceFileById(hostId, instanceFileId); }
     @Override public void createConfigSnapshot(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.createConfigSnapshot(connection, event); }
     @Override public void updateConfigSnapshot(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.updateConfigSnapshot(connection, event); }
     @Override public void deleteConfigSnapshot(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.deleteConfigSnapshot(connection, event); }
-    @Override public Result<String> getConfigSnapshot(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return configPersistence.getConfigSnapshot(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getConfigSnapshot(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return configPersistence.getConfigSnapshot(offset, limit, filters, globalFilter, sorting, active, hostId); }
 
     // --- InstanceDeployment ---
     @Override public void createInstance(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.createInstance(connection, event); }
@@ -298,36 +298,36 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void unlockInstance(Connection conn, Map<String, Object> event) throws Exception { instanceDeploymentPersistence.unlockInstance(conn, event); }
     @Override public void cloneInstance(Connection conn, Map<String, Object> event) throws Exception { instanceDeploymentPersistence.cloneInstance(conn, event); }
     @Override public void promoteInstance(Connection conn, Map<String, Object> event) throws Exception { instanceDeploymentPersistence.promoteInstance(conn, event); }
-    @Override public Result<String> getInstance(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return instanceDeploymentPersistence.getInstance(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getInstance(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return instanceDeploymentPersistence.getInstance(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getInstanceLabel(String hostId) { return instanceDeploymentPersistence.getInstanceLabel(hostId); }
     @Override public Result<String> getInstanceById(String hostId, String instanceId) { return instanceDeploymentPersistence.getInstanceById(hostId, instanceId); }
     @Override public String getInstanceId(String hostId, String serviceId, String envTag, String productVersionId) { return instanceDeploymentPersistence.getInstanceId(hostId, serviceId, envTag, productVersionId); }
 
     @Override public void createInstanceApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.createInstanceApi(connection, event); }
     @Override public void deleteInstanceApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.deleteInstanceApi(connection, event); }
-    @Override public Result<String> getInstanceApi(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return instanceDeploymentPersistence.getInstanceApi(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getInstanceApi(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return instanceDeploymentPersistence.getInstanceApi(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getInstanceApiLabel(String hostId, String instanceId) { return instanceDeploymentPersistence.getInstanceApiLabel(hostId, instanceId); }
     @Override public Result<String> getInstanceApiById(String hostId, String instanceApiId) { return instanceDeploymentPersistence.getInstanceApiById(hostId, instanceApiId); }
     @Override public String getInstanceApiId(String hostId, String instanceId, String apiVersionId) { return instanceDeploymentPersistence.getInstanceApiId(hostId, instanceId, apiVersionId); }
     @Override public void createInstanceApiPathPrefix(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.createInstanceApiPathPrefix(connection, event); }
     @Override public void updateInstanceApiPathPrefix(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.updateInstanceApiPathPrefix(connection, event); }
     @Override public void deleteInstanceApiPathPrefix(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.deleteInstanceApiPathPrefix(connection, event); }
-    @Override public Result<String> getInstanceApiPathPrefix(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return instanceDeploymentPersistence.getInstanceApiPathPrefix(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getInstanceApiPathPrefix(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return instanceDeploymentPersistence.getInstanceApiPathPrefix(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getInstanceApiPathPrefixById(String hostId, String instanceApiId, String pathPrefix) { return instanceDeploymentPersistence.getInstanceApiPathPrefixById(hostId, instanceApiId, pathPrefix); }
     @Override public void createInstanceApp(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.createInstanceApp(connection, event); }
     @Override public void deleteInstanceApp(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.deleteInstanceApp(connection, event); }
-    @Override public Result<String> getInstanceApp(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return instanceDeploymentPersistence.getInstanceApp(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getInstanceApp(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return instanceDeploymentPersistence.getInstanceApp(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getInstanceAppById(String hostId, String instanceAppId) { return instanceDeploymentPersistence.getInstanceAppById(hostId, instanceAppId); }
     @Override public String getInstanceAppId(String hostId, String instanceId, String appId, String appVersion) { return instanceDeploymentPersistence.getInstanceAppId(hostId, instanceId, appId, appVersion); }
     @Override public Result<String> getInstanceAppLabel(String hostId, String instanceId) { return instanceDeploymentPersistence.getInstanceAppLabel(hostId, instanceId); }
     @Override public void createInstanceAppApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.createInstanceAppApi(connection, event); }
     @Override public void deleteInstanceAppApi(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.deleteInstanceAppApi(connection, event); }
-    @Override public Result<String> getInstanceAppApi(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return instanceDeploymentPersistence.getInstanceAppApi(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getInstanceAppApi(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return instanceDeploymentPersistence.getInstanceAppApi(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getInstanceAppApiById(String hostId, String instanceAppId, String instanceApiId) { return instanceDeploymentPersistence.getInstanceAppApiById(hostId, instanceAppId, instanceApiId); }
     @Override public void createProduct(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.createProduct(connection, event); }
     @Override public void updateProduct(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.updateProduct(connection, event); }
     @Override public void deleteProduct(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.deleteProduct(connection, event); }
-    @Override public Result<String> getProduct(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return instanceDeploymentPersistence.getProduct(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getProduct(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return instanceDeploymentPersistence.getProduct(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getProductVersion(String hostId, String productVersionId) {return instanceDeploymentPersistence.getProductVersion(hostId, productVersionId); }
     @Override public Result<String> getProductIdLabel(String hostId) { return instanceDeploymentPersistence.getProductIdLabel(hostId); }
     @Override public Result<String> getProductVersionLabel(String hostId, String productId) { return instanceDeploymentPersistence.getProductVersionLabel(hostId, productId); }
@@ -337,28 +337,28 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void createProductVersionEnvironment(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.createProductVersionEnvironment(connection, event); }
     @Override public void updateProductVersionEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.updateProductVersionEnvironment(conn, event); }
     @Override public void deleteProductVersionEnvironment(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.deleteProductVersionEnvironment(connection, event); }
-    @Override public Result<String> getProductVersionEnvironment(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return instanceDeploymentPersistence.getProductVersionEnvironment(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getProductVersionEnvironment(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return instanceDeploymentPersistence.getProductVersionEnvironment(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getProductVersionEnvironmentById(String hostId, String productVersionId, String systemEnv, String runtimeEnv) { return instanceDeploymentPersistence.getProductVersionEnvironmentById(hostId, productVersionId, systemEnv, runtimeEnv); }
     @Override public void createProductVersionPipeline(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.createProductVersionPipeline(connection, event); }
     @Override public void deleteProductVersionPipeline(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.deleteProductVersionPipeline(connection, event); }
-    @Override public Result<String> getProductVersionPipeline(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return instanceDeploymentPersistence.getProductVersionPipeline(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getProductVersionPipeline(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return instanceDeploymentPersistence.getProductVersionPipeline(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public void createProductVersionConfig(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.createProductVersionConfig(connection, event); }
     @Override public void deleteProductVersionConfig(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.deleteProductVersionConfig(connection, event); }
-    @Override public Result<String> getProductVersionConfig(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return instanceDeploymentPersistence.getProductVersionConfig(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getProductVersionConfig(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return instanceDeploymentPersistence.getProductVersionConfig(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public void createProductVersionConfigProperty(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.createProductVersionConfigProperty(connection, event); }
     @Override public void deleteProductVersionConfigProperty(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.deleteProductVersionConfigProperty(connection, event); }
-    @Override public Result<String> getProductVersionConfigProperty(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return instanceDeploymentPersistence.getProductVersionConfigProperty(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getProductVersionConfigProperty(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return instanceDeploymentPersistence.getProductVersionConfigProperty(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public void createPipeline(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.createPipeline(connection, event); }
     @Override public void updatePipeline(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.updatePipeline(connection, event); }
     @Override public void deletePipeline(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.deletePipeline(connection, event); }
-    @Override public Result<String> getPipeline(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return instanceDeploymentPersistence.getPipeline(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getPipeline(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return instanceDeploymentPersistence.getPipeline(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getPipelineLabel(String hostId) { return instanceDeploymentPersistence.getPipelineLabel(hostId); }
     @Override public Result<String> getPipelineById(String hostId, String pipelineId) { return instanceDeploymentPersistence.getPipelineById(hostId, pipelineId); }
     @Override public String getPipelineId(String hostId, String platformId, String pipelineName, String pipelineVersion) { return instanceDeploymentPersistence.getPipelineId(hostId, platformId, pipelineName, pipelineVersion); }
     @Override public void createPlatform(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.createPlatform(connection, event); }
     @Override public void updatePlatform(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.updatePlatform(connection, event); }
     @Override public void deletePlatform(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.deletePlatform(connection, event); }
-    @Override public Result<String> getPlatform(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return instanceDeploymentPersistence.getPlatform(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getPlatform(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return instanceDeploymentPersistence.getPlatform(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getPlatformLabel(String hostId) { return instanceDeploymentPersistence.getPlatformLabel(hostId); }
     @Override public Result<String> getPlatformById(String hostId, String platformId) { return instanceDeploymentPersistence.getPlatformById(hostId, platformId); }
     @Override public String getPlatformId(String hostId, String platformName, String platformVersion) { return instanceDeploymentPersistence.getPlatformId(hostId, platformName, platformVersion); }
@@ -366,7 +366,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void createDeploymentInstance(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.createDeploymentInstance(connection, event); }
     @Override public void updateDeploymentInstance(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.updateDeploymentInstance(connection, event); }
     @Override public void deleteDeploymentInstance(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.deleteDeploymentInstance(connection, event); }
-    @Override public Result<String> getDeploymentInstance(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return instanceDeploymentPersistence.getDeploymentInstance(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getDeploymentInstance(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return instanceDeploymentPersistence.getDeploymentInstance(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getDeploymentInstanceById(String hostId, String deploymentInstanceId) { return instanceDeploymentPersistence.getDeploymentInstanceById(hostId, deploymentInstanceId); }
     @Override public Result<String> getDeploymentInstancePipeline(String hostId, String instanceId, String systemEnv, String runtimeEnv) { return instanceDeploymentPersistence.getDeploymentInstancePipeline(hostId, instanceId, systemEnv, runtimeEnv); }
     @Override public Result<String> getDeploymentInstanceLabel(String hostId, String instanceId) { return instanceDeploymentPersistence.getDeploymentInstanceLabel(hostId, instanceId); }
@@ -376,107 +376,107 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void updateDeploymentJobId(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.updateDeploymentJobId(connection, event); }
     @Override public void updateDeploymentStatus(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.updateDeploymentStatus(connection, event); }
     @Override public void deleteDeployment(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.deleteDeployment(connection, event); }
-    @Override public Result<String> getDeployment(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return instanceDeploymentPersistence.getDeployment(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getDeployment(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return instanceDeploymentPersistence.getDeployment(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getDeploymentById(String hostId, String deploymentId) { return instanceDeploymentPersistence.getDeploymentById(hostId, deploymentId); }
 
     // --- AccessControl ---
     @Override public void createRole(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.createRole(connection, event); }
     @Override public void updateRole(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.updateRole(connection, event); }
     @Override public void deleteRole(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.deleteRole(connection, event); }
-    @Override public Result<String> queryRole(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return accessControlPersistence.queryRole(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> queryRole(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return accessControlPersistence.queryRole(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> queryRoleLabel(String hostId) { return accessControlPersistence.queryRoleLabel(hostId); }
     @Override public Result<String> getRoleById(String hostId, String roleId) { return accessControlPersistence.getRoleById(hostId, roleId); }
     @Override public void createRolePermission(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.createRolePermission(connection, event); }
     @Override public void deleteRolePermission(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.deleteRolePermission(connection, event); }
-    @Override public Result<String> queryRolePermission(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return accessControlPersistence.queryRolePermission(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> queryRolePermission(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return accessControlPersistence.queryRolePermission(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public void createRoleUser(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.createRoleUser(connection, event); }
     @Override public void updateRoleUser(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.updateRoleUser(connection, event); }
     @Override public void deleteRoleUser(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.deleteRoleUser(connection, event); }
-    @Override public Result<String> queryRoleUser(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return accessControlPersistence.queryRoleUser(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> queryRoleUser(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return accessControlPersistence.queryRoleUser(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getRoleUserById(String hostId, String roleId, String userId) { return accessControlPersistence.getRoleUserById(hostId, roleId, userId); }
     @Override public void createRoleRowFilter(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.createRoleRowFilter(connection, event); }
     @Override public void updateRoleRowFilter(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.updateRoleRowFilter(connection, event); }
     @Override public void deleteRoleRowFilter(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.deleteRoleRowFilter(connection, event); }
-    @Override public Result<String> queryRoleRowFilter(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return accessControlPersistence.queryRoleRowFilter(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> queryRoleRowFilter(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return accessControlPersistence.queryRoleRowFilter(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getRoleRowFilterById(String hostId, String roleId, String endpointId, String colName) { return accessControlPersistence.getRoleRowFilterById(hostId, roleId, endpointId, colName); }
     @Override public void createRoleColFilter(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.createRoleColFilter(connection, event); }
     @Override public void updateRoleColFilter(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.updateRoleColFilter(connection, event); }
     @Override public void deleteRoleColFilter(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.deleteRoleColFilter(connection, event); }
-    @Override public Result<String> queryRoleColFilter(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return accessControlPersistence.queryRoleColFilter(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> queryRoleColFilter(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return accessControlPersistence.queryRoleColFilter(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getRoleColFilterById(String hostId, String roleId, String endpointId) { return accessControlPersistence.getRoleColFilterById(hostId, roleId, endpointId); }
     @Override public void createGroup(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.createGroup(connection, event); }
     @Override public void updateGroup(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.updateGroup(connection, event); }
     @Override public void deleteGroup(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.deleteGroup(connection, event); }
-    @Override public Result<String> queryGroup(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return accessControlPersistence.queryGroup(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> queryGroup(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return accessControlPersistence.queryGroup(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> queryGroupLabel(String hostId) { return accessControlPersistence.queryGroupLabel(hostId); }
     @Override public Result<String> getGroupById(String hostId, String groupId) { return accessControlPersistence.getGroupById(hostId, groupId); }
     @Override public void createGroupPermission(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.createGroupPermission(connection, event); }
     @Override public void deleteGroupPermission(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.deleteGroupPermission(connection, event); }
-    @Override public Result<String> queryGroupPermission(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return accessControlPersistence.queryGroupPermission(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> queryGroupPermission(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return accessControlPersistence.queryGroupPermission(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public void createGroupUser(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.createGroupUser(connection, event); }
     @Override public void updateGroupUser(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.updateGroupUser(connection, event); }
     @Override public void deleteGroupUser(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.deleteGroupUser(connection, event); }
-    @Override public Result<String> queryGroupUser(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return accessControlPersistence.queryGroupUser(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> queryGroupUser(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return accessControlPersistence.queryGroupUser(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getGroupUserById(String hostId, String groupId, String userId) { return accessControlPersistence.getGroupUserById(hostId, groupId, userId); }
     @Override public void createGroupRowFilter(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.createGroupRowFilter(connection, event); }
     @Override public void updateGroupRowFilter(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.updateGroupRowFilter(connection, event); }
     @Override public void deleteGroupRowFilter(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.deleteGroupRowFilter(connection, event); }
-    @Override public Result<String> queryGroupRowFilter(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return accessControlPersistence.queryGroupRowFilter(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> queryGroupRowFilter(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return accessControlPersistence.queryGroupRowFilter(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getGroupRowFilterById(String hostId, String groupId, String endpointId, String colName) { return accessControlPersistence.getGroupRowFilterById(hostId, groupId, endpointId, colName); }
     @Override public void createGroupColFilter(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.createGroupColFilter(connection, event); }
     @Override public void updateGroupColFilter(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.updateGroupColFilter(connection, event); }
     @Override public void deleteGroupColFilter(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.deleteGroupColFilter(connection, event); }
-    @Override public Result<String> queryGroupColFilter(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return accessControlPersistence.queryGroupColFilter(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> queryGroupColFilter(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return accessControlPersistence.queryGroupColFilter(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getGroupColFilterById(String hostId, String groupId, String endpointId) { return accessControlPersistence.getGroupColFilterById(hostId, groupId, endpointId); }
     @Override public void createPosition(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.createPosition(connection, event); }
     @Override public void updatePosition(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.updatePosition(connection, event); }
     @Override public void deletePosition(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.deletePosition(connection, event); }
-    @Override public Result<String> queryPosition(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return accessControlPersistence.queryPosition(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> queryPosition(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return accessControlPersistence.queryPosition(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> queryPositionLabel(String hostId) { return accessControlPersistence.queryPositionLabel(hostId); }
     @Override public Result<String> getPositionById(String hostId, String positionId) {return accessControlPersistence.getPositionById(hostId, positionId); }
     @Override public void createPositionPermission(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.createPositionPermission(connection, event); }
     @Override public void deletePositionPermission(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.deletePositionPermission(connection, event); }
-    @Override public Result<String> queryPositionPermission(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return accessControlPersistence.queryPositionPermission(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> queryPositionPermission(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return accessControlPersistence.queryPositionPermission(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public void createPositionUser(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.createPositionUser(connection, event); }
     @Override public void updatePositionUser(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.updatePositionUser(connection, event); }
     @Override public void deletePositionUser(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.deletePositionUser(connection, event); }
-    @Override public Result<String> queryPositionUser(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return accessControlPersistence.queryPositionUser(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> queryPositionUser(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return accessControlPersistence.queryPositionUser(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getPositionUserById(String hostId, String positionId, String employeeId) { return accessControlPersistence.getPositionUserById(hostId, positionId, employeeId); }
     @Override public void createPositionRowFilter(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.createPositionRowFilter(connection, event); }
     @Override public void updatePositionRowFilter(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.updatePositionRowFilter(connection, event); }
     @Override public void deletePositionRowFilter(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.deletePositionRowFilter(connection, event); }
-    @Override public Result<String> queryPositionRowFilter(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return accessControlPersistence.queryPositionRowFilter(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> queryPositionRowFilter(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return accessControlPersistence.queryPositionRowFilter(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getPositionRowFilterById(String hostId, String positionId, String endpointId, String colName) { return accessControlPersistence.getPositionRowFilterById(hostId, positionId, endpointId, colName); }
     @Override public void createPositionColFilter(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.createPositionColFilter(connection, event); }
     @Override public void updatePositionColFilter(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.updatePositionColFilter(connection, event); }
     @Override public void deletePositionColFilter(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.deletePositionColFilter(connection, event); }
-    @Override public Result<String> queryPositionColFilter(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return accessControlPersistence.queryPositionColFilter(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> queryPositionColFilter(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return accessControlPersistence.queryPositionColFilter(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getPositionColFilterById(String hostId, String positionId, String endpointId) { return accessControlPersistence.getPositionColFilterById(hostId, positionId, endpointId); }
     @Override public void createAttribute(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.createAttribute(connection, event); }
     @Override public void updateAttribute(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.updateAttribute(connection, event); }
     @Override public void deleteAttribute(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.deleteAttribute(connection, event); }
-    @Override public Result<String> queryAttribute(int offset, int limit, String hostId, String attributeId, String attributeType, String attributeDesc) { return accessControlPersistence.queryAttribute(offset, limit, hostId, attributeId, attributeType, attributeDesc); }
+    @Override public Result<String> queryAttribute(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return accessControlPersistence.queryAttribute(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> queryAttributeLabel(String hostId) { return accessControlPersistence.queryAttributeLabel(hostId); }
     @Override public Result<String> getAttributeById(String hostId, String attributeId) { return accessControlPersistence.getAttributeById(hostId, attributeId); }
     @Override public void createAttributePermission(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.createAttributePermission(connection, event); }
     @Override public void updateAttributePermission(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.updateAttributePermission(connection, event); }
     @Override public void deleteAttributePermission(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.deleteAttributePermission(connection, event); }
-    @Override public Result<String> queryAttributePermission(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return accessControlPersistence.queryAttributePermission(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> queryAttributePermission(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return accessControlPersistence.queryAttributePermission(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getAttributePermissionById(String hostId, String attributeId, String endpointId) { return accessControlPersistence.getAttributePermissionById(hostId, attributeId, endpointId); }
     @Override public void createAttributeUser(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.createAttributeUser(connection, event); }
     @Override public void updateAttributeUser(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.updateAttributeUser(connection, event); }
     @Override public void deleteAttributeUser(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.deleteAttributeUser(connection, event); }
-    @Override public Result<String> queryAttributeUser(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return accessControlPersistence.queryAttributeUser(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> queryAttributeUser(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return accessControlPersistence.queryAttributeUser(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getAttributeUserById(String hostId, String attributeId, String userId) { return accessControlPersistence.getAttributeUserById(hostId, attributeId, userId); }
     @Override public void createAttributeRowFilter(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.createAttributeRowFilter(connection, event); }
     @Override public void updateAttributeRowFilter(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.updateAttributeRowFilter(connection, event); }
     @Override public void deleteAttributeRowFilter(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.deleteAttributeRowFilter(connection, event); }
-    @Override public Result<String> queryAttributeRowFilter(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return accessControlPersistence.queryAttributeRowFilter(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> queryAttributeRowFilter(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return accessControlPersistence.queryAttributeRowFilter(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getAttributeRowFilterById(String hostId, String attributeId, String endpointId, String colName) { return accessControlPersistence.getAttributeRowFilterById(hostId, attributeId, endpointId, colName); }
     @Override public void createAttributeColFilter(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.createAttributeColFilter(connection, event); }
     @Override public void updateAttributeColFilter(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.updateAttributeColFilter(connection, event); }
     @Override public void deleteAttributeColFilter(Connection connection, Map<String, Object> event) throws SQLException, Exception { accessControlPersistence.deleteAttributeColFilter(connection, event); }
-    @Override public Result<String> queryAttributeColFilter(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return accessControlPersistence.queryAttributeColFilter(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> queryAttributeColFilter(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return accessControlPersistence.queryAttributeColFilter(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getAttributeColFilterById(String hostId, String attributeId, String endpointId) { return accessControlPersistence.getAttributeColFilterById(hostId, attributeId, endpointId); }
 
     // --- Category ---
@@ -486,7 +486,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void createEntityCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception { categoryPersistence.createEntityCategory(conn, event); }
     @Override public void updateEntityCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception { categoryPersistence.updateEntityCategory(conn, event); }
     @Override public void deleteEntityCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception { categoryPersistence.deleteEntityCategory(conn, event); }
-    @Override public Result<String> getCategory(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return categoryPersistence.getCategory(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getCategory(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return categoryPersistence.getCategory(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getCategoryLabel(String hostId) { return categoryPersistence.getCategoryLabel(hostId); }
     @Override public Result<String> getCategoryById(String categoryId) { return categoryPersistence.getCategoryById(categoryId); }
     @Override public Result<String> getCategoryByName(String hostId, String categoryName) { return categoryPersistence.getCategoryByName(hostId, categoryName); }
@@ -500,7 +500,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void createEntityTag(Connection conn, Map<String, Object> event) throws SQLException, Exception { tagPersistence.createEntityTag(conn, event); }
     @Override public void updateEntityTag(Connection conn, Map<String, Object> event) throws SQLException, Exception { tagPersistence.updateEntityTag(conn, event); }
     @Override public void deleteEntityTag(Connection conn, Map<String, Object> event) throws SQLException, Exception { tagPersistence.deleteEntityTag(conn, event); }
-    @Override public Result<String> getTag(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return tagPersistence.getTag(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getTag(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return tagPersistence.getTag(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getTagLabel(String hostId) { return tagPersistence.getTagLabel(hostId); }
     @Override public Result<String> getTagById(String tagId) { return tagPersistence.getTagById(tagId); }
     @Override public Result<String> getTagByName(String hostId, String tagName) { return tagPersistence.getTagByName(hostId, tagName); }
@@ -510,7 +510,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void createSchema(Connection connection, Map<String, Object> event) throws SQLException, Exception { schemaPersistence.createSchema(connection, event); }
     @Override public void updateSchema(Connection connection, Map<String, Object> event) throws SQLException, Exception { schemaPersistence.updateSchema(connection, event); }
     @Override public void deleteSchema(Connection connection, Map<String, Object> event) throws SQLException, Exception { schemaPersistence.deleteSchema(connection, event); }
-    @Override public Result<String> getSchema(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return schemaPersistence.getSchema(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getSchema(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return schemaPersistence.getSchema(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getSchemaLabel(String hostId) { return schemaPersistence.getSchemaLabel(hostId); }
     @Override public Result<String> getSchemaById(String schemaId) { return schemaPersistence.getSchemaById(schemaId); }
     @Override public Result<String> getSchemaByCategoryId(String categoryId) { return schemaPersistence.getSchemaByCategoryId(categoryId); }
@@ -520,7 +520,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void createSchedule(Connection connection, Map<String, Object> event) throws SQLException, Exception { schedulePersistence.createSchedule(connection, event); }
     @Override public void updateSchedule(Connection connection, Map<String, Object> event) throws SQLException, Exception { schedulePersistence.updateSchedule(connection, event); }
     @Override public void deleteSchedule(Connection connection, Map<String, Object> event) throws SQLException, Exception { schedulePersistence.deleteSchedule(connection, event); }
-    @Override public Result<String> getSchedule(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return schedulePersistence.getSchedule(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getSchedule(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return schedulePersistence.getSchedule(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getScheduleLabel(String hostId) { return schedulePersistence.getScheduleLabel(hostId); }
     @Override public Result<String> getScheduleById(String scheduleId) { return schedulePersistence.getScheduleById(scheduleId); }
 
@@ -529,7 +529,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void updateRule(Connection connection, Map<String, Object> event) throws SQLException, Exception { rulePersistence.updateRule(connection, event); }
     @Override public void deleteRule(Connection connection, Map<String, Object> event) throws SQLException, Exception { rulePersistence.deleteRule(connection, event); }
     @Override public Result<List<Map<String, Object>>> queryRuleByGroup(String groupId) { return rulePersistence.queryRuleByGroup(groupId); }
-    @Override public Result<String> queryRule(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return rulePersistence.queryRule(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> queryRule(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return rulePersistence.queryRule(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<Map<String, Object>> queryRuleById(String ruleId) { return rulePersistence.queryRuleById(ruleId); }
     @Override public Result<String> queryRuleByType(String ruleType) { return rulePersistence.queryRuleByType(ruleType); }
     @Override public Result<List<Map<String, Object>>> queryRuleByHostApiId(String hostId, String apiId, String apiVersion) { return rulePersistence.queryRuleByHostApiId(hostId, apiId, apiVersion); }

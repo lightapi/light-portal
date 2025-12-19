@@ -698,7 +698,7 @@ public class UserPersistenceImpl implements UserPersistence {
     }
 
     @Override
-    public Result<String> queryUserByHostId(int offset, int limit, String filtersJson, String globalFilter, String sortingJson) {
+    public Result<String> queryUserByHostId(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active) {
         Result<String> result = null;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "uh.host_id",
@@ -730,8 +730,10 @@ public class UserPersistenceImpl implements UserPersistence {
                 """;
         List<Object> parameters = new ArrayList<>();
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "u", "uh", "c", "e");
         String[] searchColumns = {"u.email", "u.first_name", "u.last_name", "COALESCE(c.customer_id, e.employee_id)"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("uh.host_id", "u.user_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("uh.host_id", "u.user_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("u.last_name", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";

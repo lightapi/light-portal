@@ -680,7 +680,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
     }
 
     @Override
-    public Result<String> getOrg(int offset, int limit, String filtersJson, String globalFilter, String sortingJson) {
+    public Result<String> getOrg(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active) {
         Result<String> result = null;
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -696,8 +696,10 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
 
         List<Object> parameters = new ArrayList<>();
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active);
         String[] searchColumns = {"domain", "org_name", "org_desc"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("org_owner"), Arrays.asList(searchColumns), filters, null, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("org_owner"), Arrays.asList(searchColumns), filters, null, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("domain", sorting, null) +
                 "\nLIMIT ? OFFSET ?";
@@ -787,7 +789,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
     }
 
     @Override
-    public Result<String> getHost(int offset, int limit, String filtersJson, String globalFilter, String sortingJson) {
+    public Result<String> getHost(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active) {
         Result<String> result = null;
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -801,8 +803,10 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                 """;
         List<Object> parameters = new ArrayList<>();
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active);
         String[] searchColumns = {"domain", "sub_domain", "host_desc"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("domain, sub_domain", sorting, null) +
                 "\nLIMIT ? OFFSET ?";
@@ -854,7 +858,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
     }
 
     @Override
-    public Result<String> getUserHost(int offset, int limit, String filtersJson, String globalFilter, String sortingJson) {
+    public Result<String> getUserHost(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active) {
         Result<String> result = null;
         final Map<String, String> columnMap = Map.of(
                 "hostId", "uh.host_id",
@@ -884,8 +888,10 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
                 """;
         List<Object> parameters = new ArrayList<>();
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "uh", "h", "u");
         String[] searchColumns = {"h.domain", "h.sub_domain", "u.email", "u.first_name", "u.last_name"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("uh.host_id", "uh.user_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("uh.host_id", "uh.user_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("u.email", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";

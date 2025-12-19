@@ -1370,7 +1370,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
     }
 
     @Override
-    public Result<String> queryAuthProviderApi(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> queryAuthProviderApi(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
 
         // Assuming helper methods parseJsonList, dynamicFilter, globalFilter, dynamicSorting,
@@ -1385,15 +1385,17 @@ public class AuthPersistenceImpl implements AuthPersistence {
                 host_id, api_id, provider_id, aggregate_version,
                 active, update_user, update_ts
                 FROM auth_provider_api_t
-                WHERE host_id = ? AND active = TRUE
+                WHERE host_id = ?
                 """;
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active);
         String[] searchColumns = {"api_id"};
         // Note: Dynamic filtering assumes a column prefix 't.' might be needed if joins were present,
         // but it's simpler to assume it works without prefix or adjusts internally based on the template.
-        String sqlBuilder = s + SqlUtil.dynamicFilter(Arrays.asList("host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+        String sqlBuilder = s + activeClause +
+                SqlUtil.dynamicFilter(Arrays.asList("host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
                 SqlUtil.globalFilter(globalFilter, searchColumns, parameters) +
                 SqlUtil.dynamicSorting("provider_id, api_id", sorting, null) +
                 "\nLIMIT ? OFFSET ?";
@@ -1634,7 +1636,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
     }
 
     @Override
-    public Result<String> queryAuthProviderClient(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> queryAuthProviderClient(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
 
         // Assuming helper methods parseJsonList, dynamicFilter, globalFilter, dynamicSorting,
@@ -1649,15 +1651,16 @@ public class AuthPersistenceImpl implements AuthPersistence {
                 host_id, client_id, provider_id, aggregate_version,
                 active, update_user, update_ts
                 FROM auth_provider_client_t
-                WHERE host_id = ? AND active = TRUE
+                WHERE host_id = ?
                 """;
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active);
         String[] searchColumns = {"provider_id"};
-
         // Note: Dynamic filtering/sorting columns changed to match table structure.
-        String sqlBuilder = s + SqlUtil.dynamicFilter(Arrays.asList("host_id", "client_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+        String sqlBuilder = s + activeClause +
+                SqlUtil.dynamicFilter(Arrays.asList("host_id", "client_id"), Arrays.asList(searchColumns), filters, null, parameters) +
                 SqlUtil.globalFilter(globalFilter, searchColumns, parameters) +
                 SqlUtil.dynamicSorting("provider_id, client_id", sorting, null) +
                 "\nLIMIT ? OFFSET ?";
@@ -1706,7 +1709,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
     }
 
     @Override
-    public Result<String> queryApp(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> queryApp(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
 
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
@@ -1723,8 +1726,10 @@ public class AuthPersistenceImpl implements AuthPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active);
         String[] searchColumns = {"app_id", "app_name", "app_desc"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("app_id", sorting, null) +
                 "\nLIMIT ? OFFSET ?";
@@ -1823,7 +1828,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
     }
 
     @Override
-    public Result<String> queryClient(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> queryClient(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -1841,8 +1846,10 @@ public class AuthPersistenceImpl implements AuthPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active);
         String[] searchColumns = {"app_id", "api_id", "client_name", "client_scope", "custom_claim", "redirect_uri"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("client_id", "host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("client_id", "host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("client_id", sorting, null) +
                 "\nLIMIT ? OFFSET ?";
@@ -2025,7 +2032,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
     }
 
     @Override
-    public Result<String> getRefreshToken(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> getRefreshToken(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "r.host_id",
@@ -2068,8 +2075,10 @@ public class AuthPersistenceImpl implements AuthPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "r", "u", "a", "c");
         String[] searchColumns = {"r.entity_id", "r.email", "u.first_name", "u.last_name", "a.app_name", "r.roles", "r.groups", "r.positions", "r.attributes", "r.scope"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("r.host_id", "r.refresh_token", "r.user_id", "r.client_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("r.host_id", "r.refresh_token", "r.user_id", "r.client_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("r.user_id", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
@@ -2329,7 +2338,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
     }
 
     @Override
-    public Result<String> getAuthCode(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> getAuthCode(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -2346,8 +2355,10 @@ public class AuthPersistenceImpl implements AuthPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active);
         String[] searchColumns = {"entity_id", "email", "roles", "redirect_uri", "scope"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("host_id", "user_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("host_id", "user_id"), Arrays.asList(searchColumns), filters, null, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("update_ts", sorting, null) +
                 "\nLIMIT ? OFFSET ?";
@@ -2506,7 +2517,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
     }
 
     @Override
-    public Result<String> queryProvider(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> queryProvider(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -2523,8 +2534,10 @@ public class AuthPersistenceImpl implements AuthPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active);
         String[] searchColumns = {"provider_name", "provider_desc"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("provider_id", sorting, null) +
                 "\nLIMIT ? OFFSET ?";
@@ -2712,7 +2725,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
     }
 
     @Override
-    public Result<String> getRefToken(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> getRefToken(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "r.host_id",
@@ -2740,8 +2753,10 @@ public class AuthPersistenceImpl implements AuthPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-        String[] searchColumns = {"c_client_name"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("r.host_id", "r.client_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "r", "c");
+        String[] searchColumns = {"c.client_name"};
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("r.host_id", "r.client_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("r.client_id", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";

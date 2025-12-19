@@ -266,7 +266,7 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
     }
 
     @Override
-    public Result<String> getSchedule(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
+    public Result<String> getSchedule(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -284,8 +284,10 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active);
         String[] searchColumns = {"schedule_name"};
-        String sqlBuilder = s + dynamicFilter(Arrays.asList("schedule_id", "host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("schedule_id", "host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("schedule_name", sorting, null) +
                 "\nLIMIT ? OFFSET ?";
