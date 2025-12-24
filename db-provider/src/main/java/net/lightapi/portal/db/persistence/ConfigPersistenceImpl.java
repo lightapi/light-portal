@@ -2918,7 +2918,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         UUID userId = UUID.fromString((String)event.get("userId"));
         UUID deploymentId = event.get("deploymentId") != null ? UUID.fromString((String) event.get("deploymentId")) : null;
         UUID snapshotId = UuidUtil.getUUID();
-        String s = "{call commit_config_instance(?, ?, ?, ?, ?, ?, ?)}";
+        String s = "CALL create_snapshot(?, ?, ?, ?, ?, ?, ?)";
 
         try ( CallableStatement stmt = conn.prepareCall(s)) {
             stmt.setObject(1, hostId);
@@ -2931,10 +2931,10 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
             stmt.execute();
         } catch (SQLException e) {
-            logger.error("SQLException during commitConfigInstance for hostId {} instanceId {}: {}", hostId, instanceId, e.getMessage(), e);
+            logger.error("SQLException during createConfigSnapshot for hostId {} instanceId {}: {}", hostId, instanceId, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during commitConfigInstance for hostId {} instanceId {}: {}", hostId, instanceId, e.getMessage(), e);
+            logger.error("Exception during createConfigSnapshot for hostId {} instanceId {}: {}", hostId, instanceId, e.getMessage(), e);
             throw e;
         }
 
