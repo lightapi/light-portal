@@ -305,7 +305,7 @@ public interface PortalDbProvider extends DbProvider {
     void createConfigSnapshot(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateConfigSnapshot(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteConfigSnapshot(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> getConfigSnapshot(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
+    Result<String> getConfigSnapshot(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
 
     Result<String> getConfigInstance(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<String> getConfigInstanceById(String hostId, String instanceId, String propertyId);

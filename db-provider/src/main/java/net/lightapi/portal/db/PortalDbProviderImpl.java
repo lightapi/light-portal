@@ -288,7 +288,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void createConfigSnapshot(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.createConfigSnapshot(connection, event); }
     @Override public void updateConfigSnapshot(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.updateConfigSnapshot(connection, event); }
     @Override public void deleteConfigSnapshot(Connection connection, Map<String, Object> event) throws SQLException, Exception { configPersistence.deleteConfigSnapshot(connection, event); }
-    @Override public Result<String> getConfigSnapshot(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return configPersistence.getConfigSnapshot(offset, limit, filters, globalFilter, sorting, active, hostId); }
+    @Override public Result<String> getConfigSnapshot(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return configPersistence.getConfigSnapshot(offset, limit, filters, globalFilter, sorting, hostId); }
 
     // --- InstanceDeployment ---
     @Override public void createInstance(Connection connection, Map<String, Object> event) throws SQLException, Exception { instanceDeploymentPersistence.createInstance(connection, event); }

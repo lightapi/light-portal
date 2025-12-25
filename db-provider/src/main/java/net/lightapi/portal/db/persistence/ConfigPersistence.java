@@ -97,7 +97,7 @@ public interface ConfigPersistence {
     void createConfigSnapshot(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void updateConfigSnapshot(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void deleteConfigSnapshot(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> getConfigSnapshot(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
+    Result<String> getConfigSnapshot(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
 
     // Product / Instance Applicable Properties
     Result<String> getApplicableConfigPropertiesForInstance(int offset, int limit, String hostId, String instanceId, Set<String> resourceTypes, Set<String> configTypes, Set<String> propertyTypes);

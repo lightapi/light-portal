@@ -3002,7 +3002,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     }
 
     @Override
-    public Result<String> getConfigSnapshot(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
+    public Result<String> getConfigSnapshot(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "snapshotId", "snapshot_id",
@@ -3021,6 +3021,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         columnMap.put("serviceId", "service_id");
         columnMap.put("apiId", "api_id");
         columnMap.put("apiVersion", "api_version");
+        columnMap.put("current", "current");
 
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -3028,7 +3029,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
-                snapshot_id, snapshot_ts, snapshot_type, host_id, instance_id, description, user_id, deployment_id, environment,
+                snapshot_id, snapshot_ts, snapshot_type, host_id, instance_id, current, description, user_id, deployment_id, environment,
                 product_id, product_version, service_id, api_id, api_version
                 FROM config_snapshot_t
                 WHERE host_id = ?
@@ -3036,9 +3037,8 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-        String activeClause = SqlUtil.buildMultiTableActiveClause(active);
         String[] searchColumns = {"description"};
-        String sqlBuilder = s + activeClause +
+        String sqlBuilder = s +
                 dynamicFilter(Arrays.asList("snapshot_id", "host_id", "instance_id", "user_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("host_id, instance_id, snapshot_ts", sorting, columnMap) +
@@ -3070,6 +3070,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("snapshotType", resultSet.getString("snapshot_type"));
                     map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
+                    map.put("current", resultSet.getBoolean("current"));
                     map.put("description", resultSet.getString("description"));
                     map.put("userId", resultSet.getObject("user_id", UUID.class));
                     map.put("deploymentId", resultSet.getObject("deployment_id", UUID.class));
