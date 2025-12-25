@@ -322,7 +322,7 @@ public class UserPersistenceImpl implements UserPersistence {
                 LEFT JOIN
                     customer_t AS c ON uh.host_id = c.host_id AND u.user_id = c.user_id
                 LEFT JOIN
-                    employee_position_t AS ep ON e.host_id = ep.host_id AND e.employee_id = ep.employee_id
+                    user_position_t AS ep ON e.host_id = ep.host_id AND e.user_id = ep.user_id
                 LEFT JOIN
                     position_t AS p ON ep.host_id = p.host_id AND ep.position_id = p.position_id
                 WHERE
