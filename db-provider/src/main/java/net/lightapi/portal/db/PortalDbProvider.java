@@ -12,7 +12,6 @@ import net.lightapi.portal.PortalConstants;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
@@ -75,7 +74,7 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> queryEmailByWallet(String cryptoType, String cryptoAddress);
     Result<String> queryUserByHostId(int offset, int limit, String filters, String globalFilter, String sorting, boolean active);
     Result<String> queryNotification(int offset, int limit, String hostId, String userId, Long nonce, String eventClass, Boolean successFlag,
-                                     Timestamp processTs, String eventJson, String error);
+                                     OffsetDateTime processTs, String eventJson, String error);
     Result<String> getHostsByUserId(String userId);
     Result<String> getHostLabelByUserId(String userId);
 
@@ -617,6 +616,11 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> getSchedule(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<String> getScheduleLabel(String hostId);
     Result<String> getScheduleById(String scheduleId);
+    int acquireLock(String instanceId, int lockId, OffsetDateTime lockTimeout) throws Exception;
+    int renewLock(String instanceId, int lockId) throws Exception;
+    int releaseLock(String instanceId, int lockId) throws Exception;
+    Result<List<Map<String, Object>>> pollTasks(OffsetDateTime nextRunTs);
+    Result<String> executeTask(Map<String, Object> taskData, long executionTimeMillis);
 
     // Event Store
     Result<String> insertEventStore(CloudEvent[] events);

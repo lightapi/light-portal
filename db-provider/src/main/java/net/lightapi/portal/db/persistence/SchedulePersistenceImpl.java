@@ -1,12 +1,17 @@
 package net.lightapi.portal.db.persistence;
 
 import com.networknt.config.JsonMapper;
+import com.networknt.db.provider.DbProvider;
 import com.networknt.monad.Failure;
 import com.networknt.monad.Result;
 import com.networknt.monad.Success;
+import com.networknt.service.SingletonServiceFactory;
 import com.networknt.status.Status;
 import com.networknt.utility.Constants;
+import com.networknt.utility.TimeUtil;
+import com.networknt.utility.UuidUtil;
 import io.cloudevents.core.v1.CloudEventV1;
+import net.lightapi.portal.EventTypeUtil;
 import net.lightapi.portal.PortalConstants;
 import net.lightapi.portal.db.ConcurrencyException;
 import net.lightapi.portal.db.PortalDbProvider;
@@ -15,20 +20,22 @@ import net.lightapi.portal.db.util.SqlUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 import static com.networknt.db.provider.SqlDbStartupHook.ds;
+import static net.lightapi.portal.db.PortalDbProviderImpl.GENERIC_EXCEPTION;
+import static net.lightapi.portal.db.PortalDbProviderImpl.SQL_EXCEPTION;
 import static net.lightapi.portal.db.util.SqlUtil.*;
 
 public class SchedulePersistenceImpl implements SchedulePersistence {
 
     private static final Logger logger = LoggerFactory.getLogger(SchedulePersistenceImpl.class);
     // Consider moving these to a shared constants class if they are truly general
+    public static PortalDbProvider dbProvider = (PortalDbProvider) SingletonServiceFactory.getBean(DbProvider.class);
     private static final String SQL_EXCEPTION = PortalDbProvider.SQL_EXCEPTION;
     private static final String GENERIC_EXCEPTION = PortalDbProvider.GENERIC_EXCEPTION;
     private static final String OBJECT_NOT_FOUND = PortalDbProvider.OBJECT_NOT_FOUND;
@@ -297,8 +304,8 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
         int total = 0; // Variable to store total count
         List<Map<String, Object>> schedules = new ArrayList<>(); // List to hold results
 
-        try (Connection connection = ds.getConnection();
-            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+        try (final Connection conn = ds.getConnection();
+            PreparedStatement preparedStatement = conn.prepareStatement(sqlBuilder)) {
             populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true; // Flag to get total count only once
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -425,4 +432,222 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
         }
         return result;
     }
+    @Override
+    public int acquireLock(String instanceId, int lockId, OffsetDateTime lockTimeout) throws Exception {
+        // Try to update the lock if it's expired or held by us (from a previous run/crash)
+        String sql =
+            """
+            UPDATE scheduler_lock_t SET instance_id = ?, last_heartbeat = ?
+            WHERE lock_id = ? AND (instance_id = ? OR last_heartbeat < ?)
+            """;
+        int updated = 0;
+        try (Connection conn = ds.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, instanceId);
+            ps.setTimestamp(2, Timestamp.from(Instant.now()));
+            ps.setInt(3, lockId);
+            ps.setString(4, instanceId);
+            ps.setObject(5, lockTimeout);
+            updated = ps.executeUpdate();
+        }
+        return updated;
+    }
+
+    @Override
+    public int renewLock(String instanceId, int lockId) throws Exception {
+        String sql =
+            """
+            UPDATE scheduler_lock_t SET instance_id = ?, last_heartbeat = ?
+            WHERE lock_id = ? AND (instance_id = ? OR last_heartbeat < ?)
+            """;
+        int updated = 0;
+        try (Connection conn = ds.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setTimestamp(1, Timestamp.from(Instant.now()));
+            ps.setInt(2, lockId);
+            ps.setString(3, instanceId);
+            updated = ps.executeUpdate();
+        }
+        return updated;
+    }
+
+    @Override
+    public int releaseLock(String instanceId, int lockId) throws Exception{
+        String sql =
+            """
+            UPDATE scheduler_lock_t SET instance_id = 'none' WHERE lock_id = ? AND instance_id = ?
+            """;
+        int updated = 0;
+        try (Connection conn = ds.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, lockId);
+            ps.setString(2, instanceId);
+            updated = ps.executeUpdate();
+        }
+        return updated;
+    }
+
+    @Override
+    public Result<List<Map<String, Object>>> pollTasks(OffsetDateTime nextRunTs) {
+        Result<List<Map<String, Object>>> result = null;
+        // Select only the ID and name columns needed for labels, filter by host_id
+        final String sql = "SELECT * FROM schedule_t WHERE active = TRUE AND next_run_ts <= ?";
+        List<Map<String, Object>> tasks = new ArrayList<>(); // Initialize list for tasks
+
+        try (Connection connection = ds.getConnection();
+            PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setObject(1, nextRunTs);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> task = new HashMap<>();
+                    task.put("schedule_id", rs.getString("schedule_id"));
+                    task.put("host_id", rs.getString("host_id"));
+                    task.put("schedule_name", rs.getString("schedule_name"));
+                    task.put("frequency_unit", rs.getString("frequency_unit"));
+                    task.put("frequency_time", rs.getInt("frequency_time"));
+                    task.put("start_ts", rs.getObject("start_ts") != null ? rs.getObject("start_ts", OffsetDateTime.class) : null);
+                    task.put("next_run_ts", rs.getObject("next_run_ts") != null ? rs.getObject("next_run_ts", OffsetDateTime.class) : null);
+                    task.put("event_topic", rs.getString("event_topic"));
+                    task.put("event_type", rs.getString("event_type"));
+                    task.put("event_data", rs.getString("event_data"));
+                    task.put("aggregate_version", rs.getLong("aggregate_version"));
+                    task.put("active", rs.getBoolean("active"));
+                    tasks.add(task);
+                }
+            }
+            result = Success.of(tasks);
+        } catch (SQLException e) {
+            logger.error("SQLException getting schedules for next run {}:", nextRunTs, e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) { // Catch other potential runtime exceptions
+            logger.error("Unexpected exception getting schedules for next run {}:", nextRunTs, e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
+    public Result<String> executeTask(Map<String, Object> task, long executionTimeMillis) {
+        String scheduleId = (String) task.get("schedule_id");
+        String hostId = (String) task.get("host_id");
+        String eventTopic = (String) task.get("event_topic");
+        String eventType = (String) task.get("event_type");
+        String eventData = (String) task.get("event_data");
+        String frequencyUnitStr = (String) task.get("frequency_unit");
+        int frequencyTime = (Integer) task.get("frequency_time");
+        TimeUnit timeUnit = TimeUnit.valueOf(frequencyUnitStr.toUpperCase());
+        long freq = TimeUtil.oneTimeUnitMillisecond(timeUnit) * frequencyTime;
+        long nextRunTs = executionTimeMillis + freq;
+
+        Result<String> result = null;
+
+        Map<String, Object> eventMap = JsonMapper.string2Map(eventData);
+        // add or replace id
+        eventMap.put("id", UuidUtil.getUUID().toString());
+        // get user to calculate the nonce, user cannot be null, and it should be validated when create the schedule.
+        String userId = (String)eventMap.get("userId");
+        long nonce = dbProvider.queryNonceByUserId(userId);
+        eventMap.put("nonce", nonce);
+        String aggregateId = (String)eventMap.get("subject");
+        if(logger.isTraceEnabled()) logger.trace("id = {} aggregateId = {} user = {} nonce = {}", eventMap.get("id"), aggregateId, userId, nonce);
+        // calculate aggregateType
+        String aggregateType = EventTypeUtil.deriveAggregateTypeFromEventType(eventType);
+        eventMap.put(PortalConstants.AGGREGATE_TYPE, aggregateType);
+        // calculate aggregateVersion.
+        int aggregateVersion = dbProvider.getMaxAggregateVersion(aggregateId);
+        if(aggregateVersion == 0) {
+            // first time creating for the aggregate.
+            eventMap.put(PortalConstants.NEW_AGGREGATE_VERSION, 1);
+            eventMap.put(PortalConstants.AGGREGATE_VERSION, 0);
+        } else {
+            // the aggregate exists in the event source table.
+            long newAggregateVersion = aggregateVersion + 1;
+            eventMap.put(PortalConstants.NEW_AGGREGATE_VERSION, newAggregateVersion);
+        }
+
+
+        try (Connection conn = ds.getConnection();) {
+            conn.setAutoCommit(false);
+            try {
+                // 1. Update schedule_t start_ts and next_run_ts to prevent double execution and prepare for next cycle
+                String updateSchedule = "UPDATE schedule_t SET start_ts = ?, next_run_ts = ?, aggregate_version = aggregate_version + 1 " +
+                        "WHERE schedule_id = ? AND aggregate_version = ?";
+                try (PreparedStatement ps = conn.prepareStatement(updateSchedule)) {
+                    ps.setTimestamp(1, Timestamp.from(Instant.ofEpochMilli(executionTimeMillis)));
+                    ps.setTimestamp(2, Timestamp.from(Instant.ofEpochMilli(nextRunTs)));
+                    ps.setObject(3, java.util.UUID.fromString(scheduleId));
+                    ps.setLong(4, aggregateVersion);
+                    int updated = ps.executeUpdate();
+                    if (updated == 0) {
+                        // This could happen if another instance (or thread) updated it first
+                        logger.warn("Task for schedule {} already processed or version mismatch. Rolling back.", scheduleId);
+                        conn.rollback();
+                        return Failure.of(new Status(GENERIC_EXCEPTION, "Task already processed or version mismatch."));
+                    }
+                }
+
+                String eventId = UuidUtil.getUUID().toString();
+                Timestamp now = Timestamp.from(Instant.now());
+
+                // 2. Insert into event_store_t
+                // Using assumed column names based on user request and common patterns
+                try (PreparedStatement ps = conn.prepareStatement(EventPersistenceImpl.insertEventStoreSql)) {
+
+                    ps.setObject(1, eventId);
+                    ps.setObject(2, hostId);
+                    ps.setObject(3, userId);
+                    ps.setLong(4,  nonce);
+                    ps.setString(5, aggregateId);
+                    ps.setLong(6,  aggregateVersion);
+                    ps.setString(7, aggregateType);
+                    ps.setString(8, eventType);
+                    ps.setObject(9, OffsetDateTime.now()); // Use OffsetDateTime for TIMESTAMP WITH TIME ZONE
+                    ps.setString(10, JsonMapper.toJson(eventMap));
+                    ps.setString(11, "{}");
+
+                    ps.setString(1, eventId);
+                    ps.setString(2, eventType);
+                    ps.setString(3, eventData);
+                    ps.setObject(4, java.util.UUID.fromString(hostId));
+                    ps.setTimestamp(5, now);
+                    ps.executeUpdate();
+                }
+
+                // 3. Insert into outbox_message_t
+                try (PreparedStatement ps = conn.prepareStatement(EventPersistenceImpl.insertOutboxMessageSql)) {
+                    ps.setObject(1, eventId);
+                    ps.setObject(2, hostId);
+                    ps.setObject(3, userId);
+                    ps.setLong(4,  nonce);
+                    ps.setString(5, aggregateId);
+                    ps.setLong(6,  aggregateVersion);
+                    ps.setString(7, aggregateType);
+                    ps.setString(8, eventType);
+                    ps.setObject(9, OffsetDateTime.now()); // Use OffsetDateTime for TIMESTAMP WITH TIME ZONE
+                    ps.setString(10, JsonMapper.toJson(eventMap));
+                    ps.setString(11, "{}");
+
+                    ps.setString(1, eventId);
+                    ps.setString(2, eventType);
+                    ps.setString(3, eventData);
+                    ps.setObject(4, java.util.UUID.fromString(hostId));
+                    ps.setTimestamp(5, now);
+                    ps.executeUpdate();
+                }
+                conn.commit();
+                if (logger.isInfoEnabled()) {
+                    logger.info("Successfully executed task for schedule {}. Event ID: {}", scheduleId, eventId);
+                }
+                result = Success.of(eventId);
+            } catch (Exception e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
 }

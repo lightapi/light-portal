@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import java.sql.Connection;
 import java.sql.SQLException; // Added import
 import java.sql.Timestamp;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -116,7 +117,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void createOrder(Connection connection, Map<String, Object> event) throws SQLException, Exception { userPersistence.createOrder(connection, event); }
     @Override public void cancelOrder(Connection connection, Map<String, Object> event) throws SQLException, Exception { userPersistence.cancelOrder(connection, event); }
     @Override public void deliverOrder(Connection connection, Map<String, Object> event) throws SQLException, Exception { userPersistence.deliverOrder(connection, event); }
-    @Override public Result<String> queryNotification(int offset, int limit, String hostId, String userId, Long nonce, String eventClass, Boolean successFlag, Timestamp processTs, String eventJson, String error) { return notificationDataPersistence.queryNotification(offset, limit, hostId, userId, nonce, eventClass, successFlag, processTs, eventJson, error); }
+    @Override public Result<String> queryNotification(int offset, int limit, String hostId, String userId, Long nonce, String eventClass, Boolean successFlag, OffsetDateTime processTs, String eventJson, String error) { return notificationDataPersistence.queryNotification(offset, limit, hostId, userId, nonce, eventClass, successFlag, processTs, eventJson, error); }
 
     // --- Auth ---
     @Override public void createApp(Connection connection, Map<String, Object> event) throws SQLException, Exception { authPersistence.createApp(connection, event); }
@@ -523,6 +524,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public Result<String> getSchedule(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return schedulePersistence.getSchedule(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getScheduleLabel(String hostId) { return schedulePersistence.getScheduleLabel(hostId); }
     @Override public Result<String> getScheduleById(String scheduleId) { return schedulePersistence.getScheduleById(scheduleId); }
+    @Override public int acquireLock(String instanceId, int lockId, OffsetDateTime lockTimeout) throws Exception { return schedulePersistence.acquireLock(instanceId, lockId, lockTimeout);}
+    @Override public int renewLock(String instanceId, int lockId) throws Exception { return schedulePersistence.renewLock(instanceId, lockId); }
+    @Override public int releaseLock(String instanceId, int lockId) throws Exception { return schedulePersistence.releaseLock(instanceId, lockId); }
+    @Override public Result<List<Map<String, Object>>> pollTasks(OffsetDateTime nextRunTs) { return schedulePersistence.pollTasks(nextRunTs); }
+    @Override public Result<String> executeTask(Map<String, Object> taskData, long executionTimeMillis) { return schedulePersistence.executeTask(taskData, executionTimeMillis); }
 
     // --- Rule ---
     @Override public void createRule(Connection connection, Map<String, Object> event) throws SQLException, Exception { rulePersistence.createRule(connection, event); }

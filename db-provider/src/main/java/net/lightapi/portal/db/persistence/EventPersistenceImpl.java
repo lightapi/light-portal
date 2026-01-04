@@ -32,6 +32,16 @@ public class EventPersistenceImpl implements EventPersistence {
     private static final String OBJECT_NOT_FOUND = PortalDbProvider.OBJECT_NOT_FOUND;
 
     private static final JsonFormat jsonFormat = new JsonFormat();
+
+    public static final String insertEventStoreSql = "INSERT INTO event_store_t " +
+            "(id, host_id, user_id, nonce, aggregate_id, aggregate_version, aggregate_type, event_type, event_ts, payload, metadata) " +
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb)"; // Use ?::jsonb for JSONB casting
+
+    // SQL for outbox_message_t table
+    public static final String insertOutboxMessageSql = "INSERT INTO outbox_message_t " +
+            "(id, host_id, user_id, nonce, aggregate_id, aggregate_version, aggregate_type, event_type, event_ts, payload, metadata) " +
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb)"; // Use ?::jsonb for JSONB casting
+
     /**
      * Inserts multiple CloudEvents into the event_store_t and outbox_message_t tables
      * within a single database transaction.
@@ -42,14 +52,6 @@ public class EventPersistenceImpl implements EventPersistence {
     @Override
     public Result<String> insertEventStore(CloudEvent[] events) {
         // SQL for event_store_t table
-        final String insertEventStoreSql = "INSERT INTO event_store_t " +
-                "(id, host_id, user_id, nonce, aggregate_id, aggregate_version, aggregate_type, event_type, event_ts, payload, metadata) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb)"; // Use ?::jsonb for JSONB casting
-
-        // SQL for outbox_message_t table
-        final String insertOutboxMessageSql = "INSERT INTO outbox_message_t " +
-                "(id, host_id, user_id, nonce, aggregate_id, aggregate_version, aggregate_type, event_type, event_ts, payload, metadata) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb)"; // Use ?::jsonb for JSONB casting
 
         if (events == null || events.length == 0) {
             return Success.of("No events to insert.");
