@@ -7,7 +7,10 @@ import com.networknt.utility.Constants;
 import com.networknt.utility.UuidUtil;
 import io.cloudevents.CloudEvent;
 import io.cloudevents.core.builder.CloudEventBuilder;
+import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.PortalConstants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
@@ -663,4 +666,287 @@ public interface PortalDbProvider extends DbProvider {
     // Aggregations
     Result<String> getAllAggregatedInstanceRuntimeConfigs(String hostId, String instanceId);
     Result<String> getPromotableInstanceConfigs(String hostId, String instanceId,Set<String> propertyNames,Set<String> apiUids);
+
+    /**
+     * Handles an event by dispatching it to the appropriate persistence method.
+     * This logic is shared between various event consumers (Kafka, Postgres).
+     *
+     * @param conn  The database connection (active transaction)
+     * @param event The event map
+     * @throws SQLException if a database error occurs
+     * @throws Exception    if an unexpected error occurs
+     */
+    default void handleEvent(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        Logger logger = LoggerFactory.getLogger(PortalDbProvider.class);
+        String eventType = (String) event.get(CloudEventV1.TYPE);
+        if (logger.isTraceEnabled()) logger.trace("Event type {} event {}", eventType, JsonMapper.toJson(event));
+        switch (eventType) {
+            // --- User Events ---
+            case PortalConstants.USER_CREATED_EVENT: createUser(conn, event); break;
+            case PortalConstants.USER_ONBOARDED_EVENT: onboardUser(conn, event); break;
+            case PortalConstants.SOCIAL_USER_CREATED_EVENT: createSocialUser(conn, event); break;
+            case PortalConstants.USER_CONFIRMED_EVENT: confirmUser(conn, event); break;
+            case PortalConstants.USER_VERIFIED_EVENT: verifyUser(conn, event); break;
+            case PortalConstants.USER_UPDATED_EVENT: updateUser(conn, event); break;
+            case PortalConstants.PASSWORD_FORGOT_EVENT: forgetPassword(conn, event); break;
+            case PortalConstants.PASSWORD_RESET_EVENT: resetPassword(conn, event); break;
+            case PortalConstants.PASSWORD_CHANGED_EVENT: changePassword(conn, event); break;
+            case PortalConstants.USER_DELETED_EVENT: deleteUser(conn, event); break;
+
+            // --- Org Events ---
+            case PortalConstants.ORG_CREATED_EVENT: createOrg(conn, event); break;
+            case PortalConstants.ORG_UPDATED_EVENT: updateOrg(conn, event); break;
+            case PortalConstants.ORG_DELETED_EVENT: deleteOrg(conn, event); break;
+
+            // --- Host Events ---
+            case PortalConstants.HOST_CREATED_EVENT: createHost(conn, event); break;
+            case PortalConstants.HOST_UPDATED_EVENT: updateHost(conn, event); break;
+            case PortalConstants.HOST_DELETED_EVENT: deleteHost(conn, event); break;
+            case PortalConstants.USER_HOST_SWITCHED_EVENT: switchUserHost(conn, event); break;
+            case PortalConstants.USER_HOST_CREATED_EVENT: createUserHost(conn, event); break;
+            case PortalConstants.USER_HOST_DELETED_EVENT: deleteUserHost(conn, event); break;
+
+            // --- Payment Events ---
+            case PortalConstants.PAYMENT_UPDATED_EVENT: updatePayment(conn, event); break;
+            case PortalConstants.PAYMENT_DELETED_EVENT: deletePayment(conn, event); break;
+
+            // --- Message Events ---
+            case PortalConstants.PRIVATE_MESSAGE_SENT_EVENT: sendPrivateMessage(conn, event); break;
+
+            // --- Attribute Events ---
+            case PortalConstants.ATTRIBUTE_CREATED_EVENT: createAttribute(conn, event); break;
+            case PortalConstants.ATTRIBUTE_UPDATED_EVENT: updateAttribute(conn, event); break;
+            case PortalConstants.ATTRIBUTE_DELETED_EVENT: deleteAttribute(conn, event); break;
+            case PortalConstants.ATTRIBUTE_PERMISSION_CREATED_EVENT: createAttributePermission(conn, event); break;
+            case PortalConstants.ATTRIBUTE_PERMISSION_UPDATED_EVENT: updateAttributePermission(conn, event); break;
+            case PortalConstants.ATTRIBUTE_PERMISSION_DELETED_EVENT: deleteAttributePermission(conn, event); break;
+            case PortalConstants.ATTRIBUTE_USER_CREATED_EVENT: createAttributeUser(conn, event); break;
+            case PortalConstants.ATTRIBUTE_USER_UPDATED_EVENT: updateAttributeUser(conn, event); break;
+            case PortalConstants.ATTRIBUTE_USER_DELETED_EVENT: deleteAttributeUser(conn, event); break;
+            case PortalConstants.ATTRIBUTE_ROW_FILTER_CREATED_EVENT: createAttributeRowFilter(conn, event); break;
+            case PortalConstants.ATTRIBUTE_ROW_FILTER_UPDATED_EVENT: updateAttributeRowFilter(conn, event); break;
+            case PortalConstants.ATTRIBUTE_ROW_FILTER_DELETED_EVENT: deleteAttributeRowFilter(conn, event); break;
+            case PortalConstants.ATTRIBUTE_COL_FILTER_CREATED_EVENT: createAttributeColFilter(conn, event); break;
+            case PortalConstants.ATTRIBUTE_COL_FILTER_UPDATED_EVENT: updateAttributeColFilter(conn, event); break;
+            case PortalConstants.ATTRIBUTE_COL_FILTER_DELETED_EVENT: deleteAttributeColFilter(conn, event); break;
+
+            // --- Group Events ---
+            case PortalConstants.GROUP_CREATED_EVENT: createGroup(conn, event); break;
+            case PortalConstants.GROUP_UPDATED_EVENT: updateGroup(conn, event); break;
+            case PortalConstants.GROUP_DELETED_EVENT: deleteGroup(conn, event); break;
+            case PortalConstants.GROUP_PERMISSION_CREATED_EVENT: createGroupPermission(conn, event); break;
+            case PortalConstants.GROUP_PERMISSION_DELETED_EVENT: deleteGroupPermission(conn, event); break;
+            case PortalConstants.GROUP_USER_CREATED_EVENT: createGroupUser(conn, event); break;
+            case PortalConstants.GROUP_USER_UPDATED_EVENT: updateGroupUser(conn, event); break;
+            case PortalConstants.GROUP_USER_DELETED_EVENT: deleteGroupUser(conn, event); break;
+            case PortalConstants.GROUP_ROW_FILTER_CREATED_EVENT: createGroupRowFilter(conn, event); break;
+            case PortalConstants.GROUP_ROW_FILTER_UPDATED_EVENT: updateGroupRowFilter(conn, event); break;
+            case PortalConstants.GROUP_ROW_FILTER_DELETED_EVENT: deleteGroupRowFilter(conn, event); break;
+            case PortalConstants.GROUP_COL_FILTER_CREATED_EVENT: createGroupColFilter(conn, event); break;
+            case PortalConstants.GROUP_COL_FILTER_UPDATED_EVENT: updateGroupColFilter(conn, event); break;
+            case PortalConstants.GROUP_COL_FILTER_DELETED_EVENT: deleteGroupColFilter(conn, event); break;
+
+            // --- Role Events ---
+            case PortalConstants.ROLE_CREATED_EVENT: createRole(conn, event); break;
+            case PortalConstants.ROLE_UPDATED_EVENT: updateRole(conn, event); break;
+            case PortalConstants.ROLE_DELETED_EVENT: deleteRole(conn, event); break;
+            case PortalConstants.ROLE_PERMISSION_CREATED_EVENT: createRolePermission(conn, event); break;
+            case PortalConstants.ROLE_PERMISSION_DELETED_EVENT: deleteRolePermission(conn, event); break;
+            case PortalConstants.ROLE_USER_CREATED_EVENT: createRoleUser(conn, event); break;
+            case PortalConstants.ROLE_USER_UPDATED_EVENT: updateRoleUser(conn, event); break;
+            case PortalConstants.ROLE_USER_DELETED_EVENT: deleteRoleUser(conn, event); break;
+            case PortalConstants.ROLE_ROW_FILTER_CREATED_EVENT: createRoleRowFilter(conn, event); break;
+            case PortalConstants.ROLE_ROW_FILTER_UPDATED_EVENT: updateRoleRowFilter(conn, event); break;
+            case PortalConstants.ROLE_ROW_FILTER_DELETED_EVENT: deleteRoleRowFilter(conn, event); break;
+            case PortalConstants.ROLE_COL_FILTER_CREATED_EVENT: createRoleColFilter(conn, event); break;
+            case PortalConstants.ROLE_COL_FILTER_UPDATED_EVENT: updateRoleColFilter(conn, event); break;
+            case PortalConstants.ROLE_COL_FILTER_DELETED_EVENT: deleteRoleColFilter(conn, event); break;
+
+            // --- Position Events ---
+            case PortalConstants.POSITION_CREATED_EVENT: createPosition(conn, event); break;
+            case PortalConstants.POSITION_UPDATED_EVENT: updatePosition(conn, event); break;
+            case PortalConstants.POSITION_DELETED_EVENT: deletePosition(conn, event); break;
+            case PortalConstants.POSITION_PERMISSION_CREATED_EVENT: createPositionPermission(conn, event); break;
+            case PortalConstants.POSITION_PERMISSION_DELETED_EVENT: deletePositionPermission(conn, event); break;
+            case PortalConstants.POSITION_USER_CREATED_EVENT: createPositionUser(conn, event); break;
+            case PortalConstants.POSITION_USER_UPDATED_EVENT: updatePositionUser(conn, event); break;
+            case PortalConstants.POSITION_USER_DELETED_EVENT: deletePositionUser(conn, event); break;
+            case PortalConstants.POSITION_ROW_FILTER_CREATED_EVENT: createPositionRowFilter(conn, event); break;
+            case PortalConstants.POSITION_ROW_FILTER_UPDATED_EVENT: updatePositionRowFilter(conn, event); break;
+            case PortalConstants.POSITION_ROW_FILTER_DELETED_EVENT: deletePositionRowFilter(conn, event); break;
+            case PortalConstants.POSITION_COL_FILTER_CREATED_EVENT: createPositionColFilter(conn, event); break;
+            case PortalConstants.POSITION_COL_FILTER_UPDATED_EVENT: updatePositionColFilter(conn, event); break;
+            case PortalConstants.POSITION_COL_FILTER_DELETED_EVENT: deletePositionColFilter(conn, event); break;
+
+            // --- Rule Events ---
+            case PortalConstants.RULE_CREATED_EVENT: createRule(conn, event); break;
+            case PortalConstants.RULE_UPDATED_EVENT: updateRule(conn, event); break;
+            case PortalConstants.RULE_DELETED_EVENT: deleteRule(conn, event); break;
+
+            // --- Schema Events ---
+            case PortalConstants.SCHEMA_CREATED_EVENT: createSchema(conn, event); break;
+            case PortalConstants.SCHEMA_UPDATED_EVENT: updateSchema(conn, event); break;
+            case PortalConstants.SCHEMA_DELETED_EVENT: deleteSchema(conn, event); break;
+
+            // --- Schedule Events ---
+            case PortalConstants.SCHEDULE_CREATED_EVENT: createSchedule(conn, event); break;
+            case PortalConstants.SCHEDULE_UPDATED_EVENT: updateSchedule(conn, event); break;
+            case PortalConstants.SCHEDULE_DELETED_EVENT: deleteSchedule(conn, event); break;
+
+            // --- Category Events ---
+            case PortalConstants.CATEGORY_CREATED_EVENT: createCategory(conn, event); break;
+            case PortalConstants.CATEGORY_UPDATED_EVENT: updateCategory(conn, event); break;
+            case PortalConstants.CATEGORY_DELETED_EVENT: deleteCategory(conn, event); break;
+
+            // --- Tag Events ---
+            case PortalConstants.TAG_CREATED_EVENT: createTag(conn, event); break;
+            case PortalConstants.TAG_UPDATED_EVENT: updateTag(conn, event); break;
+            case PortalConstants.TAG_DELETED_EVENT: deleteTag(conn, event); break;
+
+            // --- Service Events ---
+            case PortalConstants.API_CREATED_EVENT: createApi(conn, event); break;
+            case PortalConstants.API_UPDATED_EVENT: updateApi(conn, event); break;
+            case PortalConstants.API_DELETED_EVENT: deleteApi(conn, event); break;
+            case PortalConstants.API_VERSION_CREATED_EVENT: createApiVersion(conn, event); break;
+            case PortalConstants.API_VERSION_UPDATED_EVENT: updateApiVersion(conn, event); break;
+            case PortalConstants.API_VERSION_DELETED_EVENT: deleteApiVersion(conn, event); break;
+            case PortalConstants.API_ENDPOINT_RULE_CREATED_EVENT: createApiEndpointRule(conn, event); break;
+            case PortalConstants.API_ENDPOINT_RULE_DELETED_EVENT: deleteApiEndpointRule(conn, event); break;
+            case PortalConstants.API_VERSION_SPEC_UPDATED_EVENT: updateApiVersionSpec(conn, event); break;
+
+            // --- Auth Events ---
+            case PortalConstants.AUTH_REFRESH_TOKEN_CREATED_EVENT: createRefreshToken(conn, event); break;
+            case PortalConstants.AUTH_REFRESH_TOKEN_DELETED_EVENT: deleteRefreshToken(conn, event); break;
+            case PortalConstants.AUTH_CODE_CREATED_EVENT: createAuthCode(conn, event); break;
+            case PortalConstants.AUTH_CODE_DELETED_EVENT: deleteAuthCode(conn, event); break;
+            case PortalConstants.AUTH_PROVIDER_CREATED_EVENT: createAuthProvider(conn, event); break;
+            case PortalConstants.AUTH_PROVIDER_ROTATED_EVENT: rotateAuthProvider(conn, event); break;
+            case PortalConstants.AUTH_PROVIDER_UPDATED_EVENT: updateAuthProvider(conn, event); break;
+            case PortalConstants.AUTH_PROVIDER_DELETED_EVENT: deleteAuthProvider(conn, event); break;
+            case PortalConstants.AUTH_PROVIDER_API_CREATED_EVENT: createAuthProviderApi(conn, event); break;
+            case PortalConstants.AUTH_PROVIDER_API_DELETED_EVENT: deleteAuthProviderApi(conn, event); break;
+            case PortalConstants.AUTH_PROVIDER_CLIENT_CREATED_EVENT: createAuthProviderClient(conn, event); break;
+            case PortalConstants.AUTH_PROVIDER_CLIENT_DELETED_EVENT: deleteAuthProviderClient(conn, event); break;
+
+            // --- Product Events ---
+            case PortalConstants.PRODUCT_VERSION_CREATED_EVENT: createProduct(conn, event); break;
+            case PortalConstants.PRODUCT_VERSION_UPDATED_EVENT: updateProduct(conn, event); break;
+            case PortalConstants.PRODUCT_VERSION_DELETED_EVENT: deleteProduct(conn, event); break;
+            case PortalConstants.PRODUCT_VERSION_ENVIRONMENT_CREATED_EVENT: createProductVersionEnvironment(conn, event); break;
+            case PortalConstants.PRODUCT_VERSION_ENVIRONMENT_UPDATED_EVENT: updateProductVersionEnvironment(conn, event); break;
+            case PortalConstants.PRODUCT_VERSION_ENVIRONMENT_DELETED_EVENT: deleteProductVersionEnvironment(conn, event); break;
+            case PortalConstants.PRODUCT_VERSION_PIPELINE_CREATED_EVENT: createProductVersionPipeline(conn, event); break;
+            case PortalConstants.PRODUCT_VERSION_PIPELINE_DELETED_EVENT: deleteProductVersionPipeline(conn, event); break;
+            case PortalConstants.PRODUCT_VERSION_CONFIG_CREATED_EVENT: createProductVersionConfig(conn, event); break;
+            case PortalConstants.PRODUCT_VERSION_CONFIG_DELETED_EVENT: deleteProductVersionConfig(conn, event); break;
+            case PortalConstants.PRODUCT_VERSION_CONFIG_PROPERTY_CREATED_EVENT: createProductVersionConfigProperty(conn, event); break;
+            case PortalConstants.PRODUCT_VERSION_CONFIG_PROPERTY_DELETED_EVENT: deleteProductVersionConfigProperty(conn, event); break;
+
+            // --- Pipeline Events ---
+            case PortalConstants.PIPELINE_CREATED_EVENT: createPipeline(conn, event); break;
+            case PortalConstants.PIPELINE_UPDATED_EVENT: updatePipeline(conn, event); break;
+            case PortalConstants.PIPELINE_DELETED_EVENT: deletePipeline(conn, event); break;
+
+            // --- Platform Events ---
+            case PortalConstants.PLATFORM_CREATED_EVENT: createPlatform(conn, event); break;
+            case PortalConstants.PLATFORM_UPDATED_EVENT: updatePlatform(conn, event); break;
+            case PortalConstants.PLATFORM_DELETED_EVENT: deletePlatform(conn, event); break;
+
+            // --- Instance Events ---
+            case PortalConstants.INSTANCE_CREATED_EVENT: createInstance(conn, event); break;
+            case PortalConstants.INSTANCE_UPDATED_EVENT: updateInstance(conn, event); break;
+            case PortalConstants.INSTANCE_DELETED_EVENT: deleteInstance(conn, event); break;
+            case PortalConstants.INSTANCE_LOCKED_EVENT: lockInstance(conn, event); break;
+            case PortalConstants.INSTANCE_UNLOCKED_EVENT: unlockInstance(conn, event); break;
+            case PortalConstants.INSTANCE_CLONED_EVENT: cloneInstance(conn, event); break;
+            case PortalConstants.INSTANCE_PROMOTED_EVENT: promoteInstance(conn, event); break;
+            case PortalConstants.INSTANCE_API_CREATED_EVENT: createInstanceApi(conn, event); break;
+            case PortalConstants.INSTANCE_API_DELETED_EVENT: deleteInstanceApi(conn, event); break;
+            case PortalConstants.INSTANCE_APP_CREATED_EVENT: createInstanceApp(conn, event); break;
+            case PortalConstants.INSTANCE_APP_DELETED_EVENT: deleteInstanceApp(conn, event); break;
+            case PortalConstants.INSTANCE_APP_API_CREATED_EVENT: createInstanceAppApi(conn, event); break;
+            case PortalConstants.INSTANCE_APP_API_DELETED_EVENT: deleteInstanceAppApi(conn, event); break;
+            case PortalConstants.INSTANCE_API_PATH_PREFIX_CREATED_EVENT: createInstanceApiPathPrefix(conn, event); break;
+            case PortalConstants.INSTANCE_API_PATH_PREFIX_UPDATED_EVENT: updateInstanceApiPathPrefix(conn, event); break;
+            case PortalConstants.INSTANCE_API_PATH_PREFIX_DELETED_EVENT: deleteInstanceApiPathPrefix(conn, event); break;
+
+            // --- Deployment Events ---
+            case PortalConstants.DEPLOYMENT_CREATED_EVENT: createDeployment(conn, event); break;
+            case PortalConstants.DEPLOYMENT_UPDATED_EVENT: updateDeployment(conn, event); break;
+            case PortalConstants.DEPLOYMENT_JOB_ID_UPDATED_EVENT: updateDeploymentJobId(conn, event); break;
+            case PortalConstants.DEPLOYMENT_STATUS_UPDATED_EVENT: updateDeploymentStatus(conn, event); break;
+            case PortalConstants.DEPLOYMENT_DELETED_EVENT: deleteDeployment(conn, event); break;
+
+            // --- Deployment Instance Events ---
+            case PortalConstants.DEPLOYMENT_INSTANCE_CREATED_EVENT: createDeploymentInstance(conn, event); break;
+            case PortalConstants.DEPLOYMENT_INSTANCE_UPDATED_EVENT: updateDeploymentInstance(conn, event); break;
+            case PortalConstants.DEPLOYMENT_INSTANCE_DELETED_EVENT: deleteDeploymentInstance(conn, event); break;
+
+            // --- Config Events ---
+            case PortalConstants.CONFIG_CREATED_EVENT: createConfig(conn, event); break;
+            case PortalConstants.CONFIG_UPDATED_EVENT: updateConfig(conn, event); break;
+            case PortalConstants.CONFIG_DELETED_EVENT: deleteConfig(conn, event); break;
+            case PortalConstants.CONFIG_PROPERTY_CREATED_EVENT: createConfigProperty(conn, event); break;
+            case PortalConstants.CONFIG_PROPERTY_UPDATED_EVENT: updateConfigProperty(conn, event); break;
+            case PortalConstants.CONFIG_PROPERTY_DELETED_EVENT: deleteConfigProperty(conn, event); break;
+            case PortalConstants.CONFIG_ENVIRONMENT_CREATED_EVENT: createConfigEnvironment(conn, event); break;
+            case PortalConstants.CONFIG_ENVIRONMENT_UPDATED_EVENT: updateConfigEnvironment(conn, event); break;
+            case PortalConstants.CONFIG_ENVIRONMENT_DELETED_EVENT: deleteConfigEnvironment(conn, event); break;
+            case PortalConstants.CONFIG_INSTANCE_API_CREATED_EVENT: createConfigInstanceApi(conn, event); break;
+            case PortalConstants.CONFIG_INSTANCE_API_UPDATED_EVENT: updateConfigInstanceApi(conn, event); break;
+            case PortalConstants.CONFIG_INSTANCE_API_DELETED_EVENT: deleteConfigInstanceApi(conn, event); break;
+            case PortalConstants.CONFIG_INSTANCE_APP_CREATED_EVENT: createConfigInstanceApp(conn, event); break;
+            case PortalConstants.CONFIG_INSTANCE_APP_UPDATED_EVENT: updateConfigInstanceApp(conn, event); break;
+            case PortalConstants.CONFIG_INSTANCE_APP_DELETED_EVENT: deleteConfigInstanceApp(conn, event); break;
+            case PortalConstants.CONFIG_INSTANCE_APP_API_CREATED_EVENT: createConfigInstanceAppApi(conn, event); break;
+            case PortalConstants.CONFIG_INSTANCE_APP_API_UPDATED_EVENT: updateConfigInstanceAppApi(conn, event); break;
+            case PortalConstants.CONFIG_INSTANCE_APP_API_DELETED_EVENT: deleteConfigInstanceAppApi(conn, event); break;
+            case PortalConstants.CONFIG_INSTANCE_FILE_CREATED_EVENT: createConfigInstanceFile(conn, event); break;
+            case PortalConstants.CONFIG_INSTANCE_FILE_UPDATED_EVENT: updateConfigInstanceFile(conn, event); break;
+            case PortalConstants.CONFIG_INSTANCE_FILE_DELETED_EVENT: deleteConfigInstanceFile(conn, event); break;
+            case PortalConstants.CONFIG_DEPLOYMENT_INSTANCE_CREATED_EVENT: createConfigDeploymentInstance(conn, event); break;
+            case PortalConstants.CONFIG_DEPLOYMENT_INSTANCE_UPDATED_EVENT: updateConfigDeploymentInstance(conn, event); break;
+            case PortalConstants.CONFIG_DEPLOYMENT_INSTANCE_DELETED_EVENT: deleteConfigDeploymentInstance(conn, event); break;
+            case PortalConstants.CONFIG_INSTANCE_CREATED_EVENT: createConfigInstance(conn, event); break;
+            case PortalConstants.CONFIG_INSTANCE_UPDATED_EVENT: updateConfigInstance(conn, event); break;
+            case PortalConstants.CONFIG_INSTANCE_DELETED_EVENT: deleteConfigInstance(conn, event); break;
+            case PortalConstants.CONFIG_PRODUCT_CREATED_EVENT: createConfigProduct(conn, event); break;
+            case PortalConstants.CONFIG_PRODUCT_UPDATED_EVENT: updateConfigProduct(conn, event); break;
+            case PortalConstants.CONFIG_PRODUCT_DELETED_EVENT: deleteConfigProduct(conn, event); break;
+            case PortalConstants.CONFIG_PRODUCT_VERSION_CREATED_EVENT: createConfigProductVersion(conn, event); break;
+            case PortalConstants.CONFIG_PRODUCT_VERSION_UPDATED_EVENT: updateConfigProductVersion(conn, event); break;
+            case PortalConstants.CONFIG_PRODUCT_VERSION_DELETED_EVENT: deleteConfigProductVersion(conn, event); break;
+
+            // --- App Events ---
+            case PortalConstants.APP_CREATED_EVENT: createApp(conn, event); break;
+            case PortalConstants.APP_UPDATED_EVENT: updateApp(conn, event); break;
+            case PortalConstants.APP_DELETED_EVENT: deleteApp(conn, event); break;
+
+            // --- Client Events ---
+            case PortalConstants.CLIENT_CREATED_EVENT: createClient(conn, event); break;
+            case PortalConstants.CLIENT_UPDATED_EVENT: updateClient(conn, event); break;
+            case PortalConstants.CLIENT_DELETED_EVENT: deleteClient(conn, event); break;
+
+            // --- Reference Table Events ---
+            case PortalConstants.REF_TABLE_CREATED_EVENT: createRefTable(conn, event); break;
+            case PortalConstants.REF_TABLE_UPDATED_EVENT: updateRefTable(conn, event); break;
+            case PortalConstants.REF_TABLE_DELETED_EVENT: deleteRefTable(conn, event); break;
+            case PortalConstants.REF_VALUE_CREATED_EVENT: createRefValue(conn, event); break;
+            case PortalConstants.REF_VALUE_UPDATED_EVENT: updateRefValue(conn, event); break;
+            case PortalConstants.REF_VALUE_DELETED_EVENT: deleteRefValue(conn, event); break;
+            case PortalConstants.REF_LOCALE_CREATED_EVENT: createRefLocale(conn, event); break;
+            case PortalConstants.REF_LOCALE_UPDATED_EVENT: updateRefLocale(conn, event); break;
+            case PortalConstants.REF_LOCALE_DELETED_EVENT: deleteRefLocale(conn, event); break;
+            case PortalConstants.REF_RELATION_TYPE_CREATED_EVENT: createRefRelationType(conn, event); break;
+            case PortalConstants.REF_RELATION_TYPE_UPDATED_EVENT: updateRefRelationType(conn, event); break;
+            case PortalConstants.REF_RELATION_TYPE_DELETED_EVENT: deleteRefRelationType(conn, event); break;
+            case PortalConstants.REF_RELATION_CREATED_EVENT: createRefRelation(conn, event); break;
+            case PortalConstants.REF_RELATION_UPDATED_EVENT: updateRefRelation(conn, event); break;
+            case PortalConstants.REF_RELATION_DELETED_EVENT: deleteRefRelation(conn, event); break;
+
+            // --- Default Case ---
+            default:
+                if (logger.isDebugEnabled()) logger.debug("Unhandled event type: {}", eventType);
+        }
+    }
 }

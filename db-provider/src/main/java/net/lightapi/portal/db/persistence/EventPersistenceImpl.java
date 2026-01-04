@@ -39,8 +39,8 @@ public class EventPersistenceImpl implements EventPersistence {
 
     // SQL for outbox_message_t table
     public static final String insertOutboxMessageSql = "INSERT INTO outbox_message_t " +
-            "(id, host_id, user_id, nonce, aggregate_id, aggregate_version, aggregate_type, event_type, event_ts, payload, metadata) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb)"; // Use ?::jsonb for JSONB casting
+            "(id, host_id, user_id, nonce, aggregate_id, aggregate_version, aggregate_type, event_type, event_ts, payload, metadata, c_offset) " +
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?)"; // Use ?::jsonb for JSONB casting
 
     /**
      * Inserts multiple CloudEvents into the event_store_t and outbox_message_t tables
@@ -60,10 +60,11 @@ public class EventPersistenceImpl implements EventPersistence {
         Result<String> result;
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false); // Start transaction
-
             try (PreparedStatement eventStorePst = conn.prepareStatement(insertEventStoreSql);
                  PreparedStatement outboxPst = conn.prepareStatement(insertOutboxMessageSql)) {
 
+                long startOffset = reserveOffsets(conn, events.length);
+                long currentOffset = startOffset;
                 for (CloudEvent event : events) {
                     // Extract common CloudEvents attributes
                     UUID eventId = UUID.fromString(event.getId());
@@ -158,6 +159,7 @@ public class EventPersistenceImpl implements EventPersistence {
                     outboxPst.setObject(9, eventTs); // Use OffsetDateTime for TIMESTAMP WITH TIME ZONE
                     outboxPst.setString(10, payloadJson);
                     outboxPst.setString(11, metadataJson);
+                    outboxPst.setLong(12, currentOffset++);
                     outboxPst.addBatch();
                 }
 
@@ -259,5 +261,19 @@ public class EventPersistenceImpl implements EventPersistence {
             logger.error("Exception:", e);
         }
         return aggregateVersion;
+    }
+
+    private long reserveOffsets(Connection conn, int batchSize) throws SQLException {
+        String sql = "UPDATE log_counter SET next_offset = next_offset + ? WHERE id = 1 RETURNING next_offset - ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, batchSize);
+            pstmt.setInt(2, batchSize);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getLong(1);
+                }
+            }
+        }
+        throw new SQLException("Failed to reserve offsets from log_counter");
     }
 }

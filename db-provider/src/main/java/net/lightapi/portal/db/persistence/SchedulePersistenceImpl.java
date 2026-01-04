@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 import java.sql.*;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -112,7 +113,8 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
             statement.setInt(i++, ((Number) map.get("frequencyTime")).intValue());
 
             // 6. start_ts (Required)
-            OffsetDateTime startTs = OffsetDateTime.parse((String)map.get("startTs"));
+            Object startTsObj = map.get("startTs");
+            OffsetDateTime startTs = startTsObj instanceof String ? OffsetDateTime.parse((String)startTsObj) : (OffsetDateTime)startTsObj;
             statement.setObject(i++, startTs);
             // 7. next_run_ts (Required - initially same as start_ts)
             statement.setObject(i++, startTs);
@@ -127,7 +129,8 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
             // 11. update_user (From event metadata)
             statement.setString(i++, (String)event.get(Constants.USER));
             // 12. update_ts (From event metadata)
-            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            Object updateTsObj = event.get(CloudEventV1.TIME);
+            statement.setObject(i++, updateTsObj instanceof String ? OffsetDateTime.parse((String)updateTsObj) : (OffsetDateTime)updateTsObj);
             // 13. aggregate_version
             statement.setLong(i++, newAggregateVersion);
 
@@ -200,7 +203,8 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
             // 9: update_user
             statement.setString(i++, (String)event.get(Constants.USER));
             // 10: update_ts
-            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            Object updateTsObj = event.get(CloudEventV1.TIME);
+            statement.setObject(i++, updateTsObj instanceof String ? OffsetDateTime.parse((String)updateTsObj) : (OffsetDateTime)updateTsObj);
             // 11: aggregate_version
             statement.setLong(i++, newAggregateVersion);
 
@@ -291,7 +295,7 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
             """
             SELECT COUNT(*) OVER () AS total,
             schedule_id, host_id, schedule_name, frequency_unit, frequency_time,
-            start_ts, event_topic, event_type, event_data, update_user,
+            start_ts, next_run_ts, event_topic, event_type, event_data, update_user,
             update_ts, aggregate_version, active
             FROM schedule_t
             WHERE host_id = ?
@@ -331,7 +335,8 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
                     map.put("scheduleName", resultSet.getString("schedule_name"));
                     map.put("frequencyUnit", resultSet.getString("frequency_unit"));
                     map.put("frequencyTime", resultSet.getInt("frequency_time"));
-                    map.put("startTs", resultSet.getObject("start_ts") != null ? resultSet.getObject("start_ts", OffsetDateTime.class) : null);
+                    map.put("startTs", resultSet.getObject("start_ts", OffsetDateTime.class));
+                    map.put("nextRunTs", resultSet.getObject("next_run_ts", OffsetDateTime.class));
                     map.put("eventTopic", resultSet.getString("event_topic"));
                     map.put("eventType", resultSet.getString("event_type"));
                     map.put("eventData", resultSet.getString("event_data")); // Assuming TEXT -> String
@@ -398,7 +403,7 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
         final String sql =
                 """
                 SELECT schedule_id, host_id, schedule_name, frequency_unit, frequency_time,
-                start_ts, event_topic, event_type, event_data, update_user, update_ts, aggregate_version
+                start_ts, next_run_ts, event_topic, event_type, event_data, update_user, update_ts, aggregate_version
                 FROM schedule_t WHERE schedule_id = ?
                 """;
         Map<String, Object> scheduleMap = null; // Initialize map to null
@@ -417,12 +422,13 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
                         scheduleMap.put("scheduleName", resultSet.getString("schedule_name"));
                         scheduleMap.put("frequencyUnit", resultSet.getString("frequency_unit"));
                         scheduleMap.put("frequencyTime", resultSet.getInt("frequency_time"));
-                        scheduleMap.put("startTs", resultSet.getObject("start_ts") != null ? resultSet.getObject("start_ts", OffsetDateTime.class) : null);
+                        scheduleMap.put("startTs", resultSet.getTimestamp("start_ts") != null ? resultSet.getTimestamp("start_ts").toInstant().atOffset(ZoneOffset.UTC).toString() : null);
+                        scheduleMap.put("next_run_ts", resultSet.getTimestamp("next_run_ts") != null ? resultSet.getTimestamp("next_run_ts").toInstant().atOffset(ZoneOffset.UTC).toString() : null);
                         scheduleMap.put("eventTopic", resultSet.getString("event_topic"));
                         scheduleMap.put("eventType", resultSet.getString("event_type"));
                         scheduleMap.put("eventData", resultSet.getString("event_data")); // Assuming TEXT -> String
                         scheduleMap.put("updateUser", resultSet.getString("update_user"));
-                        scheduleMap.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                        scheduleMap.put("updateTs", resultSet.getTimestamp("update_ts") != null ? resultSet.getTimestamp("update_ts").toInstant().atOffset(ZoneOffset.UTC).toString() : null);
                         scheduleMap.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     }
                 }
@@ -539,7 +545,6 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
     public Result<String> executeTask(Map<String, Object> task, long executionTimeMillis) {
         String scheduleId = (String) task.get("schedule_id");
         UUID hostId = UUID.fromString((String) task.get("host_id"));
-        String eventTopic = (String) task.get("event_topic");
         String eventType = (String) task.get("event_type");
         String eventData = (String) task.get("event_data");
         String frequencyUnitStr = (String) task.get("frequency_unit");
@@ -550,12 +555,13 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
         long nextRunTs = executionTimeMillis + freq;
 
         Result<String> result = null;
-
+        if(logger.isTraceEnabled()) logger.trace("eventData = {}", eventData);
         Map<String, Object> eventMap = JsonMapper.string2Map(eventData);
         // add or replace id
         eventMap.put("id", UuidUtil.getUUID().toString());
         // get user to calculate the nonce, user cannot be null, and it should be validated when create the schedule.
         String userId = (String)eventMap.get(Constants.USER);
+        if(logger.isTraceEnabled()) logger.trace("userId = {}", userId);
         long nonce = queryNonceByUserId(userId);
         eventMap.put("nonce", nonce);
         String aggregateId = (String)eventMap.get("subject");
@@ -598,6 +604,7 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
                 }
 
                 UUID eventId = UuidUtil.getUUID();
+                long offset = reserveOffsets(conn, 1);
 
                 // 2. Insert into event_store_t
                 // Using assumed column names based on user request and common patterns
@@ -631,6 +638,7 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
                     ps.setObject(9, OffsetDateTime.now()); // Use OffsetDateTime for TIMESTAMP WITH TIME ZONE
                     ps.setString(10, JsonMapper.toJson(eventMap));
                     ps.setString(11, "{}");
+                    ps.setLong(12, offset);
 
                     ps.executeUpdate();
                 }
@@ -696,4 +704,17 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
         return aggregateVersion;
     }
 
+    private long reserveOffsets(Connection conn, int batchSize) throws SQLException {
+        String sql = "UPDATE log_counter SET next_offset = next_offset + ? WHERE id = 1 RETURNING next_offset - ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, batchSize);
+            pstmt.setInt(2, batchSize);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getLong(1);
+                }
+            }
+        }
+        throw new SQLException("Failed to reserve offsets from log_counter");
+    }
 }
