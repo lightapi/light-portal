@@ -35,12 +35,12 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
 
     private static final Logger logger = LoggerFactory.getLogger(SchedulePersistenceImpl.class);
     // Consider moving these to a shared constants class if they are truly general
-    public static PortalDbProvider dbProvider = (PortalDbProvider) SingletonServiceFactory.getBean(DbProvider.class);
     private static final String SQL_EXCEPTION = PortalDbProvider.SQL_EXCEPTION;
     private static final String GENERIC_EXCEPTION = PortalDbProvider.GENERIC_EXCEPTION;
     private static final String OBJECT_NOT_FOUND = PortalDbProvider.OBJECT_NOT_FOUND;
 
     private final NotificationService notificationService;
+    public PortalDbProvider dbProvider = (PortalDbProvider) SingletonServiceFactory.getBean(DbProvider.class);
 
     public SchedulePersistenceImpl(NotificationService notificationService) {
         this.notificationService = notificationService;
@@ -62,6 +62,7 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
                     frequency_unit,
                     frequency_time,
                     start_ts,
+                    next_run_ts,
                     event_topic,
                     event_type,
                     event_data,
@@ -69,13 +70,14 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
                     update_ts,
                     aggregate_version,
                     active
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)
                 ON CONFLICT (schedule_id) DO UPDATE
                 SET host_id = EXCLUDED.host_id,
                     schedule_name = EXCLUDED.schedule_name,
                     frequency_unit = EXCLUDED.frequency_unit,
                     frequency_time = EXCLUDED.frequency_time,
                     start_ts = EXCLUDED.start_ts,
+                    next_run_ts = EXCLUDED.next_run_ts,
                     event_topic = EXCLUDED.event_topic,
                     event_type = EXCLUDED.event_type,
                     event_data = EXCLUDED.event_data,
@@ -110,20 +112,23 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
             statement.setInt(i++, ((Number) map.get("frequencyTime")).intValue());
 
             // 6. start_ts (Required)
-            statement.setObject(i++, OffsetDateTime.parse((String)map.get("startTs")));
+            OffsetDateTime startTs = OffsetDateTime.parse((String)map.get("startTs"));
+            statement.setObject(i++, startTs);
+            // 7. next_run_ts (Required - initially same as start_ts)
+            statement.setObject(i++, startTs);
 
-            // 7. event_topic (Required)
+            // 8. event_topic (Required)
             statement.setString(i++, (String)map.get("eventTopic"));
-            // 8. event_type (Required)
+            // 9. event_type (Required)
             statement.setString(i++, (String)map.get("eventType"));
-            // 9. event_data (Required, TEXT - assuming JSON stored as string)
+            // 10. event_data (Required, TEXT - assuming JSON stored as string)
             statement.setString(i++, (String)map.get("eventData"));
 
-            // 10. update_user (From event metadata)
+            // 11. update_user (From event metadata)
             statement.setString(i++, (String)event.get(Constants.USER));
-            // 11. update_ts (From event metadata)
+            // 12. update_ts (From event metadata)
             statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            // 12. aggregate_version
+            // 13. aggregate_version
             statement.setLong(i++, newAggregateVersion);
 
             // Execute insert
@@ -154,6 +159,7 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
                     frequency_unit = ?,
                     frequency_time = ?,
                     start_ts = ?,
+                    next_run_ts = ?,
                     event_topic = ?,
                     event_type = ?,
                     event_data = ?,
@@ -181,24 +187,27 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
             // 3: frequency_time
             statement.setInt(i++, ((Number) map.get("frequencyTime")).intValue());
             // 4: start_ts
-            statement.setObject(i++, OffsetDateTime.parse((String)map.get("startTs")));
-            // 5: event_topic
+            OffsetDateTime startTs = OffsetDateTime.parse((String)map.get("startTs"));
+            statement.setObject(i++, startTs);
+            // 5: next_run_ts
+            statement.setObject(i++, startTs);
+            // 6: event_topic
             statement.setString(i++, (String)map.get("eventTopic"));
-            // 6: event_type
+            // 7: event_type
             statement.setString(i++, (String)map.get("eventType"));
-            // 7: event_data
+            // 8: event_data
             statement.setString(i++, (String)map.get("eventData"));
-            // 8: update_user
+            // 9: update_user
             statement.setString(i++, (String)event.get(Constants.USER));
-            // 9: update_ts
+            // 10: update_ts
             statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            // 10: aggregate_version
+            // 11: aggregate_version
             statement.setLong(i++, newAggregateVersion);
 
             // WHERE conditions (2 placeholders)
-            // 11: schedule_id
+            // 12: schedule_id
             statement.setObject(i++, UUID.fromString(scheduleId));
-            // 12: aggregate_version < ? (new version for OCC/IDM check)
+            // 13: aggregate_version < ? (new version for OCC/IDM check)
             statement.setLong(i++, newAggregateVersion);
 
             // Execute update
@@ -461,9 +470,11 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
             """;
         int updated = 0;
         try (Connection conn = ds.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setTimestamp(1, Timestamp.from(Instant.now()));
-            ps.setInt(2, lockId);
-            ps.setString(3, instanceId);
+            ps.setString(1, instanceId);
+            ps.setObject(2, OffsetDateTime.now());
+            ps.setInt(3, lockId);
+            ps.setString(4, instanceId);
+            ps.setObject(5, OffsetDateTime.now());
             updated = ps.executeUpdate();
         }
         return updated;
@@ -527,12 +538,13 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
     @Override
     public Result<String> executeTask(Map<String, Object> task, long executionTimeMillis) {
         String scheduleId = (String) task.get("schedule_id");
-        String hostId = (String) task.get("host_id");
+        UUID hostId = UUID.fromString((String) task.get("host_id"));
         String eventTopic = (String) task.get("event_topic");
         String eventType = (String) task.get("event_type");
         String eventData = (String) task.get("event_data");
         String frequencyUnitStr = (String) task.get("frequency_unit");
         int frequencyTime = (Integer) task.get("frequency_time");
+        long aggregateVersion = (Long) task.get("aggregate_version");
         TimeUnit timeUnit = TimeUnit.valueOf(frequencyUnitStr.toUpperCase());
         long freq = TimeUtil.oneTimeUnitMillisecond(timeUnit) * frequencyTime;
         long nextRunTs = executionTimeMillis + freq;
@@ -543,8 +555,8 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
         // add or replace id
         eventMap.put("id", UuidUtil.getUUID().toString());
         // get user to calculate the nonce, user cannot be null, and it should be validated when create the schedule.
-        String userId = (String)eventMap.get("userId");
-        long nonce = dbProvider.queryNonceByUserId(userId);
+        String userId = (String)eventMap.get(Constants.USER);
+        long nonce = queryNonceByUserId(userId);
         eventMap.put("nonce", nonce);
         String aggregateId = (String)eventMap.get("subject");
         if(logger.isTraceEnabled()) logger.trace("id = {} aggregateId = {} user = {} nonce = {}", eventMap.get("id"), aggregateId, userId, nonce);
@@ -552,14 +564,15 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
         String aggregateType = EventTypeUtil.deriveAggregateTypeFromEventType(eventType);
         eventMap.put(PortalConstants.AGGREGATE_TYPE, aggregateType);
         // calculate aggregateVersion.
-        int aggregateVersion = dbProvider.getMaxAggregateVersion(aggregateId);
-        if(aggregateVersion == 0) {
+        int maxAggregateVersion = getMaxAggregateVersion(aggregateId);
+        if(logger.isTraceEnabled()) logger.trace("aggregateId = {} aggregateVersion = {}", aggregateId, maxAggregateVersion);
+        if(maxAggregateVersion == 0) {
             // first time creating for the aggregate.
             eventMap.put(PortalConstants.NEW_AGGREGATE_VERSION, 1);
             eventMap.put(PortalConstants.AGGREGATE_VERSION, 0);
         } else {
             // the aggregate exists in the event source table.
-            long newAggregateVersion = aggregateVersion + 1;
+            long newAggregateVersion = maxAggregateVersion + 1;
             eventMap.put(PortalConstants.NEW_AGGREGATE_VERSION, newAggregateVersion);
         }
 
@@ -584,8 +597,7 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
                     }
                 }
 
-                String eventId = UuidUtil.getUUID().toString();
-                Timestamp now = Timestamp.from(Instant.now());
+                UUID eventId = UuidUtil.getUUID();
 
                 // 2. Insert into event_store_t
                 // Using assumed column names based on user request and common patterns
@@ -593,7 +605,7 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
 
                     ps.setObject(1, eventId);
                     ps.setObject(2, hostId);
-                    ps.setObject(3, userId);
+                    ps.setObject(3, UUID.fromString(userId));
                     ps.setLong(4,  nonce);
                     ps.setString(5, aggregateId);
                     ps.setLong(6,  aggregateVersion);
@@ -603,11 +615,6 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
                     ps.setString(10, JsonMapper.toJson(eventMap));
                     ps.setString(11, "{}");
 
-                    ps.setString(1, eventId);
-                    ps.setString(2, eventType);
-                    ps.setString(3, eventData);
-                    ps.setObject(4, java.util.UUID.fromString(hostId));
-                    ps.setTimestamp(5, now);
                     ps.executeUpdate();
                 }
 
@@ -615,7 +622,7 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
                 try (PreparedStatement ps = conn.prepareStatement(EventPersistenceImpl.insertOutboxMessageSql)) {
                     ps.setObject(1, eventId);
                     ps.setObject(2, hostId);
-                    ps.setObject(3, userId);
+                    ps.setObject(3, UUID.fromString(userId));
                     ps.setLong(4,  nonce);
                     ps.setString(5, aggregateId);
                     ps.setLong(6,  aggregateVersion);
@@ -625,18 +632,13 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
                     ps.setString(10, JsonMapper.toJson(eventMap));
                     ps.setString(11, "{}");
 
-                    ps.setString(1, eventId);
-                    ps.setString(2, eventType);
-                    ps.setString(3, eventData);
-                    ps.setObject(4, java.util.UUID.fromString(hostId));
-                    ps.setTimestamp(5, now);
                     ps.executeUpdate();
                 }
                 conn.commit();
                 if (logger.isInfoEnabled()) {
                     logger.info("Successfully executed task for schedule {}. Event ID: {}", scheduleId, eventId);
                 }
-                result = Success.of(eventId);
+                result = Success.of(eventId.toString());
             } catch (Exception e) {
                 conn.rollback();
                 throw e;
@@ -648,6 +650,50 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
         }
         return result;
+    }
+
+    private long queryNonceByUserId(String userId){
+        final String updateNonceSql = "UPDATE user_t SET nonce = nonce + 1 WHERE user_id = ? RETURNING nonce;";
+        try (Connection connection = ds.getConnection();
+             PreparedStatement statement = connection.prepareStatement(updateNonceSql)) {
+            Long nonce = null;
+            statement.setObject(1, UUID.fromString(userId));
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if(resultSet.next()){
+                    nonce = (Long)resultSet.getObject(1);
+                }
+            }
+            if (nonce == null)
+                return 1L;
+            else
+                return nonce;
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            return 1L;
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            return 1L;
+        }
+    }
+
+    private int getMaxAggregateVersion(String aggregateId) {
+        final String sql = "SELECT MAX(aggregate_version) aggregate_version FROM event_store_t WHERE aggregate_id = ?";
+        int aggregateVersion = 0;
+        try (final Connection conn = ds.getConnection()) {
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setObject(1, aggregateId);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if(resultSet.next()) {
+                        aggregateVersion = resultSet.getInt("aggregate_version");
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+        }
+        return aggregateVersion;
     }
 
 }

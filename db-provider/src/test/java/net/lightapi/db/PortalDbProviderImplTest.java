@@ -488,4 +488,48 @@ public class PortalDbProviderImplTest {
         }
 
     }
+
+    @Test
+    void testPollTask() {
+        Result<List<Map<String, Object>>> result = dbProvider.pollTasks(OffsetDateTime.now());
+        if(result.isFailure()) {
+            System.out.println(result.getError());
+        } else {
+            System.out.println(result.getResult());
+        }
+    }
+
+    @Test
+    void testCreateScheduleWithNextRunTs() throws Exception {
+        String scheduleId = UuidUtil.getUUID().toString();
+        String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
+        String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
+        OffsetDateTime startTs = OffsetDateTime.now().plusDays(1);
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("scheduleId", scheduleId);
+        data.put("hostId", hostId);
+        data.put("scheduleName", "Test Schedule");
+        data.put("frequencyUnit", "DAYS");
+        data.put("frequencyTime", 1);
+        data.put("startTs", startTs.toString());
+        data.put("eventTopic", "test-topic");
+        data.put("eventType", "TestCreatedEvent");
+        data.put("eventData", "{\"test\":\"data\"}");
+
+        Map<String, Object> event = createEvent(hostId, userId, scheduleId, "Schedule", 1, data);
+
+        try (Connection conn = sqlDbStartupHook.ds.getConnection()) {
+            dbProvider.createSchedule(conn, event);
+        }
+
+        Result<String> result = dbProvider.getScheduleById(scheduleId);
+        assertTrue(result.isSuccess());
+        Map<String, Object> schedule = JsonMapper.string2Map(result.getResult());
+        assertNotNull(schedule.get("next_run_ts"));
+
+        // OffsetDateTime might lose some precision in DB, so compare as strings or within a small delta
+        OffsetDateTime dbNextRunTs = (OffsetDateTime) schedule.get("next_run_ts");
+        assertEquals(startTs.toInstant().getEpochSecond(), dbNextRunTs.toInstant().getEpochSecond());
+    }
 }
