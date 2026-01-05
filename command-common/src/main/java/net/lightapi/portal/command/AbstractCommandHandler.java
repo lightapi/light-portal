@@ -162,7 +162,6 @@ public abstract class AbstractCommandHandler implements HybridHandler {
     @Override
     public ByteBuffer handle(HttpServerExchange exchange, Object input) {
         Logger logger = getLogger();
-        System.out.println(logger.getName());
         if(logger.isTraceEnabled()) logger.trace("input = {}", input);
 
         // --- 1. Input Validation and Audit Info ---
