@@ -549,7 +549,6 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
         String eventData = (String) task.get("event_data");
         String frequencyUnitStr = (String) task.get("frequency_unit");
         int frequencyTime = (Integer) task.get("frequency_time");
-        long aggregateVersion = (Long) task.get("aggregate_version");
         TimeUnit timeUnit = TimeUnit.valueOf(frequencyUnitStr.toUpperCase());
         long freq = TimeUtil.oneTimeUnitMillisecond(timeUnit) * frequencyTime;
         long nextRunTs = executionTimeMillis + freq;
@@ -571,29 +570,27 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
         eventMap.put(PortalConstants.AGGREGATE_TYPE, aggregateType);
         // calculate aggregateVersion.
         int maxAggregateVersion = getMaxAggregateVersion(aggregateId);
-        if(logger.isTraceEnabled()) logger.trace("aggregateId = {} aggregateVersion = {}", aggregateId, maxAggregateVersion);
         if(maxAggregateVersion == 0) {
             // first time creating for the aggregate.
             eventMap.put(PortalConstants.NEW_AGGREGATE_VERSION, 1);
             eventMap.put(PortalConstants.AGGREGATE_VERSION, 0);
+            maxAggregateVersion = 1;
         } else {
             // the aggregate exists in the event source table.
-            long newAggregateVersion = maxAggregateVersion + 1;
-            eventMap.put(PortalConstants.NEW_AGGREGATE_VERSION, newAggregateVersion);
+            maxAggregateVersion = maxAggregateVersion + 1;
+            eventMap.put(PortalConstants.NEW_AGGREGATE_VERSION, maxAggregateVersion);
         }
-
+        if(logger.isTraceEnabled()) logger.trace("aggregateId = {} aggregateVersion = {}", aggregateId, maxAggregateVersion);
 
         try (Connection conn = ds.getConnection();) {
             conn.setAutoCommit(false);
             try {
                 // 1. Update schedule_t start_ts and next_run_ts to prevent double execution and prepare for next cycle
-                String updateSchedule = "UPDATE schedule_t SET start_ts = ?, next_run_ts = ?, aggregate_version = aggregate_version + 1 " +
-                        "WHERE schedule_id = ? AND aggregate_version = ?";
+                String updateSchedule = "UPDATE schedule_t SET start_ts = ?, next_run_ts = ? WHERE schedule_id = ?";
                 try (PreparedStatement ps = conn.prepareStatement(updateSchedule)) {
                     ps.setTimestamp(1, Timestamp.from(Instant.ofEpochMilli(executionTimeMillis)));
                     ps.setTimestamp(2, Timestamp.from(Instant.ofEpochMilli(nextRunTs)));
                     ps.setObject(3, java.util.UUID.fromString(scheduleId));
-                    ps.setLong(4, aggregateVersion);
                     int updated = ps.executeUpdate();
                     if (updated == 0) {
                         // This could happen if another instance (or thread) updated it first
@@ -615,7 +612,7 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
                     ps.setObject(3, UUID.fromString(userId));
                     ps.setLong(4,  nonce);
                     ps.setString(5, aggregateId);
-                    ps.setLong(6,  aggregateVersion);
+                    ps.setLong(6,  maxAggregateVersion);
                     ps.setString(7, aggregateType);
                     ps.setString(8, eventType);
                     ps.setObject(9, OffsetDateTime.now()); // Use OffsetDateTime for TIMESTAMP WITH TIME ZONE
@@ -632,7 +629,7 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
                     ps.setObject(3, UUID.fromString(userId));
                     ps.setLong(4,  nonce);
                     ps.setString(5, aggregateId);
-                    ps.setLong(6,  aggregateVersion);
+                    ps.setLong(6,  maxAggregateVersion);
                     ps.setString(7, aggregateType);
                     ps.setString(8, eventType);
                     ps.setObject(9, OffsetDateTime.now()); // Use OffsetDateTime for TIMESTAMP WITH TIME ZONE
