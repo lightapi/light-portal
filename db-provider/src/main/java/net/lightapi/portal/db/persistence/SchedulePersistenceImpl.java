@@ -636,6 +636,7 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
                     ps.setString(10, JsonMapper.toJson(eventMap));
                     ps.setString(11, "{}");
                     ps.setLong(12, offset);
+                    ps.setObject(13, UuidUtil.getUUID());
 
                     ps.executeUpdate();
                 }

@@ -6,6 +6,7 @@ import com.networknt.monad.Result;
 import com.networknt.monad.Success;
 import com.networknt.status.Status;
 import com.networknt.utility.Constants;
+import com.networknt.utility.UuidUtil;
 import io.cloudevents.CloudEvent;
 import io.cloudevents.jackson.JsonFormat;
 import net.lightapi.portal.PortalConstants;
@@ -39,8 +40,8 @@ public class EventPersistenceImpl implements EventPersistence {
 
     // SQL for outbox_message_t table
     public static final String insertOutboxMessageSql = "INSERT INTO outbox_message_t " +
-            "(id, host_id, user_id, nonce, aggregate_id, aggregate_version, aggregate_type, event_type, event_ts, payload, metadata, c_offset) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?)"; // Use ?::jsonb for JSONB casting
+            "(id, host_id, user_id, nonce, aggregate_id, aggregate_version, aggregate_type, event_type, event_ts, payload, metadata, c_offset, transaction_id) " +
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?, ?)"; // Use ?::jsonb for JSONB casting
 
     /**
      * Inserts multiple CloudEvents into the event_store_t and outbox_message_t tables
@@ -63,8 +64,8 @@ public class EventPersistenceImpl implements EventPersistence {
             try (PreparedStatement eventStorePst = conn.prepareStatement(insertEventStoreSql);
                  PreparedStatement outboxPst = conn.prepareStatement(insertOutboxMessageSql)) {
 
-                long startOffset = reserveOffsets(conn, events.length);
-                long currentOffset = startOffset;
+                long currentOffset = reserveOffsets(conn, events.length);
+                UUID transactionId = UuidUtil.getUUID();
                 for (CloudEvent event : events) {
                     // Extract common CloudEvents attributes
                     UUID eventId = UUID.fromString(event.getId());
@@ -160,6 +161,7 @@ public class EventPersistenceImpl implements EventPersistence {
                     outboxPst.setString(10, payloadJson);
                     outboxPst.setString(11, metadataJson);
                     outboxPst.setLong(12, currentOffset++);
+                    outboxPst.setObject(13, transactionId);
                     outboxPst.addBatch();
                 }
 
