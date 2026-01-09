@@ -1938,15 +1938,15 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
         final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "i.host_id",
-                "categoryId", "i.instance_id",
-                "entityType", "i.instance_name",
-                "categoryName", "i.product_version_id",
-                "categoryDesc", "pv.product_id",
-                "parentCategoryId", "pv.product_version",
-                "sortOrder", "i.service_id",
-                "updateUser", "i.current",
-                "updateTs", "i.readonly",
-                "active", "i.environment"
+                "instanceId", "i.instance_id",
+                "instanceName", "i.instance_name",
+                "productVersionId", "i.product_version_id",
+                "productId", "pv.product_id",
+                "productVersion", "pv.product_version",
+                "serviceId", "i.service_id",
+                "current", "i.current",
+                "readonly", "i.readonly",
+                "environment", "i.environment"
         ));
         columnMap.put("serviceDesc", "i.service_desc");
         columnMap.put("instanceDesc", "i.instance_desc");
