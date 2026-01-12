@@ -1525,4 +1525,38 @@ public class HybridQueryClient {
         }
     }
 
+    /**
+     * Get API label for a given host ID using an authorization token.
+     *
+     * @param authorizationToken Authorization token for the request
+     * @param hostId Host ID for which to retrieve the API label
+     * @return Result<String> containing the API label in JSON format
+     */
+    public static Result<String> getApiLabelUsingToken(String authorizationToken, String hostId) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"service\",\"action\":\"getApiLabel\",\"version\":\"0.1.0\",\"data\":{\"hostId\":\"%s\"}}",
+            hostId);
+        if (config.isPortalByServiceUrl()) {
+            return callQueryTokenUrl(s, authorizationToken, config.getPortalQueryServiceUrl());
+        } else {
+            return callQueryWithToken(s, authorizationToken);
+        }
+    }
+
+    /**
+     * Get API version id label for a given host ID using an authorization token.
+     *
+     * @param authorizationToken Authorization token for the request
+     * @param hostId Host ID for which to retrieve the API version label
+     * @return Result<String> containing the API version label in JSON format
+     */
+    public static Result<String> getApiVersionIdLabelUsingToken(String authorizationToken, String hostId) {
+        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"service\",\"action\":\"getApiVersionIdLabel\",\"version\":\"0.1.0\",\"data\":{\"hostId\":\"%s\"}}",
+            hostId);
+        if (config.isPortalByServiceUrl()) {
+            return callQueryTokenUrl(s, authorizationToken, config.getPortalQueryServiceUrl());
+        } else {
+            return callQueryWithToken(s, authorizationToken);
+        }
+    }
+
 }
