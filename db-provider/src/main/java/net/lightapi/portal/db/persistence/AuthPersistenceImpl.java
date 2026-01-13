@@ -84,7 +84,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
             if (map.containsKey("deliveryOwner")) {
                 statement.setObject(7, UUID.fromString((String) map.get("deliveryOwner")));
             } else {
-                statement.setNull(7, Types.VARCHAR);
+                statement.setNull(7, Types.OTHER);
             }
             statement.setString(8, (String) event.get(Constants.USER));
             statement.setObject(9, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
