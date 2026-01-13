@@ -13,13 +13,10 @@ import com.networknt.utility.Constants;
 import com.networknt.utility.UuidUtil;
 import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.PortalConstants;
-import net.lightapi.portal.db.ConcurrencyException;
 import net.lightapi.portal.db.PortalDbProvider;
 import net.lightapi.portal.db.model.DbConsumablePromotableInstance;
 import net.lightapi.portal.db.util.NotificationService;
 import net.lightapi.portal.db.util.SqlUtil;
-import net.lightapi.portal.validation.FilterCriterion;
-import net.lightapi.portal.validation.SortCriterion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,7 +40,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     public InstanceDeploymentPersistenceImpl(NotificationService notificationService) {
         this.notificationService = notificationService;
     }
-
+    /*
     @Override
     public void createInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql =
@@ -207,7 +204,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         }
         upsertPlatformProductInstanceProperties(hostId,instanceId,properties,user);
     }
-
+    */
     private Result<String> fetchReferenceData(String hostId, String[] tableNames) {
         Result<String> result = null;
         String sql = """
@@ -370,132 +367,373 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         }
     }
 
-    private boolean queryInstanceExists(Connection conn, String hostId, String instanceId) throws SQLException {
-        final String sql =
-                """
-                SELECT COUNT(*) FROM instance_t WHERE host_id = ? AND instance_id = ?
-                """;
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
-            pst.setObject(1, UUID.fromString(hostId));
-            pst.setObject(2, UUID.fromString(instanceId));
-            try (ResultSet rs = pst.executeQuery()) {
-                return rs.next() && rs.getInt(1) > 0;
-            }
-        }
-    }
-
     @Override
-    public void updateInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // Use UPSERT based on the Primary Key (host_id, instance_id): INSERT ON CONFLICT DO UPDATE
+        // This handles:
+        // 1. First time insert (no conflict).
+        // 2. Re-creation (conflict on PK) -> UPDATE the existing soft-deleted row (setting active=TRUE and new version).
+
         final String sql =
                 """
-                UPDATE instance_t SET instance_name = ?,
-                current = ?, environment = ?, service_desc = ?, instance_desc = ?,
-                zone = ?, region = ?, lob = ?, resource_name = ?, business_name = ?,
-                topic_classification = ?, update_user = ?, update_ts = ?, aggregate_version = ?
-                WHERE host_id = ? and instance_id = ? AND aggregate_version = ? and product_version_id = ? and service_id = ? and env_tag = ?
+                INSERT INTO instance_t(
+                    host_id, instance_id, instance_name, product_version_id, service_id,
+                    current, readonly, environment, service_desc, instance_desc,
+                    zone, region, lob, resource_name, business_name,
+                    env_tag, topic_classification, update_user, update_ts, aggregate_version, active
+                ) VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (host_id, instance_id) DO UPDATE
+                SET instance_name = EXCLUDED.instance_name,
+                    product_version_id = EXCLUDED.product_version_id,
+                    service_id = EXCLUDED.service_id,
+                    current = EXCLUDED.current,
+                    readonly = EXCLUDED.readonly,
+                    environment = EXCLUDED.environment,
+                    service_desc = EXCLUDED.service_desc,
+                    instance_desc = EXCLUDED.instance_desc,
+                    zone = EXCLUDED.zone,
+                    region = EXCLUDED.region,
+                    lob = EXCLUDED.lob,
+                    resource_name = EXCLUDED.resource_name,
+                    business_name = EXCLUDED.business_name,
+                    env_tag = EXCLUDED.env_tag,
+                    topic_classification = EXCLUDED.topic_classification,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                -- OCC/IDM: Only update if the incoming event is newer
+                WHERE instance_t.aggregate_version < EXCLUDED.aggregate_version
+                AND instance_t.active = FALSE
                 """;
+
+        // SQL to unset 'current' flag for other instances of the same service_id/host_id
         final String sqlUpdateCurrent =
                 """
-                UPDATE instance_t SET current = false
+                UPDATE instance_t SET current = false, update_user = ?, update_ts = ?
                 WHERE host_id = ?
                 AND service_id = ?
                 AND instance_id != ?
                 """;
 
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
+        // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        // Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String)map.get("hostId"); // Getting hostId from map data, consistent with other methods
         String instanceId = (String)map.get("instanceId");
         String serviceId = (String)map.get("serviceId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        final String user = (String) event.get(Constants.USER);
+        final OffsetDateTime updateTs = OffsetDateTime.parse((String) event.get(CloudEventV1.TIME));
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+        Boolean current = (Boolean)map.get("current");
+
+        // Determine the boolean value to be inserted/updated for 'current'
+        boolean isCurrent = current != null ? current : false;
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setString(1, (String)map.get("instanceName"));
-            Boolean current = (Boolean)map.get("current");
-            if (current != null) {
-                statement.setBoolean(2, current);
+            // INSERT values (20 placeholders + active=TRUE in SQL, total 20 dynamic values)
+            int i = 1;
+            // 1: host_id
+            statement.setObject(i++, UUID.fromString(hostId));
+            // 2: instance_id
+            statement.setObject(i++, UUID.fromString(instanceId));
+            // 3: instance_name
+            statement.setString(i++, (String)map.get("instanceName"));
+            // 4: product_version_id
+            statement.setObject(i++, UUID.fromString((String)map.get("productVersionId")));
+            // 5: service_id
+            statement.setString(i++, serviceId);
+            // 6: current
+            statement.setBoolean(i++, isCurrent);
+            // 7: readonly
+            Boolean readonly = (Boolean)map.get("readonly");
+            if (readonly != null) {
+                statement.setBoolean(i++, readonly);
             } else {
-                statement.setNull(2, Types.BOOLEAN);
+                statement.setNull(i++, Types.BOOLEAN);
             }
+            // 8: environment
             String environment = (String)map.get("environment");
             if (environment != null && !environment.isEmpty()) {
-                statement.setString(3, environment);
+                statement.setString(i++, environment);
             } else {
-                statement.setNull(3, Types.VARCHAR);
+                statement.setNull(i++, Types.VARCHAR);
             }
+            // 9: service_desc
             String serviceDesc = (String)map.get("serviceDesc");
             if (serviceDesc != null && !serviceDesc.isEmpty()) {
-                statement.setString(4, serviceDesc);
+                statement.setString(i++, serviceDesc);
             } else {
-                statement.setNull(4, Types.VARCHAR);
+                statement.setNull(i++, Types.VARCHAR);
             }
+            // 10: instance_desc
             String instanceDesc = (String)map.get("instanceDesc");
-            if (instanceDesc != null && !instanceDesc.isEmpty()) {
-                statement.setString(5, instanceDesc);
+            if(instanceDesc != null && !instanceDesc.isEmpty()) {
+                statement.setString(i++, instanceDesc);
             } else {
-                statement.setNull(5, Types.VARCHAR);
+                statement.setNull(i++, Types.VARCHAR);
             }
+            // 11: zone
             String zone = (String)map.get("zone");
-            if (zone != null && !zone.isEmpty()) {
-                statement.setString(6, zone);
+            if(zone != null && !zone.isEmpty()) {
+                statement.setString(i++, zone);
             } else {
-                statement.setNull(6, Types.VARCHAR);
+                statement.setNull(i++, Types.VARCHAR);
             }
+            // 12: region
             String region = (String)map.get("region");
-            if (region != null && !region.isEmpty()) {
-                statement.setString(7, region);
+            if(region != null && !region.isEmpty()) {
+                statement.setString(i++, region);
             } else {
-                statement.setNull(7, Types.VARCHAR);
+                statement.setNull(i++, Types.VARCHAR);
             }
+            // 13: lob
             String lob = (String)map.get("lob");
-            if (lob != null && !lob.isEmpty()) {
-                statement.setString(8, lob);
+            if(lob != null && !lob.isEmpty()) {
+                statement.setString(i++, lob);
             } else {
-                statement.setNull(8, Types.VARCHAR);
+                statement.setNull(i++, Types.VARCHAR);
             }
+            // 14: resource_name
             String resourceName = (String)map.get("resourceName");
-            if (resourceName != null && !resourceName.isEmpty()) {
-                statement.setString(9, resourceName);
+            if(resourceName != null && !resourceName.isEmpty()) {
+                statement.setString(i++, resourceName);
             } else {
-                statement.setNull(9, Types.VARCHAR);
+                statement.setNull(i++, Types.VARCHAR);
             }
+            // 15: business_name
             String businessName = (String)map.get("businessName");
-            if (businessName != null && !businessName.isEmpty()) {
-                statement.setString(10, businessName);
+            if(businessName != null && !businessName.isEmpty()) {
+                statement.setString(i++, businessName);
             } else {
-                statement.setNull(10, Types.VARCHAR);
+                statement.setNull(i++, Types.VARCHAR);
             }
-            String topicClassification = (String)map.get("topicClassification");
-            if (topicClassification != null && !topicClassification.isEmpty()) {
-                statement.setString(11, topicClassification);
-            } else {
-                statement.setNull(11, Types.VARCHAR);
-            }
-            statement.setString(12, (String)event.get(Constants.USER));
-            statement.setObject(13, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(14, newAggregateVersion);
-            statement.setObject(15, UUID.fromString(hostId));
-            statement.setObject(16, UUID.fromString(instanceId));
-            statement.setLong(17, oldAggregateVersion);
-            statement.setObject(18, UUID.fromString((String) map.get("productVersionId")));
-            statement.setString(19, serviceId);
+            // 16: env_tag
             String envTag = (String)map.get("envTag");
-            statement.setString(20, envTag);
+            if(envTag != null && !envTag.isEmpty()) {
+                statement.setString(i++, envTag);
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+            // 17: topic_classification
+            String topicClassification = (String)map.get("topicClassification");
+            if(topicClassification != null && !topicClassification.isEmpty()) {
+                statement.setString(i++, topicClassification);
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+
+            // 18: update_user
+            statement.setString(i++, user);
+            // 19: update_ts
+            statement.setObject(i++, updateTs);
+            // 20: aggregate_version
+            statement.setLong(i++, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryInstanceExists(conn, hostId, instanceId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during updateInstance for hostId " + hostId + " instanceId " + instanceId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
-                } else {
-                    throw new SQLException("No record found during updateInstance for hostId " + hostId + " instanceId " + instanceId + ".");
+                // A count of 0 is a valid, idempotent outcome.
+                logger.warn("Creation/Reactivation skipped for hostId {} instanceId {} aggregateVersion {}. A newer or same version already exists.", hostId, instanceId, newAggregateVersion);
+            }
+
+            // If the incoming event marks this instance as current (or the existing current flag was updated/re-inserted as true),
+            // ensure all others are set to false (original business logic).
+            if(isCurrent) {
+                try (PreparedStatement statementUpdate = conn.prepareStatement(sqlUpdateCurrent)) {
+                    statementUpdate.setString(1, user);
+                    statementUpdate.setObject(2, updateTs);
+                    statementUpdate.setObject(3, UUID.fromString(hostId));
+                    statementUpdate.setString(4, serviceId);
+                    statementUpdate.setObject(5, UUID.fromString(instanceId));
+                    statementUpdate.executeUpdate();
                 }
             }
+        } catch (SQLException e) {
+            logger.error("SQLException during createInstance for hostId {} instanceId {} aggregateVersion {}: {}", hostId, instanceId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createInstance for hostId {} instanceId {} aggregateVersion {}: {}", hostId, instanceId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public void updateInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // We will attempt to update the record IF the incoming event is newer than the current projection version.
+        // We also explicitly set active = TRUE (reactivation).
+        final String sql =
+                """
+                UPDATE instance_t
+                SET instance_name = ?,
+                    product_version_id = ?,
+                    service_id = ?,
+                    current = ?,
+                    readonly = ?,
+                    environment = ?,
+                    service_desc = ?,
+                    instance_desc = ?,
+                    zone = ?,
+                    region = ?,
+                    lob = ?,
+                    resource_name = ?,
+                    business_name = ?,
+                    env_tag = ?,
+                    topic_classification = ?,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?,
+                    active = TRUE
+                WHERE host_id = ?
+                  AND instance_id = ?
+                  AND aggregate_version < ?
+                """; // <<< CRITICAL: Changed '= ?' to '< ?' in the WHERE clause AND simplified WHERE to PK only
+
+        // SQL to unset 'current' flag for other instances of the same service_id/host_id (Original logic)
+        final String sqlUpdateCurrent =
+                """
+                UPDATE instance_t SET current = false, update_user = ?, update_ts = ?
+                WHERE host_id = ?
+                AND service_id = ?
+                AND instance_id != ?
+                """;
+
+        // Assuming SqlUtil.extractEventData(event) is the helper to get PortalConstants.DATA
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+
+        String hostId = (String)map.get("hostId"); // Getting hostId from map data, consistent with other methods
+        String instanceId = (String)map.get("instanceId");
+        String serviceId = (String)map.get("serviceId");
+        final String user = (String) event.get(Constants.USER);
+        final OffsetDateTime updateTs = OffsetDateTime.parse((String) event.get(CloudEventV1.TIME));
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+        Boolean current = (Boolean)map.get("current");
+
+        // Determine the boolean value to be inserted/updated for 'current'
+        boolean isCurrent = current != null ? current : false;
+        // Determine the boolean value for 'readonly' (Default FALSE in DDL, check payload)
+        Boolean readonly = (Boolean)map.getOrDefault("readonly", Boolean.FALSE);
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            // SET values (18 dynamic values + active = TRUE in SQL)
+            int i = 1;
+
+            // 1: instance_name
+            statement.setString(i++, (String)map.get("instanceName"));
+            // 2: product_version_id
+            statement.setObject(i++, UUID.fromString((String)map.get("productVersionId")));
+            // 3: service_id
+            statement.setString(i++, serviceId);
+            // 4: current
+            statement.setBoolean(i++, isCurrent);
+            // 5: readonly
+            statement.setBoolean(i++, readonly);
+            // 6: environment
+            String environment = (String)map.get("environment");
+            if (environment != null && !environment.isEmpty()) {
+                statement.setString(i++, environment);
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+            // 7: service_desc
+            String serviceDesc = (String)map.get("serviceDesc");
+            if (serviceDesc != null && !serviceDesc.isEmpty()) {
+                statement.setString(i++, serviceDesc);
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+            // 8: instance_desc
+            String instanceDesc = (String)map.get("instanceDesc");
+            if(instanceDesc != null && !instanceDesc.isEmpty()) {
+                statement.setString(i++, instanceDesc);
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+            // 9: zone
+            String zone = (String)map.get("zone");
+            if(zone != null && !zone.isEmpty()) {
+                statement.setString(i++, zone);
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+            // 10: region
+            String region = (String)map.get("region");
+            if(region != null && !region.isEmpty()) {
+                statement.setString(i++, region);
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+            // 11: lob
+            String lob = (String)map.get("lob");
+            if(lob != null && !lob.isEmpty()) {
+                statement.setString(i++, lob);
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+            // 12: resource_name
+            String resourceName = (String)map.get("resourceName");
+            if(resourceName != null && !resourceName.isEmpty()) {
+                statement.setString(i++, resourceName);
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+            // 13: business_name
+            String businessName = (String)map.get("businessName");
+            if(businessName != null && !businessName.isEmpty()) {
+                statement.setString(i++, businessName);
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+            // 14: env_tag
+            String envTag = (String)map.get("envTag");
+            if(envTag != null && !envTag.isEmpty()) {
+                statement.setString(i++, envTag);
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+            // 15: topic_classification
+            String topicClassification = (String)map.get("topicClassification");
+            if(topicClassification != null && !topicClassification.isEmpty()) {
+                statement.setString(i++, topicClassification);
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+
+            // 16: update_user
+            statement.setString(i++, user);
+            // 17: update_ts
+            statement.setObject(i++, updateTs);
+            // 18: aggregate_version (NEW version in SET clause)
+            statement.setLong(i++, newAggregateVersion);
+
+            // WHERE clause parameters
+            // 19: host_id
+            statement.setObject(i++, UUID.fromString(hostId));
+            // 20: instance_id
+            statement.setObject(i++, UUID.fromString(instanceId));
+            // 21: aggregate_version (MONOTONICITY check in WHERE clause)
+            statement.setLong(i, newAggregateVersion); // Condition: WHERE aggregate_version < newAggregateVersion
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // count=0 means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Update skipped for hostId {} instanceId {} (old: {}) -> (new: {}). Record not found or a newer version already exists.", hostId, instanceId, oldAggregateVersion, newAggregateVersion);
+            }
+
             // try to update current to false for others if current is true.
-            if(current != null && current) {
+            if(isCurrent && count > 0) { // Only run if the main update actually happened
                 try (PreparedStatement statementUpdate = conn.prepareStatement(sqlUpdateCurrent)) {
-                    statementUpdate.setObject(1, UUID.fromString(hostId));
-                    statementUpdate.setString(2, serviceId);
-                    statementUpdate.setObject(3, UUID.fromString(instanceId));
+                    // 1: update_user
+                    statementUpdate.setString(1, user);
+                    // 2: update_ts
+                    statementUpdate.setObject(2, updateTs);
+                    // 3: host_id
+                    statementUpdate.setObject(3, UUID.fromString(hostId));
+                    // 4: service_id
+                    statementUpdate.setString(4, serviceId);
+                    // 5: instance_id (the one we just set to current=true)
+                    statementUpdate.setObject(5, UUID.fromString(instanceId));
                     statementUpdate.executeUpdate();
                 }
             }
@@ -510,85 +748,193 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
     @Override
     public void deleteInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM instance_t WHERE host_id = ? AND instance_id = ? AND aggregate_version = ?";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
-        String instanceId = (String)map.get("instanceId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        // Use UPDATE to implement Soft Delete (setting active = FALSE).
+        // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
+        final String softDeleteSql =
+                """
+                UPDATE instance_t
+                SET active = FALSE,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?
+                WHERE host_id = ?
+                  AND instance_id = ?
+                  AND aggregate_version < ?
+                """; // <<< CRITICAL: Changed from DELETE to UPDATE, and used aggregate_version < ?
 
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(instanceId));
+        // Map retrieval (from event constants and data map)
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String)map.get("hostId"); // Getting hostId from map data, consistent with other methods
+        String instanceId = (String)map.get("instanceId");
+
+        // newAggregateVersion is the version of the incoming Delete event (the target version).
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event); // For logging
+
+        try (PreparedStatement statement = conn.prepareStatement(softDeleteSql)) {
+            int i = 1;
+
+            // 1. update_user
+            statement.setString(i++, (String)event.get(Constants.USER));
+
+            // 2. update_ts
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+
+            // 3. aggregate_version (NEW version in SET clause)
+            statement.setLong(i++, newAggregateVersion);
+
+            // 4. host_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(hostId));
+
+            // 5. instance_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(instanceId));
+
+            // 6. aggregate_version (MONOTONICITY check in WHERE clause)
+            statement.setLong(i, newAggregateVersion); // Condition: WHERE aggregate_version < newAggregateVersion
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryInstanceExists(conn, hostId, instanceId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteInstance for hostId " + hostId + " instanceId " + instanceId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
-                } else {
-                    throw new SQLException("No record found during deleteInstance for hostId " + hostId + " instanceId " + instanceId + ". It might have been already deleted.");
-                }
+                // If 0 rows updated, it means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("deleteInstance skipped for hostId {} instanceId {} (old: {}) -> (new: {}). Record not found or a newer version already exists.", hostId, instanceId, oldAggregateVersion, newAggregateVersion);
             }
+            // NO THROW on count == 0. The method is now idempotent.
+
         } catch (SQLException e) {
-            logger.error("SQLException during deleteInstance for hostId {} instanceId {} aggregateVersion {}: {}", hostId, instanceId, oldAggregateVersion, e.getMessage(), e);
-            throw e;
+            logger.error("SQLException during deleteInstance for hostId {} instanceId {} (old: {}) -> (new: {}): {}", hostId, instanceId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw SQLException
         } catch (Exception e) {
-            logger.error("Exception during deleteInstance for hostId {} instanceId {} aggregateVersion {}: {}", hostId, instanceId, oldAggregateVersion, e.getMessage(), e);
-            throw e;
+            logger.error("Exception during deleteInstance for hostId {} instanceId {} (old: {}) -> (new: {}): {}", hostId, instanceId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw generic Exception
         }
     }
 
     @Override
     public void lockInstance(Connection conn, Map<String, Object> event) throws Exception {
-        String sql = "UPDATE instance_t SET readonly = true, aggregate_version = ? " +
-            "WHERE host_id = ? AND instance_id = ? AND aggregate_version = ?";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
+        // We attempt to lock the record (set readonly = TRUE) IF the incoming event is newer than the current projection version.
+        // We also explicitly set active = TRUE (assuming a lock event implies the instance is active).
+        final String sql =
+                """
+                UPDATE instance_t
+                SET readonly = TRUE,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?,
+                    active = TRUE
+                WHERE host_id = ?
+                  AND instance_id = ?
+                  AND aggregate_version < ?
+                """; // <<< CRITICAL: Changed '= ?' to '< ?' in the WHERE clause AND added update_user/update_ts/active=TRUE
+
+        Map<String, Object> map = SqlUtil.extractEventData(event); // Assuming extractEventData is the helper to get PortalConstants.DATA
+        String hostId = (String)map.get("hostId");
         String instanceId = (String)map.get("instanceId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
-        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setLong(1, SqlUtil.getNewAggregateVersion(event));
-            pstmt.setObject(2, UUID.fromString(hostId));
-            pstmt.setObject(3, UUID.fromString(instanceId));
-            pstmt.setLong(4, oldAggregateVersion);
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event); // For logging context
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event); // The new version from the event
 
-            int affectedRows = pstmt.executeUpdate();
-            if (affectedRows == 0) {
-                throw new SQLException("Locking instance failed, no rows affected.");
+        final String user = (String) event.get(Constants.USER);
+        final OffsetDateTime updateTs = OffsetDateTime.parse((String) event.get(CloudEventV1.TIME));
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            int i = 1;
+
+            // 1. update_user
+            statement.setString(i++, user);
+
+            // 2. update_ts
+            statement.setObject(i++, updateTs);
+
+            // 3. aggregate_version (NEW version in SET clause)
+            statement.setLong(i++, newAggregateVersion);
+
+            // 4. host_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(hostId));
+
+            // 5. instance_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(instanceId));
+
+            // 6. aggregate_version (MONOTONICITY check in WHERE clause)
+            statement.setLong(i, newAggregateVersion); // Condition: WHERE aggregate_version < newAggregateVersion
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // count=0 means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("lockInstance skipped for hostId {} instanceId {} (old: {}) -> (new: {}). Record not found or a newer version already exists.", hostId, instanceId, oldAggregateVersion, newAggregateVersion);
             }
+            // NO THROW on count == 0. The method is now idempotent.
+
         } catch (SQLException e) {
-            logger.error("SQLException during lockInstance for hostId {} instanceId {} aggregateVersion {}: {}", hostId, instanceId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during lockInstance for hostId {} instanceId {} (old: {}) -> (new: {}): {}", hostId, instanceId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during lockInstance for hostId {} instanceId {} aggregateVersion {}: {}", hostId, instanceId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during lockInstance for hostId {} instanceId {} (old: {}) -> (new: {}): {}", hostId, instanceId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
     public void unlockInstance(Connection conn, Map<String, Object> event) throws Exception {
-        String sql = "UPDATE instance_t SET readonly = false, aggregate_version = ? " +
-            "WHERE host_id = ? AND instance_id = ? AND aggregate_version = ?";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
+        // We attempt to unlock the record (set readonly = FALSE) IF the incoming event is newer than the current projection version.
+        // We also explicitly set active = TRUE (assuming an unlock event implies the instance is active).
+        final String sql =
+                """
+                UPDATE instance_t
+                SET readonly = FALSE,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?,
+                    active = TRUE
+                WHERE host_id = ?
+                  AND instance_id = ?
+                  AND aggregate_version < ?
+                """; // <<< CRITICAL: Changed '= ?' to '< ?' in the WHERE clause AND added update_user/update_ts/active=TRUE
+
+        Map<String, Object> map = SqlUtil.extractEventData(event); // Assuming extractEventData is the helper to get PortalConstants.DATA
+        String hostId = (String)map.get("hostId");
         String instanceId = (String)map.get("instanceId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
-        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setLong(1, SqlUtil.getNewAggregateVersion(event));
-            pstmt.setObject(2, UUID.fromString(hostId));
-            pstmt.setObject(3, UUID.fromString(instanceId));
-            pstmt.setLong(4, oldAggregateVersion);
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event); // For logging context
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event); // The new version from the event
 
-            int affectedRows = pstmt.executeUpdate();
-            if (affectedRows == 0) {
-                throw new SQLException("Unlocking instance failed, no rows affected.");
+        final String user = (String) event.get(Constants.USER);
+        final OffsetDateTime updateTs = OffsetDateTime.parse((String) event.get(CloudEventV1.TIME));
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            int i = 1;
+
+            // 1. update_user
+            statement.setString(i++, user);
+
+            // 2. update_ts
+            statement.setObject(i++, updateTs);
+
+            // 3. aggregate_version (NEW version in SET clause)
+            statement.setLong(i++, newAggregateVersion);
+
+            // 4. host_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(hostId));
+
+            // 5. instance_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(instanceId));
+
+            // 6. aggregate_version (MONOTONICITY check in WHERE clause)
+            statement.setLong(i, newAggregateVersion); // Condition: WHERE aggregate_version < newAggregateVersion
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // count=0 means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("unlockInstance skipped for hostId {} instanceId {} (old: {}) -> (new: {}). Record not found or a newer version already exists.", hostId, instanceId, oldAggregateVersion, newAggregateVersion);
             }
+            // NO THROW on count == 0. The method is now idempotent.
+
         } catch (SQLException e) {
-            logger.error("SQLException during unlockInstance for hostId {} instanceId {} aggregateVersion {}: {}", hostId, instanceId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during unlockInstance for hostId {} instanceId {} (old: {}) -> (new: {}): {}", hostId, instanceId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during unlockInstance for hostId {} instanceId {} aggregateVersion {}: {}", hostId, instanceId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during unlockInstance for hostId {} instanceId {} (old: {}) -> (new: {}): {}", hostId, instanceId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
@@ -597,26 +943,67 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     @Override
     public void cloneInstance(Connection conn, Map<String, Object> event) throws Exception {
         final Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
-        final String hostId = (String) event.get(Constants.HOST);
+        final String hostId = (String) map.get("hostId");
         final String sourceInstanceId = (String) map.get("sourceInstanceId");
         final String targetInstanceId = (String) map.get("targetInstanceId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
-        transact(
-            conn,
-            connection -> {
-                try {
-                    // increment the aggregate version of the target instance to lock it during the clone operation
-                    tryIncrementAggregateVersionOfInstance(conn, hostId, targetInstanceId, oldAggregateVersion, SqlUtil.getNewAggregateVersion(event));
-                    Map<UUID, UUID> idMapping = getIdMappingForClone(connection, hostId, sourceInstanceId);
-                    deleteDependentsOfTargetInstance(connection, hostId, targetInstanceId);
-                    cloneFirstLevelDependentsOfTargetInstance(connection, hostId, sourceInstanceId, targetInstanceId, idMapping);
-                    cloneSecondLevelDependentsOfTargetInstance(connection, hostId, sourceInstanceId, targetInstanceId, idMapping);
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
+        String s =
+            """
+            SELECT event_type, payload FROM (
+                -- Instance and ConfigInstance
+                SELECT * FROM event_store_t WHERE aggregate_id LIKE ?
+                UNION
+                -- InstanceApi
+                SELECT * FROM event_store_t WHERE aggregate_id::text IN (SELECT instance_api_id::text FROM instance_api_t WHERE instance_id = ?)
+                UNION
+                -- InstanceApiPathPrefix
+                SELECT * FROM event_store_t WHERE aggregate_id::text IN (SELECT instance_api_id||'|'||path_prefix FROM instance_api_path_prefix_t WHERE instance_api_id::text IN (SELECT instance_api_id::text FROM instance_api_t WHERE instance_id = ?))
+                UNION
+                -- InstanceApp
+                SELECT * FROM event_store_t WHERE aggregate_id::text IN (SELECT instance_app_id::text FROM instance_app_t WHERE instance_id = ?)
+                UNION
+                -- InstanceAppApi
+                SELECT * FROM event_store_t WHERE aggregate_id::text IN ((SELECT instance_app_id::text FROM instance_app_t WHERE instance_id = ?)||'|'||(SELECT instance_api_id::text FROM instance_api_t WHERE instance_id = ?))
+                UNION
+                -- ConfigInstanceApi
+                SELECT * FROM event_store_t WHERE aggregate_id::text IN (SELECT instance_api_id||'|'||property_id FROM instance_api_property_t WHERE instance_api_id::text IN (SELECT instance_api_id::text FROM instance_api_t WHERE instance_id = ?))
+                UNION
+                -- ConfigInstanceApp
+                SELECT * FROM event_store_t WHERE aggregate_id::text IN (SELECT instance_app_id||'|'||property_id FROM instance_app_property_t WHERE instance_app_id::text IN (SELECT instance_app_id::text FROM instance_app_t WHERE instance_id = ?))
+                UNION
+                -- ConfigInstanceAppApi
+                SELECT * FROM event_store_t WHERE aggregate_id::text IN (SELECT instance_app_id||'|'||instance_api_id||'|'||property_id FROM instance_app_api_property_t WHERE instance_api_id::text IN (SELECT instance_api_id::text FROM instance_api_t WHERE instance_id = ?))
+            ) ORDER BY id
+            """;
+        try (PreparedStatement statement = conn.prepareStatement(s)) {
+            // Add wildcard to the parameter value
+            statement.setString(1, sourceInstanceId + "%");
+            statement.setObject(2, UUID.fromString(sourceInstanceId));
+            statement.setObject(3, UUID.fromString(sourceInstanceId));
+            statement.setObject(4, UUID.fromString(sourceInstanceId));
+            statement.setObject(5, UUID.fromString(sourceInstanceId));
+            statement.setObject(6, UUID.fromString(sourceInstanceId));
+            statement.setObject(7, UUID.fromString(sourceInstanceId));
+            statement.setObject(8, UUID.fromString(sourceInstanceId));
+            statement.setObject(9, UUID.fromString(sourceInstanceId));
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    String eventType = resultSet.getString("event_type");
+                    String payload = resultSet.getString("payload");
+                    if(logger.isTraceEnabled()) logger.trace("eventType {} payload {}", eventType, payload);
                 }
             }
-        );
+        }
+        // For now, it just output the event type and payload. It will run replacement and enrichment logic like the import
+        // and then push the events back into the event_store_t and outbox_message_t tables for processing.
+
+        // The following promoteInstance will be updated accordingly and the difference is to output the json file to replay
+        // on another instance instead of pushing into the local database event store. The normal replacement and enrichment
+        // logic will be applied as normal export and import logic. The only difference is that all events in the event file
+        // are associated with a particular instance.
+
+        // Since the query will be shared by two events, we might extract it into another method for code sharing.
     }
 
     @SuppressWarnings("unchecked")
@@ -1546,71 +1933,69 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public Result<String> getInstance(int offset, int limit, String hostId, String instanceId, String instanceName,
-                                      String productVersionId, String productId, String productVersion, String serviceId,
-                                      Boolean current, Boolean readonly, String environment, String serviceDesc,
-                                      String instanceDesc, String zone,  String region, String lob, String resourceName,
-                                      String businessName, String envTag, String topicClassification) {
+    public Result<String> getInstance(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
+
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "i.host_id",
+                "instanceId", "i.instance_id",
+                "instanceName", "i.instance_name",
+                "productVersionId", "i.product_version_id",
+                "productId", "pv.product_id",
+                "productVersion", "pv.product_version",
+                "serviceId", "i.service_id",
+                "current", "i.current",
+                "readonly", "i.readonly",
+                "environment", "i.environment"
+        ));
+        columnMap.put("serviceDesc", "i.service_desc");
+        columnMap.put("instanceDesc", "i.instance_desc");
+        columnMap.put("zone", "i.zone");
+        columnMap.put("region", "i.region");
+        columnMap.put("lob", "i.lob");
+        columnMap.put("resourceName", "i.resource_name");
+        columnMap.put("businessName", "i.business_name");
+        columnMap.put("envTag", "i.env_tag");
+        columnMap.put("topicClassification", "i.topic_classification");
+        columnMap.put("updateUser", "i.update_user");
+        columnMap.put("updateTs", "i.update_ts");
+        columnMap.put("aggregateVersion", "i.aggregate_version");
+        columnMap.put("active", "i.active");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
-                """
-                        SELECT COUNT(*) OVER () AS total,
-                        i.host_id, i.instance_id, i.instance_name, i.product_version_id, pv.product_id, pv.product_version,
-                        i.service_id, i.current, i.readonly, i.environment, i.service_desc, i.instance_desc, i.zone, i.region,
-                        i.lob, i.resource_name, i.business_name, i.env_tag, i.topic_classification, i.update_user, i.update_ts,
-                        i.aggregate_version
-                        FROM instance_t i
-                        INNER JOIN product_version_t pv ON pv.product_version_id = i.product_version_id
-                        WHERE 1=1
-                """;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append(s).append("\n");
+            """
+                SELECT COUNT(*) OVER () AS total,
+                i.host_id, i.instance_id, i.instance_name, i.product_version_id, pv.product_id, pv.product_version,
+                i.service_id, i.current, i.readonly, i.environment, i.service_desc, i.instance_desc, i.zone, i.region,
+                i.lob, i.resource_name, i.business_name, i.env_tag, i.topic_classification, i.update_user, i.update_ts,
+                i.aggregate_version, i.active
+                FROM instance_t i
+                INNER JOIN product_version_t pv ON pv.product_version_id = i.product_version_id
+                WHERE i.host_id = ?
+            """;
 
         List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-
-        addCondition(whereClause, parameters, "i.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "i.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
-        addCondition(whereClause, parameters, "i.instance_name", instanceName);
-        addCondition(whereClause, parameters, "i.product_version_id", productVersionId != null ? UUID.fromString(productVersionId) : null);
-        addCondition(whereClause, parameters, "pv.product_id", productId);
-        addCondition(whereClause, parameters, "pv.product_version", productVersion);
-        addCondition(whereClause, parameters, "i.service_id", serviceId);
-        addCondition(whereClause, parameters, "i.current", current);
-        addCondition(whereClause, parameters, "i.readonly", readonly);
-        addCondition(whereClause, parameters, "i.environment", environment);
-        addCondition(whereClause, parameters, "i.service_desc", serviceDesc);
-        addCondition(whereClause, parameters, "i.instance_desc", instanceDesc);
-        addCondition(whereClause, parameters, "i.zone", zone);
-        addCondition(whereClause, parameters, "i.region", region);
-        addCondition(whereClause, parameters, "i.lob", lob);
-        addCondition(whereClause, parameters, "i.resource_name", resourceName);
-        addCondition(whereClause, parameters, "i.business_name", businessName);
-        addCondition(whereClause, parameters, "i.env_tag", envTag);
-        addCondition(whereClause, parameters, "i.topic_classification", topicClassification);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY i.instance_id\n" +
-                "LIMIT ? OFFSET ?");
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "i", "pv");
+        String[] searchColumns = {"i.instance_name", "i.service_desc", "i.instance_desc", "i.zone", "i.region", "i.lob", "i.resource_name", "i.business_name"};
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("i.host_id", "i.instance_id", "i.product_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("i.instance_id", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
-
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> instances = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -1641,6 +2026,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     instances.add(map);
                 }
             }
@@ -1659,6 +2045,105 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
+    public String getInstanceId(String hostId, String serviceId, String envTag, String productVersionId) {
+        // Dynamic SQL based on whether envTag is NULL
+        final String sql;
+        if (envTag == null) {
+            sql = "SELECT instance_id FROM instance_t WHERE host_id = ? AND service_id = ? AND env_tag IS NULL AND product_version_id = ?";
+        } else {
+            sql = "SELECT instance_id FROM instance_t WHERE host_id = ? AND service_id = ? AND env_tag = ? AND product_version_id = ?";
+        }
+
+        String instanceId = null;
+        try (Connection connection = ds.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setString(2, serviceId);
+
+            // Only set the envTag parameter if it's not NULL
+            if (envTag != null) {
+                statement.setString(3, envTag);
+            }
+
+            // Adjust parameter index for product_version_id based on whether envTag was set
+            int productVersionParamIndex = (envTag == null) ? 3 : 4;
+            statement.setObject(productVersionParamIndex, UUID.fromString(productVersionId));
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if(resultSet.next()){
+                    instanceId = resultSet.getString(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+        }
+        return instanceId;
+    }
+
+    @Override
+    public Result<String> getInstanceById(String hostId, String instanceId) {
+        final String sql =
+                """
+                SELECT host_id, instance_id, instance_name, product_version_id, service_id, current,
+                readonly, environment, service_desc, instance_desc, zone, region, lob, resource_name,
+                business_name, env_tag, topic_classification, aggregate_version, active, update_user, update_ts
+                FROM instance_t
+                WHERE host_id = ? AND instance_id = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + instanceId;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(instanceId));
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
+                    map.put("instanceName", resultSet.getString("instance_name"));
+                    map.put("productVersionId", resultSet.getObject("product_version_id", UUID.class));
+                    map.put("serviceId", resultSet.getString("service_id"));
+                    map.put("current", resultSet.getBoolean("current"));
+                    map.put("readonly", resultSet.getBoolean("readonly"));
+                    map.put("environment", resultSet.getString("environment"));
+                    map.put("serviceDesc", resultSet.getString("service_desc"));
+                    map.put("instanceDesc", resultSet.getString("instance_desc"));
+                    map.put("zone", resultSet.getString("zone"));
+                    map.put("region", resultSet.getString("region"));
+                    map.put("lob", resultSet.getString("lob"));
+                    map.put("resourceName", resultSet.getString("resource_name"));
+                    map.put("businessName", resultSet.getString("business_name"));
+                    map.put("envTag", resultSet.getString("env_tag"));
+                    map.put("topicClassification", resultSet.getString("topic_classification"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "instance", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
     public Result<String> getInstanceLabel(String hostId) {
         Result<String> result = null;
         String sql =
@@ -1666,7 +2151,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 SELECT i.instance_id, i.instance_name, pv.product_id, pv.product_version
                 FROM instance_t i
                 INNER JOIN product_version_t pv ON pv.product_version_id = i.product_version_id
-                WHERE i.host_id = ?
+                WHERE i.host_id = ? AND i.active = TRUE
                 """;
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
@@ -1694,37 +2179,72 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
     @Override
     public void createInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // Use UPSERT based on the Primary Key (host_id, instance_api_id): INSERT ON CONFLICT DO UPDATE
+        // This handles:
+        // 1. First time insert (no conflict).
+        // 2. Re-creation (conflict on PK) -> UPDATE the existing soft-deleted row (setting active=TRUE and new version).
+
         final String sql =
                 """
-                INSERT INTO instance_api_t(host_id, instance_api_id, instance_id, api_version_id,
-                active, update_user, update_ts, aggregate_version)
-                VALUES (?, ?, ?, ?, ?,  ?, ?, ?)
+                INSERT INTO instance_api_t(
+                    host_id,
+                    instance_api_id,
+                    instance_id,
+                    api_version_id,
+                    active,
+                    update_user,
+                    update_ts,
+                    aggregate_version
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT (host_id, instance_api_id) DO UPDATE
+                SET instance_id = EXCLUDED.instance_id,
+                    api_version_id = EXCLUDED.api_version_id,
+                    active = EXCLUDED.active,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version
+                -- OCC/IDM: Only update if the incoming event is newer
+                WHERE instance_api_t.aggregate_version < EXCLUDED.aggregate_version
+                AND instance_api_t.active = FALSE
                 """;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String instanceApiId = (String)map.get("instanceApiId"); // For logging/exceptions
-        String instanceId = (String)map.get("instanceId"); // For logging/exceptions
-        String apiVersionId = (String)map.get("apiVersionId"); // For logging/exceptions
+
+        // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        // Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String)map.get("hostId"); // Assuming hostId is in the data map, not just event metadata
+        String instanceApiId = (String)map.get("instanceApiId");
+        String instanceId = (String)map.get("instanceId");
+        String apiVersionId = (String)map.get("apiVersionId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(instanceApiId));
-            statement.setObject(3, UUID.fromString(instanceId));
-            statement.setObject(4, UUID.fromString(apiVersionId));
-            Boolean active = (Boolean)map.get("active");
-            if (active != null) {
-                statement.setBoolean(5, active);
-            } else {
-                statement.setNull(5, Types.BOOLEAN);
-            }
-            statement.setString(6, (String)event.get(Constants.USER));
-            statement.setObject(7, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(8, newAggregateVersion);
+            // INSERT values (8 placeholders)
+            int i = 1;
+            // 1: host_id (Required, part of PK)
+            statement.setObject(i++, UUID.fromString(hostId));
+            // 2: instance_api_id (Required, part of PK)
+            statement.setObject(i++, UUID.fromString(instanceApiId));
+            // 3: instance_id (Required)
+            statement.setObject(i++, UUID.fromString(instanceId));
+            // 4: api_version_id (Required)
+            statement.setObject(i++, UUID.fromString(apiVersionId));
+
+            // 5: active (Default TRUE in DDL, using payload value or TRUE)
+            Boolean active = (Boolean)map.getOrDefault("active", Boolean.TRUE);
+            statement.setBoolean(i++, active);
+
+            // 6: update_user
+            statement.setString(i++, (String)event.get(Constants.USER));
+            // 7: update_ts
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 8: aggregate_version
+            statement.setLong(i++, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("Failed during createInstanceApi for hostId %s instanceApiId %s with aggregateVersion %d", hostId, instanceApiId, newAggregateVersion));
+                // count=0 means the ON CONFLICT clause was hit, BUT the WHERE clause (aggregate_version < EXCLUDED.aggregate_version) failed.
+                // This is the desired idempotent/out-of-order protection behavior. Log and ignore.
+                logger.warn("Creation/Reactivation skipped for hostId {} instanceApiId {} aggregateVersion {}. A newer or same version already exists.", hostId, instanceApiId, newAggregateVersion);
             }
         } catch (SQLException e) {
             logger.error("SQLException during createInstanceApi for hostId {} instanceApiId {} aggregateVersion {}: {}", hostId, instanceApiId, newAggregateVersion, e.getMessage(), e);
@@ -1734,154 +2254,188 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             throw e;
         }
     }
-
-    private boolean queryInstanceApiExists(Connection conn, String hostId, String instanceApiId) throws SQLException {
-        final String sql =
-                """
-                SELECT COUNT(*) FROM instance_api_t WHERE host_id = ? AND instance_api_id = ?
-                """;
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
-            pst.setObject(1, UUID.fromString(hostId));
-            pst.setObject(2, UUID.fromString(instanceApiId));
-            try (ResultSet rs = pst.executeQuery()) {
-                return rs.next() && rs.getInt(1) > 0;
-            }
-        }
-    }
-
+    /*
     @Override
     public void updateInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
+        // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
+        // Note: The 'active' state is updated based on the event payload (if present).
         final String sql =
                 """
-                UPDATE instance_api_t SET instance_id = ?, api_version_id = ?,
-                active = ?, update_user = ?, update_ts = ?, aggregate_version = ?
-                WHERE host_id = ? and instance_api_id = ? AND aggregate_version = ?
-                """;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String instanceApiId = (String)map.get("instanceApiId"); // For logging/exceptions
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+                UPDATE instance_api_t
+                SET instance_id = ?,
+                    api_version_id = ?,
+                    active = ?,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?
+                WHERE host_id = ?
+                  AND instance_api_id = ?
+                  AND aggregate_version < ?
+                """; // <<< CRITICAL: Changed aggregate_version = ? to aggregate_version < ? to enforce monotonicity (OCC/IDM)
+
+        // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        // Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String)map.get("hostId"); // Getting hostId from map data as in other methods
+        String instanceApiId = (String)map.get("instanceApiId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString((String)map.get("instanceId")));
-            statement.setObject(2, UUID.fromString((String)map.get("apiVersionId")));
-            Boolean active = (Boolean)map.get("active");
-            if (active != null) {
-                statement.setBoolean(3, active);
-            } else {
-                statement.setNull(3, Types.BOOLEAN);
-            }
-            statement.setString(4, (String)event.get(Constants.USER));
-            statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(6, newAggregateVersion);
-            statement.setObject(7, UUID.fromString(hostId));
-            statement.setObject(8, UUID.fromString(instanceApiId));
-            statement.setLong(9, oldAggregateVersion);
+            // SET values (6 dynamic values)
+            int i = 1;
+            // 1. instance_id
+            statement.setObject(i++, UUID.fromString((String)map.get("instanceId")));
+            // 2. api_version_id
+            statement.setObject(i++, UUID.fromString((String)map.get("apiVersionId")));
+
+            // 3. active (Default TRUE in DDL, using payload value or TRUE)
+            Boolean active = (Boolean)map.getOrDefault("active", Boolean.TRUE);
+            statement.setBoolean(i++, active);
+
+            // 4. update_user
+            statement.setString(i++, (String)event.get(Constants.USER));
+            // 5. update_ts
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 6. aggregate_version
+            statement.setLong(i++, newAggregateVersion);
+
+            // WHERE conditions (3 placeholders)
+            // 7. host_id
+            statement.setObject(i++, UUID.fromString(hostId));
+            // 8. instance_api_id
+            statement.setObject(i++, UUID.fromString(instanceApiId));
+            // 9. aggregate_version < ? (new version for OCC/IDM check)
+            statement.setLong(i++, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryInstanceApiExists(conn, hostId, instanceApiId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during updateInstanceApi for hostId " + hostId + " instanceApiId " + instanceApiId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
-                } else {
-                    throw new SQLException("No record found during updateInstanceApi for hostId " + hostId + " instanceApiId " + instanceApiId + ".");
-                }
+                // If 0 rows updated, it means the record was either not found
+                // OR aggregate_version >= newAggregateVersion (OCC/IDM check failed).
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Update skipped for hostId {} instanceApiId {} aggregateVersion {}. Record not found or a newer/same version already exists.", hostId, instanceApiId, newAggregateVersion);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during updateInstanceApi for hostId {} instanceApiId {} (old: {}) -> (new: {}): {}", hostId, instanceApiId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during updateInstanceApi for hostId {} instanceApiId {} aggregateVersion {}: {}", hostId, instanceApiId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateInstanceApi for hostId {} instanceApiId {} (old: {}) -> (new: {}): {}", hostId, instanceApiId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during updateInstanceApi for hostId {} instanceApiId {} aggregateVersion {}: {}", hostId, instanceApiId, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
-
+    */
     @Override
     public void deleteInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM instance_api_t WHERE host_id = ? AND instance_api_id = ? AND aggregate_version = ?";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        // Use UPDATE to implement Soft Delete (setting active = FALSE).
+        // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
+        final String sql =
+                """
+                UPDATE instance_api_t
+                SET active = FALSE,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?
+                WHERE host_id = ?
+                  AND instance_api_id = ?
+                  AND aggregate_version < ?
+                """; // <<< CRITICAL: Added aggregate_version < ? to enforce monotonicity (OCC/IDM)
+
+        // Note: The original code retrieves hostId from event metadata,
+        // while the data map is used for instanceApiId.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
         String hostId = (String)event.get(Constants.HOST);
         String instanceApiId = (String)map.get("instanceApiId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        // A delete event represents a state change, so it should have a new, incremented version.
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(instanceApiId));
-            statement.setLong(3, oldAggregateVersion);
+            // SET values (3 placeholders)
+            // 1: update_user
+            statement.setString(1, (String)event.get(Constants.USER));
+            // 2: update_ts
+            statement.setObject(2, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 3: aggregate_version (the new version)
+            statement.setLong(3, newAggregateVersion);
+
+            // WHERE conditions (3 placeholders)
+            // 4: host_id
+            statement.setObject(4, UUID.fromString(hostId));
+            // 5: instance_api_id
+            statement.setObject(5, UUID.fromString(instanceApiId));
+            // 6: aggregate_version < ? (new version for OCC/IDM check)
+            statement.setLong(6, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryInstanceApiExists(conn, hostId, instanceApiId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteInstanceApi for hostId " + hostId + " instanceApiId " + instanceApiId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
-                } else {
-                    throw new SQLException("No record found during deleteInstanceApi for hostId " + hostId + " instanceApiId " + instanceApiId + ". It might have been already deleted.");
-                }
+                // If 0 rows updated, it means:
+                // 1. The record was not found (already deleted or never existed).
+                // 2. The OCC/IDM check failed (aggregate_version >= newAggregateVersion).
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Soft delete skipped for hostId {} instanceApiId {} aggregateVersion {}. Record not found or a newer/same version already exists.", hostId, instanceApiId, newAggregateVersion);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during deleteInstanceApi for hostId {} instanceApiId {} aggregateVersion {}: {}", hostId, instanceApiId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during deleteInstanceApi for hostId {} instanceApiId {} aggregateVersion {}: {}", hostId, instanceApiId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteInstanceApi for hostId {} instanceApiId {} aggregateVersion {}: {}", hostId, instanceApiId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during deleteInstanceApi for hostId {} instanceApiId {} aggregateVersion {}: {}", hostId, instanceApiId, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
-    public Result<String> getInstanceApi(int offset, int limit, String hostId, String instanceApiId, String instanceId, String instanceName,
-                                         String productId, String productVersion, String apiVersionId, String apiId, String apiVersion,
-                                         Boolean active) {
+    public Result<String> getInstanceApi(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "ia.host_id",
+                "instanceApiId", "ia.instance_api_id",
+                "instanceId", "ia.instance_id",
+                "instanceName", "i.instance_name",
+                "productId", "pv.product_id",
+                "productVersion", "pv.product_version",
+                "apiVersionId", "ia.api_version_id",
+                "apiId", "av.api_id",
+                "apiVersion", "av.api_version",
+                "active", "ia.active"
+        ));
+        columnMap.put("updateUser", "ia.update_user");
+        columnMap.put("updateTs", "ia.update_ts");
+        columnMap.put("aggregateVersion", "ia.aggregate_version");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
-                """
-                        SELECT COUNT(*) OVER () AS total,
-                        ia.host_id, ia.instance_api_id, ia.instance_id, i.instance_name, pv.product_id,
-                        pv.product_version, ia.api_version_id, av.api_id, av.api_version, ia.active,
-                        ia.update_user, ia.update_ts, ia.aggregate_version
-                        FROM instance_api_t ia
-                        INNER JOIN instance_t i ON ia.instance_id = i.instance_id
-                        INNER JOIN product_version_t pv ON i.product_version_id = pv.product_version_id
-                        INNER JOIN api_version_t av ON ia.api_version_id = av.api_version_id
-                        WHERE 1=1
-                """;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append(s).append("\n");
+            """
+                SELECT COUNT(*) OVER () AS total,
+                ia.host_id, ia.instance_api_id, ia.instance_id, i.instance_name, pv.product_id,
+                pv.product_version, ia.api_version_id, av.api_id, av.api_version, ia.active,
+                ia.update_user, ia.update_ts, ia.aggregate_version
+                FROM instance_api_t ia
+                INNER JOIN instance_t i ON ia.instance_id = i.instance_id
+                INNER JOIN product_version_t pv ON i.product_version_id = pv.product_version_id
+                INNER JOIN api_version_t av ON ia.api_version_id = av.api_version_id
+                WHERE ia.host_id = ?
+            """;
 
         List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-
-        addCondition(whereClause, parameters, "ia.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "ia.instance_api_id", instanceApiId != null ? UUID.fromString(instanceApiId) : null);
-        addCondition(whereClause, parameters, "ia.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
-        addCondition(whereClause, parameters, "i.instance_name", instanceName);
-        addCondition(whereClause, parameters, "pv.product_id", productId);
-        addCondition(whereClause, parameters, "pv.product_version", productVersion);
-        addCondition(whereClause, parameters, "api_version_id", apiVersionId != null ? UUID.fromString(apiVersionId) : null);
-        addCondition(whereClause, parameters, "av.api_id", apiId);
-        addCondition(whereClause, parameters, "av.api_version", apiVersion);
-        addCondition(whereClause, parameters, "active", active);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY instance_id, api_version_id\n" + // Added ordering
-                "LIMIT ? OFFSET ?");
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "ia", "i", "pv", "av");
+        String[] searchColumns = {"i.instance_name"};
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("ia.host_id", "ia.instance_api_id", "ia.instance_id", "ia.api_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("instance_id, api_version_id", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
-
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> instanceApis = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -1923,6 +2477,75 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         return result;
     }
 
+    @Override
+    public Result<String> getInstanceApiById(String hostId, String instanceApiId) {
+        final String sql =
+                """
+                SELECT host_id, instance_api_id, instance_id, api_version_id,
+                aggregate_version, active, update_user, update_ts
+                FROM instance_api_t
+                WHERE host_id = ? AND instance_api_id = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + instanceApiId;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(instanceApiId));
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceApiId", resultSet.getObject("instance_api_id", UUID.class));
+                    map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
+                    map.put("apiVersionId", resultSet.getObject("api_version_id", UUID.class));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "instance_api", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public String getInstanceApiId(String hostId, String instanceId, String apiVersionId) {
+        final String sql = "SELECT instance_api_id FROM instance_api_t WHERE host_id = ? AND instance_id = ? AND api_version_id = ?";
+        String instanceApiId = null;
+        try (Connection connection = ds.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(instanceId));
+            statement.setObject(3, UUID.fromString(apiVersionId));
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if(resultSet.next()){
+                    instanceApiId = resultSet.getString(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+        }
+        return instanceApiId;
+    }
+
     public Result<String> getInstanceApiLabel(String hostId, String instanceId) {
         Result<String> result = null;
         String sql =
@@ -1931,14 +2554,14 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 FROM instance_api_t ia
                 INNER JOIN instance_t i ON i.instance_id = ia.instance_id
                 INNER JOIN api_version_t av ON av.api_version_id = ia.api_version_id
-                WHERE ia.host_id = ?
+                WHERE ia.host_id = ? AND ia.active = TRUE
                 """;
-        if(instanceId != null) sql += " AND ia.instance_id = ?";
+        if(instanceId != null && !instanceId.isEmpty()) sql += " AND ia.instance_id = ?";
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
             preparedStatement.setObject(1, UUID.fromString(hostId));
-            if(instanceId != null) {
+            if(instanceId != null && !instanceId.isEmpty()) {
                 preparedStatement.setObject(2, UUID.fromString(instanceId));
             }
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -1962,28 +2585,62 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
     @Override
     public void createInstanceApiPathPrefix(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // Use UPSERT based on the Primary Key (host_id, instance_api_id, path_prefix): INSERT ON CONFLICT DO UPDATE
+        // This handles:
+        // 1. First time insert (no conflict).
+        // 2. Re-creation (conflict on PK) -> UPDATE the existing soft-deleted row (setting active=TRUE and new version).
+
         final String sql =
                 """
-                INSERT INTO instance_api_path_prefix_t(host_id, instance_api_id, path_prefix, update_user, update_ts, aggregate_version)
-                VALUES (?, ?, ?, ?, ?,  ?)
+                INSERT INTO instance_api_path_prefix_t(
+                    host_id,
+                    instance_api_id,
+                    path_prefix,
+                    update_user,
+                    update_ts,
+                    aggregate_version,
+                    active
+                ) VALUES (?, ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (host_id, instance_api_id, path_prefix) DO UPDATE
+                SET update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                -- OCC/IDM: Only update if the incoming event is newer
+                WHERE instance_api_path_prefix_t.aggregate_version < EXCLUDED.aggregate_version
+                AND instance_api_path_prefix_t.active = FALSE
                 """;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
+
+        // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        // Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String)map.get("hostId"); // Getting hostId from map data (or event metadata, adjusted for safety)
         String instanceApiId = (String)map.get("instanceApiId");
         String pathPrefix = (String)map.get("pathPrefix");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(instanceApiId));
-            statement.setString(3, pathPrefix);
-            statement.setString(4, (String)event.get(Constants.USER));
-            statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(6, newAggregateVersion);
+            // INSERT values (6 placeholders + active=TRUE in SQL, total 6 dynamic values)
+            int i = 1;
+            // 1. host_id (Required, part of PK)
+            statement.setObject(i++, UUID.fromString(hostId));
+            // 2. instance_api_id (Required, part of PK)
+            statement.setObject(i++, UUID.fromString(instanceApiId));
+            // 3. path_prefix (Required, part of PK)
+            statement.setString(i++, pathPrefix);
+
+            // 4. update_user
+            statement.setString(i++, (String)event.get(Constants.USER));
+            // 5. update_ts
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 6. aggregate_version
+            statement.setLong(i++, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("Failed during createInstanceApiPathPrefix for hostId %s instanceApiId %s pathPrefix %s with aggregateVersion %d", hostId, instanceApiId, pathPrefix, newAggregateVersion));
+                // count=0 means the ON CONFLICT clause was hit, BUT the WHERE clause (aggregate_version < EXCLUDED.aggregate_version) failed.
+                // This is the desired idempotent/out-of-order protection behavior. Log and ignore.
+                logger.warn("Creation/Reactivation skipped for hostId {} instanceApiId {} pathPrefix {} aggregateVersion {}. A newer or same version already exists.", hostId, instanceApiId, pathPrefix, newAggregateVersion);
             }
         } catch (SQLException e) {
             logger.error("SQLException during createInstanceApiPathPrefix for hostId {} instanceApiId {} pathPrefix {} aggregateVersion {}: {}", hostId, instanceApiId, pathPrefix, newAggregateVersion, e.getMessage(), e);
@@ -1994,152 +2651,203 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         }
     }
 
-    private boolean queryInstanceApiPathPrefixExists(Connection conn, String hostId, String instanceApiId, String pathPrefix) throws SQLException {
-        final String sql =
-                """
-                SELECT COUNT(*) FROM instance_api_path_prefix_t WHERE host_id = ? AND instanceApiId = ? AND path_prefix = ?
-                """;
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
-            pst.setObject(1, UUID.fromString(hostId));
-            pst.setObject(2, UUID.fromString(instanceApiId));
-            pst.setString(3, pathPrefix);
-            try (ResultSet rs = pst.executeQuery()) {
-                return rs.next() && rs.getInt(1) > 0;
-            }
-        }
-    }
-
     @Override
     public void updateInstanceApiPathPrefix(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
+        // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
+        // We explicitly set active = TRUE as an UPDATE event implies the path prefix should be active.
         final String sql =
                 """
-                UPDATE instance_api_path_prefix_t SET path_prefix = ?, update_user = ?, update_ts = ?, aggregate_version = ?
-                WHERE host_id = ? and instance_api_id = ? AND aggregate_version = ?
-                """;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String instanceApiId = (String)map.get("instanceApiId"); // For logging/exceptions
-        String pathPrefix = (String)map.get("pathPrefix"); // For logging/exceptions
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+                UPDATE instance_api_path_prefix_t
+                SET update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?,
+                    active = TRUE
+                WHERE host_id = ?
+                  AND instance_api_id = ?
+                  AND path_prefix = ?
+                  AND aggregate_version < ?
+                """; // <<< CRITICAL: Changed aggregate_version = ? to aggregate_version < ? to enforce monotonicity (OCC/IDM)
+        // Note: Path_prefix removed from SET as it's part of the PK and shouldn't be updated.
+
+        // Note: The original code retrieves hostId from event metadata,
+        // while the data map is used for instanceApiId and pathPrefix.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String)map.get("hostId"); // Assuming hostId is in the data map, consistent with other methods
+        String instanceApiId = (String)map.get("instanceApiId");
+        String pathPrefix = (String)map.get("pathPrefix");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setString(1, pathPrefix);
-            statement.setString(2, (String)event.get(Constants.USER));
-            statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(4, newAggregateVersion);
-            statement.setObject(5, UUID.fromString(hostId));
-            statement.setObject(6, UUID.fromString(instanceApiId));
-            statement.setLong(7, oldAggregateVersion);
+            // SET values (3 dynamic values + active = TRUE in SQL)
+            int i = 1;
+            // 1. update_user
+            statement.setString(i++, (String)event.get(Constants.USER));
+            // 2. update_ts
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 3. aggregate_version
+            statement.setLong(i++, newAggregateVersion);
+
+            // WHERE conditions (4 placeholders)
+            // 4. host_id
+            statement.setObject(i++, UUID.fromString(hostId));
+            // 5. instance_api_id
+            statement.setObject(i++, UUID.fromString(instanceApiId));
+            // 6. path_prefix
+            statement.setString(i++, pathPrefix);
+            // 7. aggregate_version < ? (new version for OCC/IDM check)
+            statement.setLong(i++, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryInstanceApiPathPrefixExists(conn, hostId, instanceApiId, pathPrefix)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during updateInstanceApiPathPrefix for hostId " + hostId + " instanceApiId " + instanceApiId + " pathPrefix " + pathPrefix + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
-                } else {
-                    throw new SQLException("No record found during updateInstanceApiPathPrefix for hostId " + hostId + " instanceApiId " + instanceApiId + " pathPrefix " + pathPrefix + ".");
-                }
+                // If 0 rows updated, it means the record was either not found
+                // OR aggregate_version >= newAggregateVersion (OCC/IDM check failed).
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Update skipped for hostId {} instanceApiId {} pathPrefix {} aggregateVersion {}. Record not found or a newer/same version already exists.", hostId, instanceApiId, pathPrefix, newAggregateVersion);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during updateInstanceApiPathPrefix for hostId {} instanceApiId {} pathPrefix {} (old: {}) -> (new: {}): {}", hostId, instanceApiId, pathPrefix, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during updateInstanceApiPathPrefix for hostId {} instanceApiId {} pathPrefix {} aggregateVersion {}: {}", hostId, instanceApiId, pathPrefix, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateInstanceApiPathPrefix for hostId {} instanceApiId {} pathPrefix {} (old: {}) -> (new: {}): {}", hostId, instanceApiId, pathPrefix, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during updateInstanceApiPathPrefix for hostId {} instanceApiId {} pathPrefix {} aggregateVersion {}: {}", hostId, instanceApiId, pathPrefix, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
+
+    /**
+     * Performs a soft delete on an instance_api_path_prefix record using an idempotent/monotonic pattern.
+     * This method implements:
+     * 1.  **Soft Delete:** Sets the 'active' flag to false.
+     * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
+     * 3.  **OCC/Idempotency:** Uses `aggregate_version < ?` to ensure the operation only succeeds if it
+     *     represents a new state, preventing re-processing of old events or concurrent conflicts.
+     *
+     * @param conn  The database connection.
+     * @param event The event map containing the data and metadata for the operation.
+     * @throws SQLException If a database access error occurs.
+     * @throws Exception    For other generic errors.
+     */
     @Override
     public void deleteInstanceApiPathPrefix(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM instance_api_path_prefix_t WHERE host_id = ? AND instance_api_id = ? AND path_prefix = ? AND aggregate_version = ?";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
-        String instanceApiId = (String)map.get("instanceApiId");
-        String pathPrefix = (String)map.get("pathPrefix");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        // SQL statement updated to match the idempotent soft-delete pattern.
+        final String sql =
+                """
+                UPDATE instance_api_path_prefix_t
+                SET active = FALSE,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?
+                WHERE host_id = ?
+                  AND instance_api_id = ?
+                  AND path_prefix = ?
+                  AND aggregate_version < ?
+                """;
+
+        // Extract data and metadata from the event.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String) event.get(Constants.HOST);
+        String instanceApiId = (String) map.get("instanceApiId");
+        String pathPrefix = (String) map.get("pathPrefix");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(instanceApiId));
-            statement.setString(3, pathPrefix);
-            statement.setLong(4, oldAggregateVersion);
+            // SET clause placeholders (3)
+            // 1: update_user from event metadata
+            statement.setString(1, (String) event.get(Constants.USER));
+            // 2: update_ts from event metadata
+            statement.setObject(2, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            // 3: aggregate_version (the new version)
+            statement.setLong(3, newAggregateVersion);
+
+            // WHERE clause placeholders (4)
+            // 4: host_id from primary key
+            statement.setObject(4, UUID.fromString(hostId));
+            // 5: instance_api_id from primary key
+            statement.setObject(5, UUID.fromString(instanceApiId));
+            // 6: path_prefix from primary key
+            statement.setString(6, pathPrefix);
+            // 7: aggregate_version < ? for OCC/Idempotency check
+            statement.setLong(7, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryInstanceApiPathPrefixExists(conn, hostId, instanceApiId, pathPrefix)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteInstanceApiPathPrefix for hostId " + hostId + " instanceApiId " + instanceApiId + " pathPrefix " + pathPrefix + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
-                } else {
-                    throw new SQLException("No record found during deleteInstanceApiPathPrefix for hostId " + hostId + " instanceApiId " + instanceApiId + " pathPrefix " + pathPrefix + ". It might have been already deleted.");
-                }
+                // If 0 rows were updated, we log a warning and continue.
+                // This indicates the record was already deleted, never existed, or a newer version is already in the database.
+                // This is the expected behavior for an idempotent operation.
+                logger.warn("Soft delete skipped for InstanceApiPathPrefix with hostId {}, instanceApiId {}, pathPrefix {}, newAggregateVersion {}. Record not found or a newer version already exists.",
+                        hostId, instanceApiId, pathPrefix, newAggregateVersion);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during deleteInstanceApiPathPrefix for hostId {} instanceApiId {} pathPrefix {} aggregateVersion {}: {}", hostId, instanceApiId, pathPrefix, oldAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during soft delete of InstanceApiPathPrefix for hostId {} instanceApiId {} pathPrefix {}: {}",
+                    hostId, instanceApiId, pathPrefix, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteInstanceApiPathPrefix for hostId {} instanceApiId {} pathPrefix {} aggregateVersion {}: {}", hostId, instanceApiId, pathPrefix, oldAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during soft delete of InstanceApiPathPrefix for hostId {} instanceApiId {} pathPrefix {}: {}",
+                    hostId, instanceApiId, pathPrefix, e.getMessage(), e);
             throw e;
         }
     }
 
+
     @Override
-    public Result<String> getInstanceApiPathPrefix(int offset, int limit, String hostId, String instanceApiId, String instanceId,
-                                                   String instanceName, String productId, String productVersion, String apiVersionId,
-                                                   String apiId, String apiVersion, String pathPrefix) {
+    public Result<String> getInstanceApiPathPrefix(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "iapp.host_id",
+                "instanceApiId", "iapp.instance_api_id",
+                "instanceId", "iai.instance_id",
+                "instanceName", "i.instance_name",
+                "productId", "pv.product_id",
+                "productVersion", "pv.product_version",
+                "apiVersionId", "iai.api_version_id",
+                "apiId", "av.api_id",
+                "apiVersion", "av.api_version",
+                "pathPrefix", "iapp.path_prefix"
+        ));
+        columnMap.put("updateUser", "iapp.update_user");
+        columnMap.put("updateTs", "iapp.update_ts");
+        columnMap.put("aggregateVersion", "iapp.aggregate_version");
+        columnMap.put("active", "iapp.active");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
-                """
-                        SELECT COUNT(*) OVER () AS total,
-                        iapp.host_id, iapp.instance_api_id, iai.instance_id, i.instance_name,
-                        pv.product_id, pv.product_version, iai.api_version_id, av.api_id,
-                        av.api_version, iapp.path_prefix, iapp.update_user, iapp.update_ts, iapp.aggregate_version
-                        FROM instance_api_path_prefix_t iapp
-                        INNER JOIN instance_api_t iai ON iapp.instance_api_id = iai.instance_api_id
-                        INNER JOIN instance_t i ON i.instance_id = iai.instance_id
-                        INNER JOIN product_version_t pv ON pv.product_version_id = i.product_version_id
-                        INNER JOIN api_version_t av ON av.api_version_id = iai.api_version_id
-                        INNER JOIN api_t ai ON ai.api_id = av.api_id
-                        WHERE 1=1
-                """;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append(s).append("\n");
+            """
+                SELECT COUNT(*) OVER () AS total,
+                iapp.host_id, iapp.instance_api_id, iai.instance_id, i.instance_name,
+                pv.product_id, pv.product_version, iai.api_version_id, av.api_id,
+                av.api_version, iapp.path_prefix, iapp.update_user, iapp.update_ts,
+                iapp.aggregate_version, iapp.active
+                FROM instance_api_path_prefix_t iapp
+                INNER JOIN instance_api_t iai ON iapp.instance_api_id = iai.instance_api_id
+                INNER JOIN instance_t i ON i.instance_id = iai.instance_id
+                INNER JOIN product_version_t pv ON pv.product_version_id = i.product_version_id
+                INNER JOIN api_version_t av ON av.api_version_id = iai.api_version_id
+                INNER JOIN api_t ai ON ai.api_id = av.api_id
+                WHERE iapp.host_id = ?
+            """;
 
         List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-
-        addCondition(whereClause, parameters, "iapp.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "iapp.instance_api_id", instanceApiId != null ? UUID.fromString(instanceApiId) : null);
-        addCondition(whereClause, parameters, "iai.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
-        addCondition(whereClause, parameters, "i.instance_name", instanceName);
-        addCondition(whereClause, parameters, "pv.product_id", productId);
-        addCondition(whereClause, parameters, "pv.product_version", productVersion);
-        addCondition(whereClause, parameters, "iai.api_version_id", apiVersionId != null ? UUID.fromString(apiVersionId) : null);
-        addCondition(whereClause, parameters, "av.api_id", apiId);
-        addCondition(whereClause, parameters, "av.api_version", apiVersion);
-        addCondition(whereClause, parameters, "iapp.path_prefix", pathPrefix);
-
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY iai.instance_id, iapp.instance_api_id, iapp.path_prefix\n" + // Added ordering
-                "LIMIT ? OFFSET ?");
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "iapp", "iai", "i", "pv", "av", "ai");
+        String[] searchColumns = {"i.instance_name", "iapp.path_prefix"};
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("iapp.host_id", "iapp.instance_api_id", "iai.instance_id", "iai.api_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("iai.instance_id, iapp.instance_api_id, iapp.path_prefix", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
-
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> instanceApiPathPrefixes = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -2161,6 +2869,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     instanceApiPathPrefixes.add(map);
                 }
             }
@@ -2183,203 +2892,345 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
+    public Result<String> getInstanceApiPathPrefixById(String hostId, String instanceApiId, String pathPrefix) {
+        final String sql =
+                """
+                SELECT host_id, instance_api_id, path_prefix,
+                aggregate_version, active, update_user, update_ts
+                FROM instance_api_path_prefix_t
+                WHERE host_id = ? AND instance_api_id = ? AND path_prefix = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + instanceApiId + ":" + pathPrefix;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(instanceApiId));
+            statement.setString(3, pathPrefix);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceApiId", resultSet.getObject("instance_api_id", UUID.class));
+                    map.put("pathPrefix", resultSet.getString("path_prefix"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "instance_api_path_prefix", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    /**
+     * Creates or reactivates an instance_app_api record using an idempotent UPSERT pattern.
+     * This method implements:
+     * 1.  **Idempotent Create/Update (Upsert):** Uses `INSERT ... ON CONFLICT DO UPDATE`. This will
+     *     create the record on the first valid event, or update and reactivate it if a soft-deleted
+     *     record with an older version already exists.
+     * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
+     * 3.  **OCC/Monotonicity:** The `WHERE` clause in the `DO UPDATE` part ensures that an update
+     *     only occurs if the incoming event's version is strictly greater than the existing record's version.
+     *
+     * @param conn  The database connection.
+     * @param event The event map containing the data and metadata for the operation.
+     * @throws SQLException If a database access error occurs.
+     * @throws Exception    For other generic errors.
+     */
+    @Override
     public void createInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql =
                 """
-                INSERT INTO instance_app_api_t(host_id, instance_app_id, instance_api_id, active, update_user, update_ts, aggregate_version)
-                VALUES (?, ?, ?, ?, ?,  ?, ?)
+                INSERT INTO instance_app_api_t(
+                    host_id,
+                    instance_app_id,
+                    instance_api_id,
+                    update_user,
+                    update_ts,
+                    aggregate_version,
+                    active
+                ) VALUES (?, ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (host_id, instance_app_id, instance_api_id) DO UPDATE
+                SET update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                WHERE instance_app_api_t.aggregate_version < EXCLUDED.aggregate_version
+                AND instance_app_api_t.active = FALSE
                 """;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
-        String instanceAppId = (String)map.get("instanceAppId");
-        String instanceApiId = (String)map.get("instanceApiId");
+
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String) event.get(Constants.HOST);
+        String instanceAppId = (String) map.get("instanceAppId");
+        String instanceApiId = (String) map.get("instanceApiId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(instanceAppId));
-            statement.setObject(3, UUID.fromString(instanceApiId));
-            Boolean active = (Boolean)map.get("active");
-            if (active != null) {
-                statement.setBoolean(4, active);
-            } else {
-                statement.setNull(4, Types.BOOLEAN);
-            }
-            statement.setString(5, (String)event.get(Constants.USER));
-            statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(7, newAggregateVersion);
+            // Set parameters for the INSERT part of the statement
+            int i = 1;
+            // 1. host_id (PK)
+            statement.setObject(i++, UUID.fromString(hostId));
+            // 2. instance_app_id (PK)
+            statement.setObject(i++, UUID.fromString(instanceAppId));
+            // 3. instance_api_id (PK)
+            statement.setObject(i++, UUID.fromString(instanceApiId));
+
+            // 4. update_user (IDM)
+            statement.setString(i++, (String) event.get(Constants.USER));
+            // 5. update_ts (IDM)
+            statement.setObject(i++, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            // 6. aggregate_version (OCC)
+            statement.setLong(i++, newAggregateVersion);
 
             int count = statement.executeUpdate();
+
             if (count == 0) {
-                throw new SQLException(String.format("Failed during createInstanceAppApi for hostId %s instanceAppId %s instanceApiId %s with aggregateVersion %d", hostId, instanceAppId, instanceApiId, newAggregateVersion));
+                // A count of 0 is a valid, idempotent outcome. It means the ON CONFLICT clause was triggered,
+                // but the WHERE condition (version check) was not met.
+                logger.warn("Creation/Reactivation skipped for InstanceAppApi with hostId {}, instanceAppId {}, instanceApiId {}. A newer or same version already exists.",
+                        hostId, instanceAppId, instanceApiId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during createInstanceAppApi for hostId {} instanceAppId {} instanceApiId {} aggregateVersion {}: {}", hostId, instanceAppId, instanceApiId, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during createInstanceAppApi for hostId {} instanceAppId {} instanceApiId {}: {}",
+                    hostId, instanceAppId, instanceApiId, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createInstanceAppApi for hostId {} instanceAppId {} instanceApiId {} aggregateVersion {}: {}", hostId, instanceAppId, instanceApiId, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during createInstanceAppApi for hostId {} instanceAppId {} instanceApiId {}: {}",
+                    hostId, instanceAppId, instanceApiId, e.getMessage(), e);
             throw e;
         }
     }
 
-    private boolean queryInstanceAppApiExists(Connection conn, String hostId, String instanceAppId, String instanceApiId) throws SQLException {
-        final String sql =
-                """
-                SELECT COUNT(*) FROM instance_app_api_t WHERE host_id = ? AND instance_app_id = ? AND instance_api_id = ?
-                """;
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
-            pst.setObject(1, UUID.fromString(hostId));
-            pst.setObject(2, UUID.fromString(instanceAppId));
-            pst.setObject(3, UUID.fromString(instanceApiId));
-            try (ResultSet rs = pst.executeQuery()) {
-                return rs.next() && rs.getInt(1) > 0;
-            }
-        }
-    }
-
+    /**
+     * Updates an instance_app_api record using an idempotent/monotonic pattern.
+     * This method implements:
+     * 1.  **Soft Delete Principle:** An update implicitly reactivates the record by setting `active = TRUE`.
+     * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
+     * 3.  **OCC/Idempotency:** Uses `aggregate_version < ?` to ensure the operation only succeeds if it
+     *     represents a new state, preventing re-processing of old events or concurrent conflicts.
+     *
+     * @param conn  The database connection.
+     * @param event The event map containing the data and metadata for the operation.
+     * @throws SQLException If a database access error occurs.
+     * @throws Exception    For other generic errors.
+     */
+    /*
     @Override
     public void updateInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // SQL statement updated to match the idempotent update pattern.
         final String sql =
                 """
-                UPDATE instance_app_api_t SET active = ?, update_user = ?, update_ts = ?, aggregate_version = ?
-                WHERE host_id = ? AND instance_app_id = ? AND instance_api_id = ? AND aggregate_version = ?
+                UPDATE instance_app_api_t
+                SET update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?,
+                    active = TRUE
+                WHERE host_id = ?
+                  AND instance_app_id = ?
+                  AND instance_api_id = ?
+                  AND aggregate_version < ?
                 """;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
-        String instanceAppId = (String)map.get("instanceAppId");
-        String instanceApiId = (String)map.get("instanceApiId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String) event.get(Constants.HOST);
+        String instanceAppId = (String) map.get("instanceAppId");
+        String instanceApiId = (String) map.get("instanceApiId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            Boolean active = (Boolean)map.get("active");
-            if (active != null) {
-                statement.setBoolean(1, active);
-            } else {
-                statement.setNull(1, Types.BOOLEAN);
-            }
-            statement.setString(2, (String)event.get(Constants.USER));
-            statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(4, newAggregateVersion);
-            statement.setObject(5, UUID.fromString(hostId));
-            statement.setObject(6, UUID.fromString(instanceAppId));
-            statement.setObject(7, UUID.fromString(instanceApiId));
-            statement.setLong(8, oldAggregateVersion);
+            // SET clause placeholders (3)
+            int i = 1;
+            // 1. update_user (IDM)
+            statement.setString(i++, (String) event.get(Constants.USER));
+            // 2. update_ts (IDM)
+            statement.setObject(i++, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            // 3. aggregate_version (the new version)
+            statement.setLong(i++, newAggregateVersion);
+
+            // WHERE clause placeholders (4)
+            // 4. host_id (PK)
+            statement.setObject(i++, UUID.fromString(hostId));
+            // 5. instance_app_id (PK)
+            statement.setObject(i++, UUID.fromString(instanceAppId));
+            // 6. instance_api_id (PK)
+            statement.setObject(i++, UUID.fromString(instanceApiId));
+            // 7. aggregate_version < ? for OCC/Idempotency check
+            statement.setLong(i++, newAggregateVersion);
 
             int count = statement.executeUpdate();
+
             if (count == 0) {
-                if (queryInstanceAppApiExists(conn, hostId, instanceAppId, instanceApiId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during updateInstanceAppApi for hostId " + hostId + " instanceAppId " + instanceAppId + " instanceApiId " + instanceApiId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
-                } else {
-                    throw new SQLException("No record found during updateInstanceAppApi for hostId " + hostId + " instanceAppId " + instanceAppId + "instanceApiId " + instanceApiId + ".");
-                }
+                // If 0 rows were updated, it's a valid idempotent outcome.
+                // It means the record was not found or a newer/same version already exists.
+                logger.warn("Update skipped for InstanceAppApi with hostId {}, instanceAppId {}, instanceApiId {}. Record not found or a newer version already exists.",
+                        hostId, instanceAppId, instanceApiId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during updateInstanceAppApi for hostId {} instanceAppId {} instanceApiId {} (old: {}) -> (new: {}): {}", hostId, instanceAppId, instanceApiId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during updateInstanceAppApi for hostId {} instanceAppId {} instanceApiId {}: {}",
+                    hostId, instanceAppId, instanceApiId, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateInstanceAppApi for hostId {} instanceAppId {} instanceApiId {} (old: {}) -> (new: {}): {}", hostId, instanceAppId, instanceApiId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during updateInstanceAppApi for hostId {} instanceAppId {} instanceApiId {}: {}",
+                    hostId, instanceAppId, instanceApiId, e.getMessage(), e);
             throw e;
         }
     }
+    */
 
+    /**
+     * Performs a soft delete on an instance_app_api record using an idempotent/monotonic pattern.
+     * This method implements:
+     * 1.  **Soft Delete:** Sets the 'active' flag to false.
+     * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
+     * 3.  **OCC/Idempotency:** Uses `aggregate_version < ?` to ensure the operation only succeeds if it
+     *     represents a new state, preventing re-processing of old events or concurrent conflicts.
+     *
+     * @param conn  The database connection.
+     * @param event The event map containing the data and metadata for the operation.
+     * @throws SQLException If a database access error occurs.
+     * @throws Exception    For other generic errors.
+     */
     @Override
     public void deleteInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM instance_app_api_t WHERE host_id = ? AND instance_app_id = ? AND instance_api_id = ? AND aggregate_version = ?";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
-        String instanceAppId = (String)map.get("instanceAppId");
-        String instanceApiId = (String)map.get("instanceApiId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        // SQL statement updated to match the idempotent soft-delete pattern.
+        final String sql =
+                """
+                UPDATE instance_app_api_t
+                SET active = FALSE,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?
+                WHERE host_id = ?
+                  AND instance_app_id = ?
+                  AND instance_api_id = ?
+                  AND aggregate_version < ?
+                """;
+
+        // Extract data and metadata from the event.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String) event.get(Constants.HOST);
+        String instanceAppId = (String) map.get("instanceAppId");
+        String instanceApiId = (String) map.get("instanceApiId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(instanceAppId));
-            statement.setObject(3, UUID.fromString(instanceApiId));
-            statement.setLong(4, oldAggregateVersion);
+            // SET clause placeholders (3)
+            int i = 1;
+            // 1: update_user from event metadata
+            statement.setString(i++, (String) event.get(Constants.USER));
+            // 2: update_ts from event metadata
+            statement.setObject(i++, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            // 3: aggregate_version (the new version)
+            statement.setLong(i++, newAggregateVersion);
+
+            // WHERE clause placeholders (4)
+            // 4: host_id from primary key
+            statement.setObject(i++, UUID.fromString(hostId));
+            // 5: instance_app_id from primary key
+            statement.setObject(i++, UUID.fromString(instanceAppId));
+            // 6: instance_api_id from primary key
+            statement.setObject(i++, UUID.fromString(instanceApiId));
+            // 7: aggregate_version < ? for OCC/Idempotency check
+            statement.setLong(i++, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryInstanceAppApiExists(conn, hostId, instanceAppId, instanceApiId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteInstanceAppApi for hostId " + hostId + " instanceAppId " + instanceAppId + " instanceApiId " + instanceApiId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
-                } else {
-                    throw new SQLException("No record found during deleteInstanceAppApi for hostId " + hostId + " instanceAppId " + instanceAppId + " instanceApiId " + instanceApiId + ". It might have been already deleted.");
-                }
+                // If 0 rows were updated, we log a warning and continue.
+                // This indicates the record was already deleted, never existed, or a newer version is already in the database.
+                // This is the expected behavior for an idempotent operation.
+                logger.warn("Soft delete skipped for InstanceAppApi with hostId {}, instanceAppId {}, instanceApiId {}, newAggregateVersion {}. Record not found or a newer version already exists.",
+                        hostId, instanceAppId, instanceApiId, newAggregateVersion);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during deleteInstanceAppApi for hostId {} instanceAppId {} instanceApiId {} aggregateVersion {}: {}", hostId, instanceAppId, instanceApiId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during soft delete of InstanceAppApi for hostId {} instanceAppId {} instanceApiId {}: {}",
+                    hostId, instanceAppId, instanceApiId, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteInstanceAppApi for hostId {} instanceAppId {} instanceApiId {} aggregateVersion {}: {}", hostId, instanceAppId, instanceApiId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during soft delete of InstanceAppApi for hostId {} instanceAppId {} instanceApiId {}: {}",
+                    hostId, instanceAppId, instanceApiId, e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
-    public Result<String> getInstanceAppApi(int offset, int limit, String hostId, String instanceAppId, String instanceApiId,
-                                            String instanceId, String instanceName, String productId, String productVersion,
-                                            String appId, String appVersion, String apiVersionId, String apiId,
-                                            String apiVersion, Boolean active) {
+    public Result<String> getInstanceAppApi(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "iaa.host_id",
+                "instanceAppId", "iaa.instance_app_id",
+                "appId", "iap.app_id",
+                "appVersion", "iap.app_version",
+                "instanceApiId", "iaa.instance_api_id",
+                "instanceId", "iai.instance_id",
+                "instanceName", "i.instance_name",
+                "productId", "pv.product_id",
+                "productVersion", "pv.product_version",
+                "apiVersionId", "iai.api_version_id"
+        ));
+        columnMap.put("apiId", "av.api_id");
+        columnMap.put("apiVersion", "av.api_version");
+        columnMap.put("active", "iaa.active");
+        columnMap.put("updateUser", "iaa.update_user");
+        columnMap.put("updateTs", "iaa.update_ts");
+        columnMap.put("aggregateVersion", "iaa.aggregate_version");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
-                """
-                                SELECT COUNT(*) OVER () AS total,
-                                iaa.host_id, iaa.instance_app_id, iap.app_id, iap.app_version,
-                                iaa.instance_api_id, iai.instance_id, i.instance_name, pv.product_id,
-                                pv.product_version, iai.api_version_id, av.api_id, av.api_version, iaa.active,
-                                iaa.update_user, iaa.update_ts, iaa.aggregate_version
-                                FROM instance_app_api_t iaa
-                                INNER JOIN instance_app_t iap ON iaa.instance_app_id = iap.instance_app_id
-                                INNER JOIN app_t a ON iap.app_id = a.app_id
-                                INNER JOIN instance_api_t iai ON iaa.instance_api_id = iai.instance_api_id
-                                INNER JOIN instance_t i ON i.instance_id = iai.instance_id
-                                INNER JOIN product_version_t pv ON pv.product_version_id = i.product_version_id
-                                INNER JOIN api_version_t av ON av.api_version_id = iai.api_version_id
-                                INNER JOIN api_t ai ON ai.api_id = av.api_id
-                                WHERE 1=1
-                        """;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append(s).append("\n");
+            """
+                SELECT COUNT(*) OVER () AS total,
+                iaa.host_id, iaa.instance_app_id, iap.app_id, iap.app_version,
+                iaa.instance_api_id, iai.instance_id, i.instance_name, pv.product_id,
+                pv.product_version, iai.api_version_id, av.api_id, av.api_version, iaa.active,
+                iaa.update_user, iaa.update_ts, iaa.aggregate_version
+                FROM instance_app_api_t iaa
+                INNER JOIN instance_app_t iap ON iaa.instance_app_id = iap.instance_app_id
+                INNER JOIN app_t a ON iap.app_id = a.app_id
+                INNER JOIN instance_api_t iai ON iaa.instance_api_id = iai.instance_api_id
+                INNER JOIN instance_t i ON i.instance_id = iai.instance_id
+                INNER JOIN product_version_t pv ON pv.product_version_id = i.product_version_id
+                INNER JOIN api_version_t av ON av.api_version_id = iai.api_version_id
+                INNER JOIN api_t ai ON ai.api_id = av.api_id
+                WHERE iaa.host_id = ?
+            """;
 
         List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-
-        addCondition(whereClause, parameters, "iaa.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "iaa.instance_app_id", instanceAppId != null ? UUID.fromString(instanceAppId) : null);
-        addCondition(whereClause, parameters, "iaa.instance_api_id", instanceApiId != null ? UUID.fromString(instanceApiId) : null);
-        addCondition(whereClause, parameters, "iai.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
-        addCondition(whereClause, parameters, "i.instance_name", instanceName);
-        addCondition(whereClause, parameters, "pv.product_id", productId);
-        addCondition(whereClause, parameters, "pv.product_version", productVersion);
-        addCondition(whereClause, parameters, "iap.app_id", appId);
-        addCondition(whereClause, parameters, "iap.app_version", appVersion);
-        addCondition(whereClause, parameters, "iai.api_version_id", apiVersionId != null ? UUID.fromString(apiVersionId) : null);
-        addCondition(whereClause, parameters, "av.api_id", apiId);
-        addCondition(whereClause, parameters, "av.api_version", apiVersion);
-        addCondition(whereClause, parameters, "active", active);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY i.instance_name, iap.app_id, av.api_id\n" +
-                "LIMIT ? OFFSET ?");
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "iaa", "iap", "a", "iap", "iai", "i", "pv", "av", "ai");
+        String[] searchColumns = {"i.instance_name"};
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("iaa.host_id", "iaa.instance_app_id", "iaa.instance_api_id", "iai.instance_id", "iai.api_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("i.instance_name, iap.app_id, av.api_id", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> instanceApis = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -2426,188 +3277,346 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
+    public Result<String> getInstanceAppApiById(String hostId, String instanceAppId, String instanceApiId) {
+        final String sql =
+                """
+                SELECT host_id, instance_app_id, instance_api_id,
+                aggregate_version, active, update_user, update_ts
+                FROM instance_app_api_t
+                WHERE host_id = ? AND instance_app_id = ? AND instance_api_id = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + instanceAppId + ":" + instanceApiId;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(instanceAppId));
+            statement.setObject(3, UUID.fromString(instanceApiId));
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceAppId", resultSet.getObject("instance_app_id", UUID.class));
+                    map.put("instanceApiId", resultSet.getObject("instance_api_id", UUID.class));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "instance_app_api", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    /**
+     * Creates or reactivates an instance_app_t record using an idempotent UPSERT pattern.
+     * This method implements:
+     * 1.  **Idempotent Create/Update (Upsert):** Uses `INSERT ... ON CONFLICT DO UPDATE`. This will
+     *     create the record on the first valid event, or update and reactivate it if a soft-deleted
+     *     record with an older version already exists.
+     * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
+     * 3.  **OCC/Monotonicity:** The `WHERE` clause in the `DO UPDATE` part ensures that an update
+     *     only occurs if the incoming event's version is strictly greater than the existing record's version.
+     *
+     * @param conn  The database connection.
+     * @param event The event map containing the data and metadata for the operation.
+     * @throws SQLException If a database access error occurs.
+     * @throws Exception    For other generic errors.
+     */
+    @Override
     public void createInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql =
                 """
-                INSERT INTO instance_app_t(host_id, instance_app_id, instance_id, app_id, app_version, active, update_user, update_ts, aggregate_version)
-                VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?)
+                INSERT INTO instance_app_t(
+                    host_id,
+                    instance_app_id,
+                    instance_id,
+                    app_id,
+                    app_version,
+                    update_user,
+                    update_ts,
+                    aggregate_version,
+                    active
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (host_id, instance_app_id) DO UPDATE
+                SET instance_id = EXCLUDED.instance_id,
+                    app_id = EXCLUDED.app_id,
+                    app_version = EXCLUDED.app_version,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                WHERE instance_app_t.aggregate_version < EXCLUDED.aggregate_version
+                AND instance_app_t.active = FALSE
                 """;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
-        String instanceAppId = (String)map.get("instanceAppId");
+
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String) event.get(Constants.HOST);
+        String instanceAppId = (String) map.get("instanceAppId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(instanceAppId));
-            statement.setObject(3, UUID.fromString((String)map.get("instanceId")));
-            statement.setString(4, (String)map.get("appId"));
-            statement.setString(5, (String)map.get("appVersion"));
-            if (map.containsKey("active")) {
-                statement.setBoolean(6, (Boolean) map.get("active"));
-            } else {
-                statement.setNull(6, Types.BOOLEAN);
-            }
-            statement.setString(7, (String)event.get(Constants.USER));
-            statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(9, newAggregateVersion);
+            // Set parameters for the INSERT part of the statement
+            int i = 1;
+            // 1. host_id (PK)
+            statement.setObject(i++, UUID.fromString(hostId));
+            // 2. instance_app_id (PK)
+            statement.setObject(i++, UUID.fromString(instanceAppId));
+
+            // 3. instance_id
+            statement.setObject(i++, UUID.fromString((String) map.get("instanceId")));
+            // 4. app_id
+            statement.setString(i++, (String) map.get("appId"));
+            // 5. app_version
+            statement.setString(i++, (String) map.get("appVersion"));
+
+            // 6. update_user (IDM)
+            statement.setString(i++, (String) event.get(Constants.USER));
+            // 7. update_ts (IDM)
+            statement.setObject(i++, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            // 8. aggregate_version (OCC)
+            statement.setLong(i++, newAggregateVersion);
+
             int count = statement.executeUpdate();
+
             if (count == 0) {
-                throw new SQLException(String.format("Failed during createInstanceApp for hostId %s instanceAppId %s with aggregateVersion %d", hostId, instanceAppId, newAggregateVersion));
+                // A count of 0 is a valid, idempotent outcome. It means the ON CONFLICT clause was triggered,
+                // but the WHERE condition (version check) was not met.
+                logger.warn("Creation/Reactivation skipped for InstanceApp with hostId {}, instanceAppId {}. A newer or same version already exists.",
+                        hostId, instanceAppId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during createInstanceApp for hostId {} instanceAppId {} aggregateVersion {}: {}", hostId, instanceAppId, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during createInstanceApp for hostId {} instanceAppId {}: {}",
+                    hostId, instanceAppId, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createInstanceApp for hostId {} instanceAppId {} aggregateVersion {}: {}", hostId, instanceAppId, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during createInstanceApp for hostId {} instanceAppId {}: {}",
+                    hostId, instanceAppId, e.getMessage(), e);
             throw e;
         }
     }
 
-    private boolean queryInstanceAppExists(Connection conn, String hostId, String instanceAppId) throws SQLException {
-        final String sql =
-                """
-                SELECT COUNT(*) FROM instance_app_t WHERE host_id = ? AND instance_app_id = ?
-                """;
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
-            pst.setObject(1, UUID.fromString(hostId));
-            pst.setObject(2, UUID.fromString(instanceAppId));
-            try (ResultSet rs = pst.executeQuery()) {
-                return rs.next() && rs.getInt(1) > 0;
-            }
-        }
-    }
-
+    /**
+     * Updates an instance_app_t record using an idempotent/monotonic pattern.
+     * This method implements:
+     * 1.  **Soft Delete Principle:** An update implicitly reactivates the record by setting `active = TRUE`.
+     * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
+     * 3.  **OCC/Idempotency:** Uses `aggregate_version < ?` to ensure the operation only succeeds if it
+     *     represents a new state, preventing re-processing of old events or concurrent conflicts.
+     *
+     * @param conn  The database connection.
+     * @param event The event map containing the data and metadata for the operation.
+     * @throws SQLException If a database access error occurs.
+     * @throws Exception    For other generic errors.
+     */
+    /*
     @Override
     public void updateInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // SQL statement updated to match the idempotent update pattern.
+        // Includes mutable fields from the event data in the SET clause.
         final String sql =
                 """
-                UPDATE instance_app_t SET instance_id = ?, app_id = ?, app_version = ?, active = ?, update_user = ?, update_ts = ?, aggregate_version = ?
-                WHERE host_id = ? and instance_app_id = ? AND aggregate_version = ?
+                UPDATE instance_app_t
+                SET instance_id = ?,
+                    app_id = ?,
+                    app_version = ?,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?,
+                    active = TRUE
+                WHERE host_id = ?
+                  AND instance_app_id = ?
+                  AND aggregate_version < ?
                 """;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String instanceAppId = (String)map.get("instanceAppId"); // For logging/exceptions
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String) event.get(Constants.HOST);
+        String instanceAppId = (String) map.get("instanceAppId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString((String)map.get("instanceId")));
-            statement.setString(2, (String)map.get("appId"));
-            statement.setString(3, (String)map.get("appVersion"));
-            Boolean active = (Boolean)map.get("active");
-            if (active != null) {
-                statement.setBoolean(4, active);
-            } else {
-                statement.setNull(4, Types.BOOLEAN);
-            }
-            statement.setString(5, (String)event.get(Constants.USER));
-            statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(7, newAggregateVersion);
-            statement.setObject(8, UUID.fromString(hostId));
-            statement.setObject(9, UUID.fromString(instanceAppId));
-            statement.setLong(10, oldAggregateVersion);
+            // SET clause placeholders (6)
+            int i = 1;
+            // 1. instance_id
+            statement.setObject(i++, UUID.fromString((String) map.get("instanceId")));
+            // 2. app_id
+            statement.setString(i++, (String) map.get("appId"));
+            // 3. app_version
+            statement.setString(i++, (String) map.get("appVersion"));
+            // 4. update_user (IDM)
+            statement.setString(i++, (String) event.get(Constants.USER));
+            // 5. update_ts (IDM)
+            statement.setObject(i++, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            // 6. aggregate_version (the new version)
+            statement.setLong(i++, newAggregateVersion);
+
+            // WHERE clause placeholders (3)
+            // 7. host_id (PK)
+            statement.setObject(i++, UUID.fromString(hostId));
+            // 8. instance_app_id (PK)
+            statement.setObject(i++, UUID.fromString(instanceAppId));
+            // 9. aggregate_version < ? for OCC/Idempotency check
+            statement.setLong(i++, newAggregateVersion);
 
             int count = statement.executeUpdate();
+
             if (count == 0) {
-                if (queryInstanceAppExists(conn, hostId, instanceAppId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during updateInstanceApp for hostId " + hostId + " instanceAppId " + instanceAppId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
-                } else {
-                    throw new SQLException("No record found during updateInstanceApp for hostId " + hostId + " instanceAppId " + instanceAppId + ".");
-                }
+                // If 0 rows were updated, it's a valid idempotent outcome.
+                // It means the record was not found or a newer/same version already exists.
+                logger.warn("Update skipped for InstanceApp with hostId {}, instanceAppId {}. Record not found or a newer version already exists.",
+                        hostId, instanceAppId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during updateInstanceApp for hostId {} instanceAppId {} (old: {}) -> (new: {}): {}", hostId, instanceAppId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during updateInstanceApp for hostId {} instanceAppId {}: {}",
+                    hostId, instanceAppId, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateInstanceApp for hostId {} instanceAppId {} (old: {}) -> (new: {}): {}", hostId, instanceAppId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during updateInstanceApp for hostId {} instanceAppId {}: {}",
+                    hostId, instanceAppId, e.getMessage(), e);
             throw e;
         }
     }
+    */
 
+    /**
+     * Performs a soft delete on an instance_app_t record using an idempotent/monotonic pattern.
+     * This method implements:
+     * 1.  **Soft Delete:** Sets the 'active' flag to false.
+     * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
+     * 3.  **OCC/Idempotency:** Uses `aggregate_version < ?` to ensure the operation only succeeds if it
+     *     represents a new state, preventing re-processing of old events or concurrent conflicts.
+     *
+     * @param conn  The database connection.
+     * @param event The event map containing the data and metadata for the operation.
+     * @throws SQLException If a database access error occurs.
+     * @throws Exception    For other generic errors.
+     */
     @Override
     public void deleteInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM instance_app_t WHERE host_id = ? AND instance_app_id = ? AND aggregate_version = ?";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
-        String instanceAppId = (String)map.get("instanceAppId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        // SQL statement updated to match the idempotent soft-delete pattern.
+        final String sql =
+                """
+                UPDATE instance_app_t
+                SET active = FALSE,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?
+                WHERE host_id = ?
+                  AND instance_app_id = ?
+                  AND aggregate_version < ?
+                """;
+
+        // Extract data and metadata from the event.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String) event.get(Constants.HOST);
+        String instanceAppId = (String) map.get("instanceAppId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(instanceAppId));
-            statement.setLong(3, oldAggregateVersion);
+            // SET clause placeholders (3)
+            int i = 1;
+            // 1: update_user from event metadata
+            statement.setString(i++, (String) event.get(Constants.USER));
+            // 2: update_ts from event metadata
+            statement.setObject(i++, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            // 3: aggregate_version (the new version)
+            statement.setLong(i++, newAggregateVersion);
+
+            // WHERE clause placeholders (3)
+            // 4: host_id from primary key
+            statement.setObject(i++, UUID.fromString(hostId));
+            // 5: instance_app_id from primary key
+            statement.setObject(i++, UUID.fromString(instanceAppId));
+            // 6: aggregate_version < ? for OCC/Idempotency check
+            statement.setLong(i++, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryInstanceAppExists(conn, hostId, instanceAppId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteInstanceApp for hostId " + hostId + " instanceAppId " + instanceAppId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
-                } else {
-                    throw new SQLException("No record found during deleteInstanceApp for hostId " + hostId + " instanceAppId " + instanceAppId + ". It might have been already deleted.");
-                }
+                // If 0 rows were updated, we log a warning and continue.
+                // This indicates the record was already deleted, never existed, or a newer version is already in the database.
+                // This is the expected behavior for an idempotent operation.
+                logger.warn("Soft delete skipped for InstanceApp with hostId {}, instanceAppId {}, newAggregateVersion {}. Record not found or a newer version already exists.",
+                        hostId, instanceAppId, newAggregateVersion);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during deleteInstanceApp for hostId {} instanceAppId {} aggregateVersion {}: {}", hostId, instanceAppId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during soft delete of InstanceApp for hostId {} instanceAppId {}: {}",
+                    hostId, instanceAppId, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteInstanceApp for hostId {} instanceAppId {} aggregateVersion {}: {}", hostId, instanceAppId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during soft delete of InstanceApp for hostId {} instanceAppId {}: {}",
+                    hostId, instanceAppId, e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
-    public Result<String> getInstanceApp(int offset, int limit, String hostId, String instanceAppId, String instanceId, String instanceName,
-                                         String productId, String productVersion, String appId, String appVersion, Boolean active) {
+    public Result<String> getInstanceApp(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "ia.host_id",
+                "instanceAppId", "ia.instance_app_id",
+                "instanceId", "ia.instance_id",
+                "instanceName", "i.instance_name",
+                "productId", "pv.product_id",
+                "productVersion", "pv.product_version",
+                "appId", "ia.app_id",
+                "appVersion", "ia.app_version",
+                "active", "ia.active",
+                "updateUser", "ia.update_user"
+        ));
+        columnMap.put("updateTs", "ia.update_ts");
+        columnMap.put("aggregateVersion", "ia.aggregate_version");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
-                """
-                        SELECT COUNT(*) OVER () AS total,
-                        ia.host_id, ia.instance_app_id, ia.instance_id, i.instance_name, pv.product_id, pv.product_version,
-                        ia.app_id, ia.app_version, ia.active, ia.update_user, ia.update_ts, ia.aggregate_version
-                        FROM instance_app_t ia
-                        INNER JOIN instance_t i ON ia.instance_id = i.instance_id
-                        INNER JOIN product_version_t pv ON i.product_version_id = pv.product_version_id
-                        WHERE 1=1
-                """;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append(s).append("\n");
+            """
+                SELECT COUNT(*) OVER () AS total,
+                ia.host_id, ia.instance_app_id, ia.instance_id, i.instance_name, pv.product_version_id,
+                pv.product_id, pv.product_version, ia.app_id, ia.app_version, ia.active, ia.update_user,
+                ia.update_ts, ia.aggregate_version
+                FROM instance_app_t ia
+                INNER JOIN instance_t i ON ia.instance_id = i.instance_id
+                INNER JOIN product_version_t pv ON i.product_version_id = pv.product_version_id
+                WHERE ia.host_id = ?
+            """;
 
         List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-
-        addCondition(whereClause, parameters, "ia.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "ia.instance_app_id", instanceAppId != null ? UUID.fromString(instanceAppId) : null);
-        addCondition(whereClause, parameters, "ia.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
-        addCondition(whereClause, parameters, "i.instance_name", instanceName);
-        addCondition(whereClause, parameters, "pv.product_id", productId);
-        addCondition(whereClause, parameters, "pv.product_version", productVersion);
-        addCondition(whereClause, parameters, "ia.app_id", appId);
-        addCondition(whereClause, parameters, "ia.app_version", appVersion);
-        addCondition(whereClause, parameters, "ia.active", active);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY instance_id, app_id, app_version\n" +
-                "LIMIT ? OFFSET ?");
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "ia", "i", "pv");
+        String[] searchColumns = {"i.instance_name"};
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("ia.host_id", "ia.instance_app_id", "ia.instance_id", "pv.product_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("instance_id, app_id, app_version", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
-        if(logger.isTraceEnabled()) logger.trace("sql = {}", sql);
         int total = 0;
         List<Map<String, Object>> instanceApps = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -2620,6 +3629,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("instanceAppId", resultSet.getObject("instance_app_id", UUID.class));
                     map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
                     map.put("instanceName", resultSet.getString("instance_name"));
+                    map.put("productVersionId", resultSet.getObject("product_version_id", UUID.class));
                     map.put("productId", resultSet.getString("product_id"));
                     map.put("productVersion", resultSet.getString("product_version"));
                     map.put("appId", resultSet.getString("app_id"));
@@ -2647,6 +3657,77 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         return result;
     }
 
+    @Override
+    public Result<String> getInstanceAppById(String hostId, String instanceAppId) {
+        final String sql =
+                """
+                SELECT host_id, instance_app_id, instance_id, app_id, app_version,
+                aggregate_version, active, update_user, update_ts
+                FROM instance_app_t
+                WHERE host_id = ? AND instance_app_id = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + instanceAppId;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(instanceAppId));
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceAppId", resultSet.getObject("instance_app_id", UUID.class));
+                    map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
+                    map.put("appId", resultSet.getString("app_id"));
+                    map.put("appVersion", resultSet.getString("app_version"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "instance_app", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public String getInstanceAppId(String hostId, String instanceId, String appId, String appVersion) {
+        final String sql = "SELECT instance_app_id FROM instance_app_t WHERE host_id = ? AND instance_id = ? AND app_id = ? AND app_version = ?";
+        String instanceAppId = null;
+        try (Connection connection = ds.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(instanceId));
+            statement.setString(3, appId);
+            statement.setString(4, appVersion);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if(resultSet.next()){
+                    instanceAppId = resultSet.getString(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+        }
+        return instanceAppId;
+    }
+
     public Result<String> getInstanceAppLabel(String hostId, String instanceId) {
         Result<String> result = null;
         String sql =
@@ -2654,16 +3735,16 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                         SELECT ia.instance_app_id, i.instance_name, ia.app_id, ia.app_version
                         FROM instance_app_t ia
                         INNER JOIN instance_t i ON i.instance_id = ia.instance_id
-                        WHERE ia.host_id = ?
+                        WHERE ia.host_id = ? AND ia.active = TRUE
                 """;
-        if(instanceId != null) {
+        if(instanceId != null && !instanceId.isEmpty()) {
             sql += " AND ia.instance_id = ?";
         }
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
             preparedStatement.setObject(1, UUID.fromString(hostId));
-            if(instanceId != null) {
+            if(instanceId != null && !instanceId.isEmpty()) {
                 preparedStatement.setObject(2, UUID.fromString(instanceId));
             }
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -2687,166 +3768,225 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
     @Override
     public void createProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql =
+        // --- 1. PRIMARY UPSERT SQL (Creates or Reactivates the specific product version) ---
+        // PRIMARY KEY is assumed to be (host_id, product_version_id)
+        final String upsertSql =
                 """
                 INSERT INTO product_version_t(host_id, product_version_id, product_id, product_version,
                 light4j_version, break_code, break_config, release_note, version_desc, release_type, current,
-                version_status, update_user, update_ts, aggregate_version)
-                VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?)
+                version_status, update_user, update_ts, aggregate_version, active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (host_id, product_version_id) DO UPDATE
+                SET product_id = EXCLUDED.product_id,
+                    product_version = EXCLUDED.product_version,
+                    light4j_version = EXCLUDED.light4j_version,
+                    break_code = EXCLUDED.break_code,
+                    break_config = EXCLUDED.break_config,
+                    release_note = EXCLUDED.release_note,
+                    version_desc = EXCLUDED.version_desc,
+                    release_type = EXCLUDED.release_type,
+                    current = EXCLUDED.current,
+                    version_status = EXCLUDED.version_status,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                WHERE product_version_t.aggregate_version < EXCLUDED.aggregate_version
+                AND product_version_t.active = FALSE
                 """;
-        final String sqlUpdate = "UPDATE product_version_t SET current = false \n" +
-                "WHERE host_id = ?\n" +
-                "AND product_id = ?\n" +
-                "AND product_version != ?";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+
+        // --- 2. UPDATE SQL (To set all other versions of the same product to current = false) ---
+        // This update needs to be idempotent.
+        final String updateOthersSql =
+                """
+                UPDATE product_version_t SET current = false, update_user = ?, update_ts = ?
+                WHERE host_id = ?
+                AND product_id = ?
+                AND product_version_id != ?
+                AND current = TRUE
+                """; // <<< CRITICAL: Only set current=false if it is true (for idempotency)
+
+        Map<String, Object> map = SqlUtil.extractEventData(event);
         String hostId = (String)event.get(Constants.HOST);
+        String productVersionId = (String)map.get("productVersionId");
         String productId = (String)map.get("productId");
         String productVersion = (String)map.get("productVersion");
-        Boolean current = (Boolean)map.get("current");
+        Boolean current = (Boolean)map.getOrDefault("current", false); // Default to false if not provided
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+        String updateTsStr = (String)event.get(CloudEventV1.TIME);
+        String updateUser = (String)event.get(Constants.USER);
+        OffsetDateTime updateTs = OffsetDateTime.parse(updateTsStr);
 
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString((String)map.get("productVersionId")));
-            statement.setString(3, productId);
-            statement.setString(4, productVersion);
-            statement.setString(5, (String)map.get("light4jVersion"));
+        try (PreparedStatement statement = conn.prepareStatement(upsertSql)) {
+            int i = 1;
+
+            // --- PRIMARY UPSERT PARAMETERS ---
+            statement.setObject(i++, UUID.fromString(hostId)); // 1. host_id
+            statement.setObject(i++, UUID.fromString(productVersionId)); // 2. product_version_id (PK)
+            statement.setString(i++, productId); // 3. product_id
+            statement.setString(i++, productVersion); // 4. product_version
+            statement.setString(i++, (String)map.get("light4jVersion")); // 5. light4j_version
+
+            // 6. break_code
             if (map.containsKey("breakCode")) {
-                statement.setBoolean(6, (Boolean) map.get("breakCode"));
+                statement.setBoolean(i++, (Boolean) map.get("breakCode"));
             } else {
-                statement.setNull(6, Types.BOOLEAN);
+                statement.setNull(i++, Types.BOOLEAN);
             }
+
+            // 7. break_config
             if (map.containsKey("breakConfig")) {
-                statement.setBoolean(7, (Boolean) map.get("breakConfig"));
+                statement.setBoolean(i++, (Boolean) map.get("breakConfig"));
             } else {
-                statement.setNull(7, Types.BOOLEAN);
+                statement.setNull(i++, Types.BOOLEAN);
             }
+
+            // 8. release_note
             if (map.containsKey("releaseNote")) {
-                statement.setString(8, (String) map.get("releaseNote"));
+                statement.setString(i++, (String) map.get("releaseNote"));
             } else {
-                statement.setNull(8, Types.VARCHAR);
+                statement.setNull(i++, Types.VARCHAR);
             }
+
+            // 9. version_desc
             if (map.containsKey("versionDesc")) {
-                statement.setString(9, (String) map.get("versionDesc"));
+                statement.setString(i++, (String) map.get("versionDesc"));
             } else {
-                statement.setNull(9, Types.VARCHAR);
+                statement.setNull(i++, Types.VARCHAR);
             }
-            statement.setString(10, (String)map.get("releaseType"));
-            statement.setBoolean(11, current);
-            statement.setString(12, (String)map.get("versionStatus"));
-            statement.setString(13, (String)event.get(Constants.USER));
-            statement.setObject(14, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(15, newAggregateVersion);
+
+            statement.setString(i++, (String)map.get("releaseType")); // 10. release_type
+            statement.setBoolean(i++, current); // 11. current (NOTE: This value is in the event)
+            statement.setString(i++, (String)map.get("versionStatus")); // 12. version_status
+            statement.setString(i++, updateUser); // 13. update_user
+            statement.setObject(i++, updateTs); // 14. update_ts
+            statement.setLong(i++, newAggregateVersion); // 15. aggregate_version
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("Failed during createProduct for hostId %s productId %s productVersion %s with aggregateVersion %d", hostId, productId, productVersion, newAggregateVersion));
+                // UPSERT monotonicity failed. Log and ignore.
+                logger.warn("Product Version creation/update skipped for productId {} version {}. A newer or same version already exists.", productId, productVersion);
             }
-            // try to update current to false for others if current is true.
-            if(current != null && current) {
-                try (PreparedStatement statementUpdate = conn.prepareStatement(sqlUpdate)) {
-                    statementUpdate.setObject(1, UUID.fromString(hostId));
-                    statementUpdate.setString(2, productId);
-                    statementUpdate.setString(3, productVersion);
+
+            // --- STATE MANAGEMENT: Set others to current=false if this new one is true ---
+            if(current && count > 0) {
+                // If the new version is set to current=TRUE, ensure all others are set to FALSE.
+                try (PreparedStatement statementUpdate = conn.prepareStatement(updateOthersSql)) {
+                    int j = 1;
+                    statementUpdate.setString(j++, updateUser);
+                    statementUpdate.setObject(j++, updateTs);
+                    statementUpdate.setObject(j++, UUID.fromString(hostId));
+                    statementUpdate.setString(j++, productId);
+                    statementUpdate.setObject(j, UUID.fromString(productVersionId)); // The ID of the currently active version
+
                     statementUpdate.executeUpdate();
                 }
             }
+
         } catch (SQLException e) {
-            logger.error("SQLException during createProduct (version) for productId {} version {}: {}", productId, productVersion, e.getMessage(), e);
+            logger.error("SQLException during createProduct (version) UPSERT for productId {} version {} aggregateVersion {}: {}", productId, productVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createProduct (version) for productId {} version {}: {}", productId, productVersion, e.getMessage(), e);
+            logger.error("Exception during createProduct (version) for productId {} version {} aggregateVersion {}: {}", productId, productVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
-        }
-    }
-
-    private boolean queryProductExists(Connection conn, String hostId, String productVersionId) throws SQLException {
-        final String sql =
-                """
-                SELECT COUNT(*) FROM product_version_t WHERE host_id = ? AND product_version_id = ?
-                """;
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
-            pst.setObject(1, UUID.fromString(hostId));
-            pst.setObject(2, UUID.fromString(productVersionId));
-            try (ResultSet rs = pst.executeQuery()) {
-                return rs.next() && rs.getInt(1) > 0;
-            }
         }
     }
 
     @Override
     public void updateProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // --- 1. PRIMARY UPDATE SQL (Monotonicity Check) ---
+        // Changed WHERE aggregate_version = ? to aggregate_version < ?
         final String sql =
                 """
                 UPDATE product_version_t SET light4j_version = ?, break_code = ?, break_config = ?,
                 release_note = ?, version_desc = ?, release_type = ?, current = ?, version_status = ?,
                 update_user = ?, update_ts = ?, aggregate_version = ?
-                WHERE host_id = ? AND product_version_id = ? AND aggregate_version = ?
-                """;
-        final String sqlUpdate = "UPDATE product_version_t SET current = false \n" +
+                WHERE host_id = ? AND product_version_id = ? AND aggregate_version < ?
+                """; // <<< CRITICAL: Changed '= ?' to '< ?' for idempotent update
+
+        // --- 2. SECONDARY UPDATE SQL (Set others to current=false) ---
+        // This remains the same, but it should also update update_user/update_ts for consistency.
+        final String updateOthersSql = "UPDATE product_version_t SET current = false, update_user = ?, update_ts = ? \n" + // Added update_user/update_ts
                 "WHERE host_id = ?\n" +
                 "AND product_id = ?\n" +
-                "AND product_version != ?";
+                "AND product_version_id != ?"; // Use product_version_id for uniqueness
 
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String hostId = (String)event.get(Constants.HOST);
         String productId = (String)map.get("productId");
-        String productVersion = (String)map.get("productVersion");
+        // String productVersion = (String)map.get("productVersion"); // Unused in new logic
         String productVersionId = (String)map.get("productVersionId");
-        Boolean current = (Boolean)map.get("current");
+        Boolean current = (Boolean)map.getOrDefault("current", false); // Use getOrDefault for safety
         long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
+        String updateTsStr = (String)event.get(CloudEventV1.TIME);
+        String updateUser = (String)event.get(Constants.USER);
+        OffsetDateTime updateTs = OffsetDateTime.parse(updateTsStr);
+
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setString(1, (String)map.get("light4jVersion"));
+            int i = 1;
+
+            // --- PRIMARY UPDATE PARAMETERS (1 to 14) ---
+            statement.setString(i++, (String)map.get("light4jVersion")); // 1. light4j_version
+
             if (map.containsKey("breakCode")) {
-                statement.setBoolean(2, (Boolean) map.get("breakCode"));
+                statement.setBoolean(i++, (Boolean) map.get("breakCode"));
             } else {
-                statement.setNull(2, Types.BOOLEAN);
+                statement.setNull(i++, Types.BOOLEAN);
             }
+
             if (map.containsKey("breakConfig")) {
-                statement.setBoolean(3, (Boolean) map.get("breakConfig"));
+                statement.setBoolean(i++, (Boolean) map.get("breakConfig"));
             } else {
-                statement.setNull(3, Types.BOOLEAN);
+                statement.setNull(i++, Types.BOOLEAN);
             }
+
             if (map.containsKey("releaseNote")) {
-                statement.setString(4, (String) map.get("releaseNote"));
+                statement.setString(i++, (String) map.get("releaseNote"));
             } else {
-                statement.setNull(4, Types.VARCHAR);
+                statement.setNull(i++, Types.VARCHAR);
             }
 
             if (map.containsKey("versionDesc")) {
-                statement.setString(5, (String) map.get("versionDesc"));
+                statement.setString(i++, (String) map.get("versionDesc"));
             } else {
-                statement.setNull(5, Types.VARCHAR);
+                statement.setNull(i++, Types.VARCHAR);
             }
-            statement.setString(6, (String)map.get("releaseType"));
-            statement.setBoolean(7, current);
-            statement.setString(8, (String)map.get("versionStatus"));
-            statement.setString(9, (String)event.get(Constants.USER));
-            statement.setObject(10, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(11, newAggregateVersion);
-            statement.setObject(12, UUID.fromString(hostId));
-            statement.setObject(13, UUID.fromString(productVersionId));
-            statement.setLong(14, oldAggregateVersion);
+
+            statement.setString(i++, (String)map.get("releaseType")); // 6. release_type
+            statement.setBoolean(i++, current); // 7. current
+            statement.setString(i++, (String)map.get("versionStatus")); // 8. version_status
+            statement.setString(i++, updateUser); // 9. update_user
+            statement.setObject(i++, updateTs); // 10. update_ts
+            statement.setLong(i++, newAggregateVersion); // 11. aggregate_version (New Version in SET)
+
+            statement.setObject(i++, UUID.fromString(hostId)); // 12. host_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(productVersionId)); // 13. product_version_id (in WHERE clause)
+            statement.setLong(i, newAggregateVersion); // 14. Monotonicity Check: aggregate_version < newAggregateVersion
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryProductExists(conn, hostId, productVersionId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during updateProduct for hostId " + hostId + " productVersionId " + productVersionId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
-                } else {
-                    throw new SQLException("No record found during updateProduct for hostId " + hostId + " productVersionId " + productVersionId + ".");
-                }
+                // If 0 rows updated, it means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Product Version update skipped for hostId {} productVersionId {} (new version {}). Record not found or a newer version already exists.", hostId, productVersionId, newAggregateVersion);
             }
-            // try to update current to false for others if current is true.
-            if(current != null && current) {
-                try (PreparedStatement statementUpdate = conn.prepareStatement(sqlUpdate)) {
-                    statementUpdate.setObject(1, UUID.fromString(hostId));
-                    statementUpdate.setString(2, productId);
-                    statementUpdate.setString(3, productVersion);
+
+            // --- STATE MANAGEMENT: Set others to current=false if this new one is true ---
+            if(current && count > 0) {
+                // If the new version is set to current=TRUE, ensure all others are set to FALSE.
+                try (PreparedStatement statementUpdate = conn.prepareStatement(updateOthersSql)) {
+                    int j = 1;
+                    statementUpdate.setString(j++, updateUser); // 1. update_user
+                    statementUpdate.setObject(j++, updateTs); // 2. update_ts
+                    statementUpdate.setObject(j++, UUID.fromString(hostId)); // 3. host_id
+                    statementUpdate.setString(j++, productId); // 4. product_id
+                    statementUpdate.setObject(j, UUID.fromString(productVersionId)); // 5. product_version_id (the ID of the version being SET to TRUE)
+
                     statementUpdate.executeUpdate();
                 }
             }
+
         } catch (SQLException e) {
             logger.error("SQLException during updateProduct for hostId {} productVersionId {} (old: {}) -> (new: {}): {}", hostId, productVersionId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
             throw e;
@@ -2856,91 +3996,109 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         }
     }
 
+    /**
+     * This method should only be called if the current flag is false. The service handler should validte it.
+     *
+     */
     @Override
     public void deleteProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql =
+        // --- UPDATED SQL FOR SOFT DELETE + MONOTONICITY ---
+        // Updates the 'active' flag to FALSE and sets the new version IF the current DB version is older than the incoming event's version.
+        final String softDeleteProductSql =
                 """
-                DELETE FROM product_version_t WHERE host_id = ?
-                AND product_version_id = ? AND aggregate_version = ?
-                """;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
-        String productVersionId = (String)map.get("productVersionId");
-        String productId = (String)map.get("productId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+                UPDATE product_version_t SET active = false, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? AND product_version_id = ? AND aggregate_version < ?
+                """; // <<< CRITICAL: Changed from DELETE to UPDATE, and used aggregate_version < ?
 
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(productVersionId));
-            statement.setLong(3, oldAggregateVersion);
+        Map<String, Object> map = SqlUtil.extractEventData(event); // Assuming extractEventData is the helper to get PortalConstants.DATA
+        String hostId = (String)event.get(Constants.HOST); // HostId from CloudEvent extension
+        String productVersionId = (String)map.get("productVersionId");
+
+        // productId is not needed for the SQL
+        // String productId = (String)map.get("productId");
+
+        // oldAggregateVersion is the version the command handler operated on (for context/logging).
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        // newAggregateVersion is the version of the incoming Delete event (the target version).
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        String updateTsStr = (String)event.get(CloudEventV1.TIME);
+        String updateUser = (String)event.get(Constants.USER);
+        OffsetDateTime updateTs = OffsetDateTime.parse(updateTsStr);
+
+        try (PreparedStatement statement = conn.prepareStatement(softDeleteProductSql)) {
+            int i = 1;
+
+            // 1. update_user
+            statement.setString(i++, updateUser);
+
+            // 2. update_ts
+            statement.setObject(i++, updateTs);
+
+            // 3. aggregate_version (NEW version in SET clause)
+            statement.setLong(i++, newAggregateVersion);
+
+            // 4. host_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(hostId));
+
+            // 5. product_version_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(productVersionId));
+
+            // 6. aggregate_version (MONOTONICITY check in WHERE clause)
+            statement.setLong(i, newAggregateVersion); // Condition: WHERE aggregate_version < newAggregateVersion
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryProductExists(conn, hostId, productVersionId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteProduct for hostId " + hostId + " productVersionId " + productVersionId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
-                } else {
-                    throw new SQLException("No record found during deleteProduct for hostId " + hostId + " productVersionId " + productVersionId + ". It might have been already deleted.");
-                }
+                // If 0 rows updated, it means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Product Version soft-delete skipped for hostId {} productVersionId {} (new version {}). Record not found or a newer version already exists.", hostId, productVersionId, newAggregateVersion);
             }
+            // NO THROW on count == 0. The method is now idempotent.
+
         } catch (SQLException e) {
-            logger.error("SQLException during deleteProduct for hostId {} productVersionId {} aggregateVersion {}: {}", hostId, productVersionId, oldAggregateVersion, e.getMessage(), e);
-            throw e;
+            logger.error("SQLException during softDeleteProduct for hostId {} productVersionId {} aggregateVersion {}: {}", hostId, productVersionId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw SQLException
         } catch (Exception e) {
-            logger.error("Exception during deleteProduct for hostId {} productVersionId {} aggregateVersion {}: {}", hostId, productVersionId, oldAggregateVersion, e.getMessage(), e);
-            throw e;
+            logger.error("Exception during softDeleteProduct for hostId {} productVersionId {} aggregateVersion {}: {}", hostId, productVersionId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw generic Exception
         }
     }
 
     @Override
-    public Result<String> getProduct(int offset, int limit, String hostId, String productVersionId, String productId, String productVersion,
-                                     String light4jVersion, Boolean breakCode, Boolean breakConfig, String releaseNote,
-                                     String versionDesc, String releaseType, Boolean current, String versionStatus) {
+    public Result<String> getProduct(int offset, int limit, String filtersJson, String globalFilter, String  sortingJson, boolean active, String hostId) {
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         Result<String> result = null;
         String s = """
                 SELECT COUNT(*) OVER () AS total,
-                host_id, product_version_id, product_id, product_version, light4j_version, break_code, break_config,
-                release_note, version_desc, release_type, current, version_status, update_user, update_ts, aggregate_version
+                host_id, product_version_id, product_id, product_version,
+                light4j_version, break_code, break_config, release_note,
+                version_desc, release_type, current, version_status,
+                update_user, update_ts, aggregate_version, active
                 FROM product_version_t
-                WHERE 1=1
+                WHERE host_id = ?
                 """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
-        StringBuilder whereClause = new StringBuilder();
-        addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "product_version_id", productVersionId != null ? UUID.fromString(productVersionId) : null);
-        addCondition(whereClause, parameters, "product_id", productId);
-        addCondition(whereClause, parameters, "product_version", productVersion);
-        addCondition(whereClause, parameters, "light4j_version", light4jVersion);
-        addCondition(whereClause, parameters, "break_code", breakCode);
-        addCondition(whereClause, parameters, "break_config", breakConfig);
-        addCondition(whereClause, parameters, "release_note", releaseNote);
-        addCondition(whereClause, parameters, "version_desc", versionDesc);
-        addCondition(whereClause, parameters, "release_type", releaseType);
-        addCondition(whereClause, parameters, "current", current);
-        addCondition(whereClause, parameters, "version_status", versionStatus);
+        parameters.add(UUID.fromString(hostId));
 
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY product_id, product_version DESC\n" +
-                "LIMIT ? OFFSET ?");
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active);
+        String[] searchColumns = {"release_note", "version_desc", "org_desc"};
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("host_id", "product_version_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("product_id, product_version", sorting, null) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
-
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> products = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -2965,6 +4123,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     // handling date properly
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     products.add(map);
                 }
             }
@@ -2985,9 +4144,62 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
+    public Result<String> getProductVersion(String hostId, String productVersionId) {
+        Result<String> result;
+        String sql =
+                """
+                SELECT host_id, product_version_id, product_id, product_version,
+                light4j_version, break_code, break_config, release_note,
+                version_desc, release_type, current, version_status,
+                update_user, update_ts, aggregate_version, active
+                FROM product_version_t
+                WHERE host_id = ? AND product_version_id = ?
+                """;
+        try (final Connection conn = ds.getConnection()) {
+            Map<String, Object> map = new HashMap<>();
+            try (PreparedStatement statement = conn.prepareStatement(sql)) {
+                statement.setObject(1, UUID.fromString(hostId));
+                statement.setObject(2, UUID.fromString(productVersionId));
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                        map.put("productVersionId", resultSet.getObject("product_version_id", UUID.class));
+                        map.put("productId", resultSet.getString("product_id"));
+                        map.put("productVersion", resultSet.getString("product_version"));
+                        map.put("light4jVersion", resultSet.getString("light4j_version"));
+                        map.put("breakCode", resultSet.getBoolean("break_code"));
+                        map.put("breakConfig", resultSet.getBoolean("break_config"));
+                        map.put("releaseNote", resultSet.getString("release_note"));
+                        map.put("versionDesc", resultSet.getString("version_desc"));
+                        map.put("releaseType", resultSet.getString("release_type"));
+                        map.put("current", resultSet.getBoolean("current"));
+                        map.put("versionStatus", resultSet.getString("version_status"));
+                        map.put("updateUser", resultSet.getString("update_user"));
+                        map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                        map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                        map.put("active", resultSet.getBoolean("active"));
+                    }
+                }
+            }
+            if (map.isEmpty())
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "getProductVersion", productVersionId));
+            else
+                result = Success.of(JsonMapper.toJson(map));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+
+    }
+
+    @Override
     public Result<String> getProductIdLabel(String hostId) {
         Result<String> result = null;
-        String sql = "SELECT DISTINCT product_id FROM product_version_t WHERE host_id = ?";
+        String sql = "SELECT DISTINCT product_id FROM product_version_t WHERE host_id = ? AND active = TRUE";
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
@@ -3014,7 +4226,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     @Override
     public Result<String> getProductVersionLabel(String hostId, String productId) {
         Result<String> result = null;
-        String sql = "SELECT product_version FROM product_version_t WHERE host_id = ? AND product_id = ?";
+        String sql = "SELECT product_version FROM product_version_t WHERE host_id = ? AND product_id = ? AND active = TRUE";
         List<Map<String, Object>> versions = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
@@ -3043,7 +4255,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     @Override
     public Result<String> getProductVersionIdLabel(String hostId) {
         Result<String> result = null;
-        String sql = "SELECT DISTINCT product_version_id, product_id, product_version FROM product_version_t WHERE host_id = ?";
+        String sql = "SELECT DISTINCT product_version_id, product_id, product_version FROM product_version_t WHERE host_id = ? AND active = TRUE";
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
@@ -3068,121 +4280,305 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
+    public String getProductVersionId(String hostId, String productId, String productVersion) {
+        final String sql = "SELECT product_version_id FROM product_version_t WHERE host_id = ? AND product_id = ? AND product_version = ?";
+        String productVersionId = null;
+        try (Connection connection = ds.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setString(2, productId);
+            statement.setString(3, productVersion);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if(resultSet.next()){
+                    productVersionId = resultSet.getString(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+        }
+        return productVersionId;
+    }
+
+    @Override
+    public String queryProductVersionId(String hostId, String productId, String light4jVersion) {
+        final String sql = "SELECT product_version_id FROM product_version_t WHERE host_id = ? AND product_id = ? AND light4j_version = ?";
+        String productVersionId = null;
+        try (Connection connection = ds.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setString(2, productId);
+            statement.setString(3, light4jVersion);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if(resultSet.next()){
+                    productVersionId = resultSet.getString(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+        }
+        return productVersionId;
+    }
+
+    @Override
     public void createProductVersionEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql =
+        // --- UPDATED SQL FOR UPSERT ---
+        // Assuming the Unique Constraint is (host_id, product_version_id, system_env, runtime_env)
+        final String upsertSql =
                 """
                 INSERT INTO product_version_environment_t(host_id, product_version_id,
-                system_env, runtime_env, update_user, update_ts, aggregate_version)
-                VALUES (?, ?, ?, ?, ?,  ?, ?)
-                """;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+                system_env, runtime_env, current, update_user, update_ts, aggregate_version, active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (host_id, product_version_id, system_env, runtime_env) DO UPDATE
+                SET update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    current = EXCLUDED.current,
+                    active = TRUE
+                WHERE product_version_environment_t.aggregate_version < EXCLUDED.aggregate_version
+                AND product_version_environment_t.active = FALSE
+                """; // <<< CRITICAL: ON CONFLICT on the composite key and monotonicity check
+
+        Map<String, Object> map = SqlUtil.extractEventData(event);
         String hostId = (String)event.get(Constants.HOST);
         String productVersionId = (String)map.get("productVersionId");
         String systemEnv = (String)map.get("systemEnv");
         String runtimeEnv = (String)map.get("runtimeEnv");
+        Boolean current = (Boolean)map.getOrDefault("current", false);
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(productVersionId));
-            statement.setString(3, systemEnv);
-            statement.setString(4, runtimeEnv);
-            statement.setString(5, (String)event.get(Constants.USER));
-            statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(7, newAggregateVersion);
+        try (PreparedStatement statement = conn.prepareStatement(upsertSql)) {
+            int i = 1;
+            // --- SET VALUES (1 to 7) ---
+            statement.setObject(i++, UUID.fromString(hostId));
+            statement.setObject(i++, UUID.fromString(productVersionId));
+            statement.setString(i++, systemEnv);
+            statement.setString(i++, runtimeEnv);
+            statement.setBoolean(i++, current);
+            statement.setString(i++, (String)event.get(Constants.USER));
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(i++, newAggregateVersion);
+
+            // --- Execute UPSERT ---
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // count=0 means the ON CONFLICT clause was hit, BUT the WHERE clause failed (version was newer or same).
+                logger.warn("Environment creation/reactivation skipped for hostId {} productVersionId {}. A newer or same version already exists in the projection.", hostId, productVersionId);
+            } else {
+                logger.info("Product Version Environment successfully inserted or updated to aggregateVersion {}.", newAggregateVersion);
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException during UPSERT for hostId {} productVersionId {} systemEnv {} runtimeEnv {} aggregateVersion {}: {}", hostId, productVersionId, systemEnv, runtimeEnv, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during UPSERT for hostId {} productVersionId {} systemEnv {} runtimeEnv {} aggregateVersion {}: {}", hostId, productVersionId, systemEnv, runtimeEnv, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw generic Exception
+        }
+    }
+
+    @Override
+    public void updateProductVersionEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // --- 1. PRIMARY UPDATE SQL (Updates the specific product version environment) ---
+        final String updateSql =
+                """
+                UPDATE product_version_environment_t
+                SET current = ?,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?,
+                    active = TRUE
+                WHERE host_id = ?
+                  AND product_version_id = ?
+                  AND system_env = ?
+                  AND runtime_env = ?
+                  AND aggregate_version < ?
+                """;
+
+        // --- 2. UPDATE SQL (To set all other versions of the same pipeline to current = false) ---
+        final String updateOthersSql =
+                """
+                UPDATE product_version_environment_t SET current = false, update_user = ?, update_ts = ?
+                WHERE host_id = ?
+                  AND product_version_id = ?
+                  AND system_env != ?
+                  AND runtime_env != ?
+                  AND current = TRUE
+                """;
+
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String) event.get(Constants.HOST);
+        String productVersionId = (String) map.get("productVersionId");
+        String systemEnv = (String) map.get("systemEnv");
+        String runtimeEnv = (String) map.get("runtimeEnv");
+        Boolean current = (Boolean) map.getOrDefault("current", false);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+        String updateUser = (String) event.get(Constants.USER);
+        OffsetDateTime updateTs = OffsetDateTime.parse((String) event.get(CloudEventV1.TIME));
+
+        try (PreparedStatement statement = conn.prepareStatement(updateSql)) {
+            int i = 1;
+            statement.setBoolean(i++, current);
+            statement.setString(i++, updateUser);
+            statement.setObject(i++, updateTs);
+            statement.setLong(i++, newAggregateVersion);
+
+            statement.setObject(i++, UUID.fromString(hostId));
+            statement.setObject(i++, UUID.fromString(productVersionId));
+            statement.setString(i++, systemEnv);
+            statement.setString(i++, runtimeEnv);
+            statement.setLong(i++, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("Failed during createProductVersionEnvironment for hostId %s productVersionId %s systemEnv %s runtimeEnv %s with aggregateVersion %d", hostId, productVersionId, systemEnv, runtimeEnv, newAggregateVersion));
+                logger.warn("Update skipped for ProductVersionEnvironment with hostId {} productVersionId {} systemEnv {} runtimeEnv {} aggregateVersion {}. Record not found or a newer version already exists.",
+                        hostId, productVersionId, systemEnv, runtimeEnv, newAggregateVersion);
+            }
+
+            // --- STATE MANAGEMENT: Set others to current=false if this one is true ---
+            if (current && count > 0) {
+                try (PreparedStatement statementUpdate = conn.prepareStatement(updateOthersSql)) {
+                    int j = 1;
+                    statementUpdate.setString(j++, updateUser);
+                    statementUpdate.setObject(j++, updateTs);
+                    statementUpdate.setObject(j++, UUID.fromString(hostId));
+                    statementUpdate.setObject(j++, UUID.fromString(productVersionId));
+                    statementUpdate.setString(j++, systemEnv);
+                    statementUpdate.setString(j++, runtimeEnv);
+                    statementUpdate.executeUpdate();
+                }
             }
         } catch (SQLException e) {
-            logger.error("SQLException during createProductVersionEnvironment for hostId {} productVersionId {} systemEnv {} runtimeEnv {} aggregateVersion {}: {}", hostId, productVersionId, systemEnv, runtimeEnv, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during updateProductVersionEnvironment for hostId {} productVersionId {} systemEnv {} runtimeEnv {} aggregateVersion {}: {}",
+                    hostId, productVersionId, systemEnv, runtimeEnv, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createProductVersionEnvironment for hostId {} productVersionId {} systemEnv {} runtimeEnv {} aggregateVersion {}: {}", hostId, productVersionId, systemEnv, runtimeEnv, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during updateProductVersionEnvironment for hostId {} productVersionId {} systemEnv {} runtimeEnv {} aggregateVersion {}: {}",
+                    hostId, productVersionId, systemEnv, runtimeEnv, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
     public void deleteProductVersionEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql =
+        // --- UPDATED SQL FOR SOFT DELETE + MONOTONICITY ---
+        // Updates the 'active' flag to FALSE and sets the new version IF the current DB version is older than the incoming event's version.
+        final String softDeleteSql =
                 """
-                DELETE FROM product_version_environment_t WHERE host_id = ?
-                AND product_version_id = ? AND system_env = ? AND runtime_env = ? AND aggregate_version = ?
-                """;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+                UPDATE product_version_environment_t SET active = false, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? AND product_version_id = ? AND system_env = ? AND runtime_env = ? AND aggregate_version < ?
+                """; // <<< CRITICAL: Changed from DELETE to UPDATE, and used aggregate_version < ?
+
+        Map<String, Object> map = SqlUtil.extractEventData(event);
         String hostId = (String)event.get(Constants.HOST);
         String productVersionId = (String)map.get("productVersionId");
         String systemEnv = (String)map.get("systemEnv");
         String runtimeEnv = (String)map.get("runtimeEnv");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
 
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(productVersionId));
-            statement.setString(3, systemEnv);
-            statement.setString(4, runtimeEnv);
-            statement.setLong(5, oldAggregateVersion);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        String updateTsStr = (String)event.get(CloudEventV1.TIME);
+        String updateUser = (String)event.get(Constants.USER);
+        OffsetDateTime updateTs = OffsetDateTime.parse(updateTsStr);
+
+        try (PreparedStatement statement = conn.prepareStatement(softDeleteSql)) {
+            int i = 1;
+
+            // 1. update_user
+            statement.setString(i++, updateUser);
+
+            // 2. update_ts
+            statement.setObject(i++, updateTs);
+
+            // 3. aggregate_version (NEW version in SET clause)
+            statement.setLong(i++, newAggregateVersion);
+
+            // 4. host_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(hostId));
+
+            // 5. product_version_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(productVersionId));
+
+            // 6. system_env (in WHERE clause)
+            statement.setString(i++, systemEnv);
+
+            // 7. runtime_env (in WHERE clause)
+            statement.setString(i++, runtimeEnv);
+
+            // 8. aggregate_version (MONOTONICITY check in WHERE clause)
+            statement.setLong(i, newAggregateVersion); // Condition: WHERE aggregate_version < newAggregateVersion
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed during deleteProductVersionEnvironment for hostId " + hostId + " productVersionId " + productVersionId + " systemEnv " + systemEnv + " runtimeEnv " + runtimeEnv);
+                // If 0 rows updated, it means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Environment soft-delete skipped for hostId {} productVersionId {} (new version {}). Record not found or a newer version already exists.", hostId, productVersionId, newAggregateVersion);
             }
+            // NO THROW on count == 0. The method is now idempotent.
         } catch (SQLException e) {
-            logger.error("SQLException during deleteProductVersionEnvironment for hostId {} productVersionId {} systemEnv {} runtimeEnv {} aggregateVersion {}: {}", hostId, productVersionId, systemEnv, runtimeEnv, oldAggregateVersion, e.getMessage(), e);
-            throw e;
+            logger.error("SQLException during softDeleteEnvironment for hostId {} productVersionId {} aggregateVersion {}: {}", hostId, productVersionId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw SQLException
         } catch (Exception e) {
-            logger.error("Exception during deleteProductVersionEnvironment for hostId {} productVersionId {} systemEnv {} runtimeEnv {} aggregateVersion {}: {}", hostId, productVersionId, systemEnv, runtimeEnv, oldAggregateVersion, e.getMessage(), e);
-            throw e;
+            logger.error("Exception during softDeleteEnvironment for hostId {} productVersionId {} aggregateVersion {}: {}", hostId, productVersionId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw generic Exception
         }
     }
 
+
     @Override
-    public Result<String> getProductVersionEnvironment(int offset, int limit, String hostId, String productVersionId,
-                                                       String productId, String productVersion, String systemEnv, String runtimeEnv) {
+    public Result<String> getProductVersionEnvironment(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "pve.host_id",
+                "productVersionId", "pve.product_version_id",
+                "productId", "pv.product_id",
+                "productVersion", "pv.product_version",
+                "systemEnv", "pve.system_env",
+                "runtimeEnv", "pve.runtime_env",
+                "updateUser", "pve.update_user",
+                "updateTs", "pve.update_ts",
+                "aggregateVersion", "pve.aggregate_version",
+                "active", "pve.active"
+        ));
+        columnMap.put("current", "pve.current");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
                 pve.host_id, pve.product_version_id, pv.product_id, pv.product_version,
-                pve.system_env, pve.runtime_env, pve.update_user, pve.update_ts, pve.aggregate_version
+                pve.system_env, pve.runtime_env, pve.current, pve.update_user,
+                pve.update_ts, pve.aggregate_version, pve.active
                 FROM product_version_environment_t pve
                 INNER JOIN product_version_t pv ON pv.product_version_id = pve.product_version_id
-                WHERE 1=1
+                WHERE pve.host_id = ?
                 """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
-        StringBuilder whereClause = new StringBuilder();
-        addCondition(whereClause, parameters, "pve.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "pve.product_version_id", productVersionId != null ? UUID.fromString(productVersionId) : null);
-        addCondition(whereClause, parameters, "pv.product_id", productId);
-        addCondition(whereClause, parameters, "pv.product_version", productVersion);
-        addCondition(whereClause, parameters, "pve.system_env", systemEnv);
-        addCondition(whereClause, parameters, "pve.runtime_env", runtimeEnv);
+        parameters.add(UUID.fromString(hostId));
 
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY pv.product_id, pv.product_version, pve.system_env, pve.runtime_env DESC\n" +
-                "LIMIT ? OFFSET ?");
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "pve", "pv");
+        String[] searchColumns = {"pve.system_env", "pve.runtime_env"};
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("pve.host_id", "pve.product_version_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("pv.product_id, pv.product_version, pve.system_env, pve.runtime_env", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> productEnvironments = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -3197,9 +4593,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("productVersion", resultSet.getString("product_version"));
                     map.put("systemEnv", resultSet.getString("system_env"));
                     map.put("runtimeEnv", resultSet.getString("runtime_env"));
+                    map.put("current", resultSet.getBoolean("current"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     productEnvironments.add(map);
                 }
             }
@@ -3219,115 +4617,221 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
+    public Result<String> getProductVersionEnvironmentById(String hostId, String productVersionId, String systemEnv, String runtimeEnv) {
+        final String sql =
+                """
+                SELECT host_id, product_version_id, system_env, runtime_env, current,
+                aggregate_version, active, update_user, update_ts
+                FROM product_version_environment_t
+                WHERE host_id = ? AND product_version_id = ? AND system_env = ? AND runtime_env = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + productVersionId + ":" + systemEnv + ":" + runtimeEnv;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(productVersionId));
+            statement.setString(3, systemEnv);
+            statement.setString(4, runtimeEnv);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("productVersionId", resultSet.getObject("product_version_id", UUID.class));
+                    map.put("systemEnv", resultSet.getString("system_env"));
+                    map.put("runtimeEnv", resultSet.getString("runtime_env"));
+                    map.put("current", resultSet.getBoolean("current"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "product version environment", searchId));
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
     public void createProductVersionPipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "INSERT INTO product_version_pipeline_t(host_id, product_version_id, " +
-                "pipeline_id, update_user, update_ts, aggregate_version) " +
-                "VALUES (?, ?, ?, ?, ?, ?)";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        // --- UPDATED SQL FOR UPSERT ---
+        // Assuming the Unique Constraint is (host_id, product_version_id, pipeline_id)
+        final String upsertSql =
+                """
+                INSERT INTO product_version_pipeline_t(host_id, product_version_id,
+                pipeline_id, update_user, update_ts, aggregate_version, active)
+                VALUES (?, ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (host_id, product_version_id, pipeline_id) DO UPDATE
+                SET update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                WHERE product_version_pipeline_t.aggregate_version < EXCLUDED.aggregate_version
+                AND product_version_pipeline_t.active = FALSE
+                """; // <<< CRITICAL: ON CONFLICT on the composite key and monotonicity check
+
+        Map<String, Object> map = SqlUtil.extractEventData(event);
         String hostId = (String)event.get(Constants.HOST);
         String productVersionId = (String)map.get("productVersionId");
         String pipelineId = (String)map.get("pipelineId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+        String updateUser = (String)event.get(Constants.USER);
+        OffsetDateTime updateTs = OffsetDateTime.parse((String)event.get(CloudEventV1.TIME));
 
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(productVersionId));
-            statement.setObject(3, UUID.fromString(pipelineId));
-            statement.setString(4, (String)event.get(Constants.USER));
-            statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(6, newAggregateVersion);
+        try (PreparedStatement statement = conn.prepareStatement(upsertSql)) {
+            int i = 1;
+            // --- SET VALUES (1 to 6) ---
+            statement.setObject(i++, UUID.fromString(hostId)); // 1. host_id (Part of PK)
+            statement.setObject(i++, UUID.fromString(productVersionId)); // 2. product_version_id (Part of PK)
+            statement.setObject(i++, UUID.fromString(pipelineId)); // 3. pipeline_id (Part of PK)
+            statement.setString(i++, updateUser); // 4. update_user
+            statement.setObject(i++, updateTs); // 5. update_ts
+            statement.setLong(i++, newAggregateVersion); // 6. aggregate_version (New Version)
 
+            // --- Execute UPSERT ---
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("Failed during createProductVersionPipeline for hostId %s productVersionId %s pipelineId %s with aggregateVersion %d", hostId, productVersionId, pipelineId, newAggregateVersion));
+                // count=0 means the ON CONFLICT clause was hit, BUT the WHERE clause failed (version was newer or same).
+                logger.warn("Pipeline creation/reactivation skipped for hostId {} productVersionId {} pipelineId {}. A newer or same version already exists in the projection.", hostId, productVersionId, pipelineId);
+            } else {
+                logger.info("Product Version Pipeline successfully inserted or updated to aggregateVersion {}.", newAggregateVersion);
             }
+
         } catch (SQLException e) {
-            logger.error("SQLException during createProductVersionPipeline for hostId {} productVersionId {} pipelineId {} aggregateVersion {}: {}", hostId, productVersionId, pipelineId, newAggregateVersion, e.getMessage(), e);
-            throw e;
-        } catch (Exception e) {
-            logger.error("Exception during createProductVersionPipeline for hostId {} productVersionId {} pipelineId {} aggregateVersion {}: {}", hostId, productVersionId, pipelineId, newAggregateVersion, e.getMessage(), e);
-            throw e;
-        }
-    }
-
-    @Override
-    public void deleteProductVersionPipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM product_version_pipeline_t WHERE host_id = ? " +
-                "AND product_version_id = ? AND pipeline_id = ?";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String productVersionId = (String)map.get("productVersionId"); // For logging/exceptions
-        String pipelineId = (String)map.get("pipelineId"); // For logging/exceptions
-
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(productVersionId));
-            statement.setObject(3, UUID.fromString(pipelineId));
-
-            int count = statement.executeUpdate();
-            if (count == 0) {
-                throw new SQLException("Failed to delete the product version pipeline with productVersionId " + productVersionId + " and pipelineId " + pipelineId);
-            }
-            notificationService.insertNotification(event, true, null);
-        } catch (SQLException e) {
-            logger.error("SQLException during deleteProductVersionPipeline for productVersionId {} pipelineId {}: {}", productVersionId, pipelineId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during UPSERT for hostId {} productVersionId {} pipelineId {} aggregateVersion {}: {}", hostId, productVersionId, pipelineId, newAggregateVersion, e.getMessage(), e);
             throw e; // Re-throw SQLException
         } catch (Exception e) {
-            logger.error("Exception during deleteProductVersionPipeline for productVersionId {} pipelineId {}: {}", productVersionId, pipelineId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during UPSERT for hostId {} productVersionId {} pipelineId {} aggregateVersion {}: {}", hostId, productVersionId, pipelineId, newAggregateVersion, e.getMessage(), e);
             throw e; // Re-throw generic Exception
         }
     }
 
     @Override
-    public Result<String> getProductVersionPipeline(int offset, int limit, String hostId, String productVersionId,
-                                                    String productId, String productVersion, String pipelineId,
-                                                    String pipelineName, String pipelineVersion) {
-        Result<String> result = null;
-        String s =
+    public void deleteProductVersionPipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // --- UPDATED SQL FOR SOFT DELETE + MONOTONICITY ---
+        // Updates the 'active' flag to FALSE and sets the new version IF the current DB version is older than the incoming event's version.
+        final String softDeleteSql =
                 """
-                SELECT COUNT(*) OVER () AS total,
-                pvp.host_id, pvp.product_version_id, pv.product_id, pv.product_version,
-                pvp.pipeline_id, p.pipeline_name, p.pipeline_version, pvp.update_user, pvp.update_ts, pvp.aggregate_version
-                FROM product_version_pipeline_t pvp
-                INNER JOIN product_version_t pv ON pv.product_version_id = pvp.product_version_id
-                INNER JOIN pipeline_t p ON p.pipeline_id = pvp.pipeline_id
-                WHERE 1=1
-                """;
+                UPDATE product_version_pipeline_t SET active = false, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? AND product_version_id = ? AND pipeline_id = ? AND aggregate_version < ?
+                """; // <<< CRITICAL: Changed from DELETE to UPDATE, and used aggregate_version < ?
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
-        List<Object> parameters = new ArrayList<>();
-        StringBuilder whereClause = new StringBuilder();
-        addCondition(whereClause, parameters, "pvp.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "pvp.product_version_id", productVersionId != null ? UUID.fromString(productVersionId) : null);
-        addCondition(whereClause, parameters, "pv.product_id", productId);
-        addCondition(whereClause, parameters, "pv.product_version", productVersion);
-        addCondition(whereClause, parameters, "pvp.pipeline_id", pipelineId != null ? UUID.fromString(pipelineId) : null);
-        addCondition(whereClause, parameters, "p.pipeline_name", pipelineName);
-        addCondition(whereClause, parameters, "p.pipeline_version", pipelineVersion);
+        Map<String, Object> map = SqlUtil.extractEventData(event); // Assuming extractEventData is the helper to get PortalConstants.DATA
+        String hostId = (String)event.get(Constants.HOST); // HostId from CloudEvent extension
+        String productVersionId = (String)map.get("productVersionId");
+        String pipelineId = (String)map.get("pipelineId");
 
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
+        // Old version is for logging context
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        // New version is the version of the incoming Delete event (the target version).
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        String updateUser = (String)event.get(Constants.USER);
+        OffsetDateTime updateTs = OffsetDateTime.parse((String)event.get(CloudEventV1.TIME));
+
+        try (PreparedStatement statement = conn.prepareStatement(softDeleteSql)) {
+            int i = 1;
+
+            // 1. update_user
+            statement.setString(i++, updateUser);
+
+            // 2. update_ts
+            statement.setObject(i++, updateTs);
+
+            // 3. aggregate_version (NEW version in SET clause)
+            statement.setLong(i++, newAggregateVersion);
+
+            // 4. host_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(hostId));
+
+            // 5. product_version_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(productVersionId));
+
+            // 6. pipeline_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(pipelineId));
+
+            // 7. aggregate_version (MONOTONICITY check in WHERE clause)
+            statement.setLong(i, newAggregateVersion); // Condition: WHERE aggregate_version < newAggregateVersion
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // If 0 rows updated, it means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Pipeline soft-delete skipped for hostId {} productVersionId {} pipelineId {}. Record not found or a newer version already exists.", hostId, productVersionId, pipelineId);
+            }
+            // NO THROW on count == 0. The method is now idempotent.
+        } catch (SQLException e) {
+            logger.error("SQLException during softDeleteProductVersionPipeline for productVersionId {} pipelineId {} new version {}: {}", productVersionId, pipelineId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during softDeleteProductVersionPipeline for productVersionId {} pipelineId {} new version {}: {}", productVersionId, pipelineId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw generic Exception
         }
+    }
 
-        sqlBuilder.append(" ORDER BY pv.product_id, pv.product_version, p.pipeline_name, p.pipeline_version DESC\n" +
-                "LIMIT ? OFFSET ?");
+    @Override
+    public Result<String> getProductVersionPipeline(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
+        Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "pvp.host_id",
+                "productVersionId", "pvp.product_version_id",
+                "productId", "pv.product_id",
+                "productVersion", "pv.product_version",
+                "pipelineId", "pvp.pipeline_id",
+                "pipelineName", "p.pipeline_name",
+                "pipelineVersion", "p.pipeline_version",
+                "updateUser", "pvp.update_user",
+                "updateTs", "pvp.update_ts",
+                "aggregateVersion", "pvp.aggregate_version"
+        ));
+        columnMap.put("active", "pvp.active");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
+        String s =
+            """
+            SELECT COUNT(*) OVER () AS total,
+            pvp.host_id, pvp.product_version_id, pv.product_id, pv.product_version,
+            pvp.pipeline_id, p.pipeline_name, p.pipeline_version, pvp.update_user,
+            pvp.update_ts, pvp.aggregate_version, pvp.active
+            FROM product_version_pipeline_t pvp
+            INNER JOIN product_version_t pv ON pv.product_version_id = pvp.product_version_id
+            INNER JOIN pipeline_t p ON p.pipeline_id = pvp.pipeline_id
+            WHERE pvp.host_id = ?
+            """;
+
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
+
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "pvp", "pv", "p");
+        String[] searchColumns = {"p.pipeline_name"};
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("pvp.host_id", "pvp.product_version_id", "pvp.pipeline_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("pv.product_id, pv.product_version, p.pipeline_name, p.pipeline_version", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
-
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> productPipelines = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -3346,6 +4850,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     productPipelines.add(map);
                 }
             }
@@ -3366,74 +4871,124 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
     @Override
     public void createProductVersionConfig(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql =
+        // --- UPDATED SQL FOR UPSERT ---
+        // Assuming the Unique Constraint is (host_id, product_version_id, config_id)
+        final String upsertSql =
                 """
                 INSERT INTO product_version_config_t(host_id, product_version_id,
-                config_id, update_user, update_ts, aggregate_version)
-                VALUES (?, ?, ?, ?, ?,  ?)
-                """;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+                config_id, update_user, update_ts, aggregate_version, active)
+                VALUES (?, ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (host_id, product_version_id, config_id) DO UPDATE
+                SET update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                WHERE product_version_config_t.aggregate_version < EXCLUDED.aggregate_version
+                AND product_version_config_t.active = FALSE
+                """; // <<< CRITICAL: ON CONFLICT on the composite key and monotonicity check
+
+        Map<String, Object> map = SqlUtil.extractEventData(event);
         String hostId = (String)event.get(Constants.HOST);
         String productVersionId = (String)map.get("productVersionId");
         String configId = (String)map.get("configId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+        String updateUser = (String)event.get(Constants.USER);
+        OffsetDateTime updateTs = OffsetDateTime.parse((String)event.get(CloudEventV1.TIME));
 
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(productVersionId));
-            statement.setObject(3, UUID.fromString(configId));
-            statement.setString(4, (String)event.get(Constants.USER));
-            statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(6, newAggregateVersion);
 
+        try (PreparedStatement statement = conn.prepareStatement(upsertSql)) {
+            int i = 1;
+            // --- SET VALUES (1 to 6) ---
+            statement.setObject(i++, UUID.fromString(hostId)); // 1. host_id (Part of PK)
+            statement.setObject(i++, UUID.fromString(productVersionId)); // 2. product_version_id (Part of PK)
+            statement.setObject(i++, UUID.fromString(configId)); // 3. config_id (Part of PK)
+            statement.setString(i++, updateUser); // 4. update_user
+            statement.setObject(i++, updateTs); // 5. update_ts
+            statement.setLong(i++, newAggregateVersion); // 6. aggregate_version (New Version)
+
+            // --- Execute UPSERT ---
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("Failed during createProductVersionConfig for hostId %s productVersionId %s configId %s with aggregateVersion %d", hostId, productVersionId, configId, newAggregateVersion));
+                // count=0 means the ON CONFLICT clause was hit, BUT the WHERE clause failed (version was newer or same).
+                logger.warn("Config creation/reactivation skipped for hostId {} productVersionId {} configId {}. A newer or same version already exists in the projection.", hostId, productVersionId, configId);
+            } else {
+                logger.info("Product Version Config successfully inserted or updated to aggregateVersion {}.", newAggregateVersion);
             }
+
         } catch (SQLException e) {
-            logger.error("SQLException during createProductVersionConfig for hostId {} productVersionId {} configId {} aggregateVersion {}: {}", hostId, productVersionId, configId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            logger.error("SQLException during UPSERT for hostId {} productVersionId {} configId {} aggregateVersion {}: {}", hostId, productVersionId, configId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw SQLException
         } catch (Exception e) {
-            logger.error("Exception during createProductVersionConfig for hostId {} productVersionId {} configId {} aggregateVersion {}: {}", hostId, productVersionId, configId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            logger.error("Exception during UPSERT for hostId {} productVersionId {} configId {} aggregateVersion {}: {}", hostId, productVersionId, configId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw generic Exception
         }
     }
 
     @Override
     public void deleteProductVersionConfig(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM product_version_config_t WHERE host_id = ? " +
-                "AND product_version_id = ? AND config_id = ?";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
+        // --- UPDATED SQL FOR SOFT DELETE + MONOTONICITY ---
+        // Updates the 'active' flag to FALSE and sets the new version IF the current DB version is older than the incoming event's version.
+        final String softDeleteSql =
+                """
+                UPDATE product_version_config_t SET active = false, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? AND product_version_id = ? AND config_id = ? AND aggregate_version < ?
+                """; // <<< CRITICAL: Changed from DELETE to UPDATE, and used aggregate_version < ?
+
+        Map<String, Object> map = SqlUtil.extractEventData(event); // Assuming extractEventData is the helper to get PortalConstants.DATA
+        String hostId = (String)event.get(Constants.HOST); // HostId from CloudEvent extension
         String productVersionId = (String)map.get("productVersionId");
         String configId = (String)map.get("configId");
 
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(productVersionId));
-            statement.setObject(3, UUID.fromString(configId));
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        // New version is the version of the incoming Delete event (the target version).
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        String updateUser = (String)event.get(Constants.USER);
+        OffsetDateTime updateTs = OffsetDateTime.parse((String)event.get(CloudEventV1.TIME));
+
+        try (PreparedStatement statement = conn.prepareStatement(softDeleteSql)) {
+            int i = 1;
+
+            // 1. update_user
+            statement.setString(i++, updateUser);
+
+            // 2. update_ts
+            statement.setObject(i++, updateTs);
+
+            // 3. aggregate_version (NEW version in SET clause)
+            statement.setLong(i++, newAggregateVersion);
+
+            // 4. host_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(hostId));
+
+            // 5. product_version_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(productVersionId));
+
+            // 6. config_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(configId));
+
+            // 7. aggregate_version (MONOTONICITY check in WHERE clause)
+            statement.setLong(i, newAggregateVersion); // Condition: WHERE aggregate_version < newAggregateVersion
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to delete the product version config with productVersionId " + productVersionId + " and configId " + configId);
+                // If 0 rows updated, it means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Config soft-delete skipped for hostId {} productVersionId {} configId {}. Record not found or a newer version already exists.", hostId, productVersionId, configId);
             }
-            notificationService.insertNotification(event, true, null);
+            // NO THROW on count == 0. The method is now idempotent.
         } catch (SQLException e) {
-            logger.error("SQLException during deleteProductVersionConfig for productVersionId {} configId {}: {}", productVersionId, configId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e;
+            logger.error("SQLException during softDeleteProductVersionConfig for hostId {} productVersionId {} configId {} new version {}: {}", hostId, productVersionId, configId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw SQLException
         } catch (Exception e) {
-            logger.error("Exception during deleteProductVersionConfig for productVersionId {} configId {}: {}", productVersionId, configId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e;
+            logger.error("Exception during softDeleteProductVersionConfig for hostId {} productVersionId {} configId {} new version {}: {}", hostId, productVersionId, configId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw generic Exception
         }
     }
 
     @Override
-    public Result<String> getProductVersionConfig(int offset, int limit, List<SortCriterion> sorting, List<FilterCriterion> filtering, String globalFilter,
-                                                  String hostId, String productVersionId, String productId, String productVersion, String configId,
-                                                  String configName) {
-        final Map<String, String> API_TO_DB_COLUMN_MAP = Map.of(
+    public Result<String> getProductVersionConfig(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
                 "hostId", "pvc.host_id",
                 "productVersionId", "pvc.product_version_id",
                 "productId", "pv.product_id",
@@ -3441,107 +4996,44 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                 "configId", "pvc.config_id",
                 "configName", "c.config_name",
                 "updateUser", "pvc.update_user",
-                "updateTs", "pvc.update_ts"
-        );
-        // The base query with the window function for total count is efficient.
-        String baseSql =
+                "updateTs", "pvc.update_ts",
+                "active", "pvc.active"
+        ));
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
+        String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
                 pvc.host_id, pvc.product_version_id, pv.product_id, pv.product_version,
-                pvc.config_id, c.config_name, pvc.update_user, pvc.update_ts, pvc.aggregate_version
+                pvc.config_id, c.config_name, pvc.update_user, pvc.update_ts, pvc.aggregate_version, pvc.active
                 FROM product_version_config_t pvc
                 INNER JOIN product_version_t pv ON pv.host_id = pvc.host_id AND pv.product_version_id = pvc.product_version_id
                 INNER JOIN config_t c ON c.config_id = pvc.config_id
+                WHERE pvc.host_id = ?
                 """;
 
-        StringBuilder sqlBuilder = new StringBuilder(baseSql);
         List<Object> parameters = new ArrayList<>();
-        List<String> whereClauses = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
 
-        // --- 1. Build WHERE clause from filters ---
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "pvc", "pv", "c");
+        String[] searchColumns = {"c.config_name"};
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("pvc.host_id", "pvc.product_version_id", "pvc.config_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("pv.product_id, pv.product_version, c.config_name", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
-        // Add mandatory hostId filter.
-        if (hostId != null) {
-            whereClauses.add("pvc.host_id = ?");
-            parameters.add(UUID.fromString(hostId));
-        }
-
-        // Handle dynamic column filters from MRT
-        if (filtering != null) {
-            for (FilterCriterion filter : filtering) {
-                String dbColumn = API_TO_DB_COLUMN_MAP.get(filter.getId());
-                if (dbColumn == null) {
-                    logger.warn("Invalid filter column requested: {}", filter.getId());
-                    continue; // Or return an error
-                }
-                whereClauses.add(dbColumn + " ILIKE ?"); // Use ILIKE for case-insensitive matching in PostgreSQL
-                parameters.add("%" + filter.getValue() + "%");
-            }
-        }
-
-        // Handle global filter from MRT
-        if (globalFilter != null && !globalFilter.isBlank()) {
-            List<String> globalSearchableColumns = List.of("pv.product_id", "pv.product_version", "c.config_name");
-            String globalWhere = globalSearchableColumns.stream()
-                    .map(col -> col + " ILIKE ?")
-                    .collect(Collectors.joining(" OR "));
-
-            whereClauses.add("(" + globalWhere + ")");
-            for (int i = 0; i < globalSearchableColumns.size(); i++) {
-                parameters.add("%" + globalFilter + "%");
-            }
-        }
-
-        if (!whereClauses.isEmpty()) {
-            sqlBuilder.append(" WHERE ").append(String.join(" AND ", whereClauses));
-        }
-
-        // --- 2. Build ORDER BY clause ---
-        if (sorting != null && !sorting.isEmpty()) {
-            String orderByClause = sorting.stream()
-                    .map(sortCriterion -> {
-                        String dbColumn = API_TO_DB_COLUMN_MAP.get(sortCriterion.getId());
-                        if (dbColumn == null) {
-                            logger.warn("Invalid sort column requested: {}", sortCriterion.getId());
-                            return null; // This will be filtered out
-                        }
-                        return dbColumn + (sortCriterion.isDesc() ? " DESC" : " ASC");
-                    })
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.joining(", "));
-
-            if (!orderByClause.isEmpty()) {
-                sqlBuilder.append(" ORDER BY ").append(orderByClause);
-            } else {
-                // Fallback to default sort if all provided columns were invalid
-                sqlBuilder.append(" ORDER BY pv.product_id, pv.product_version, c.config_name DESC");
-            }
-        } else {
-            // Default sort order when no sorting is provided by the client
-            sqlBuilder.append(" ORDER BY pv.product_id, pv.product_version, c.config_name DESC");
-        }
-
-
-        // --- 3. Add Pagination ---
-        sqlBuilder.append(" LIMIT ? OFFSET ?");
         parameters.add(limit);
         parameters.add(offset);
-
-
-        // --- 4. Execute Query ---
-        String finalSql = sqlBuilder.toString();
-        if(logger.isTraceEnabled()) logger.trace("Final SQL: {}, Parameters: {}", finalSql, parameters);
 
         int total = 0;
         List<Map<String, Object>> productConfigs = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(finalSql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 boolean isFirstRow = true;
                 while (resultSet.next()) {
@@ -3560,6 +5052,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class).toString() : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     productConfigs.add(map);
                 }
             }
@@ -3568,129 +5061,185 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             resultMap.put("productConfigs", productConfigs);
             return Success.of(JsonMapper.toJson(resultMap));
         } catch (SQLException e) {
-            logger.error("SQLException executing query: " + finalSql, e);
-            return Failure.of(new Status("ERR10001", "SQL_EXCEPTION", e.getMessage())); // Use your own error codes
+            logger.error("SQLException:", e);
+            return Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
         } catch (Exception e) {
-            logger.error("Generic exception executing query: " + finalSql, e);
-            return Failure.of(new Status("ERR10000", "GENERIC_EXCEPTION", e.getMessage()));
+            logger.error("Exception:", e);
+            return Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
     }
 
     @Override
     public void createProductVersionConfigProperty(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql =
+        // --- UPDATED SQL FOR UPSERT ---
+        // Assuming the Unique Constraint is (host_id, product_version_id, property_id)
+        final String upsertSql =
                 """
                 INSERT INTO product_version_config_property_t(host_id, product_version_id,
-                property_id, update_user, update_ts, aggregate_version)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+                property_id, update_user, update_ts, aggregate_version, active)
+                VALUES (?, ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (host_id, product_version_id, property_id) DO UPDATE
+                SET update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                WHERE product_version_config_property_t.aggregate_version < EXCLUDED.aggregate_version
+                AND product_version_config_property_t.active = FALSE
+                """; // <<< CRITICAL: ON CONFLICT on the composite key and monotonicity check
+
+        Map<String, Object> map = SqlUtil.extractEventData(event);
         String hostId = (String)event.get(Constants.HOST);
         String productVersionId = (String)map.get("productVersionId");
         String propertyId = (String)map.get("propertyId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+        String updateUser = (String)event.get(Constants.USER);
+        OffsetDateTime updateTs = OffsetDateTime.parse((String)event.get(CloudEventV1.TIME));
 
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(productVersionId));
-            statement.setObject(3, UUID.fromString(propertyId));
-            statement.setString(4, (String)event.get(Constants.USER));
-            statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(6, newAggregateVersion);
 
+        try (PreparedStatement statement = conn.prepareStatement(upsertSql)) {
+            int i = 1;
+            // --- SET VALUES (1 to 6) ---
+            statement.setObject(i++, UUID.fromString(hostId)); // 1. host_id (Part of PK)
+            statement.setObject(i++, UUID.fromString(productVersionId)); // 2. product_version_id (Part of PK)
+            statement.setObject(i++, UUID.fromString(propertyId)); // 3. property_id (Part of PK)
+            statement.setString(i++, updateUser); // 4. update_user
+            statement.setObject(i++, updateTs); // 5. update_ts
+            statement.setLong(i++, newAggregateVersion); // 6. aggregate_version (New Version)
+
+            // --- Execute UPSERT ---
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("Failed during createProductVersionConfigProperty for hostId %s productVersionId %s propertyId %s with aggregateVersion %d", hostId, productVersionId, propertyId, newAggregateVersion));
+                // count=0 means the ON CONFLICT clause was hit, BUT the WHERE clause failed (version was newer or same).
+                logger.warn("Property creation/reactivation skipped for hostId {} productVersionId {} propertyId {}. A newer or same version already exists in the projection.", hostId, productVersionId, propertyId);
+            } else {
+                logger.info("Product Version Config Property successfully inserted or updated to aggregateVersion {}.", newAggregateVersion);
             }
+
         } catch (SQLException e) {
-            logger.error("SQLException during createProductVersionConfigProperty for hostId {} productVersionId {} propertyId {} aggregateVersion {}: {}", hostId, productVersionId, propertyId, newAggregateVersion, e.getMessage(), e);
-            throw e;
-        } catch (Exception e) {
-            logger.error("Exception during createProductVersionConfigProperty for hostId {} productVersionId {} propertyId {} aggregateVersion {}: {}", hostId, productVersionId, propertyId, newAggregateVersion, e.getMessage(), e);
-            throw e;
-        }
-    }
-
-    @Override
-    public void deleteProductVersionConfigProperty(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM product_version_config_property_t WHERE host_id = ? " +
-                "AND product_version_id = ? AND property_id = ?";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String productVersionId = (String)map.get("productVersionId"); // For logging/exceptions
-        String propertyId = (String)map.get("propertyId"); // For logging/exceptions
-
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(productVersionId));
-            statement.setObject(3, UUID.fromString(propertyId));
-
-            int count = statement.executeUpdate();
-            if (count == 0) {
-                throw new SQLException("Failed to delete the product version config property with productVersionId " + productVersionId + " and propertyId " + propertyId);
-            }
-            notificationService.insertNotification(event, true, null);
-        } catch (SQLException e) {
-            logger.error("SQLException during deleteProductVersionConfigProperty for productVersionId {} propertyId {}: {}", productVersionId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("SQLException during UPSERT for hostId {} productVersionId {} propertyId {} aggregateVersion {}: {}", hostId, productVersionId, propertyId, newAggregateVersion, e.getMessage(), e);
             throw e; // Re-throw SQLException
         } catch (Exception e) {
-            logger.error("Exception during deleteProductVersionConfigProperty for productVersionId {} propertyId {}: {}", productVersionId, propertyId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
+            logger.error("Exception during UPSERT for hostId {} productVersionId {} propertyId {} aggregateVersion {}: {}", hostId, productVersionId, propertyId, newAggregateVersion, e.getMessage(), e);
             throw e; // Re-throw generic Exception
         }
     }
 
     @Override
-    public Result<String> getProductVersionConfigProperty(int offset, int limit, String hostId, String productVersionId,
-                                                          String productId, String productVersion, String configId,
-                                                          String configName, String propertyId, String propertyName) {
-        Result<String> result = null;
-        String s =
+    public void deleteProductVersionConfigProperty(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // --- UPDATED SQL FOR SOFT DELETE + MONOTONICITY ---
+        // Updates the 'active' flag to FALSE and sets the new version IF the current DB version is older than the incoming event's version.
+        final String softDeleteSql =
                 """
-                        SELECT COUNT(*) OVER () AS total,
-                        pvcp.host_id, pvcp.product_version_id, pv.product_id, pv.product_version,
-                        cp.config_id, c.config_name, pvcp.property_id, cp.property_name, pvcp.update_user, pvcp.update_ts, pvcp.aggregate_version
-                        FROM product_version_config_property_t pvcp
-                        INNER JOIN product_version_t pv ON pv.host_id = pvcp.host_id AND pv.product_version_id = pvcp.product_version_id
-                        INNER JOIN config_property_t cp ON cp.property_id = pvcp.property_id
-                        INNER JOIN config_t c ON c.config_id = cp.config_id
-                        WHERE 1=1
-                        """;
+                UPDATE product_version_config_property_t SET active = false, update_user = ?, update_ts = ?, aggregate_version = ?
+                WHERE host_id = ? AND product_version_id = ? AND property_id = ? AND aggregate_version < ?
+                """; // <<< CRITICAL: Changed from DELETE to UPDATE, and used aggregate_version < ?
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
-        List<Object> parameters = new ArrayList<>();
-        StringBuilder whereClause = new StringBuilder();
-        addCondition(whereClause, parameters, "pvcp.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "pvcp.product_version_id", productVersionId != null ? UUID.fromString(productVersionId) : null);
-        addCondition(whereClause, parameters, "pv.product_id", productId);
-        addCondition(whereClause, parameters, "pv.product_version", productVersion);
-        addCondition(whereClause, parameters, "cp.config_id", configId != null ? UUID.fromString(configId) : null);
-        addCondition(whereClause, parameters, "c.config_name", configName);
-        addCondition(whereClause, parameters, "pvcp.property_id", propertyId != null ? UUID.fromString(propertyId) : null);
-        addCondition(whereClause, parameters, "cp.property_name", propertyName);
+        Map<String, Object> map = SqlUtil.extractEventData(event); // Assuming extractEventData is the helper to get PortalConstants.DATA
+        String hostId = (String)event.get(Constants.HOST); // HostId from CloudEvent extension
+        String productVersionId = (String)map.get("productVersionId");
+        String propertyId = (String)map.get("propertyId");
 
+        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        // New version is the version of the incoming Delete event (the target version).
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
+        String updateUser = (String)event.get(Constants.USER);
+        OffsetDateTime updateTs = OffsetDateTime.parse((String)event.get(CloudEventV1.TIME));
+
+        try (PreparedStatement statement = conn.prepareStatement(softDeleteSql)) {
+            int i = 1;
+
+            // 1. update_user
+            statement.setString(i++, updateUser);
+
+            // 2. update_ts
+            statement.setObject(i++, updateTs);
+
+            // 3. aggregate_version (NEW version in SET clause)
+            statement.setLong(i++, newAggregateVersion);
+
+            // 4. host_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(hostId));
+
+            // 5. product_version_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(productVersionId));
+
+            // 6. property_id (in WHERE clause)
+            statement.setObject(i++, UUID.fromString(propertyId));
+
+            // 7. aggregate_version (MONOTONICITY check in WHERE clause)
+            statement.setLong(i, newAggregateVersion); // Condition: WHERE aggregate_version < newAggregateVersion
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // If 0 rows updated, it means the record was either not found OR aggregate_version >= newAggregateVersion.
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Property soft-delete skipped for hostId {} productVersionId {} propertyId {}. Record not found or a newer version already exists.", hostId, productVersionId, propertyId);
+            }
+            // NO THROW on count == 0. The method is now idempotent.
+        } catch (SQLException e) {
+            logger.error("SQLException during softDeleteProductVersionConfigProperty for hostId {} productVersionId {} propertyId {} new version {}: {}", hostId, productVersionId, propertyId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw SQLException
+        } catch (Exception e) {
+            logger.error("Exception during softDeleteProductVersionConfigProperty for hostId {} productVersionId {} propertyId {} new version {}: {}", hostId, productVersionId, propertyId, newAggregateVersion, e.getMessage(), e);
+            throw e; // Re-throw generic Exception
         }
+    }
 
-        sqlBuilder.append(" ORDER BY pv.product_id, pv.product_version, c.config_name, cp.property_name DESC\n" +
-                "LIMIT ? OFFSET ?");
+    @Override
+    public Result<String> getProductVersionConfigProperty(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
+        Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "pvcp.host_id",
+                "productVersionId", "pvcp.product_version_id",
+                "productId", "pv.product_id",
+                "productVersion", "pv.product_version",
+                "configId", "cp.config_id",
+                "configName", "c.config_name",
+                "propertyId", "pvcp.property_id",
+                "propertyName", "cp.property_name",
+                "updateUser", "pvcp.update_user",
+                "updateTs", "pvcp.update_ts"
+        ));
+        columnMap.put("aggregateVersion", "pvcp.aggregate_version");
+        columnMap.put("active", "pvcp.active");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
+        String s =
+            """
+            SELECT COUNT(*) OVER () AS total,
+            pvcp.host_id, pvcp.product_version_id, pv.product_id, pv.product_version,
+            cp.config_id, c.config_name, pvcp.property_id, cp.property_name,
+            pvcp.update_user, pvcp.update_ts, pvcp.aggregate_version, pvcp.active
+            FROM product_version_config_property_t pvcp
+            INNER JOIN product_version_t pv ON pv.host_id = pvcp.host_id AND pv.product_version_id = pvcp.product_version_id
+            INNER JOIN config_property_t cp ON cp.property_id = pvcp.property_id
+            INNER JOIN config_t c ON c.config_id = cp.config_id
+            WHERE pvcp.host_id = ?
+            """;
+
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
+
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "pvcp", "pv", "cp", "c");
+        String[] searchColumns = {"c.config_name", "cp.property_name"};
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("pvcp.host_id", "pvcp.product_version_id", "cp.config_id", "pvcp.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("pv.product_id, pv.product_version, c.config_name, cp.property_name", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> productProperties = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
 
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -3711,6 +5260,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     productProperties.add(map);
                 }
             }
@@ -3729,78 +5279,114 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
     }
 
+    /**
+     * Creates or updates a pipeline record using an idempotent UPSERT pattern, and manages the 'current' flag.
+     * This method implements:
+     * 1.  **Idempotent Create/Update (Upsert):** Uses `INSERT ... ON CONFLICT DO UPDATE` to create or update the pipeline.
+     * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
+     * 3.  **OCC/Monotonicity:** Ensures updates only occur if the event version is newer than the database version.
+     * 4.  **State Management:** If the upserted pipeline is marked as 'current', an additional idempotent UPDATE
+     *     is performed to set all other pipelines with the same name to 'current = false'.
+     *
+     * @param conn  The database connection.
+     * @param event The event map containing the data and metadata for the operation.
+     * @throws SQLException If a database access error occurs.
+     * @throws Exception    For other generic errors.
+     */
     @Override
     public void createPipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql =
+        // --- 1. PRIMARY UPSERT SQL (Creates or Reactivates the specific pipeline) ---
+        final String upsertSql =
                 """
                 INSERT INTO pipeline_t(host_id, pipeline_id, platform_id, pipeline_version, pipeline_name,
                 current, endpoint, version_status, system_env, runtime_env, request_schema,
-                response_schema, update_user, update_ts, aggregate_version)
-                VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?)
+                response_schema, update_user, update_ts, aggregate_version, active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (host_id, pipeline_id) DO UPDATE
+                SET platform_id = EXCLUDED.platform_id,
+                    pipeline_version = EXCLUDED.pipeline_version,
+                    pipeline_name = EXCLUDED.pipeline_name,
+                    current = EXCLUDED.current,
+                    endpoint = EXCLUDED.endpoint,
+                    version_status = EXCLUDED.version_status,
+                    system_env = EXCLUDED.system_env,
+                    runtime_env = EXCLUDED.runtime_env,
+                    request_schema = EXCLUDED.request_schema,
+                    response_schema = EXCLUDED.response_schema,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                WHERE pipeline_t.aggregate_version < EXCLUDED.aggregate_version
+                AND pipeline_t.active = FALSE
                 """;
-        final String sqlUpdateCurrent =
+
+        // --- 2. UPDATE SQL (To set all other versions of the same pipeline to current = false) ---
+        final String updateOthersSql =
                 """
-                UPDATE pipeline_t
-                SET current = false
+                UPDATE pipeline_t SET current = false, update_user = ?, update_ts = ?
                 WHERE host_id = ?
                 AND pipeline_name = ?
                 AND pipeline_id != ?
+                AND current = TRUE
                 """;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
-        String pipelineId = (String)map.get("pipelineId");
-        String pipelineName = (String)map.get("pipelineName");
-        Boolean current = (Boolean)map.get("current");
+
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String) event.get(Constants.HOST);
+        String pipelineId = (String) map.get("pipelineId");
+        String pipelineName = (String) map.get("pipelineName");
+        Boolean current = (Boolean) map.getOrDefault("current", false);
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+        String updateUser = (String) event.get(Constants.USER);
+        OffsetDateTime updateTs = OffsetDateTime.parse((String) event.get(CloudEventV1.TIME));
 
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(pipelineId));
-            statement.setObject(3, UUID.fromString((String)map.get("platformId")));
-            statement.setString(4, (String)map.get("pipelineVersion"));
-            statement.setString(5, pipelineName);
-            if (current != null) {
-                statement.setBoolean(6, current);
+        try (PreparedStatement statement = conn.prepareStatement(upsertSql)) {
+            int i = 1;
+
+            // --- PRIMARY UPSERT PARAMETERS ---
+            statement.setObject(i++, UUID.fromString(hostId)); // 1. host_id
+            statement.setObject(i++, UUID.fromString(pipelineId)); // 2. pipeline_id (PK)
+            statement.setObject(i++, UUID.fromString((String) map.get("platformId"))); // 3. platform_id
+            statement.setString(i++, (String) map.get("pipelineVersion")); // 4. pipeline_version
+            statement.setString(i++, pipelineName); // 5. pipeline_name
+            statement.setBoolean(i++, current); // 6. current
+            statement.setString(i++, (String) map.get("endpoint")); // 7. endpoint
+            statement.setString(i++, (String) map.get("versionStatus")); // 8. version_status
+            statement.setString(i++, (String) map.get("systemEnv")); // 9. system_env
+
+            // 10. runtime_env (optional)
+            if (map.containsKey("runtimeEnv")) {
+                statement.setString(i++, (String) map.get("runtimeEnv"));
             } else {
-                statement.setNull(6, Types.BOOLEAN);
+                statement.setNull(i++, Types.VARCHAR);
             }
 
-            statement.setString(7, (String)map.get("endpoint"));
-
-            String versionStatus = (String)map.get("versionStatus");
-            if (versionStatus != null && !versionStatus.isEmpty()) {
-                statement.setString(8, versionStatus);
-            } else {
-                statement.setNull(8, Types.VARCHAR);
-            }
-            statement.setString(9, (String)map.get("systemEnv"));
-
-            String runtimeEnv = (String)map.get("runtimeEnv");
-            if (runtimeEnv != null && !runtimeEnv.isEmpty()) {
-                statement.setString(10, runtimeEnv);
-            } else {
-                statement.setNull(10, Types.VARCHAR);
-            }
-            statement.setString(11, (String)map.get("requestSchema"));
-            statement.setString(12, (String)map.get("responseSchema"));
-            statement.setString(13, (String)event.get(Constants.USER));
-            statement.setObject(14, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setString(i++, (String) map.get("requestSchema")); // 11. request_schema
+            statement.setString(i++, (String) map.get("responseSchema")); // 12. response_schema
+            statement.setString(i++, updateUser); // 13. update_user
+            statement.setObject(i++, updateTs); // 14. update_ts
+            statement.setLong(i++, newAggregateVersion); // 15. aggregate_version
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException(String.format("Failed during createPipeline for hostId %s pipelineId %s with aggregateVersion %d", hostId, pipelineId, newAggregateVersion));
+                logger.warn("Pipeline creation/update skipped for hostId {} pipelineId {}. A newer or same version already exists.", hostId, pipelineId);
             }
-            // try to update current to false for others if current is true.
-            if(current != null && current) {
-                try (PreparedStatement statementUpdate = conn.prepareStatement(sqlUpdateCurrent)) {
-                    statementUpdate.setObject(1, UUID.fromString(hostId));
-                    statementUpdate.setString(2, pipelineName);
-                    statementUpdate.setObject(3, UUID.fromString(pipelineId));
+
+            // --- STATE MANAGEMENT: Set others to current=false if this new one is true ---
+            if (current && count > 0) {
+                try (PreparedStatement statementUpdate = conn.prepareStatement(updateOthersSql)) {
+                    int j = 1;
+                    statementUpdate.setString(j++, updateUser);
+                    statementUpdate.setObject(j++, updateTs);
+                    statementUpdate.setObject(j++, UUID.fromString(hostId));
+                    statementUpdate.setString(j++, pipelineName);
+                    statementUpdate.setObject(j, UUID.fromString(pipelineId));
                     statementUpdate.executeUpdate();
                 }
             }
+
         } catch (SQLException e) {
-            logger.error("SQLException during createPipeline for hostId {} pipelineId {} aggregateVersion {}: {}", hostId, pipelineId, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during createPipeline UPSERT for hostId {} pipelineId {} aggregateVersion {}: {}", hostId, pipelineId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
             logger.error("Exception during createPipeline for hostId {} pipelineId {} aggregateVersion {}: {}", hostId, pipelineId, newAggregateVersion, e.getMessage(), e);
@@ -3808,195 +5394,251 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         }
     }
 
-    private boolean queryPipelineExists(Connection conn, String hostId, String pipelineId) throws SQLException {
-        final String sql =
-                """
-                SELECT COUNT(*) FROM pipeline_t WHERE host_id = ? AND pipeline_id = ?
-                """;
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
-            pst.setObject(1, UUID.fromString(hostId));
-            pst.setObject(2, UUID.fromString(pipelineId));
-            try (ResultSet rs = pst.executeQuery()) {
-                return rs.next() && rs.getInt(1) > 0;
-            }
-        }
-    }
 
+    /**
+     * Updates a pipeline record using an idempotent/monotonic pattern and manages the 'current' flag.
+     * This method implements:
+     * 1.  **Soft Delete Principle:** An update implicitly reactivates the record by setting `active = TRUE`.
+     * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
+     * 3.  **OCC/Idempotency:** Uses `aggregate_version < ?` to ensure the operation only succeeds if it
+     *     represents a new state, preventing re-processing of old events or concurrent conflicts.
+     * 4.  **State Management:** If the updated pipeline is marked as 'current', an additional idempotent UPDATE
+     *     is performed to set all other pipelines with the same name to 'current = false'.
+     *
+     * @param conn  The database connection.
+     * @param event The event map containing the data and metadata for the operation.
+     * @throws SQLException If a database access error occurs.
+     * @throws Exception    For other generic errors.
+     */
     @Override
     public void updatePipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql =
-                """
-                UPDATE pipeline_t SET platform_id = ?, pipeline_version = ?, pipeline_name = ?, current = ?,
-                endpoint = ?, version_status = ?, system_env = ?, runtime_env = ?, request_schema = ?, response_schema = ?,
-                update_user = ?, update_ts = ?, aggregate_version = ?
-                WHERE host_id = ? AND pipeline_id = ? AND aggregate_version = ?
-                """;
-        final String sqlUpdateCurrent =
+        // --- 1. PRIMARY UPDATE SQL (Updates the specific pipeline) ---
+        final String updateSql =
                 """
                 UPDATE pipeline_t
-                SET current = false
+                SET platform_id = ?,
+                    pipeline_version = ?,
+                    pipeline_name = ?,
+                    current = ?,
+                    endpoint = ?,
+                    version_status = ?,
+                    system_env = ?,
+                    runtime_env = ?,
+                    request_schema = ?,
+                    response_schema = ?,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?,
+                    active = TRUE
                 WHERE host_id = ?
-                AND pipeline_name = ?
-                AND pipeline_id != ?
+                  AND pipeline_id = ?
+                  AND aggregate_version < ?
                 """;
 
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
-        String pipelineId = (String)map.get("pipelineId");
-        String pipelineName = (String)map.get("pipelineName");
-        Boolean current = (Boolean)map.get("current");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        // --- 2. UPDATE SQL (To set all other versions of the same pipeline to current = false) ---
+        final String updateOthersSql =
+                """
+                UPDATE pipeline_t SET current = false, update_user = ?, update_ts = ?
+                WHERE host_id = ?
+                  AND pipeline_name = ?
+                  AND pipeline_id != ?
+                  AND current = TRUE
+                """;
+
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String) event.get(Constants.HOST);
+        String pipelineId = (String) map.get("pipelineId");
+        String pipelineName = (String) map.get("pipelineName");
+        Boolean current = (Boolean) map.getOrDefault("current", false);
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+        String updateUser = (String) event.get(Constants.USER);
+        OffsetDateTime updateTs = OffsetDateTime.parse((String) event.get(CloudEventV1.TIME));
 
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString((String)map.get("platformId")));
-            statement.setString(2, (String)map.get("pipelineVersion"));
-            statement.setString(3, pipelineName);
-            if (current != null) {
-                statement.setBoolean(4, current);
+        try (PreparedStatement statement = conn.prepareStatement(updateSql)) {
+            // SET clause placeholders (13)
+            int i = 1;
+            statement.setObject(i++, UUID.fromString((String) map.get("platformId")));
+            statement.setString(i++, (String) map.get("pipelineVersion"));
+            statement.setString(i++, pipelineName);
+            statement.setBoolean(i++, current);
+            statement.setString(i++, (String) map.get("endpoint"));
+            statement.setString(i++, (String) map.get("versionStatus"));
+            statement.setString(i++, (String) map.get("systemEnv"));
+
+            if (map.containsKey("runtimeEnv")) {
+                statement.setString(i++, (String) map.get("runtimeEnv"));
             } else {
-                statement.setNull(4, Types.BOOLEAN);
-            }
-            statement.setString(5, (String)map.get("endpoint"));
-            String versionStatus = (String)map.get("versionStatus");
-            if (versionStatus != null && !versionStatus.isEmpty()) {
-                statement.setString(6, versionStatus);
-            } else {
-                statement.setNull(6, Types.VARCHAR);
-            }
-            statement.setString(7, (String)map.get("systemEnv"));
-            String runtimeEnv = (String)map.get("runtimeEnv");
-            if (runtimeEnv != null && !runtimeEnv.isEmpty()) {
-                statement.setString(8, runtimeEnv);
-            } else {
-                statement.setNull(8, Types.VARCHAR);
+                statement.setNull(i++, Types.VARCHAR);
             }
 
-            statement.setString(9, (String)map.get("requestSchema"));
-            statement.setString(10, (String)map.get("responseSchema"));
-            statement.setString(11,(String) event.get(Constants.USER));
-            statement.setObject(12, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(13, newAggregateVersion);
-            statement.setObject(14, UUID.fromString(hostId));
-            statement.setString(15, pipelineId);
-            statement.setLong(16, oldAggregateVersion);
+            statement.setString(i++, (String) map.get("requestSchema"));
+            statement.setString(i++, (String) map.get("responseSchema"));
+            statement.setString(i++, updateUser);
+            statement.setObject(i++, updateTs);
+            statement.setLong(i++, newAggregateVersion);
+
+            // WHERE clause placeholders (3)
+            statement.setObject(i++, UUID.fromString(hostId));
+            statement.setObject(i++, UUID.fromString(pipelineId));
+            statement.setLong(i++, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryPipelineExists(conn, hostId, pipelineId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during updatePipeline for hostId " + hostId + " pipelineId " + pipelineId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
-                } else {
-                    throw new SQLException("No record found during updatePipeline for hostId " + hostId + " pipelineId " + pipelineId + ".");
-                }
+                logger.warn("Update skipped for Pipeline with hostId {} pipelineId {}. Record not found or a newer version already exists.",
+                        hostId, pipelineId);
             }
-            // try to update current to false for others if current is true.
-            if(current != null && current) {
-                try (PreparedStatement statementUpdate = conn.prepareStatement(sqlUpdateCurrent)) {
-                    statementUpdate.setObject(1, UUID.fromString(hostId));
-                    statementUpdate.setString(2, pipelineName);
-                    statementUpdate.setObject(3, UUID.fromString(pipelineId));
+
+            // --- STATE MANAGEMENT: Set others to current=false if this one is true ---
+            if (current && count > 0) {
+                try (PreparedStatement statementUpdate = conn.prepareStatement(updateOthersSql)) {
+                    int j = 1;
+                    statementUpdate.setString(j++, updateUser);
+                    statementUpdate.setObject(j++, updateTs);
+                    statementUpdate.setObject(j++, UUID.fromString(hostId));
+                    statementUpdate.setString(j++, pipelineName);
+                    statementUpdate.setObject(j, UUID.fromString(pipelineId));
                     statementUpdate.executeUpdate();
                 }
             }
         } catch (SQLException e) {
-            logger.error("SQLException during updatePipeline for hostId {} pipelineId {} (old: {}) -> (new: {}): {}", hostId, pipelineId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during updatePipeline for hostId {} pipelineId {}: {}",
+                    hostId, pipelineId, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updatePipeline for hostId {} pipelineId {} (old: {}) -> (new: {}): {}", hostId, pipelineId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during updatePipeline for hostId {} pipelineId {}: {}",
+                    hostId, pipelineId, e.getMessage(), e);
             throw e;
         }
     }
 
+    /**
+     * Performs a soft delete on a pipeline_t record using an idempotent/monotonic pattern.
+     * This method implements:
+     * 1.  **Soft Delete:** Sets the 'active' flag to false.
+     * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
+     * 3.  **OCC/Idempotency:** Uses `aggregate_version < ?` to ensure the operation only succeeds if it
+     *     represents a new state, preventing re-processing of old events or concurrent conflicts.
+     *
+     * @param conn  The database connection.
+     * @param event The event map containing the data and metadata for the operation.
+     * @throws SQLException If a database access error occurs.
+     * @throws Exception    For other generic errors.
+     */
     @Override
     public void deletePipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM pipeline_t WHERE host_id = ? AND pipeline_id = ? AND aggregate_version = ?";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
-        String pipelineId = (String)map.get("pipelineId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        // SQL statement updated to match the idempotent soft-delete pattern.
+        final String sql =
+                """
+                UPDATE pipeline_t
+                SET active = FALSE,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?
+                WHERE host_id = ?
+                  AND pipeline_id = ?
+                  AND aggregate_version < ?
+                """;
+
+        // Extract data and metadata from the event.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String) event.get(Constants.HOST);
+        String pipelineId = (String) map.get("pipelineId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(pipelineId));
-            statement.setLong(3, oldAggregateVersion);
+            // SET clause placeholders (3)
+            int i = 1;
+            // 1: update_user from event metadata
+            statement.setString(i++, (String) event.get(Constants.USER));
+            // 2: update_ts from event metadata
+            statement.setObject(i++, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            // 3: aggregate_version (the new version)
+            statement.setLong(i++, newAggregateVersion);
+
+            // WHERE clause placeholders (3)
+            // 4: host_id from primary key
+            statement.setObject(i++, UUID.fromString(hostId));
+            // 5: pipeline_id from primary key
+            statement.setObject(i++, UUID.fromString(pipelineId));
+            // 6: aggregate_version < ? for OCC/Idempotency check
+            statement.setLong(i++, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryPipelineExists(conn, hostId, pipelineId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during deletePipeline for hostId " + hostId + " pipelineId " + pipelineId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
-                } else {
-                    throw new SQLException("No record found during deletePipeline for hostId " + hostId + " pipelineId " + pipelineId+ ". It might have been already deleted.");
-                }
+                // If 0 rows were updated, we log a warning and continue.
+                // This indicates the record was already deleted, never existed, or a newer version is already in the database.
+                // This is the expected behavior for an idempotent operation.
+                logger.warn("Soft delete skipped for Pipeline with hostId {}, pipelineId {}, newAggregateVersion {}. Record not found or a newer version already exists.",
+                        hostId, pipelineId, newAggregateVersion);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during deletePipeline for hostId {} pipelineId {} aggregateVersion {}: {}", hostId, pipelineId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during soft delete of Pipeline for hostId {} pipelineId {}: {}",
+                    hostId, pipelineId, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deletePipeline for hostId {} pipelineId {} aggregateVersion {}: {}", hostId, pipelineId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during soft delete of Pipeline for hostId {} pipelineId {}: {}",
+                    hostId, pipelineId, e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
-    public Result<String> getPipeline(int offset, int limit, String hostId, String pipelineId, String platformId,
-                                      String platformName, String platformVersion, String pipelineVersion,
-                                      String pipelineName, Boolean current, String endpoint, String versionStatus,
-                                      String systemEnv, String runtimeEnv, String requestSchema, String responseSchema) {
+    public Result<String> getPipeline(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
+
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "p.host_id",
+                "pipelineId", "p.pipeline_id",
+                "platformId", "p.platform_id",
+                "platformName", "pf.platform_name",
+                "platformVersion", "pf.platform_version",
+                "pipelineVersion", "p.pipeline_version",
+                "pipelineName", "p.pipeline_name",
+                "current", "p.current",
+                "endpoint", "p.endpoint",
+                "versionStatus", "p.version_status"
+        ));
+        columnMap.put("systemEnv", "p.system_env");
+        columnMap.put("runtimeEnv", "p.runtime_env");
+        columnMap.put("requestSchema", "p.request_schema");
+        columnMap.put("responseSchema", "p.response_schema");
+        columnMap.put("updateUser", "p.update_user");
+        columnMap.put("updateTs", "p.update_ts");
+        columnMap.put("aggregateVersion", "p.aggregate_version");
+        columnMap.put("active", "p.active");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
-                """
-                SELECT COUNT(*) OVER () AS total,
-                p.host_id, p.pipeline_id, p.platform_id, pf.platform_name, pf.platform_version,
-                p.pipeline_version, p.pipeline_name, p.current, p.endpoint, p.version_status,
-                p.system_env, p.runtime_env, p.request_schema, p.response_schema,
-                p.update_user, p.update_ts, p.aggregate_version
-                FROM pipeline_t p
-                INNER JOIN platform_t pf ON pf.platform_id = p.platform_id
-                WHERE 1=1
-                """;
+            """
+            SELECT COUNT(*) OVER () AS total,
+            p.host_id, p.pipeline_id, p.platform_id, pf.platform_name, pf.platform_version,
+            p.pipeline_version, p.pipeline_name, p.current, p.endpoint, p.version_status,
+            p.system_env, p.runtime_env, p.request_schema, p.response_schema,
+            p.update_user, p.update_ts, p.aggregate_version, p.active
+            FROM pipeline_t p
+            INNER JOIN platform_t pf ON pf.platform_id = p.platform_id
+            WHERE 1=1
+            """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
-        StringBuilder whereClause = new StringBuilder();
-        addCondition(whereClause, parameters, "p.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "p.pipeline_id", pipelineId != null ? UUID.fromString(pipelineId) : null);
-        addCondition(whereClause, parameters, "p.platform_id", platformId != null ? UUID.fromString(platformId) : null);
-        addCondition(whereClause, parameters, "pf.platform_name", platformName);
-        addCondition(whereClause, parameters, "pf.platform_version", platformVersion);
-        addCondition(whereClause, parameters, "p.pipeline_version", pipelineVersion);
-        addCondition(whereClause, parameters, "p.pipeline_name", pipelineName);
-        addCondition(whereClause, parameters, "p.current", current);
-        addCondition(whereClause, parameters, "p.endpoint", endpoint);
-        addCondition(whereClause, parameters, "p.version_status", versionStatus);
-        addCondition(whereClause, parameters, "p.system_env", systemEnv);
-        addCondition(whereClause, parameters, "p.runtime_env", runtimeEnv);
-        addCondition(whereClause, parameters, "p.request_schema", requestSchema);
-        addCondition(whereClause, parameters, "p.response_schema", responseSchema);
 
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append(" AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY p.pipeline_id\n" +
-                "LIMIT ? OFFSET ?");
-
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "p", "pf");
+        String[] searchColumns = {"pf.platform_name", "p.pipeline_name", "p.endpoint"};
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("p.host_id", "p.pipeline_id", "p.platform_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("p.pipeline_id", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
         parameters.add(limit);
         parameters.add(offset);
-
-        String sql = sqlBuilder.toString();
-        // if(logger.isTraceEnabled()) logger.trace("sql = {}", sql);
         int total = 0;
         List<Map<String, Object>> pipelines = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -4020,9 +5662,9 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("requestSchema", resultSet.getString("request_schema"));
                     map.put("responseSchema", resultSet.getString("response_schema"));
                     map.put("updateUser", resultSet.getString("update_user"));
-                    // handling date properly
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     pipelines.add(map);
                 }
             }
@@ -4043,9 +5685,88 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
+    public Result<String> getPipelineById(String hostId, String pipelineId) {
+        final String sql =
+                """
+                SELECT host_id, pipeline_id, platform_id, pipeline_version, pipeline_name, current,
+                endpoint, version_status, system_env, runtime_env, request_schema, response_schema,
+                aggregate_version, active, update_user, update_ts
+                FROM pipeline_t
+                WHERE host_id = ? AND pipeline_id = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + pipelineId;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(pipelineId));
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("pipelineId", resultSet.getObject("pipeline_id", UUID.class));
+                    map.put("platformId", resultSet.getObject("platform_id", UUID.class));
+                    map.put("pipelineVersion", resultSet.getString("pipeline_version"));
+                    map.put("pipelineName", resultSet.getString("pipeline_name"));
+                    map.put("current", resultSet.getBoolean("current"));
+                    map.put("endpoint", resultSet.getString("endpoint"));
+                    map.put("versionStatus", resultSet.getString("version_status"));
+                    map.put("systemEnv", resultSet.getString("system_env"));
+                    map.put("runtimeEnv", resultSet.getString("runtime_env"));
+                    map.put("requestSchema", resultSet.getString("request_schema"));
+                    map.put("responseSchema", resultSet.getString("response_schema"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "pipeline", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public String getPipelineId(String hostId, String platformId, String pipelineName, String pipelineVersion) {
+        final String sql = "SELECT pipeline_id FROM pipeline_t WHERE host_id = ? AND platform_id = ? AND pipeline_name = ? AND pipeline_version = ?";
+        String pipelineId = null;
+        try (Connection connection = ds.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(platformId));
+            statement.setString(3, pipelineName);
+            statement.setString(4, pipelineVersion);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if(resultSet.next()){
+                    pipelineId = resultSet.getString(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+        }
+        return pipelineId;
+    }
+
+    @Override
     public Result<String> getPipelineLabel(String hostId) {
         Result<String> result = null;
-        String sql = "SELECT pipeline_id, pipeline_name, pipeline_version FROM pipeline_t WHERE host_id = ?";
+        String sql = "SELECT pipeline_id, pipeline_name, pipeline_version FROM pipeline_t WHERE host_id = ? AND active = TRUE";
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
@@ -4072,481 +5793,331 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         return result;
     }
 
-    @Override
-    public void createInstancePipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql =
-                """
-                INSERT INTO instance_pipeline_t(host_id, instance_id, pipeline_id, update_user, update_ts, aggregate_version)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
-        String instanceId = (String)map.get("instanceId");
-        String pipelineId = (String)map.get("pipelineId");
-        String key = String.format("hostId: %s, instanceId: %s pipelineId: %s", hostId, instanceId, pipelineId);
-        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
-
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(instanceId));
-            statement.setObject(3, UUID.fromString(pipelineId));
-            statement.setString(4, (String)event.get(Constants.USER));
-            statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(6, newAggregateVersion);
-
-            int count = statement.executeUpdate();
-            if (count == 0) {
-                throw new SQLException(String.format("Failed during createInstancePipeline for hostId %s instanceId %s pipelineId %s with aggregateVersion %d", hostId, instanceId, pipelineId, newAggregateVersion));
-            }
-        } catch (SQLException e) {
-            logger.error("SQLException during createInstancePipeline for hostId {} instanceId {} pipelineId {} aggregateVersion {}: {}", hostId, instanceId, pipelineId, newAggregateVersion, e.getMessage(), e);
-            throw e;
-        } catch (Exception e) {
-            logger.error("Exception during createInstancePipeline for hostId {} instanceId {} pipelineId {} aggregateVersion {}: {}", hostId, instanceId, pipelineId, newAggregateVersion, e.getMessage(), e);
-            throw e;
-        }
-    }
-
-    private boolean queryInstancePipelineExists(Connection conn, String hostId, String instanceId, String pipelineId) throws SQLException {
-        final String sql =
-                """
-                SELECT COUNT(*) FROM instance_pipeline_t WHERE host_id = ? AND instance_id = ? AND pipeline_id = ?
-                """;
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
-            pst.setObject(1, UUID.fromString(hostId));
-            pst.setObject(2, UUID.fromString(instanceId));
-            pst.setObject(3, UUID.fromString(pipelineId));
-            try (ResultSet rs = pst.executeQuery()) {
-                return rs.next() && rs.getInt(1) > 0;
-            }
-        }
-    }
-
-    @Override
-    public void updateInstancePipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql =
-                """
-                UPDATE instance_pipeline_t SET update_user = ?, update_ts = ?, aggregate_version = ?
-                WHERE host_id = ? and instance_id = ? and pipeline_id = ? AND aggregate_version = ?
-                """;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
-        String instanceId = (String)map.get("instanceId");
-        String pipelineId = (String)map.get("pipelineId");
-        String key = String.format("hostId: %s, instanceId: %s pipelineId: %s", hostId, instanceId, pipelineId);
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
-        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
-
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setString(1,(String) event.get(Constants.USER));
-            statement.setObject(2, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(3, newAggregateVersion);
-            statement.setObject(4, UUID.fromString(hostId));
-            statement.setObject(5, UUID.fromString(instanceId));
-            statement.setObject(6, UUID.fromString(pipelineId));
-            statement.setLong(7, oldAggregateVersion);
-
-            int count = statement.executeUpdate();
-            if (count == 0) {
-                if (queryInstancePipelineExists(conn, hostId, instanceId, pipelineId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during updateInstancePipeline for hostId" + hostId + " instanceId " + instanceId + " pipelineId " + pipelineId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
-                } else {
-                    throw new SQLException("No record found during updateInstancePipeline for hostId " + hostId + " instanceId " + instanceId + " pipelineId " + pipelineId + ".");
-                }
-            }
-        } catch (SQLException e) {
-            logger.error("SQLException during updateInstancePipeline for hostId {} instanceId {} pipelineId {} (old: {}) -> (new: {}): {}", hostId, instanceId, pipelineId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
-        } catch (Exception e) {
-            logger.error("Exception during updateInstancePipeline for hostId {} instanceId {} pipelineId {} (old: {}) -> (new: {}): {}", hostId, instanceId, pipelineId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
-        }
-    }
-
-    @Override
-    public void deleteInstancePipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM instance_pipeline_t WHERE host_id = ? AND instance_id = ? AND pipeline_id = ? AND aggregate_version = ?";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
-        String instanceId = (String)map.get("instanceId");
-        String pipelineId = (String)map.get("pipelineId");
-        String key = String.format("hostId: %s, instanceId: %s pipelineId: %s", hostId, instanceId, pipelineId);
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
-
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(instanceId));
-            statement.setObject(3, UUID.fromString(pipelineId));
-            statement.setLong(4, oldAggregateVersion);
-
-            int count = statement.executeUpdate();
-            if (count == 0) {
-                if (queryInstancePipelineExists(conn, hostId, instanceId, pipelineId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteInstancePipeline for hostId " + hostId + " instanceId " + instanceId + " pipelineId " + pipelineId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
-                } else {
-                    throw new SQLException("No record found during deleteInstancePipeline for hostId " + hostId + " instanceId" + instanceId + " pipelineId " + pipelineId + ". It might have been already deleted.");
-                }
-            }
-        } catch (SQLException e) {
-            logger.error("SQLException during deleteInstancePipeline for hostId {} instanceId {} pipelineId {} aggregateVersion {}: {}", hostId, instanceId, pipelineId, oldAggregateVersion, e.getMessage(), e);
-            throw e;
-        } catch (Exception e) {
-            logger.error("Exception during deleteInstancePipeline for hostId {} instanceId {} pipelineId {} aggregateVersion {}: {}", hostId, instanceId, pipelineId, oldAggregateVersion, e.getMessage(), e);
-            throw e;
-        }
-    }
-
-    @Override
-    public Result<String> getInstancePipeline(int offset, int limit, String hostId, String instanceId, String instanceName,
-                                              String productId, String productVersion, String pipelineId, String platformName,
-                                              String platformVersion, String pipelineName, String pipelineVersion) {
-        Result<String> result = null;
-        String s =
-                """
-                        SELECT ip.host_id, ip.instance_id, i.instance_name, pv.product_id,
-                        pv.product_version, ip.pipeline_id, pf.platform_name, pf.platform_version,
-                        p.pipeline_name, p.pipeline_version, ip.update_user, ip.update_ts, ip.aggregate_version,
-                        FROM instance_pipeline_t ip
-                        INNER JOIN instance_t i ON ip.instance_id = i.instance_id
-                        INNER JOIN product_version_t pv ON i.product_version_id = pv.product_version_id
-                        INNER JOIN pipeline_t p ON p.pipeline_id = ip.pipeline_id
-                        INNER JOIN platform_t pf ON p.platform_id = pf.platform_id
-                        WHERE 1=1
-                """;
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append(s).append("\n");
-
-        List<Object> parameters = new ArrayList<>();
-
-        StringBuilder whereClause = new StringBuilder();
-        addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
-        addCondition(whereClause, parameters, "instance_name", instanceName);
-        addCondition(whereClause, parameters, "product_id", productId);
-        addCondition(whereClause, parameters, "product_version", productVersion);
-        addCondition(whereClause, parameters, "pipeline_id", pipelineId != null ? UUID.fromString(pipelineId) : null);
-        addCondition(whereClause, parameters, "platform_name", platformName);
-        addCondition(whereClause, parameters, "platform_version", platformVersion);
-        addCondition(whereClause, parameters, "pipeline_name", pipelineName);
-        addCondition(whereClause, parameters, "pipeline_version", pipelineVersion);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY instance_id, pipeline_id\n" +
-                "LIMIT ? OFFSET ?");
-
-        parameters.add(limit);
-        parameters.add(offset);
-
-        String sql = sqlBuilder.toString();
-        int total = 0;
-        List<Map<String, Object>> instancePipelines = new ArrayList<>();
-
-        try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
-            boolean isFirstRow = true;
-            try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                while (resultSet.next()) {
-                    Map<String, Object> map = new HashMap<>();
-                    if (isFirstRow) {
-                        total = resultSet.getInt("total");
-                        isFirstRow = false;
-                    }
-                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
-                    map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
-                    map.put("instanceName", resultSet.getString("instance_name"));
-                    map.put("productId", resultSet.getString("product_id"));
-                    map.put("productVersion", resultSet.getString("product_version"));
-                    map.put("pipelineId", resultSet.getString("pipeline_id"));
-                    map.put("platformName", resultSet.getString("platform_name"));
-                    map.put("platformVersion", resultSet.getString("platform_version"));
-                    map.put("pipelineName", resultSet.getString("pipeline_name"));
-                    map.put("pipelineVersion", resultSet.getString("pipeline_version"));
-                    map.put("updateUser", resultSet.getString("update_user"));
-                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
-                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
-                    instancePipelines.add(map);
-                }
-            }
-            Map<String, Object> resultMap = new HashMap<>();
-            resultMap.put("total", total);
-            resultMap.put("instancePipelines", instancePipelines);
-            result = Success.of(JsonMapper.toJson(resultMap));
-        } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-        } catch (Exception e) {
-            logger.error("Exception:", e);
-            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
-        }
-        return result;
-    }
-
+    /**
+     * Creates or reactivates a platform_t record using an idempotent UPSERT pattern.
+     * This method implements:
+     * 1.  **Idempotent Create/Update (Upsert):** Uses `INSERT ... ON CONFLICT DO UPDATE`. This will
+     *     create the record on the first valid event, or update and reactivate it if a soft-deleted
+     *     record with an older version already exists.
+     * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
+     * 3.  **OCC/Monotonicity:** The `WHERE` clause in the `DO UPDATE` part ensures that an update
+     *     only occurs if the incoming event's version is strictly greater than the existing record's version.
+     *
+     * @param conn  The database connection.
+     * @param event The event map containing the data and metadata for the operation.
+     * @throws SQLException If a database access error occurs.
+     * @throws Exception    For other generic errors.
+     */
     @Override
     public void createPlatform(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql =
                 """
                 INSERT INTO platform_t(host_id, platform_id, platform_name, platform_version,
                 client_type, handler_class, client_url, credentials, proxy_url, proxy_port, console_url,
-                environment, zone, region, lob, update_user, update_ts, aggregate_version)
-                VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?,  ?, ?, ?)
+                environment, zone, region, lob, update_user, update_ts, aggregate_version, active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (host_id, platform_id) DO UPDATE
+                SET platform_name = EXCLUDED.platform_name,
+                    platform_version = EXCLUDED.platform_version,
+                    client_type = EXCLUDED.client_type,
+                    handler_class = EXCLUDED.handler_class,
+                    client_url = EXCLUDED.client_url,
+                    credentials = EXCLUDED.credentials,
+                    proxy_url = EXCLUDED.proxy_url,
+                    proxy_port = EXCLUDED.proxy_port,
+                    console_url = EXCLUDED.console_url,
+                    environment = EXCLUDED.environment,
+                    zone = EXCLUDED.zone,
+                    region = EXCLUDED.region,
+                    lob = EXCLUDED.lob,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                WHERE platform_t.aggregate_version < EXCLUDED.aggregate_version
+                AND platform_t.active = FALSE
                 """;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String platformId = (String)map.get("platformId"); // For logging/exceptions
+
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String) event.get(Constants.HOST);
+        String platformId = (String) map.get("platformId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(platformId));
-            statement.setString(3, (String)map.get("platformName"));
-            statement.setString(4, (String)map.get("platformVersion"));
-            statement.setString(5, (String)map.get("clientType"));
-            statement.setString(6, (String)map.get("handlerClass"));
-            statement.setString(7, (String)map.get("clientUrl"));
-            statement.setString(8, (String)map.get("credentials"));
+            // Set parameters for the INSERT part of the statement
+            int i = 1;
+            statement.setObject(i++, UUID.fromString(hostId));
+            statement.setObject(i++, UUID.fromString(platformId));
+            statement.setString(i++, (String) map.get("platformName"));
+            statement.setString(i++, (String) map.get("platformVersion"));
+            statement.setString(i++, (String) map.get("clientType"));
+            statement.setString(i++, (String) map.get("handlerClass"));
+            statement.setString(i++, (String) map.get("clientUrl"));
+            statement.setString(i++, (String) map.get("credentials"));
 
-            if (map.containsKey("proxyUrl")) {
-                statement.setString(9, (String) map.get("proxyUrl"));
+            // Handle optional fields
+            statement.setString(i++, (String) map.get("proxyUrl"));
+            if (map.get("proxyPort") != null) {
+                statement.setInt(i++, (Integer) map.get("proxyPort"));
             } else {
-                statement.setNull(9, Types.VARCHAR);
+                statement.setNull(i++, Types.INTEGER);
             }
-            if (map.containsKey("proxyPort")) {
-                statement.setInt(10, (Integer)map.get("proxyPort"));
-            } else {
-                statement.setNull(10, Types.INTEGER);
-            }
-            if (map.containsKey("consoleUrl")) {
-                statement.setString(11, (String) map.get("consoleUrl"));
-            } else {
-                statement.setNull(11, Types.VARCHAR);
-            }
-            if (map.containsKey("environment")) {
-                statement.setString(12, (String) map.get("environment"));
-            } else {
-                statement.setNull(12, Types.VARCHAR);
-            }
-            if(map.containsKey("zone")) {
-                statement.setString(13, (String) map.get("zone"));
-            } else {
-                statement.setNull(13, Types.VARCHAR);
-            }
-            if(map.containsKey("region")) {
-                statement.setString(14, (String) map.get("region"));
-            } else {
-                statement.setNull(14, Types.VARCHAR);
-            }
-            if(map.containsKey("lob")) {
-                statement.setString(15, (String) map.get("lob"));
-            } else {
-                statement.setNull(15, Types.VARCHAR);
-            }
-            statement.setString(16, (String)event.get(Constants.USER));
-            statement.setObject(17, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(18, newAggregateVersion);
+            statement.setString(i++, (String) map.get("consoleUrl"));
+            statement.setString(i++, (String) map.get("environment"));
+            statement.setString(i++, (String) map.get("zone"));
+            statement.setString(i++, (String) map.get("region"));
+            statement.setString(i++, (String) map.get("lob"));
+
+            // IDM and OCC fields
+            statement.setString(i++, (String) event.get(Constants.USER));
+            statement.setObject(i++, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            statement.setLong(i++, newAggregateVersion);
 
             int count = statement.executeUpdate();
+
             if (count == 0) {
-                throw new SQLException(String.format("Failed during createPlatform for hostId %s platformId %s with aggregateVersion %d", hostId, platformId, newAggregateVersion));
+                // A count of 0 is a valid, idempotent outcome.
+                logger.warn("Creation/Reactivation skipped for Platform with hostId {}, platformId {}. A newer or same version already exists.",
+                        hostId, platformId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during createPlatform for hostId {} platformId {} aggregateVersion {}: {}", hostId, platformId, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during createPlatform for hostId {} platformId {}: {}",
+                    hostId, platformId, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createPlatform for hostId {} platformId {} aggregateVersion {}: {}", hostId, platformId, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during createPlatform for hostId {} platformId {}: {}",
+                    hostId, platformId, e.getMessage(), e);
             throw e;
         }
     }
 
-    private boolean queryPlatformExists(Connection conn, String hostId, String platformId) throws SQLException {
-        final String sql =
-                """
-                SELECT COUNT(*) FROM platform_t WHERE host_id = ? AND platform_id = ?
-                """;
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
-            pst.setObject(1, UUID.fromString(hostId));
-            pst.setObject(2, UUID.fromString(platformId));
-            try (ResultSet rs = pst.executeQuery()) {
-                return rs.next() && rs.getInt(1) > 0;
+    @Override
+    public String getPlatformId(String hostId, String platformName, String platformVersion) {
+        final String sql = "SELECT platform_id FROM platform_t WHERE host_id = ? AND platform_name = ? AND platform_version = ?";
+        String platformId = null;
+        try (Connection connection = ds.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setString(2, platformName);
+            statement.setString(3, platformVersion);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if(resultSet.next()){
+                    platformId = resultSet.getString(1);
+                }
             }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
         }
+        return platformId;
     }
 
+    /**
+     * Updates a platform_t record using an idempotent/monotonic pattern.
+     * This method implements:
+     * 1.  **Soft Delete Principle:** An update implicitly reactivates the record by setting `active = TRUE`.
+     * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
+     * 3.  **OCC/Idempotency:** Uses `aggregate_version < ?` to ensure the operation only succeeds if it
+     *     represents a new state, preventing re-processing of old events or concurrent conflicts.
+     *
+     * @param conn  The database connection.
+     * @param event The event map containing the data and metadata for the operation.
+     * @throws SQLException If a database access error occurs.
+     * @throws Exception    For other generic errors.
+     */
     @Override
     public void updatePlatform(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // SQL statement updated to match the idempotent update pattern.
         final String sql =
                 """
-                UPDATE platform_t SET platform_name = ?, platform_version = ?,
-                client_type = ?, handler_class = ?, client_url = ?, credentials = ?, proxy_url = ?, proxy_port = ?,
-                console_url = ?, environment = ?, zone = ?, region = ?, lob = ?,
-                update_user = ?, update_ts = ?, aggregate_version = ?
-                WHERE host_id = ? and platform_id = ? AND aggregate_version = ?
+                UPDATE platform_t
+                SET platform_name = ?,
+                    platform_version = ?,
+                    client_type = ?,
+                    handler_class = ?,
+                    client_url = ?,
+                    credentials = ?,
+                    proxy_url = ?,
+                    proxy_port = ?,
+                    console_url = ?,
+                    environment = ?,
+                    zone = ?,
+                    region = ?,
+                    lob = ?,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?,
+                    active = TRUE
+                WHERE host_id = ?
+                  AND platform_id = ?
+                  AND aggregate_version < ?
                 """;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
-        String platformId = (String)map.get("platformId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String) event.get(Constants.HOST);
+        String platformId = (String) map.get("platformId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setString(1, (String)map.get("platformName"));
-            statement.setString(2, (String)map.get("platformVersion"));
-            statement.setString(3, (String)map.get("clientType"));
-            statement.setString(4, (String)map.get("handlerClass"));
-            statement.setString(5, (String)map.get("clientUrl"));
-            statement.setString(6, (String)map.get("credentials"));
-            if (map.containsKey("proxyUrl")) {
-                statement.setString(7, (String) map.get("proxyUrl"));
+            // SET clause placeholders (16)
+            int i = 1;
+            statement.setString(i++, (String) map.get("platformName"));
+            statement.setString(i++, (String) map.get("platformVersion"));
+            statement.setString(i++, (String) map.get("clientType"));
+            statement.setString(i++, (String) map.get("handlerClass"));
+            statement.setString(i++, (String) map.get("clientUrl"));
+            statement.setString(i++, (String) map.get("credentials"));
+
+            // Handle optional fields
+            statement.setString(i++, (String) map.get("proxyUrl"));
+            if (map.get("proxyPort") != null) {
+                statement.setInt(i++, (Integer) map.get("proxyPort"));
             } else {
-                statement.setNull(7, Types.VARCHAR);
+                statement.setNull(i++, Types.INTEGER);
             }
-            if (map.containsKey("proxyPort")) {
-                statement.setInt(8, (Integer) map.get("proxyPort"));
-            } else {
-                statement.setNull(8, Types.INTEGER);
-            }
-            if (map.containsKey("consoleUrl")) {
-                statement.setString(9, (String) map.get("consoleUrl"));
-            } else {
-                statement.setNull(9, Types.VARCHAR);
-            }
-            if (map.containsKey("environment")) {
-                statement.setString(10, (String) map.get("environment"));
-            } else {
-                statement.setNull(10, Types.VARCHAR);
-            }
-            if(map.containsKey("zone")) {
-                statement.setString(11, (String) map.get("zone"));
-            } else {
-                statement.setNull(11, Types.VARCHAR);
-            }
-            if(map.containsKey("region")) {
-                statement.setString(12, (String) map.get("region"));
-            } else {
-                statement.setNull(12, Types.VARCHAR);
-            }
-            if(map.containsKey("lob")) {
-                statement.setString(13, (String) map.get("lob"));
-            } else {
-                statement.setNull(13, Types.VARCHAR);
-            }
-            statement.setString(14, (String)event.get(Constants.USER));
-            statement.setObject(15, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(16, newAggregateVersion);
-            statement.setObject(17, UUID.fromString(hostId));
-            statement.setObject(18, UUID.fromString(platformId));
-            statement.setLong(19, oldAggregateVersion);
+            statement.setString(i++, (String) map.get("consoleUrl"));
+            statement.setString(i++, (String) map.get("environment"));
+            statement.setString(i++, (String) map.get("zone"));
+            statement.setString(i++, (String) map.get("region"));
+            statement.setString(i++, (String) map.get("lob"));
+
+            // IDM and OCC fields
+            statement.setString(i++, (String) event.get(Constants.USER));
+            statement.setObject(i++, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            statement.setLong(i++, newAggregateVersion);
+
+            // WHERE clause placeholders (3)
+            statement.setObject(i++, UUID.fromString(hostId));
+            statement.setObject(i++, UUID.fromString(platformId));
+            statement.setLong(i++, newAggregateVersion);
 
             int count = statement.executeUpdate();
+
             if (count == 0) {
-                if (queryPlatformExists(conn, hostId, platformId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during updatePlatform for hostId " + hostId + " platformId " + platformId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
-                } else {
-                    throw new SQLException("No record found during updatePlatform for hostId " + hostId + " platformId " + platformId + ".");
-                }
+                // If 0 rows were updated, it's a valid idempotent outcome.
+                logger.warn("Update skipped for Platform with hostId {}, platformId {}. Record not found or a newer version already exists.",
+                        hostId, platformId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during updatePlatform for hostId {} platformId {} (old: {}) -> (new: {}): {}", hostId, platformId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during updatePlatform for hostId {} platformId {}: {}",
+                    hostId, platformId, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updatePlatform for hostId {} platformId {} (old: {}) -> (new: {}): {}", hostId, platformId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during updatePlatform for hostId {} platformId {}: {}",
+                    hostId, platformId, e.getMessage(), e);
             throw e;
         }
     }
 
+    /**
+     * Performs a soft delete on a platform_t record using an idempotent/monotonic pattern.
+     * This method implements:
+     * 1.  **Soft Delete:** Sets the 'active' flag to false.
+     * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
+     * 3.  **OCC/Idempotency:** Uses `aggregate_version < ?` to ensure the operation only succeeds if it
+     *     represents a new state, preventing re-processing of old events or concurrent conflicts.
+     *
+     * @param conn  The database connection.
+     * @param event The event map containing the data and metadata for the operation.
+     * @throws SQLException If a database access error occurs.
+     * @throws Exception    For other generic errors.
+     */
     @Override
     public void deletePlatform(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM platform_t WHERE host_id = ? AND platform_id = ? AND aggregate_version = ?";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
-        String platformId = (String)map.get("platformId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        // SQL statement updated to match the idempotent soft-delete pattern.
+        final String sql =
+                """
+                UPDATE platform_t
+                SET active = FALSE,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?
+                WHERE host_id = ?
+                  AND platform_id = ?
+                  AND aggregate_version < ?
+                """;
+
+        // Extract data and metadata from the event.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String) event.get(Constants.HOST);
+        String platformId = (String) map.get("platformId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(platformId));
+            // SET clause placeholders (3)
+            int i = 1;
+            // 1: update_user from event metadata
+            statement.setString(i++, (String) event.get(Constants.USER));
+            // 2: update_ts from event metadata
+            statement.setObject(i++, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            // 3: aggregate_version (the new version)
+            statement.setLong(i++, newAggregateVersion);
+
+            // WHERE clause placeholders (3)
+            // 4: host_id from primary key
+            statement.setObject(i++, UUID.fromString(hostId));
+            // 5: platform_id from primary key
+            statement.setObject(i++, UUID.fromString(platformId));
+            // 6: aggregate_version < ? for OCC/Idempotency check
+            statement.setLong(i++, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryPlatformExists(conn, hostId, platformId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during deletePlatform for hostId " + hostId + " platformId " + platformId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
-                } else {
-                    throw new SQLException("No record found during deletePlatform for hostId " + hostId +  " platformId " + platformId + ". It might have been already deleted.");
-                }
+                // If 0 rows were updated, we log a warning and continue.
+                // This indicates the record was already deleted, never existed, or a newer version is already in the database.
+                // This is the expected behavior for an idempotent operation.
+                logger.warn("Soft delete skipped for Platform with hostId {}, platformId {}, newAggregateVersion {}. Record not found or a newer version already exists.",
+                        hostId, platformId, newAggregateVersion);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during deletePlatform for hostId {} platformId {} aggregateVersion {}: {}", hostId, platformId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during soft delete of Platform for hostId {} platformId {}: {}",
+                    hostId, platformId, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deletePlatform for hostId {} platformId {} aggregateVersion {}: {}", hostId, platformId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during soft delete of Platform for hostId {} platformId {}: {}",
+                    hostId, platformId, e.getMessage(), e);
             throw e;
         }
     }
 
+
     @Override
-    public Result<String> getPlatform(int offset, int limit, String hostId, String platformId, String platformName, String platformVersion,
-                                      String clientType, String clientUrl, String credentials, String proxyUrl, Integer proxyPort,
-                                      String handlerClass, String consoleUrl, String environment, String zone, String region, String lob) {
+    public Result<String> getPlatform(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
-                """
-                SELECT COUNT(*) OVER () AS total,
-                host_id, platform_id, platform_name, platform_version, client_type, client_url,
-                credentials, proxy_url, proxy_port, handler_class, console_url, environment,
-                zone, region, lob, update_user, update_ts, aggregate_version
-                FROM platform_t
-                WHERE 1=1
-                """;
+            """
+            SELECT COUNT(*) OVER () AS total,
+            host_id, platform_id, platform_name, platform_version, client_type, client_url,
+            credentials, proxy_url, proxy_port, handler_class, console_url, environment,
+            zone, region, lob, update_user, update_ts, aggregate_version, active
+            FROM platform_t
+            WHERE host_id = ?
+            """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
 
-        StringBuilder whereClause = new StringBuilder();
-        addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "platform_id", platformId != null ? UUID.fromString(platformId) : null);
-        addCondition(whereClause, parameters, "platform_name", platformName);
-        addCondition(whereClause, parameters, "platform_version", platformVersion);
-        addCondition(whereClause, parameters, "client_type", clientType);
-        addCondition(whereClause, parameters, "handler_class", handlerClass);
-        addCondition(whereClause, parameters, "client_url", clientUrl);
-        addCondition(whereClause, parameters, "credentials", credentials);
-        addCondition(whereClause, parameters, "proxy_url", proxyUrl);
-        addCondition(whereClause, parameters, "proxy_port", proxyPort);
-        addCondition(whereClause, parameters, "console_url", consoleUrl);
-        addCondition(whereClause, parameters, "environment", environment);
-        addCondition(whereClause, parameters, "zone", zone);
-        addCondition(whereClause, parameters, "region", region);
-        addCondition(whereClause, parameters, "lob", lob);
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY platform_id\n" +
-                "LIMIT ? OFFSET ?");
-
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active);
+        String[] searchColumns = {"platform_name"};
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("host_id", "platform_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("platform_id", sorting, null) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
-
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> platforms = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -4573,7 +6144,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
-
+                    map.put("active", resultSet.getBoolean("active"));
                     platforms.add(map);
                 }
             }
@@ -4594,9 +6165,68 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
+    public Result<String> getPlatformById(String hostId, String platformId) {
+        final String sql =
+                """
+                SELECT host_id, platform_id, platform_name, platform_version, client_type,
+                client_url, credentials, proxy_url, proxy_port, handler_class, console_url,
+                environment, zone, region, lob, aggregate_version, active, update_user, update_ts
+                FROM platform_t
+                WHERE host_id = ? AND platform_id = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + platformId;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(platformId));
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("platformId", resultSet.getObject("platform_id", UUID.class));
+                    map.put("platformName", resultSet.getString("platform_name"));
+                    map.put("platformVersion", resultSet.getString("platform_version"));
+                    map.put("clientType", resultSet.getString("client_type"));
+                    map.put("clientUrl", resultSet.getString("client_url"));
+                    map.put("credentials", resultSet.getString("credentials"));
+                    map.put("proxyUrl", resultSet.getString("proxy_url"));
+                    map.put("proxyPort", resultSet.getObject("proxy_port") != null ? resultSet.getInt("proxy_port") : null);
+                    map.put("handlerClass", resultSet.getString("handler_class"));
+                    map.put("consoleUrl", resultSet.getString("console_url"));
+                    map.put("environment", resultSet.getString("environment"));
+                    map.put("zone", resultSet.getString("zone"));
+                    map.put("region", resultSet.getString("region"));
+                    map.put("lob", resultSet.getString("lob"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "platform", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
     public Result<String> getPlatformLabel(String hostId) {
         Result<String> result = null;
-        String sql = "SELECT platform_id, platform_name FROM platform_t WHERE host_id = ?";
+        String sql = "SELECT platform_id, platform_name FROM platform_t WHERE host_id = ? AND active = TRUE";
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
@@ -4620,261 +6250,305 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         return result;
     }
 
+    /**
+     * Creates or reactivates a deployment_instance_t record using an idempotent UPSERT pattern.
+     * This method implements:
+     * 1.  **Idempotent Create/Update (Upsert):** Uses `INSERT ... ON CONFLICT DO UPDATE`. This will
+     *     create the record on the first valid event, or update and reactivate it if a soft-deleted
+     *     record with an older version already exists.
+     * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
+     * 3.  **OCC/Monotonicity:** The `WHERE` clause in the `DO UPDATE` part ensures that an update
+     *     only occurs if the incoming event's version is strictly greater than the existing record's version.
+     *
+     * @param conn  The database connection.
+     * @param event The event map containing the data and metadata for the operation.
+     * @throws SQLException If a database access error occurs.
+     * @throws Exception    For other generic errors.
+     */
     @Override
     public void createDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        // deployStatus is not set here but use the default value.
         final String sql =
                 """
-                INSERT INTO deployment_instance_t(host_id, instance_id, deployment_instance_id,
+                INSERT INTO deployment_instance_t(host_id, deployment_instance_id, instance_id,
                 service_id, ip_address, port_number, system_env, runtime_env, pipeline_id,
-                update_user, update_ts, aggregate_version)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                update_user, update_ts, aggregate_version, active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (host_id, deployment_instance_id) DO UPDATE
+                SET instance_id = EXCLUDED.instance_id,
+                    service_id = EXCLUDED.service_id,
+                    ip_address = EXCLUDED.ip_address,
+                    port_number = EXCLUDED.port_number,
+                    system_env = EXCLUDED.system_env,
+                    runtime_env = EXCLUDED.runtime_env,
+                    pipeline_id = EXCLUDED.pipeline_id,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                WHERE deployment_instance_t.aggregate_version < EXCLUDED.aggregate_version
+                AND deployment_instance_t.active = FALSE
                 """;
-        Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String deploymentInstanceId = (String)map.get("deploymentInstanceId"); // For logging/exceptions
-        String instanceId = (String)map.get("instanceId"); // For logging/exceptions
+
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String) event.get(Constants.HOST);
+        String deploymentInstanceId = (String) map.get("deploymentInstanceId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(instanceId));
-            statement.setObject(3, UUID.fromString(deploymentInstanceId));
-            statement.setString(4, (String) map.get("serviceId"));
-            String ipAddress = (String) map.get("ipAddress");
-            if(ipAddress != null && !ipAddress.isEmpty()) {
-                statement.setString(5, ipAddress);
+            // Set parameters for the INSERT part of the statement
+            int i = 1;
+            statement.setObject(i++, UUID.fromString(hostId));
+            statement.setObject(i++, UUID.fromString(deploymentInstanceId));
+            statement.setObject(i++, UUID.fromString((String) map.get("instanceId")));
+            statement.setString(i++, (String) map.get("serviceId"));
+            statement.setString(i++, (String) map.get("ipAddress"));
+
+            if (map.get("portNumber") != null) {
+                statement.setInt(i++, (Integer) map.get("portNumber"));
             } else {
-                statement.setNull(5, Types.VARCHAR); // Set to SQL NULL if null or empty
+                statement.setNull(i++, Types.INTEGER);
             }
 
-            // Handle nullable integer for port_number
-            Object portNumberObj = map.get("portNumber");
-            if (portNumberObj != null) {
-                if (portNumberObj instanceof String && !((String) portNumberObj).isEmpty()) {
-                    statement.setInt(6, Integer.parseInt((String) portNumberObj));
-                } else if (portNumberObj instanceof Number) {
-                    statement.setInt(6, ((Number) portNumberObj).intValue());
-                } else {
-                    statement.setNull(6, java.sql.Types.INTEGER); // Set to SQL NULL if not a valid number or empty string
-                }
-            } else {
-                statement.setNull(6, java.sql.Types.INTEGER); // Set to SQL NULL if null
-            }
+            statement.setString(i++, (String) map.get("systemEnv"));
+            statement.setString(i++, (String) map.get("runtimeEnv"));
+            statement.setObject(i++, UUID.fromString((String) map.get("pipelineId")));
 
-            statement.setString(7, (String) map.get("systemEnv"));
-            statement.setString(8, (String) map.get("runtimeEnv"));
-            statement.setObject(9, UUID.fromString((String) map.get("pipelineId")));
-            statement.setString(10, (String) event.get(Constants.USER));
-            statement.setObject(11, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-            statement.setLong(12, newAggregateVersion);
+            // IDM and OCC fields
+            statement.setString(i++, (String) event.get(Constants.USER));
+            statement.setObject(i++, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            statement.setLong(i++, newAggregateVersion);
 
             int count = statement.executeUpdate();
+
             if (count == 0) {
-                throw new SQLException(String.format("Failed during for hostId %s deploymentInstanceId %s with aggregateVersion %d", hostId, deploymentInstanceId, newAggregateVersion));
+                // A count of 0 is a valid, idempotent outcome.
+                logger.warn("Creation/Reactivation skipped for DeploymentInstance with hostId {}, deploymentInstanceId {}. A newer or same version already exists.",
+                        hostId, deploymentInstanceId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during createDeploymentInstance for hostId {} deploymentInstanceId {} aggregateVersion {}: {}", hostId, deploymentInstanceId, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during createDeploymentInstance for hostId {} deploymentInstanceId {}: {}",
+                    hostId, deploymentInstanceId, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createDeploymentInstance for hostId {} deploymentInstanceId {} aggregateVersion {}: {}", hostId, deploymentInstanceId, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during createDeploymentInstance for hostId {} deploymentInstanceId {}: {}",
+                    hostId, deploymentInstanceId, e.getMessage(), e);
             throw e;
         }
     }
 
-    private boolean queryDeploymentInstanceExists(Connection conn, String hostId, String deploymentInstanceId) throws SQLException {
-        final String sql =
-                """
-                SELECT COUNT(*) FROM deployment_instance_t WHERE host_id = ? AND deployment_instance_id = ?
-                """;
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
-            pst.setObject(1, UUID.fromString(hostId));
-            pst.setObject(2, UUID.fromString(deploymentInstanceId));
-            try (ResultSet rs = pst.executeQuery()) {
-                return rs.next() && rs.getInt(1) > 0;
-            }
-        }
-    }
-
+    /**
+     * Updates a deployment_instance_t record using an idempotent/monotonic pattern.
+     * This method implements:
+     * 1.  **Soft Delete Principle:** An update implicitly reactivates the record by setting `active = TRUE`.
+     * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
+     * 3.  **OCC/Idempotency:** Uses `aggregate_version < ?` to ensure the operation only succeeds if it
+     *     represents a new state, preventing re-processing of old events or concurrent conflicts.
+     *
+     * @param conn  The database connection.
+     * @param event The event map containing the data and metadata for the operation.
+     * @throws SQLException If a database access error occurs.
+     * @throws Exception    For other generic errors.
+     */
     @Override
     public void updateDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        // instanceId is FK and deployStatus is not updated here.
+        // SQL statement updated to match the idempotent update pattern.
         final String sql =
                 """
-                UPDATE deployment_instance_t SET
-                service_id = ?,
-                ip_address = ?,
-                port_number = ?,
-                system_env = ?,
-                runtime_env = ?,
-                pipeline_id = ?,
-                update_user = ?,
-                update_ts = ?,
-                aggregate_version = ?
-                WHERE host_id = ? AND deployment_instance_id = ? AND aggregate_version = ?
+                UPDATE deployment_instance_t
+                SET service_id = ?,
+                    ip_address = ?,
+                    port_number = ?,
+                    system_env = ?,
+                    runtime_env = ?,
+                    pipeline_id = ?,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?,
+                    active = TRUE
+                WHERE host_id = ?
+                  AND deployment_instance_id = ?
+                  AND aggregate_version < ?
                 """;
 
-        Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String) event.get(Constants.HOST);
         String deploymentInstanceId = (String) map.get("deploymentInstanceId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            // Set parameters in the order they appear in the SQL SET clause, then WHERE clause
-            int paramIdx = 1;
+            // SET clause placeholders (9)
+            int i = 1;
+            statement.setString(i++, (String) map.get("serviceId"));
+            statement.setString(i++, (String) map.get("ipAddress"));
 
-            // service_id
-            statement.setString(paramIdx++, (String) map.get("serviceId"));
-
-            // ip_address (handles null if map.get("ipAddress") returns null)
-            statement.setString(paramIdx++, (String) map.get("ipAddress"));
-
-            // port_number
-            Object portNumberObj = map.get("portNumber");
-            if (portNumberObj != null) {
-                // Attempt to parse if it's a string, otherwise assume it's a number or handle appropriately
-                if (portNumberObj instanceof String && !((String) portNumberObj).isEmpty()) {
-                    statement.setInt(paramIdx++, Integer.parseInt((String) portNumberObj));
-                } else if (portNumberObj instanceof Number) {
-                    statement.setInt(paramIdx++, ((Number) portNumberObj).intValue());
-                } else { // If it's an empty string or unexpected type intended to be null for port_number
-                    statement.setNull(paramIdx++, java.sql.Types.INTEGER);
-                }
+            if (map.get("portNumber") != null) {
+                statement.setInt(i++, (Integer) map.get("portNumber"));
             } else {
-                statement.setNull(paramIdx++, java.sql.Types.INTEGER);
+                statement.setNull(i++, Types.INTEGER);
             }
 
-            // system_env
-            statement.setString(paramIdx++, (String) map.get("systemEnv"));
-            // runtime_env
-            statement.setString(paramIdx++, (String) map.get("runtimeEnv"));
-            // pipeline_id
-            statement.setObject(paramIdx++, UUID.fromString((String) map.get("pipelineId")));
+            statement.setString(i++, (String) map.get("systemEnv"));
+            statement.setString(i++, (String) map.get("runtimeEnv"));
+            statement.setObject(i++, UUID.fromString((String) map.get("pipelineId")));
 
-            // update_user
-            statement.setString(paramIdx++, (String) event.get(Constants.USER));
-            // update_ts
-            statement.setObject(paramIdx++, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-            // aggregate_version
-            statement.setLong(paramIdx++, newAggregateVersion);
+            // IDM and OCC fields
+            statement.setString(i++, (String) event.get(Constants.USER));
+            statement.setObject(i++, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            statement.setLong(i++, newAggregateVersion);
 
-            // WHERE clause parameters
-            statement.setObject(paramIdx++, UUID.fromString(hostId));
-            statement.setObject(paramIdx++, UUID.fromString(deploymentInstanceId));
-            statement.setLong(paramIdx++, oldAggregateVersion);
+            // WHERE clause placeholders (3)
+            statement.setObject(i++, UUID.fromString(hostId));
+            statement.setObject(i++, UUID.fromString(deploymentInstanceId));
+            statement.setLong(i++, newAggregateVersion);
 
             int count = statement.executeUpdate();
+
             if (count == 0) {
-                if (queryDeploymentInstanceExists(conn, hostId, deploymentInstanceId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during updateDeploymentInstance for hostId " + hostId + " deploymentInstanceId " + deploymentInstanceId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
-                } else {
-                    throw new SQLException("No record found during updateDeploymentInstance for hostId " + hostId + " deploymentInstanceId " + deploymentInstanceId + ".");
-                }
+                // If 0 rows were updated, it's a valid idempotent outcome.
+                logger.warn("Update skipped for DeploymentInstance with hostId {}, deploymentInstanceId {}. Record not found or a newer version already exists.",
+                        hostId, deploymentInstanceId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during updateDeploymentInstance for hostId {} deploymentInstanceId {} (old: {}) -> (new: {}): {}", hostId, deploymentInstanceId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during updateDeploymentInstance for hostId {} deploymentInstanceId {}: {}",
+                    hostId, deploymentInstanceId, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateDeploymentInstance for hostId {} deploymentInstanceId {} (old: {}) -> (new: {}): {}", hostId, deploymentInstanceId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during updateDeploymentInstance for hostId {} deploymentInstanceId {}: {}",
+                    hostId, deploymentInstanceId, e.getMessage(), e);
             throw e;
         }
     }
 
+
+    /**
+     * Performs a soft delete on a deployment_instance_t record using an idempotent/monotonic pattern.
+     * This method implements:
+     * 1.  **Soft Delete:** Sets the 'active' flag to false.
+     * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
+     * 3.  **OCC/Idempotency:** Uses `aggregate_version < ?` to ensure the operation only succeeds if it
+     *     represents a new state, preventing re-processing of old events or concurrent conflicts.
+     *
+     * @param conn  The database connection.
+     * @param event The event map containing the data and metadata for the operation.
+     * @throws SQLException If a database access error occurs.
+     * @throws Exception    For other generic errors.
+     */
     @Override
     public void deleteDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM deployment_instance_t WHERE host_id = ? AND deployment_instance_id = ? AND aggregate_version = ?";
-        Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
+        // SQL statement updated to match the idempotent soft-delete pattern.
+        final String sql =
+                """
+                UPDATE deployment_instance_t
+                SET active = FALSE,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?
+                WHERE host_id = ?
+                  AND deployment_instance_id = ?
+                  AND aggregate_version < ?
+                """;
+
+        // Extract data and metadata from the event.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String) event.get(Constants.HOST);
         String deploymentInstanceId = (String) map.get("deploymentInstanceId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(deploymentInstanceId));
-            statement.setLong(3, oldAggregateVersion);
+            // SET clause placeholders (3)
+            int i = 1;
+            // 1: update_user from event metadata
+            statement.setString(i++, (String) event.get(Constants.USER));
+            // 2: update_ts from event metadata
+            statement.setObject(i++, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            // 3: aggregate_version (the new version)
+            statement.setLong(i++, newAggregateVersion);
+
+            // WHERE clause placeholders (3)
+            // 4: host_id from primary key
+            statement.setObject(i++, UUID.fromString(hostId));
+            // 5: deployment_instance_id from primary key
+            statement.setObject(i++, UUID.fromString(deploymentInstanceId));
+            // 6: aggregate_version < ? for OCC/Idempotency check
+            statement.setLong(i++, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryDeploymentInstanceExists(conn, hostId, deploymentInstanceId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteDeploymentInstance for hostId " + hostId + " deploymentInstanceId " + deploymentInstanceId +  " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
-                } else {
-                    throw new SQLException("No record found during deleteDeploymentInstance for hostId " + hostId + " deploymentInstanceId " + deploymentInstanceId + ". It might have been already deleted.");
-                }
+                // If 0 rows were updated, we log a warning and continue.
+                // This is the expected behavior for an idempotent operation.
+                logger.warn("Soft delete skipped for DeploymentInstance with hostId {}, deploymentInstanceId {}, newAggregateVersion {}. Record not found or a newer version already exists.",
+                        hostId, deploymentInstanceId, newAggregateVersion);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during deleteDeploymentInstance for hostId {} deploymentInstanceId {} aggregateVersion {}: {}", hostId, deploymentInstanceId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during soft delete of DeploymentInstance for hostId {} deploymentInstanceId {}: {}",
+                    hostId, deploymentInstanceId, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteDeploymentInstance for hostId {} deploymentInstanceId {} aggregateVersion {}: {}", hostId, deploymentInstanceId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during soft delete of DeploymentInstance for hostId {} deploymentInstanceId {}: {}",
+                    hostId, deploymentInstanceId, e.getMessage(), e);
             throw e;
         }
     }
 
+
     @Override
-    public Result<String> getDeploymentInstance(int offset, int limit, String hostId, String instanceId, String instanceName, String deploymentInstanceId,
-                                                String serviceId, String ipAddress, Integer portNumber, String systemEnv, String runtimeEnv,
-                                                String pipelineId, String pipelineName, String pipelineVersion, String deployStatus) {
+    public Result<String> getDeploymentInstance(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "di.host_id",
+                "instanceId", "di.instance_id",
+                "instanceName", "i.instance_name",
+                "deploymentInstanceId", "di.deployment_instance_id",
+                "serviceId", "di.service_id",
+                "ipAddress", "di.ip_address",
+                "portNumber", "di.port_number",
+                "systemEnv", "di.system_env",
+                "runtimeEnv", "di.runtime_env",
+                "pipelineId", "di.pipeline_id"
+        ));
+        columnMap.put("pipelineName", "p.pipeline_name");
+        columnMap.put("pipelineVersion", "p.pipeline_version");
+        columnMap.put("deployStatus", "di.deploy_status");
+        columnMap.put("updateUser", "di.update_user");
+        columnMap.put("updateTs", "di.update_ts");
+        columnMap.put("aggregateVersion", "di.aggregate_version");
+        columnMap.put("active", "di.active");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
-                """
-                SELECT COUNT(*) OVER () AS total,
-                di.host_id, di.instance_id, i.instance_name, di.deployment_instance_id, di.service_id, di.ip_address,
-                di.port_number, di.system_env, di.runtime_env, di.pipeline_id, p.pipeline_name, p.pipeline_version,
-                di.deploy_status, di.update_user, di.update_ts, di.aggregate_version
-                FROM deployment_instance_t di
-                INNER JOIN instance_t i ON i.instance_id = di.instance_id
-                INNER JOIN pipeline_t p ON p.pipeline_id = di.pipeline_id
-                WHERE 1=1
-                """;
+            """
+            SELECT COUNT(*) OVER () AS total,
+            di.host_id, di.instance_id, i.instance_name, di.deployment_instance_id, di.service_id, di.ip_address,
+            di.port_number, di.system_env, di.runtime_env, di.pipeline_id, p.pipeline_name, p.pipeline_version,
+            di.deploy_status, di.update_user, di.update_ts, di.aggregate_version, di.active
+            FROM deployment_instance_t di
+            INNER JOIN instance_t i ON i.instance_id = di.instance_id
+            INNER JOIN pipeline_t p ON p.pipeline_id = di.pipeline_id
+            WHERE di.host_id = ?
+            """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
         List<Object> parameters = new ArrayList<>();
-        StringBuilder whereClause = new StringBuilder();
+        parameters.add(UUID.fromString(hostId));
 
-        // Add conditions based on input parameters
-        addCondition(whereClause, parameters, "di.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "di.instance_id", instanceId != null ? UUID.fromString(instanceId) : null);
-        addCondition(whereClause, parameters, "i.instance_name", instanceName);
-        addCondition(whereClause, parameters, "di.deployment_instance_id", deploymentInstanceId != null ? UUID.fromString(deploymentInstanceId) : null);
-        addCondition(whereClause, parameters, "di.service_id", serviceId);
-        addCondition(whereClause, parameters, "di.ip_address", ipAddress);
-        addCondition(whereClause, parameters, "di.port_number", portNumber); // Integer, addCondition should handle it or be adapted
-        addCondition(whereClause, parameters, "di.system_env", systemEnv);
-        addCondition(whereClause, parameters, "di.runtime_env", runtimeEnv);
-        addCondition(whereClause, parameters, "di.pipeline_id", pipelineId != null ? UUID.fromString(pipelineId) : null);
-        addCondition(whereClause, parameters, "p.pipeline_name", pipelineName);
-        addCondition(whereClause, parameters, "p.pipeline_version", pipelineVersion);
-        addCondition(whereClause, parameters, "di.deploy_status", deployStatus);
-
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        // It's good practice to order by a consistent key, e.g., the primary key or a creation timestamp.
-        // Using deployment_instance_id for ordering.
-        sqlBuilder.append(" ORDER BY di.host_id, di.deployment_instance_id\n") // Or just deployment_instance_id if host_id is always filtered
-                .append("LIMIT ? OFFSET ?");
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "di", "i", "p");
+        String[] searchColumns = {"i.instance_name", "p.pipeline_name"};
+        String sqlBuilder = s +  activeClause +
+                dynamicFilter(Arrays.asList("di.host_id", "di.instance_id", "di.deployment_instance_id", "di.pipeline_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("di.host_id, di.deployment_instance_id", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
         int total = 0;
-        List<Map<String, Object>> deploymentInstances = new ArrayList<>(); // Changed variable name
+        List<Map<String, Object>> deploymentInstances = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                // The template's addCondition likely handles setObject(..., null) which works for most types.
-                // For Integers specifically, setObject(i + 1, null) might not map to SQL NULL correctly for all drivers,
-                // setNull(i+1, Types.INTEGER) is safer.
-                // Given the template uses setObject for all, we'll follow that.
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -4907,7 +6581,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
-
+                    map.put("active", resultSet.getBoolean("active"));
                     deploymentInstances.add(map); // Changed variable name
                 }
             }
@@ -4924,6 +6598,82 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
         return result;
+    }
+
+    @Override
+    public Result<String> getDeploymentInstanceById(String hostId, String deploymentInstanceId) {
+        final String sql =
+                """
+                SELECT host_id, instance_id, deployment_instance_id, service_id, ip_address,
+                port_number, system_env, runtime_env, pipeline_id, deploy_status, aggregate_version,
+                active, update_user, update_ts
+                FROM deployment_instance_t
+                WHERE host_id = ? AND deployment_instance_id = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + deploymentInstanceId;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(deploymentInstanceId));
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
+                    map.put("deploymentInstanceId", resultSet.getObject("deployment_instance_id", UUID.class));
+                    map.put("serviceId", resultSet.getString("service_id"));
+                    map.put("ipAddress", resultSet.getString("ip_address"));
+                    map.put("portNumber", resultSet.getObject("port_number") != null ? resultSet.getInt("port_number") : null);
+                    map.put("systemEnv", resultSet.getString("system_env"));
+                    map.put("runtimeEnv", resultSet.getString("runtime_env"));
+                    map.put("pipelineId", resultSet.getObject("pipeline_id", UUID.class));
+                    map.put("deployStatus", resultSet.getString("deploy_status"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "deployment_instance", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public String getDeploymentInstanceId(String hostId, String instanceId, String serviceId) {
+        final String sql = "SELECT deployment_instance_id FROM deployment_instance_t WHERE host_id = ? AND instance_id = ? AND service_id = ?";
+        String deploymentInstanceId = null;
+        try (Connection connection = ds.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(instanceId));
+            statement.setString(3, serviceId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if(resultSet.next()){
+                    deploymentInstanceId = resultSet.getString(1);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+        }
+        return deploymentInstanceId;
     }
 
     @Override
@@ -4999,8 +6749,8 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     @Override
     public Result<String> getDeploymentInstanceLabel(String hostId, String instanceId) {
         Result<String> result = null;
-        String sql = instanceId == null ? "SELECT deployment_instance_id, service_id FROM deployment_instance_t WHERE host_id = ?" :
-                "SELECT deployment_instance_id, service_id FROM deployment_instance_t WHERE host_id = ? AND instance_id = ?";
+        String sql = instanceId == null ? "SELECT deployment_instance_id, service_id FROM deployment_instance_t WHERE host_id = ? AND active = TRUE" :
+                "SELECT deployment_instance_id, service_id FROM deployment_instance_t WHERE host_id = ? AND instance_id = ? AND active = TRUE";
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
@@ -5027,233 +6777,419 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         return result;
     }
 
+    /**
+     * Creates or reactivates a deployment_t record using an idempotent UPSERT pattern.
+     * This method implements:
+     * 1.  **Idempotent Create/Update (Upsert):** Uses `INSERT ... ON CONFLICT DO UPDATE`. This will
+     *     create the record on the first valid event, or update and reactivate it if a soft-deleted
+     *     record with an older version already exists.
+     * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
+     * 3.  **OCC/Monotonicity:** The `WHERE` clause in the `DO UPDATE` part ensures that an update
+     *     only occurs if the incoming event's version is strictly greater than the existing record's version.
+     *
+     * @param conn  The database connection.
+     * @param event The event map containing the data and metadata for the operation.
+     * @throws SQLException If a database access error occurs.
+     * @throws Exception    For other generic errors.
+     */
     @Override
     public void createDeployment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql =
                 """
                 INSERT INTO deployment_t(host_id, deployment_id, deployment_instance_id,
-                deployment_status, deployment_type, schedule_ts, update_user, update_ts, aggregate_version)
-                VALUES (?, ?, ?, ?, ?,  ?, ?, ?, ?)
+                deployment_status, deployment_type, schedule_ts, update_user, update_ts, aggregate_version, active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (host_id, deployment_id) DO UPDATE
+                SET deployment_instance_id = EXCLUDED.deployment_instance_id,
+                    deployment_status = EXCLUDED.deployment_status,
+                    deployment_type = EXCLUDED.deployment_type,
+                    schedule_ts = EXCLUDED.schedule_ts,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                WHERE deployment_t.aggregate_version < EXCLUDED.aggregate_version
+                AND deployment_t.active = FALSE
                 """;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
-        String deploymentId = (String)map.get("deploymentId");
+
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String) event.get(Constants.HOST);
+        String deploymentId = (String) map.get("deploymentId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(deploymentId));
-            statement.setObject(3, UUID.fromString((String)map.get("deploymentInstanceId")));
-            statement.setString(4, (String)map.get("deploymentStatus"));
-            statement.setString(5, (String)map.get("deploymentType"));
-            statement.setObject(6, map.get("scheduleTs") != null ? OffsetDateTime.parse((String)map.get("scheduleTs")) : OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setString(7, (String)event.get(Constants.USER));
-            statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(9, SqlUtil.getNewAggregateVersion(event));
+            // Set parameters for the INSERT part of the statement
+            int i = 1;
+            statement.setObject(i++, UUID.fromString(hostId));
+            statement.setObject(i++, UUID.fromString(deploymentId));
+            statement.setObject(i++, UUID.fromString((String) map.get("deploymentInstanceId")));
+            statement.setString(i++, (String) map.get("deploymentStatus"));
+            statement.setString(i++, (String) map.get("deploymentType"));
+
+            // Use schedule_ts from data if present, otherwise default to event time
+            OffsetDateTime scheduleTs = map.get("scheduleTs") != null
+                    ? OffsetDateTime.parse((String) map.get("scheduleTs"))
+                    : OffsetDateTime.parse((String) event.get(CloudEventV1.TIME));
+            statement.setObject(i++, scheduleTs);
+
+            // IDM and OCC fields
+            statement.setString(i++, (String) event.get(Constants.USER));
+            statement.setObject(i++, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            statement.setLong(i++, newAggregateVersion);
 
             int count = statement.executeUpdate();
+
             if (count == 0) {
-                throw new SQLException(String.format("Failed during createDeployment for hostId %s deploymentId %s with aggregateVersion %d", hostId, deploymentId, newAggregateVersion));
+                // A count of 0 is a valid, idempotent outcome.
+                logger.warn("Creation/Reactivation skipped for Deployment with hostId {}, deploymentId {}. A newer or same version already exists.",
+                        hostId, deploymentId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during createDeployment for hostId {} deploymentId {} aggregateVersion {}: {}", hostId, deploymentId, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during createDeployment for hostId {} deploymentId {}: {}",
+                    hostId, deploymentId, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during createDeployment for hostId {} deploymentId {} aggregateVersion {}: {}", hostId, deploymentId, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during createDeployment for hostId {} deploymentId {}: {}",
+                    hostId, deploymentId, e.getMessage(), e);
             throw e;
         }
     }
 
-    private boolean queryDeploymentExists(Connection conn, String hostId, String deploymentId) throws SQLException {
-        final String sql =
-                """
-                SELECT COUNT(*) FROM deployment_t WHERE host_id = ? AND deployment_id = ?
-                """;
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
-            pst.setObject(1, UUID.fromString(hostId));
-            pst.setObject(2, UUID.fromString(deploymentId));
-            try (ResultSet rs = pst.executeQuery()) {
-                return rs.next() && rs.getInt(1) > 0;
-            }
-        }
-    }
-
+    /**
+     * Updates a deployment_t record using an idempotent/monotonic pattern.
+     * This method implements:
+     * 1.  **Soft Delete Principle:** An update implicitly reactivates the record by setting `active = TRUE`.
+     * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
+     * 3.  **OCC/Idempotency:** Uses `aggregate_version < ?` to ensure the operation only succeeds if it
+     *     represents a new state, preventing re-processing of old events or concurrent conflicts.
+     *
+     * @param conn  The database connection.
+     * @param event The event map containing the data and metadata for the operation.
+     * @throws SQLException If a database access error occurs.
+     * @throws Exception    For other generic errors.
+     */
     @Override
     public void updateDeployment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "UPDATE deployment_t SET deployment_status = ?, deployment_type = ?, " +
-                "schedule_ts = ?, update_user = ?, update_ts = ?, aggregate_version =? " +
-                "WHERE host_id = ? and deployment_id = ? AND aggregate_version = ?";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST);
-        String deploymentId = (String)map.get("deploymentId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        // SQL statement updated to match the idempotent update pattern.
+        final String sql =
+                """
+                UPDATE deployment_t
+                SET deployment_status = ?,
+                    deployment_type = ?,
+                    schedule_ts = ?,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?,
+                    active = TRUE
+                WHERE host_id = ?
+                  AND deployment_id = ?
+                  AND aggregate_version < ?
+                """;
+
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String) event.get(Constants.HOST);
+        String deploymentId = (String) map.get("deploymentId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setString(1, (String)map.get("deploymentStatus"));
-            statement.setString(2, (String)map.get("deploymentType"));
-            statement.setObject(3, map.get("scheduleTs") != null ? OffsetDateTime.parse((String)map.get("scheduleTs")) : OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setString(4, (String)event.get(Constants.USER));
-            statement.setObject(5, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(6, newAggregateVersion);
-            statement.setObject(7, UUID.fromString(hostId));
-            statement.setObject(8, UUID.fromString(deploymentId));
-            statement.setLong(9, oldAggregateVersion);
+            // SET clause placeholders (6)
+            int i = 1;
+            statement.setString(i++, (String) map.get("deploymentStatus"));
+            statement.setString(i++, (String) map.get("deploymentType"));
+
+            // Use schedule_ts from data if present, otherwise default to event time
+            OffsetDateTime scheduleTs = map.get("scheduleTs") != null
+                    ? OffsetDateTime.parse((String) map.get("scheduleTs"))
+                    : OffsetDateTime.parse((String) event.get(CloudEventV1.TIME));
+            statement.setObject(i++, scheduleTs);
+
+            // IDM and OCC fields
+            statement.setString(i++, (String) event.get(Constants.USER));
+            statement.setObject(i++, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            statement.setLong(i++, newAggregateVersion);
+
+            // WHERE clause placeholders (3)
+            statement.setObject(i++, UUID.fromString(hostId));
+            statement.setObject(i++, UUID.fromString(deploymentId));
+            statement.setLong(i++, newAggregateVersion);
+
             int count = statement.executeUpdate();
+
             if (count == 0) {
-                if (queryDeploymentExists(conn, hostId, deploymentId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during updateDeployment for hostId " + hostId + " deploymentId " + deploymentId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
-                } else {
-                    throw new SQLException("No record found during updateDeployment for hostId " + hostId + " deploymentId " + deploymentId + ".");
-                }
+                // If 0 rows were updated, it's a valid idempotent outcome.
+                logger.warn("Update skipped for Deployment with hostId {}, deploymentId {}. Record not found or a newer version already exists.",
+                        hostId, deploymentId);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during updateDeployment for hostId {} deploymentId {} (old: {}) -> (new: {}): {}", hostId, deploymentId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during updateDeployment for hostId {} deploymentId {}: {}",
+                    hostId, deploymentId, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during updateDeployment for hostId {} deploymentId {} (old: {}) -> (new: {}): {}", hostId, deploymentId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during updateDeployment for hostId {} deploymentId {}: {}",
+                    hostId, deploymentId, e.getMessage(), e);
             throw e;
         }
     }
 
+
+    /**
+     * Updates the platform_job_id of a deployment_t record using an idempotent/monotonic pattern.
+     * This method implements:
+     * 1.  **Soft Delete Principle:** An update implicitly reactivates the record by setting `active = TRUE`.
+     * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
+     * 3.  **OCC/Idempotency:** Uses `aggregate_version < ?` to ensure the operation only succeeds if it
+     *     represents a new state, preventing re-processing of old events or concurrent conflicts.
+     *
+     * @param conn  The database connection.
+     * @param event The event map containing the data and metadata for the operation.
+     * @throws SQLException If a database access error occurs.
+     * @throws Exception    For other generic errors.
+     */
     @Override
     public void updateDeploymentJobId(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "UPDATE deployment_t SET platform_job_id = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? and deployment_id = ?";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String deploymentId = (String)map.get("deploymentId"); // For logging/exceptions
-
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setString(1, (String)map.get("platformJobId"));
-            statement.setString(2, (String)event.get(Constants.USER));
-            statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setObject(4, UUID.fromString(hostId));
-            statement.setObject(5, UUID.fromString(deploymentId));
-            int count = statement.executeUpdate();
-            if (count == 0) {
-                throw new SQLException("Failed to update the platform job id with deploymentId " + deploymentId);
-            }
-            notificationService.insertNotification(event, true, null);
-        } catch (SQLException e) {
-            logger.error("SQLException during updateDeploymentJobId for deploymentId {}: {}", deploymentId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
-        } catch (Exception e) {
-            logger.error("Exception during updateDeploymentJobId for deploymentId {}: {}", deploymentId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
-        }
-    }
-
-    @Override
-    public void updateDeploymentStatus(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "UPDATE deployment_t SET deployment_status = ?, update_user = ?, update_ts = ? " +
-                "WHERE host_id = ? and deployment_id = ?";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String deploymentId = (String)map.get("deploymentId"); // For logging/exceptions
-
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setString(1, (String)map.get("deploymentStatus"));
-            statement.setString(2, (String)event.get(Constants.USER));
-            statement.setObject(3, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setObject(4, UUID.fromString(hostId));
-            statement.setObject(5, UUID.fromString(deploymentId));
-            int count = statement.executeUpdate();
-            if (count == 0) {
-                throw new SQLException("Failed to update the deployment status with deploymentId " + deploymentId);
-            }
-            notificationService.insertNotification(event, true, null);
-        } catch (SQLException e) {
-            logger.error("SQLException during updateDeploymentStatus for deploymentId {}: {}", deploymentId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw SQLException
-        } catch (Exception e) {
-            logger.error("Exception during updateDeploymentStatus for deploymentId {}: {}", deploymentId, e.getMessage(), e);
-            notificationService.insertNotification(event, false, e.getMessage());
-            throw e; // Re-throw generic Exception
-        }
-    }
-
-    @Override
-    public void deleteDeployment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM deployment_t WHERE host_id = ? AND deployment_id = ? AND aggregate_version = ?";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String hostId = (String)event.get(Constants.HOST); // For logging/exceptions
-        String deploymentId = (String)map.get("deploymentId"); // For logging/exceptions
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
-
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(deploymentId));
-
-            int count = statement.executeUpdate();
-            if (count == 0) {
-                if (queryDeploymentExists(conn, hostId, deploymentId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteDeployment for hostId " + hostId + " deploymentId " + deploymentId +  " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
-                } else {
-                    throw new SQLException("No record found during deleteDeployment for hostId " + hostId + " deploymentId " + deploymentId + ". It might have been already deleted.");
-                }
-            }
-        } catch (SQLException e) {
-            logger.error("SQLException during deleteDeployment for hostId {} deploymentId {} aggregateVersion {}: {}", hostId, deploymentId, oldAggregateVersion, e.getMessage(), e);
-            throw e;
-        } catch (Exception e) {
-            logger.error("Exception during deleteDeployment for hostId {} deploymentId {} aggregateVersion {}: {}", hostId, deploymentId, oldAggregateVersion, e.getMessage(), e);
-            throw e;
-        }
-    }
-
-    @Override
-    public Result<String> getDeployment(int offset, int limit, String hostId, String deploymentId,
-                                        String deploymentInstanceId, String serviceId, String deploymentStatus,
-                                        String deploymentType, String platformJobId) {
-        Result<String> result = null;
-        String s =
+        // SQL statement updated to match the idempotent update pattern.
+        final String sql =
                 """
-                SELECT COUNT(*) OVER () AS total,
-                d.host_id, d.deployment_id, d.deployment_instance_id, di.service_id, d.deployment_status,
-                d.deployment_type, d.schedule_ts, d.platform_job_id, d.update_user, d.update_ts, d.aggregate_version
-                FROM deployment_t d
-                INNER JOIN deployment_instance_t di ON di.deployment_instance_id = d.deployment_instance_id
-                WHERE 1=1
+                UPDATE deployment_t
+                SET platform_job_id = ?,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?,
+                    active = TRUE
+                WHERE host_id = ?
+                  AND deployment_id = ?
+                  AND aggregate_version < ?
                 """;
 
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String) event.get(Constants.HOST);
+        String deploymentId = (String) map.get("deploymentId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
-        List<Object> parameters = new ArrayList<>();
-        StringBuilder whereClause = new StringBuilder();
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            // SET clause placeholders (4)
+            int i = 1;
+            statement.setString(i++, (String) map.get("platformJobId"));
 
-        addCondition(whereClause, parameters, "d.host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "d.deployment_id", deploymentId != null ? UUID.fromString(deploymentId) : null);
-        addCondition(whereClause, parameters, "d.deployment_instance_id", deploymentInstanceId != null ? UUID.fromString(deploymentInstanceId) : null);
-        addCondition(whereClause, parameters, "di.service_id", serviceId);
-        addCondition(whereClause, parameters, "d.deployment_status", deploymentStatus);
-        addCondition(whereClause, parameters, "d.deployment_type", deploymentType);
-        addCondition(whereClause, parameters, "d.platform_job_id", platformJobId);
+            // IDM and OCC fields
+            statement.setString(i++, (String) event.get(Constants.USER));
+            statement.setObject(i++, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            statement.setLong(i++, newAggregateVersion);
 
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
+            // WHERE clause placeholders (3)
+            statement.setObject(i++, UUID.fromString(hostId));
+            statement.setObject(i++, UUID.fromString(deploymentId));
+            statement.setLong(i++, newAggregateVersion);
+
+            int count = statement.executeUpdate();
+
+            if (count == 0) {
+                // If 0 rows were updated, it's a valid idempotent outcome.
+                logger.warn("Update of platformJobId skipped for Deployment with hostId {}, deploymentId {}. Record not found or a newer version already exists.",
+                        hostId, deploymentId);
+                // We might not want to send a success notification if nothing happened.
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during updateDeploymentJobId for hostId {} deploymentId {}: {}",
+                    hostId, deploymentId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updateDeploymentJobId for hostId {} deploymentId {}: {}",
+                    hostId, deploymentId, e.getMessage(), e);
+            throw e;
         }
+    }
 
-        sqlBuilder.append(" ORDER BY d.deployment_id\n" +
-                "LIMIT ? OFFSET ?");
+
+    /**
+     * Updates the deployment_status of a deployment_t record using an idempotent/monotonic pattern.
+     * This method implements:
+     * 1.  **Soft Delete Principle:** An update implicitly reactivates the record by setting `active = TRUE`.
+     * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
+     * 3.  **OCC/Idempotency:** Uses `aggregate_version < ?` to ensure the operation only succeeds if it
+     *     represents a new state, preventing re-processing of old events or concurrent conflicts.
+     *
+     * @param conn  The database connection.
+     * @param event The event map containing the data and metadata for the operation.
+     * @throws SQLException If a database access error occurs.
+     * @throws Exception    For other generic errors.
+     */
+    @Override
+    public void updateDeploymentStatus(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // SQL statement updated to match the idempotent update pattern.
+        final String sql =
+                """
+                UPDATE deployment_t
+                SET deployment_status = ?,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?,
+                    active = TRUE
+                WHERE host_id = ?
+                  AND deployment_id = ?
+                  AND aggregate_version < ?
+                """;
+
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String) event.get(Constants.HOST);
+        String deploymentId = (String) map.get("deploymentId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            // SET clause placeholders (4)
+            int i = 1;
+            statement.setString(i++, (String) map.get("deploymentStatus"));
+
+            // IDM and OCC fields
+            statement.setString(i++, (String) event.get(Constants.USER));
+            statement.setObject(i++, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            statement.setLong(i++, newAggregateVersion);
+
+            // WHERE clause placeholders (3)
+            statement.setObject(i++, UUID.fromString(hostId));
+            statement.setObject(i++, UUID.fromString(deploymentId));
+            statement.setLong(i++, newAggregateVersion);
+
+            int count = statement.executeUpdate();
+
+            if (count == 0) {
+                // If 0 rows were updated, it's a valid idempotent outcome.
+                logger.warn("Update of deploymentStatus skipped for Deployment with hostId {}, deploymentId {}. Record not found or a newer version already exists.",
+                        hostId, deploymentId);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during updateDeploymentStatus for hostId {} deploymentId {}: {}",
+                    hostId, deploymentId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updateDeploymentStatus for hostId {} deploymentId {}: {}",
+                    hostId, deploymentId, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    /**
+     * Performs a soft delete on a deployment_t record using an idempotent/monotonic pattern.
+     * This method implements:
+     * 1.  **Soft Delete:** Sets the 'active' flag to false.
+     * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
+     * 3.  **OCC/Idempotency:** Uses `aggregate_version < ?` to ensure the operation only succeeds if it
+     *     represents a new state, preventing re-processing of old events or concurrent conflicts.
+     *
+     * @param conn  The database connection.
+     * @param event The event map containing the data and metadata for the operation.
+     * @throws SQLException If a database access error occurs.
+     * @throws Exception    For other generic errors.
+     */
+    @Override
+    public void deleteDeployment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // SQL statement updated to match the idempotent soft-delete pattern.
+        final String sql =
+                """
+                UPDATE deployment_t
+                SET active = FALSE,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?
+                WHERE host_id = ?
+                  AND deployment_id = ?
+                  AND aggregate_version < ?
+                """;
+
+        // Extract data and metadata from the event.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String) event.get(Constants.HOST);
+        String deploymentId = (String) map.get("deploymentId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            // SET clause placeholders (3)
+            int i = 1;
+            // 1: update_user from event metadata
+            statement.setString(i++, (String) event.get(Constants.USER));
+            // 2: update_ts from event metadata
+            statement.setObject(i++, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            // 3: aggregate_version (the new version)
+            statement.setLong(i++, newAggregateVersion);
+
+            // WHERE clause placeholders (3)
+            // 4: host_id from primary key
+            statement.setObject(i++, UUID.fromString(hostId));
+            // 5: deployment_id from primary key
+            statement.setObject(i++, UUID.fromString(deploymentId));
+            // 6: aggregate_version < ? for OCC/Idempotency check
+            statement.setLong(i++, newAggregateVersion);
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // If 0 rows were updated, we log a warning and continue.
+                // This indicates the record was already deleted, never existed, or a newer version is already in the database.
+                // This is the expected behavior for an idempotent operation.
+                logger.warn("Soft delete skipped for Deployment with hostId {}, deploymentId {}, newAggregateVersion {}. Record not found or a newer version already exists.",
+                        hostId, deploymentId, newAggregateVersion);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during soft delete of Deployment for hostId {} deploymentId {}: {}",
+                    hostId, deploymentId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during soft delete of Deployment for hostId {} deploymentId {}: {}",
+                    hostId, deploymentId, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public Result<String> getDeployment(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
+        Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "d.host_id",
+                "deploymentId", "d.deployment_id",
+                "deploymentInstanceId", "d.deployment_instance_id",
+                "serviceId", "di.service_id",
+                "deploymentStatus", "d.deployment_status",
+                "deploymentType", "d.deployment_type",
+                "scheduleTs", "d.schedule_ts",
+                "platformJobId", "d.platform_job_id",
+                "updateUser", "d.update_user",
+                "updateTs", "d.update_ts"
+        ));
+        columnMap.put("aggregateVersion", "d.aggregate_version");
+        columnMap.put("active", "d.active");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
+        String s =
+            """
+            SELECT COUNT(*) OVER () AS total,
+            d.host_id, d.deployment_id, d.deployment_instance_id, di.service_id, d.deployment_status,
+            d.deployment_type, d.schedule_ts, d.platform_job_id, d.update_user,
+            d.update_ts, d.aggregate_version, d.active
+            FROM deployment_t d
+            INNER JOIN deployment_instance_t di ON di.deployment_instance_id = d.deployment_instance_id
+            WHERE d.host_id = ?
+            """;
+
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
+
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "d", "di");
+        String[] searchColumns = {"di.service_id"};
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("d.host_id", "d.deployment_id", "d.deployment_instance_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("d.deployment_id", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
-
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> deployments = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -5273,7 +7209,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
-
+                    map.put("active", resultSet.getBoolean("active"));
                     deployments.add(map);
                 }
             }
@@ -5287,6 +7223,55 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             logger.error("SQLException:", e);
             result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
         } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+    @Override
+    public Result<String> getDeploymentById(String hostId, String deploymentId) {
+        final String sql =
+                """
+                SELECT host_id, deployment_id, deployment_instance_id, deployment_status, deployment_type,
+                schedule_ts, platform_job_id, aggregate_version, active, update_user, update_ts
+                FROM deployment_t
+                WHERE host_id = ? AND deployment_id = ?
+                """;
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+
+        String searchId = hostId + ":" + deploymentId;
+
+        try (Connection conn = ds.getConnection();
+             PreparedStatement statement = conn.prepareStatement(sql)) {
+
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(deploymentId));
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("deploymentId", resultSet.getObject("deployment_id", UUID.class));
+                    map.put("deploymentInstanceId", resultSet.getObject("deployment_instance_id", UUID.class));
+                    map.put("deploymentStatus", resultSet.getString("deployment_status"));
+                    map.put("deploymentType", resultSet.getString("deployment_type"));
+                    map.put("scheduleTs", resultSet.getObject("schedule_ts") != null ? resultSet.getObject("schedule_ts", OffsetDateTime.class) : null);
+                    map.put("platformJobId", resultSet.getString("platform_job_id"));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "deployment", searchId));
+                }
+            }
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }  catch (Exception e) {
             logger.error("Exception:", e);
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }

@@ -1,4 +1,4 @@
-package net.lightapi.portal;
+package net.lightapi.portal.mutator;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -88,6 +88,8 @@ public class EventMutator {
     }
 
     private void applyEnrichments(Map<String, Object> map) {
+        assert map != null;
+        // enrichment rule execution
         for (Map<String, Object> rule : enrichmentRules) {
             String field = (String)rule.get("fieldName");
             String action = (String)rule.get("action");
@@ -95,6 +97,7 @@ public class EventMutator {
 
             String generatedId = null;
 
+            // id generation
             if ("generateUUID".equalsIgnoreCase(action)) {
                 // Generate and cache a new UUID for the whole import run if needed, or always generate new.
                 // For simplicity, we assume we generate a new UUID for the field.
@@ -104,7 +107,7 @@ public class EventMutator {
                 String originalId = null;
 
                 // Get the original ID from a source field in the data payload (e.g., from an 'oldUserId' field)
-                if (map != null && sourceField != null && map.containsKey(sourceField)) {
+                if (sourceField != null && map.containsKey(sourceField)) {
                     originalId = map.get(sourceField).toString();
                 }
 
@@ -120,11 +123,17 @@ public class EventMutator {
 
             if (generatedId != null) {
                 // Mutate Data Payload
-                if (map != null && map.containsKey(field)) {
+                if (map.containsKey(field)) {
                     map.put(field, generatedId);
                 }
                 logger.debug("Enriched field {} with new ID {}", field, generatedId);
             }
         }
+
+        // enricher execution for event type
+        EventEnrichmentRegistry registry = EventEnrichmentRegistry.getInstance();
+        if(logger.isTraceEnabled()) logger.trace("map before enricher {}", map);
+        registry.enrich(map);
+        if(logger.isTraceEnabled()) logger.trace("map after enricher {}", map);
     }
 }

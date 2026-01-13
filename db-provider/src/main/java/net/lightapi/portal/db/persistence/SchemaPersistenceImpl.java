@@ -24,7 +24,7 @@ import java.time.OffsetDateTime;
 import java.util.*;
 
 import static com.networknt.db.provider.SqlDbStartupHook.ds;
-import static net.lightapi.portal.db.util.SqlUtil.addCondition;
+import static net.lightapi.portal.db.util.SqlUtil.*;
 
 
 public class SchemaPersistenceImpl implements SchemaPersistence {
@@ -41,6 +41,7 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
         this.notificationService = notificationService;
     }
 
+    /*
     @Override
     public void createSchema(Connection conn, Map<String, Object> event) throws SQLException, Exception {
         final String sql =
@@ -81,7 +82,7 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
                 statement.setNull(8, Types.VARCHAR);
             }
             statement.setString(9, (String)map.get("schemaBody")); // Required
-            statement.setString(10, (String)map.get("schemaOwner")); // Required
+            statement.setObject(10, UUID.fromString((String)map.get("schemaOwner"))); // Required
             statement.setString(11, (String)map.get("schemaStatus")); // Required
 
             String example = (String)map.get("example");
@@ -181,7 +182,7 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
                 statement.setNull(6, Types.VARCHAR);
             }
             statement.setString(7, (String)map.get("schemaBody"));
-            statement.setString(8, (String)map.get("schemaOwner"));
+            statement.setObject(8, UUID.fromString((String)map.get("schemaOwner")));
             statement.setString(9, (String)map.get("schemaStatus"));
             String example = (String)map.get("example");
             if (example != null && !example.isBlank()) {
@@ -279,62 +280,334 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
             throw e;
         }
     }
+    */
 
     @Override
-    public Result<String> getSchema(int offset, int limit, String hostId, String schemaId, String schemaVersion, String schemaType,
-                                    String specVersion, String schemaSource, String schemaName, String schemaDesc, String schemaBody,
-                                    String schemaOwner, String schemaStatus, String example, String commentStatus) {
+    public void createSchema(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // Use UPSERT based on the Primary Key (schema_id): INSERT ON CONFLICT DO UPDATE
+        // This handles:
+        // 1. First time insert (no conflict).
+        // 2. Re-creation (conflict on schema_id) -> UPDATE the existing soft-deleted row (setting active=TRUE and new version).
+
+        final String sql =
+                """
+                INSERT INTO schema_t (
+                    schema_id,
+                    host_id,
+                    schema_version,
+                    schema_type,
+                    spec_version,
+                    schema_source,
+                    schema_name,
+                    schema_desc,
+                    schema_body,
+                    schema_owner,
+                    schema_status,
+                    example,
+                    comment_status,
+                    update_user,
+                    update_ts,
+                    aggregate_version,
+                    active
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (schema_id) DO UPDATE
+                SET host_id = EXCLUDED.host_id,
+                    schema_version = EXCLUDED.schema_version,
+                    schema_type = EXCLUDED.schema_type,
+                    spec_version = EXCLUDED.spec_version,
+                    schema_source = EXCLUDED.schema_source,
+                    schema_name = EXCLUDED.schema_name,
+                    schema_desc = EXCLUDED.schema_desc,
+                    schema_body = EXCLUDED.schema_body,
+                    schema_owner = EXCLUDED.schema_owner,
+                    schema_status = EXCLUDED.schema_status,
+                    example = EXCLUDED.example,
+                    comment_status = EXCLUDED.comment_status,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                -- OCC/IDM: Only update if the incoming event is newer
+                WHERE schema_t.aggregate_version < EXCLUDED.aggregate_version
+                AND schema_t.active = FALSE
+                """;
+
+        // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+
+        String schemaId = (String)map.get("schemaId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            // INSERT values (16 placeholders + active=TRUE in SQL, total 16 dynamic values)
+            int i = 1;
+            // 1: schema_id
+            statement.setString(i++, schemaId);
+
+            // 2: host_id
+            String hostId = (String)map.get("hostId");
+            if (hostId != null && !hostId.isBlank()) {
+                statement.setObject(i++, UUID.fromString(hostId));
+            } else {
+                statement.setNull(i++, Types.OTHER);
+            }
+
+            // 3: schema_version
+            statement.setString(i++, (String)map.get("schemaVersion"));
+            // 4: schema_type
+            statement.setString(i++, (String)map.get("schemaType"));
+            // 5: spec_version
+            statement.setString(i++, (String)map.get("specVersion"));
+            // 6: schema_source
+            statement.setString(i++, (String)map.get("schemaSource"));
+            // 7: schema_name
+            statement.setString(i++, (String)map.get("schemaName"));
+
+            // 8: schema_desc
+            if (map.containsKey("schemaDesc")) {
+                statement.setString(i++, (String)map.get("schemaDesc"));
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+
+            // 9: schema_body
+            statement.setString(i++, (String)map.get("schemaBody"));
+            // 10: schema_owner
+            statement.setObject(i++, UUID.fromString((String)map.get("schemaOwner")));
+            // 11: schema_status
+            statement.setString(i++, (String)map.getOrDefault("schemaStatus", "P")); // Default 'P'
+
+            // 12: example
+            if (map.containsKey("example")) {
+                statement.setString(i++, (String)map.get("example"));
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+
+            // 13: comment_status
+            statement.setString(i++, (String)map.getOrDefault("commentStatus", "O")); // Default 'O'
+
+            // 14: update_user
+            statement.setString(i++, (String)event.get(Constants.USER));
+            // 15: update_ts
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 16: aggregate_version
+            statement.setLong(i++, newAggregateVersion);
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // count=0 means the ON CONFLICT clause was hit, BUT the WHERE clause (aggregate_version < EXCLUDED.aggregate_version) failed.
+                // This is the desired idempotent/out-of-order protection behavior. Log and ignore.
+                logger.warn("Creation/Reactivation skipped for schemaId {} aggregateVersion {}. A newer or same version already exists.", schemaId, newAggregateVersion);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during createSchema for schemaId {} aggregateVersion {}: {}", schemaId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createSchema for schemaId {} aggregateVersion {}: {}", schemaId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public void updateSchema(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
+        // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
+        // We explicitly set active = TRUE as an UPDATE event implies the schema should be active.
+        final String sql =
+                """
+                UPDATE schema_t
+                SET host_id = ?,
+                    schema_version = ?,
+                    schema_type = ?,
+                    spec_version = ?,
+                    schema_source = ?,
+                    schema_name = ?,
+                    schema_desc = ?,
+                    schema_body = ?,
+                    schema_owner = ?,
+                    schema_status = ?,
+                    example = ?,
+                    comment_status = ?,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?,
+                    active = TRUE
+                WHERE schema_id = ?
+                  AND aggregate_version < ?
+                """; // <<< CRITICAL: Added aggregate_version < ? to enforce monotonicity (OCC/IDM)
+
+        // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+
+        String schemaId = (String)map.get("schemaId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            // SET values (15 dynamic values + active = TRUE in SQL)
+            int i = 1;
+
+            // 1: host_id
+            String hostId = (String)map.get("hostId");
+            if (hostId != null && !hostId.isBlank()) {
+                statement.setObject(i++, UUID.fromString(hostId));
+            } else {
+                statement.setNull(i++, Types.OTHER);
+            }
+
+            // 2: schema_version
+            statement.setString(i++, (String)map.get("schemaVersion"));
+            // 3: schema_type
+            statement.setString(i++, (String)map.get("schemaType"));
+            // 4: spec_version
+            statement.setString(i++, (String)map.get("specVersion"));
+            // 5: schema_source
+            statement.setString(i++, (String)map.get("schemaSource"));
+            // 6: schema_name
+            statement.setString(i++, (String)map.get("schemaName"));
+
+            // 7: schema_desc
+            if (map.containsKey("schemaDesc")) {
+                statement.setString(i++, (String)map.get("schemaDesc"));
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+
+            // 8: schema_body
+            statement.setString(i++, (String)map.get("schemaBody"));
+            // 9: schema_owner
+            statement.setObject(i++, UUID.fromString((String)map.get("schemaOwner")));
+            // 10: schema_status
+            statement.setString(i++, (String)map.getOrDefault("schemaStatus", "P")); // Default 'P'
+
+            // 11: example
+            if (map.containsKey("example")) {
+                statement.setString(i++, (String)map.get("example"));
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+
+            // 12: comment_status
+            statement.setString(i++, (String)map.getOrDefault("commentStatus", "O")); // Default 'O'
+
+            // 13: update_user
+            statement.setString(i++, (String)event.get(Constants.USER));
+            // 14: update_ts
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 15: aggregate_version
+            statement.setLong(i++, newAggregateVersion);
+
+            // WHERE conditions (2 placeholders)
+            // 16: schema_id (PK)
+            statement.setString(i++, schemaId);
+            // 17: aggregate_version < ? (new version for OCC/IDM check)
+            statement.setLong(i++, newAggregateVersion);
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // If 0 rows updated, it means the record was either not found
+                // OR aggregate_version >= newAggregateVersion (OCC/IDM check failed).
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Update skipped for schemaId {} aggregateVersion {}. Record not found or a newer/same version already exists.", schemaId, newAggregateVersion);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during updateSchema for schemaId {} aggregateVersion {}: {}", schemaId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updateSchema for schemaId {} aggregateVersion {}: {}", schemaId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public void deleteSchema(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // Use UPDATE to implement Soft Delete (setting active = FALSE).
+        // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
+        final String sql =
+                """
+                UPDATE schema_t
+                SET active = FALSE,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?
+                WHERE schema_id = ?
+                  AND aggregate_version < ?
+                """; // <<< CRITICAL: Added aggregate_version < ? to enforce monotonicity (OCC/IDM)
+
+        // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+
+        String schemaId = (String)map.get("schemaId");
+        // A delete event represents a state change, so it should have a new, incremented version.
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            // SET values (3 placeholders)
+            // 1: update_user
+            statement.setString(1, (String)event.get(Constants.USER));
+            // 2: update_ts
+            statement.setObject(2, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 3: aggregate_version (the new version)
+            statement.setLong(3, newAggregateVersion);
+
+            // WHERE conditions (2 placeholders)
+            // 4: schema_id
+            statement.setString(4, schemaId);
+            // 5: aggregate_version < ? (new version for OCC/IDM check)
+            statement.setLong(5, newAggregateVersion);
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // If 0 rows updated, it means:
+                // 1. The record was not found (already deleted or never existed).
+                // 2. The OCC/IDM check failed (aggregate_version >= newAggregateVersion).
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Soft delete skipped for schemaId {} aggregateVersion {}. Record not found or a newer/same version already exists.", schemaId, newAggregateVersion);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during deleteSchema for schemaId {} aggregateVersion {}: {}", schemaId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deleteSchema for schemaId {} aggregateVersion {}: {}", schemaId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public Result<String> getSchema(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
                 schema_id, host_id, schema_version, schema_type, spec_version, schema_source, schema_name, schema_desc, schema_body,
-                schema_owner, schema_status, example, comment_status, update_user, update_ts, aggregate_version
+                schema_owner, schema_status, example, comment_status, update_user, update_ts, aggregate_version, active
                 FROM schema_t
-                WHERE 1=1
+                WHERE host_id = ?
                 """;
-        StringBuilder sqlBuilder = new StringBuilder(s);
 
         List<Object> parameters = new ArrayList<>();
-        StringBuilder whereClause = new StringBuilder();
+        parameters.add(UUID.fromString(hostId));
 
-        addCondition(whereClause, parameters, "host_id", hostId != null ? UUID.fromString(hostId) : null);
-        addCondition(whereClause, parameters, "schema_id", schemaId);
-        addCondition(whereClause, parameters, "schema_version", schemaVersion);
-        addCondition(whereClause, parameters, "schema_type", schemaType);
-        addCondition(whereClause, parameters, "spec_version", specVersion);
-        addCondition(whereClause, parameters, "schema_source", schemaSource);
-        addCondition(whereClause, parameters, "schema_name", schemaName);
-        addCondition(whereClause, parameters, "schema_desc", schemaDesc);
-        // schemaBody is usually not used in get list query for performance reasons
-        addCondition(whereClause, parameters, "schema_owner", schemaOwner);
-        addCondition(whereClause, parameters, "schema_status", schemaStatus);
-        // categoryId is not a column in schema_t table, so it is ignored in WHERE clause
-        addCondition(whereClause, parameters, "example", example);
-        addCondition(whereClause, parameters, "comment_status", commentStatus);
-
-
-        if (!whereClause.isEmpty()) {
-            sqlBuilder.append("AND ").append(whereClause);
-        }
-
-        sqlBuilder.append(" ORDER BY schema_name\n" +
-                "LIMIT ? OFFSET ?");
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active);
+        String[] searchColumns = {"schema_name", "schema_desc", "schema_body", "example"};
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("host_id", "product_version_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("schema_name", sorting, null) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
         int total = 0;
         List<Map<String, Object>> schemas = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -353,14 +626,14 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
                     map.put("schemaDesc", resultSet.getString("schema_desc"));
                     // schemaBody is usually not returned in get list query for performance reasons
                     // map.put("schemaBody", resultSet.getString("schema_body"));
-                    map.put("schemaOwner", resultSet.getString("schema_owner"));
+                    map.put("schemaOwner", resultSet.getObject("schema_owner", UUID.class));
                     map.put("schemaStatus", resultSet.getString("schema_status"));
                     map.put("example", resultSet.getString("example"));
                     map.put("commentStatus", resultSet.getString("comment_status"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
-
+                    map.put("active", resultSet.getBoolean("active"));
                     schemas.add(map);
                 }
             }
@@ -384,7 +657,7 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
     public Result<String> getSchemaLabel(String hostId) {
         Result<String> result = null;
         StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT schema_id, schema_name FROM schema_t WHERE 1=1 "); // Base query
+        sqlBuilder.append("SELECT schema_id, schema_name FROM schema_t WHERE active = TRUE "); // Base query
 
         if (hostId != null && !hostId.isEmpty()) {
             sqlBuilder.append("AND (host_id = ? OR host_id IS NULL)"); // Tenant-specific OR Global
@@ -427,7 +700,7 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
                 """
                 SELECT schema_id, host_id, schema_version, schema_type, spec_version, schema_source,
                 schema_name, schema_desc, schema_body, schema_owner, schema_status, example,
-                comment_status, update_user, update_ts, aggregate_version
+                comment_status, update_user, update_ts, aggregate_version, active
                 FROM schema_t WHERE schema_id = ?
                 """;
         Map<String, Object> map = null;
@@ -447,13 +720,14 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
                         map.put("schemaName", resultSet.getString("schema_name"));
                         map.put("schemaDesc", resultSet.getString("schema_desc"));
                         map.put("schemaBody", resultSet.getString("schema_body"));
-                        map.put("schemaOwner", resultSet.getString("schema_owner"));
+                        map.put("schemaOwner", resultSet.getObject("schema_owner", UUID.class));
                         map.put("schemaStatus", resultSet.getString("schema_status"));
                         map.put("example", resultSet.getString("example"));
                         map.put("commentStatus", resultSet.getString("comment_status"));
                         map.put("updateUser", resultSet.getString("update_user"));
                         map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                         map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                        map.put("active", resultSet.getBoolean("active"));
                     }
                 }
                 // Check if map was populated (i.e., record found)
@@ -482,7 +756,7 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
                 SELECT schema_t.schema_id, schema_t.host_id, schema_t.schema_version, schema_t.schema_type,
                 schema_t.spec_version, schema_t.schema_source, schema_t.schema_name, schema_t.schema_desc,
                 schema_t.schema_body, schema_t.schema_owner, schema_t.schema_status, schema_t.example,
-                schema_t.comment_status, schema_t.update_user, schema_t.update_ts, schema_t.aggregate_version
+                schema_t.comment_status, schema_t.update_user, schema_t.update_ts, schema_t.aggregate_version, schema_t.active
                 FROM schema_t
                 INNER JOIN entity_category_t ON schema_t.schema_id = entity_category_t.entity_id
                 WHERE entity_type = 'schema' AND entity_category_t.category_id = ?
@@ -506,14 +780,14 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
                     map.put("schemaName", resultSet.getString("schema_name"));
                     map.put("schemaDesc", resultSet.getString("schema_desc"));
                     map.put("schemaBody", resultSet.getString("schema_body"));
-                    map.put("schemaOwner", resultSet.getString("schema_owner"));
+                    map.put("schemaOwner", resultSet.getObject("schema_owner", UUID.class));
                     map.put("schemaStatus", resultSet.getString("schema_status"));
                     map.put("example", resultSet.getString("example"));
                     map.put("commentStatus", resultSet.getString("comment_status"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
-
+                    map.put("active", resultSet.getBoolean("active"));
                     schemas.add(map);
                 }
             }
@@ -540,7 +814,7 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
                 SELECT schema_t.schema_id, schema_t.host_id, schema_t.schema_version, schema_t.schema_type,
                 schema_t.spec_version, schema_t.schema_source, schema_t.schema_name, schema_t.schema_desc,
                 schema_t.schema_body, schema_t.schema_owner, schema_t.schema_status, schema_t.example,
-                schema_t.comment_status, schema_t.update_user, schema_t.update_ts, schema_t.aggregate_version
+                schema_t.comment_status, schema_t.update_user, schema_t.update_ts, schema_t.aggregate_version, schema_t.active
                 FROM schema_t
                 INNER JOIN entity_tag_t ON schema_t.schema_id = entity_tag_t.entity_id
                 WHERE entity_type = 'schema' AND entity_tag_t.tag_id = ?
@@ -564,14 +838,14 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
                     map.put("schemaName", resultSet.getString("schema_name"));
                     map.put("schemaDesc", resultSet.getString("schema_desc"));
                     map.put("schemaBody", resultSet.getString("schema_body"));
-                    map.put("schemaOwner", resultSet.getString("schema_owner"));
+                    map.put("schemaOwner", resultSet.getObject("schema_owner", UUID.class));
                     map.put("schemaStatus", resultSet.getString("schema_status"));
                     map.put("example", resultSet.getString("example"));
                     map.put("commentStatus", resultSet.getString("comment_status"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
-
+                    map.put("active", resultSet.getBoolean("active"));
                     schemas.add(map);
                 }
             }

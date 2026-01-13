@@ -25,7 +25,7 @@ public class NotificationDataPersistenceImpl implements NotificationDataPersiste
     private static final String GENERIC_EXCEPTION = PortalDbProvider.GENERIC_EXCEPTION;
 
     @Override
-    public Result<String> queryNotification(int offset, int limit, String hostId, String userId, Long nonce, String eventClass, Boolean successFlag, Timestamp processTs, String eventJson, String error) {
+    public Result<String> queryNotification(int offset, int limit, String hostId, String userId, Long nonce, String eventClass, Boolean successFlag, OffsetDateTime processTs, String eventJson, String error) {
         StringBuilder sqlBuilder = new StringBuilder();
         sqlBuilder.append("""
                 SELECT COUNT(*) OVER () AS total,

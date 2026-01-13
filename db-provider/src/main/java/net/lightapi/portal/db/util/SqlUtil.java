@@ -319,4 +319,42 @@ public class SqlUtil {
         }
 
     }
+
+    /**
+     * Generates the SQL condition for soft-delete filtering across multiple tables.
+     *
+     * @param active       If true, enforces strict consistency (all tables must be active).
+     *                     If false, checks if the primary entity (first alias) is inactive.
+     * @param tableAliases A variable list of table aliases involved in the query.
+     *                     IMPORTANT: The first alias provided must be the primary table being queried.
+     * @return A SQL string starting with " AND ...", or an empty string if no aliases provided.
+     */
+    public static String buildMultiTableActiveClause(boolean active, String... tableAliases) {
+        StringBuilder sb = new StringBuilder();
+
+        if (tableAliases == null || tableAliases.length == 0) {
+            if(active)
+                return sb.append(" AND active = true").toString();
+            else
+                return sb.append(" AND active = false").toString();
+        }
+
+        if (active) {
+            // Scenario: Active View
+            // Requirement: Strict Consistency. To be considered a valid active record in a join,
+            // the record itself AND its parents/associations must all be active.
+            for (String alias : tableAliases) {
+                sb.append(" AND ").append(alias).append(".active = true");
+            }
+        } else {
+            // Scenario: Trash/Deleted View
+            // Requirement: We are looking for records that were deleted.
+            // We usually only check the status of the *primary* entity (the first arg).
+            // The status of related tables (aliases[1..n]) usually doesn't filter the result here.
+            sb.append(" AND ").append(tableAliases[0]).append(".active = false");
+        }
+
+        return sb.toString();
+    }
+
 }

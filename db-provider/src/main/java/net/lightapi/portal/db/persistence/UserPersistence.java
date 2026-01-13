@@ -11,15 +11,16 @@ public interface UserPersistence {
     Result<String> loginUserByEmail(String email);
     Result<String> queryUserByEmail(String email);
     Result<String> queryUserById(String userId);
+    Result<String> getUserById(String userId);
     Result<String> queryUserByTypeEntityId(String userType, String entityId);
     Result<String> queryUserByWallet(String cryptoType, String cryptoAddress);
-    Result<String> queryUserByHostId(int offset, int limit, String filters, String globalFilter, String sorting);
+    Result<String> queryUserByHostId(int offset, int limit, String filters, String globalFilter, String sorting, boolean active);
     Result<String> getHostsByUserId(String userId);
     Result<String> getHostLabelByUserId(String userId);
 
     void createUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void onboardUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<Long> queryNonceByUserId(String userId);
+    long queryNonceByUserId(String userId);
 
     void confirmUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;
     void verifyUser(Connection conn, Map<String, Object> event) throws SQLException, Exception;

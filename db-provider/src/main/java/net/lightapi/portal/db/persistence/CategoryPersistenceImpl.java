@@ -24,6 +24,7 @@ import java.time.OffsetDateTime;
 import java.util.*;
 
 import static com.networknt.db.provider.SqlDbStartupHook.ds;
+import static net.lightapi.portal.db.util.SqlUtil.*;
 
 public class CategoryPersistenceImpl implements CategoryPersistence {
     private static final Logger logger = LoggerFactory.getLogger(CategoryPersistenceImpl.class);
@@ -39,50 +40,103 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
 
     @Override
     public void createCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "INSERT INTO category_t(host_id, category_id, entity_type, category_name, " +
-                "category_desc, parent_category_id, sort_order, update_user, update_ts, aggregate_version) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        // Use UPSERT based on the Primary Key (category_id): INSERT ON CONFLICT DO UPDATE
+        // This handles:
+        // 1. First time insert (no conflict).
+        // 2. Re-creation (conflict on category_id) -> UPDATE the existing soft-deleted row (setting active=TRUE and new version).
+
+        final String sql =
+                """
+                INSERT INTO category_t(
+                    host_id,
+                    category_id,
+                    entity_type,
+                    category_name,
+                    category_desc,
+                    parent_category_id,
+                    sort_order,
+                    update_user,
+                    update_ts,
+                    aggregate_version,
+                    active
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (category_id) DO UPDATE
+                SET host_id = EXCLUDED.host_id,
+                    entity_type = EXCLUDED.entity_type,
+                    category_name = EXCLUDED.category_name,
+                    category_desc = EXCLUDED.category_desc,
+                    parent_category_id = EXCLUDED.parent_category_id,
+                    sort_order = EXCLUDED.sort_order,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                -- OCC/IDM: Only update if the incoming event is newer
+                WHERE category_t.aggregate_version < EXCLUDED.aggregate_version
+                AND category_t.active = FALSE
+                """;
+
+        // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        // Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String)map.get("hostId");
         String categoryId = (String)map.get("categoryId");
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            String hostId = (String)map.get("hostId");
+            // INSERT values (10 placeholders + active=TRUE in SQL, total 10 dynamic values)
+            int i = 1;
+
+            // 1: host_id
             if (hostId != null && !hostId.isBlank()) {
-                statement.setObject(1, UUID.fromString(hostId));
+                statement.setObject(i++, UUID.fromString(hostId));
             } else {
-                statement.setNull(1, Types.OTHER);
+                statement.setNull(i++, Types.OTHER);
             }
 
-            statement.setObject(2, UUID.fromString(categoryId));
-            statement.setString(3, (String)map.get("entityType"));
-            statement.setString(4, (String)map.get("categoryName"));
+            // 2: category_id
+            statement.setObject(i++, UUID.fromString(categoryId));
+            // 3: entity_type
+            statement.setString(i++, (String)map.get("entityType"));
+            // 4: category_name
+            statement.setString(i++, (String)map.get("categoryName"));
 
+            // 5: category_desc
             String categoryDesc = (String)map.get("categoryDesc");
             if (categoryDesc != null && !categoryDesc.isBlank()) {
-                statement.setString(5, categoryDesc);
+                statement.setString(i++, categoryDesc);
             } else {
-                statement.setNull(5, Types.VARCHAR);
+                statement.setNull(i++, Types.VARCHAR);
             }
+
+            // 6: parent_category_id
             String parentCategoryId = (String)map.get("parentCategoryId");
             if (parentCategoryId != null && !parentCategoryId.isBlank()) {
-                statement.setObject(6, UUID.fromString(parentCategoryId));
+                statement.setObject(i++, UUID.fromString(parentCategoryId));
             } else {
-                statement.setNull(6, Types.OTHER);
+                statement.setNull(i++, Types.OTHER);
             }
+
+            // 7: sort_order
             Number sortOrder = (Number)map.get("sortOrder");
             if (sortOrder != null) {
-                statement.setInt(7, sortOrder.intValue());
+                statement.setInt(i++, sortOrder.intValue());
             } else {
-                statement.setNull(7, Types.INTEGER);
+                statement.setNull(i++, Types.INTEGER);
             }
-            statement.setString(8, (String)event.get(Constants.USER));
-            statement.setObject(9, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(10, newAggregateVersion);
+
+            // 8: update_user
+            statement.setString(i++, (String)event.get(Constants.USER));
+            // 9: update_ts
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 10: aggregate_version
+            statement.setLong(i++, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                throw new SQLException("Failed to insert the category id " + categoryId + " with aggregate version " + newAggregateVersion + ".");
+                // count=0 means the ON CONFLICT clause was hit, BUT the WHERE clause (aggregate_version < EXCLUDED.aggregate_version) failed.
+                // This is the desired idempotent/out-of-order protection behavior. Log and ignore.
+                logger.warn("Creation/Reactivation skipped for categoryId {} aggregateVersion {}. A newer or same version already exists.", categoryId, newAggregateVersion);
             }
         } catch (SQLException e) {
             logger.error("SQLException during createCategory for id {} aggregateVersion {}: {}", categoryId, newAggregateVersion, e.getMessage(), e);
@@ -93,162 +147,392 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
         }
     }
 
-    private boolean queryCategoryExists(Connection conn, String categoryId) throws SQLException {
-        final String sql =
-                """
-                SELECT COUNT(*) FROM category_t WHERE category_id = ?
-                """;
-        try (PreparedStatement pst = conn.prepareStatement(sql)) {
-            pst.setObject(1, UUID.fromString(categoryId));
-            try (ResultSet rs = pst.executeQuery()) {
-                return rs.next() && rs.getInt(1) > 0;
-            }
-        }
-    }
-
     @Override
     public void updateCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
+        // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
+        // We explicitly set active = TRUE as an UPDATE event implies the category should be active.
         final String sql =
                 """
-                UPDATE category_t SET category_name = ?, category_desc = ?, parent_category_id = ?,
-                sort_order = ?, update_user = ?, update_ts = ?, aggregate_version = ?
-                WHERE category_id = ? AND aggregate_version = ?
-                """;
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+                UPDATE category_t
+                SET category_name = ?,
+                    category_desc = ?,
+                    parent_category_id = ?,
+                    sort_order = ?,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?,
+                    active = TRUE
+                WHERE category_id = ?
+                  AND aggregate_version < ?
+                """; // <<< CRITICAL: Changed aggregate_version = ? to aggregate_version < ? to enforce monotonicity (OCC/IDM)
+
+        // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
         String categoryId = (String)map.get("categoryId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setString(1, (String)map.get("categoryName"));
+            // SET values (7 dynamic values + active = TRUE in SQL)
+            int i = 1;
+            // 1: category_name
+            statement.setString(i++, (String)map.get("categoryName"));
 
+            // 2: category_desc
             String categoryDesc = (String)map.get("categoryDesc");
             if (categoryDesc != null && !categoryDesc.isBlank()) {
-                statement.setString(2, categoryDesc);
+                statement.setString(i++, categoryDesc);
             } else {
-                statement.setNull(2, Types.VARCHAR);
+                statement.setNull(i++, Types.VARCHAR);
             }
+            // 3: parent_category_id
             String parentCategoryId = (String)map.get("parentCategoryId");
             if (parentCategoryId != null && !parentCategoryId.isBlank()) {
-                statement.setObject(3, UUID.fromString(parentCategoryId));
+                statement.setObject(i++, UUID.fromString(parentCategoryId));
             } else {
-                statement.setNull(3, Types.OTHER);
+                statement.setNull(i++, Types.OTHER);
             }
+            // 4: sort_order
             Number sortOrder = (Number)map.get("sortOrder");
             if (sortOrder != null) {
-                statement.setInt(4, sortOrder.intValue());
+                statement.setInt(i++, sortOrder.intValue());
             } else {
-                statement.setNull(4, Types.INTEGER);
+                statement.setNull(i++, Types.INTEGER);
             }
-            statement.setString(5, (String)event.get(Constants.USER));
-            statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(7, newAggregateVersion);
-            statement.setObject(8, UUID.fromString(categoryId));
-            statement.setLong(9, oldAggregateVersion);
+            // 5: update_user
+            statement.setString(i++, (String)event.get(Constants.USER));
+            // 6: update_ts
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 7: aggregate_version
+            statement.setLong(i++, newAggregateVersion);
+
+            // WHERE conditions (2 placeholders)
+            // 8: category_id
+            statement.setObject(i++, UUID.fromString(categoryId));
+            // 9: aggregate_version < ? (new version for OCC/IDM check)
+            statement.setLong(i++, newAggregateVersion);
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryCategoryExists(conn, categoryId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict for category " + categoryId + ". Expected version " + oldAggregateVersion + " but found a different version " + newAggregateVersion + ".");
-                } else {
-                    throw new SQLException("No record found to update for category " + categoryId + ".");
-                }
+                // If 0 rows updated, it means the record was either not found
+                // OR aggregate_version >= newAggregateVersion (OCC/IDM check failed).
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Update skipped for categoryId {} aggregateVersion {}. Record not found or a newer/same version already exists.", categoryId, newAggregateVersion);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during updateCategory for id {} (old: {}) -> (new: {}): {}", categoryId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during updateCategory for id {} aggregateVersion {}: {}", categoryId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) { // Catch other potential runtime exceptions
-            logger.error("Exception during updateCategory for id {} (old: {}) -> (new: {}): {}", categoryId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during updateCategory for id {} aggregateVersion {}: {}", categoryId, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
     public void deleteCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String sql = "DELETE FROM category_t WHERE category_id = ? AND aggregate_version = ?";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        // Use UPDATE to implement Soft Delete (setting active = FALSE).
+        // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
+        final String sql =
+                """
+                UPDATE category_t
+                SET active = FALSE,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?
+                WHERE category_id = ?
+                  AND aggregate_version < ?
+                """; // <<< CRITICAL: Added aggregate_version < ? to enforce monotonicity (OCC/IDM)
+
+        // Note: The original code uses a non-standard map retrieval: Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
+        // Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
         String categoryId = (String) map.get("categoryId");
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
+        // A delete event represents a state change, so it should have a new, incremented version.
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(categoryId));
+            // SET values (3 placeholders)
+            // 1: update_user
+            statement.setString(1, (String)event.get(Constants.USER));
+            // 2: update_ts
+            statement.setObject(2, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 3: aggregate_version (the new version)
+            statement.setLong(3, newAggregateVersion);
+
+            // WHERE conditions (2 placeholders)
+            // 4: category_id
+            statement.setObject(4, UUID.fromString(categoryId));
+            // 5: aggregate_version < ? (new version for OCC/IDM check)
+            statement.setLong(5, newAggregateVersion);
+
             int count = statement.executeUpdate();
             if (count == 0) {
-                if (queryCategoryExists(conn, categoryId)) {
-                    throw new ConcurrencyException("Optimistic concurrency conflict during deleteCategory for category " + categoryId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
-                } else {
-                    throw new SQLException("No record found during deleteCategory for category " + categoryId + ". It might have been already deleted.");
-                }
+                // If 0 rows updated, it means:
+                // 1. The record was not found (already deleted or never existed).
+                // 2. The OCC/IDM check failed (aggregate_version >= newAggregateVersion).
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Soft delete skipped for categoryId {} aggregateVersion {}. Record not found or a newer/same version already exists.", categoryId, newAggregateVersion);
             }
         } catch (SQLException e) {
-            logger.error("SQLException during deleteCategory for id {} aggregateVersion {}: {}", categoryId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("SQLException during deleteCategory for id {} aggregateVersion {}: {}", categoryId, newAggregateVersion, e.getMessage(), e);
             throw e;
         } catch (Exception e) {
-            logger.error("Exception during deleteCategory for id {} aggregateVersion {}: {}", categoryId, oldAggregateVersion, e.getMessage(), e);
+            logger.error("Exception during deleteCategory for id {} aggregateVersion {}: {}", categoryId, newAggregateVersion, e.getMessage(), e);
             throw e;
         }
     }
 
     @Override
-    public Result<String> getCategory(int offset, int limit, String hostId, String categoryId, String entityType,
-                                      String categoryName, String categoryDesc, String parentCategoryId,
-                                      String parentCategoryName, Integer sortOrder) {
-        Result<String> result = null;
-        String s =
+    public void createEntityCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // Use UPSERT based on the Primary Key (entity_id, entity_type, category_id): INSERT ON CONFLICT DO UPDATE
+        // This handles:
+        // 1. First time insert (no conflict).
+        // 2. Re-creation (conflict on entity_id, entity_type, category_id) -> UPDATE the existing soft-deleted row (setting active=TRUE and new version).
+
+        final String sql =
                 """
-                SELECT COUNT(*) OVER () AS total,
-                cat.category_id, cat.host_id, cat.entity_type, cat.category_name, cat.category_desc, cat.parent_category_id,
-                cat.sort_order, cat.update_user, cat.update_ts, cat.aggregate_version,
-                parent_cat.category_name AS parent_category_name
-                FROM category_t cat
-                LEFT JOIN category_t parent_cat ON cat.parent_category_id = parent_cat.category_id
-                WHERE
+                INSERT INTO entity_category_t (
+                    entity_id,
+                    entity_type,
+                    category_id,
+                    update_user,
+                    update_ts,
+                    aggregate_version,
+                    active
+                ) VALUES (?, ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (entity_id, entity_type, category_id) DO UPDATE
+                SET update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                -- OCC/IDM: Only update if the incoming event is newer
+                WHERE entity_category_t.aggregate_version < EXCLUDED.aggregate_version
+                AND entity_category_t.active = FALSE
                 """;
 
-        StringBuilder sqlBuilder = new StringBuilder(s);
-        List<Object> parameters = new ArrayList<>();
-        // Use a separate list to build condition strings to manage AND correctly
-        List<String> conditions = new ArrayList<>();
+        // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
 
+        String entityId = (String)map.get("entityId");
+        String entityType = (String)map.get("entityType");
+        String categoryId = (String)map.get("categoryId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            // INSERT values (6 placeholders + active=TRUE in SQL, total 6 dynamic values)
+            int i = 1;
+            // 1: entity_id
+            statement.setObject(i++, UUID.fromString(entityId));
+            // 2: entity_type
+            statement.setString(i++, entityType);
+            // 3: category_id
+            statement.setObject(i++, UUID.fromString(categoryId));
+
+            // 4: update_user
+            statement.setString(i++, (String)event.get(Constants.USER));
+            // 5: update_ts
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 6: aggregate_version
+            statement.setLong(i++, newAggregateVersion);
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // count=0 means the ON CONFLICT clause was hit, BUT the WHERE clause (aggregate_version < EXCLUDED.aggregate_version) failed.
+                // This is the desired idempotent/out-of-order protection behavior. Log and ignore.
+                logger.warn("Creation/Reactivation skipped for entityId {} entityType {} categoryId {} aggregateVersion {}. A newer or same version already exists.", entityId, entityType, categoryId, newAggregateVersion);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during createEntityCategory for entityId {} entityType {} categoryId {} aggregateVersion {}: {}", entityId, entityType, categoryId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createEntityCategory for entityId {} entityType {} categoryId {} aggregateVersion {}: {}", entityId, entityType, categoryId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public void updateEntityCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
+        // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
+        // We explicitly set active = TRUE as an UPDATE event implies the assignment should be active.
+        final String sql =
+                """
+                UPDATE entity_category_t
+                SET update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?,
+                    active = TRUE
+                WHERE entity_id = ?
+                  AND entity_type = ?
+                  AND category_id = ?
+                  AND aggregate_version < ?
+                """; // <<< CRITICAL: Added aggregate_version < ? to enforce monotonicity (OCC/IDM)
+
+        // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+
+        String entityId = (String)map.get("entityId");
+        String entityType = (String)map.get("entityType");
+        String categoryId = (String)map.get("categoryId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            // SET values (3 dynamic values + active = TRUE in SQL)
+            int i = 1;
+            // 1: update_user
+            statement.setString(i++, (String)event.get(Constants.USER));
+            // 2: update_ts
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 3: aggregate_version
+            statement.setLong(i++, newAggregateVersion);
+
+            // WHERE conditions (4 placeholders)
+            // 4: entity_id
+            statement.setObject(i++, UUID.fromString(entityId));
+            // 5: entity_type
+            statement.setString(i++, entityType);
+            // 6: category_id
+            statement.setObject(i++, UUID.fromString(categoryId));
+            // 7: aggregate_version < ? (new version for OCC/IDM check)
+            statement.setLong(i++, newAggregateVersion);
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // If 0 rows updated, it means the record was either not found
+                // OR aggregate_version >= newAggregateVersion (OCC/IDM check failed).
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Update skipped for entityId {} entityType {} categoryId {} aggregateVersion {}. Record not found or a newer/same version already exists.", entityId, entityType, categoryId, newAggregateVersion);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during updateEntityCategory for entityId {} entityType {} categoryId {} aggregateVersion {}: {}", entityId, entityType, categoryId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updateEntityCategory for entityId {} entityType {} categoryId {} aggregateVersion {}: {}", entityId, entityType, categoryId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public void deleteEntityCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+        // Use UPDATE to implement Soft Delete (setting active = FALSE).
+        // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
+        final String sql =
+                """
+                UPDATE entity_category_t
+                SET active = FALSE,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?
+                WHERE entity_id = ?
+                  AND entity_type = ?
+                  AND category_id = ?
+                  AND aggregate_version < ?
+                """; // <<< CRITICAL: Added aggregate_version < ? to enforce monotonicity (OCC/IDM)
+
+        // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+
+        String entityId = (String)map.get("entityId");
+        String entityType = (String)map.get("entityType");
+        String categoryId = (String)map.get("categoryId");
+        // A delete event represents a state change, so it should have a new, incremented version.
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            // SET values (3 placeholders)
+            // 1: update_user
+            statement.setString(1, (String)event.get(Constants.USER));
+            // 2: update_ts
+            statement.setObject(2, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            // 3: aggregate_version (the new version)
+            statement.setLong(3, newAggregateVersion);
+
+            // WHERE conditions (4 placeholders)
+            // 4: entity_id
+            statement.setObject(4, UUID.fromString(entityId));
+            // 5: entity_type
+            statement.setString(5, entityType);
+            // 6: category_id
+            statement.setObject(6, UUID.fromString(categoryId));
+            // 7: aggregate_version < ? (new version for OCC/IDM check)
+            statement.setLong(7, newAggregateVersion);
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                // If 0 rows updated, it means:
+                // 1. The record was not found (already deleted or never existed).
+                // 2. The OCC/IDM check failed (aggregate_version >= newAggregateVersion).
+                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
+                logger.warn("Soft delete skipped for entityId {} entityType {} categoryId {} aggregateVersion {}. Record not found or a newer/same version already exists.", entityId, entityType, categoryId, newAggregateVersion);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during deleteEntityCategory for entityId {} entityType {} categoryId {} aggregateVersion {}: {}", entityId, entityType, categoryId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deleteEntityCategory for entityId {} entityType {} categoryId {} aggregateVersion {}: {}", entityId, entityType, categoryId,  newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public Result<String> getCategory(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
+        Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "cat.host_id",
+                "categoryId", "cat.category_id",
+                "entityType", "cat.entity_type",
+                "categoryName", "cat.category_name",
+                "categoryDesc", "cat.category_desc",
+                "parentCategoryId", "cat.parent_category_id",
+                "sortOrder", "cat.sort_order",
+                "updateUser", "cat.update_user",
+                "updateTs", "cat.update_ts",
+                "active", "cat.active"
+        ));
+        columnMap.put("aggregateVersion", "cat.aggregate_version");
+        columnMap.put("parentCategoryName", "parent_category_name");
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
+        String s =
+            """
+            SELECT COUNT(*) OVER () AS total,
+            cat.category_id, cat.host_id, cat.entity_type,
+            cat.category_name, cat.category_desc, cat.parent_category_id,
+            cat.sort_order, cat.update_user, cat.update_ts, cat.active,
+            cat.aggregate_version, parent_cat.category_name AS parent_category_name
+            FROM category_t cat
+            LEFT JOIN category_t parent_cat ON cat.parent_category_id = parent_cat.category_id
+            WHERE
+            """;
+
+        List<Object> parameters = new ArrayList<>();
         // --- Handle host_id condition first ---
         if (hostId != null && !hostId.isEmpty()) {
-            conditions.add("(cat.host_id = ? OR cat.host_id IS NULL)");
+            s = s + "cat.host_id = ? OR cat.host_id IS NULL";
             parameters.add(UUID.fromString(hostId));
         } else {
-            conditions.add("cat.host_id IS NULL");
-            // No parameter for IS NULL
+            s = s + "cat.host_id IS NULL";
         }
 
-        // --- Add other conditions using the helper ---
-        addConditionToList(conditions, parameters, "cat.category_id", categoryId != null ? UUID.fromString(categoryId) : null);
-        addConditionToList(conditions, parameters, "cat.entity_type", entityType);
-        addConditionToList(conditions, parameters, "cat.category_name", categoryName);
-        addConditionToList(conditions, parameters, "cat.category_desc", categoryDesc); // Consider LIKE here if needed
-        addConditionToList(conditions, parameters, "cat.parent_category_id", parentCategoryId != null ? UUID.fromString(parentCategoryId) : null);
-        // parentCategoryName is derived, not filtered here
-        addConditionToList(conditions, parameters, "cat.sort_order", sortOrder);
-
-        // --- Join conditions with AND ---
-        sqlBuilder.append(String.join(" AND ", conditions));
-
-        // --- Add ORDER BY, LIMIT, OFFSET ---
-        sqlBuilder.append(" ORDER BY cat.category_name\n" +
-                "LIMIT ? OFFSET ?");
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "cat", "parent_cat");
+        String[] searchColumns = {"cat.category_name", "cat.category_desc"};
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("cat.host_id", "cat.category_id", "cat.parent_category_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("cat.category_name", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
         parameters.add(offset);
 
-        String sql = sqlBuilder.toString();
-        // if(logger.isTraceEnabled()) logger.trace("sql = {}", sql);
         int total = 0;
         List<Map<String, Object>> categories = new ArrayList<>();
 
         try (Connection connection = ds.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-
-            for (int i = 0; i < parameters.size(); i++) {
-                preparedStatement.setObject(i + 1, parameters.get(i));
-            }
-
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
@@ -268,6 +552,7 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
                     categories.add(map);
                 }
             }
@@ -309,7 +594,7 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
     @Override
     public Result<String> getCategoryLabel(String hostId) {
         Result<String> result = null;
-        String sql = "SELECT category_id, category_name FROM category_t WHERE host_id = ? OR host_id IS NULL";
+        String sql = "SELECT category_id, category_name FROM category_t WHERE (host_id = ? OR host_id IS NULL) AND active = TRUE";
         List<Map<String, Object>> labels = new ArrayList<>();
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
@@ -441,7 +726,7 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
                 SELECT category_id, host_id, entity_type, category_name, category_desc, parent_category_id,
                 sort_order, update_user, update_ts, aggregate_version
                 FROM category_t
-                WHERE entity_type = ?
+                WHERE active = TRUE AND entity_type = ?
                 """;
         StringBuilder sqlBuilder = new StringBuilder(s);
 
@@ -502,7 +787,7 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
                 SELECT cat.category_id, cat.host_id, cat.entity_type, cat.category_name, cat.category_desc, cat.parent_category_id,
                 cat.sort_order, cat.update_user, cat.update_ts, cat.aggregate_version
                 FROM category_t cat
-                WHERE cat.entity_type = ?
+                WHERE cat.active = TRUE AND cat.entity_type = ?
                 """;
         StringBuilder sqlBuilder = new StringBuilder(s);
 

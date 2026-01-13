@@ -628,50 +628,6 @@ public class HybridQueryClient {
     }
 
     /**
-     * Get client detail by clientId. The result contains a map of properties.
-     *
-     * @param exchange HttpServerExchange
-     * @param url host of instance that contains the state store
-     * @param clientId client id
-     * @return Result of client object in JSON
-     */
-    public static Result<String> getClientById(HttpServerExchange exchange, String url, String clientId) {
-        final String command = String.format("{\"host\":\"lightapi.net\",\"service\":\"oauth\",\"action\":\"getClientById\",\"version\":\"0.1.0\",\"data\":{\"clientId\":\"%s\"}}", clientId);
-        return callQueryExchangeUrl(command, exchange, url);
-    }
-
-    /**
-     * Get client detail by clientId. The result contains a map of properties.
-     *
-     * @param token access token
-     * @param url host of instance that contains the state store
-     * @param clientId client id
-     * @return Result of client object in JSON
-     */
-    public static Result<String> getClientById(String token, String url, String clientId) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"oauth\",\"action\":\"getClientById\",\"version\":\"0.1.0\",\"data\":{\"clientId\":\"%s\"}}", clientId);
-        return callQueryTokenUrl(s, token, url);
-    }
-
-    /**
-     * Get client by clientId with client credentials token from oauth-kafka. The token will be a client credential
-     * token so that there is no user_id in the JWT to bypass the match verification. This is an internal method
-     * that is called between oauth and portal services and a client credential token must be provided.
-     *
-     * @param clientId client Id
-     * @param token a client credential JWT token
-     * @return Result of client
-     */
-    public static Result<String> getClientById(String token, String clientId) {
-        final String s = String.format("{\"host\":\"lightapi.net\",\"service\":\"oauth\",\"action\":\"getClientById\",\"version\":\"0.1.0\",\"data\":{\"clientId\":\"%s\"}}", clientId);
-        if (config.isPortalByServiceUrl()) {
-            return callQueryTokenUrl(s, token, config.getPortalQueryServiceUrl());
-        } else {
-            return callQueryWithToken(s, token);
-        }
-    }
-
-    /**
      * Get client by providerId and clientId with client credentials token from oauth-kafka. The token will be a client credential
      * token so that there is no user_id in the JWT to bypass the match verification. This is an internal method that is called
      * between oauth-kafka and portal services and a client credential token must be provided.

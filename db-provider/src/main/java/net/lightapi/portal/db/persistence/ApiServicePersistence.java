@@ -9,34 +9,38 @@ import java.util.Map;
 
 public interface ApiServicePersistence {
     // Service
-    void createService(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void updateService(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void deleteService(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> queryService(int offset, int limit, String hostId, String apiId, String apiName, String apiDesc, String operationOwner, String deliveryOwner, String region, String businessGroup, String lob, String platform, String capability, String gitRepo, String apiTags, String apiStatus);
+    void createApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void updateApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void deleteApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    Result<String> queryApi(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<String> queryApiLabel(String hostId);
+    Result<String> getApiById(String hostId, String apiId);
 
     // Service Version
-    void createServiceVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void updateServiceVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void deleteServiceVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> queryServiceVersion(String hostId, String apiId);
+    void createApiVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void updateApiVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void deleteApiVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    Result<String> getApiVersionById(String hostId, String apiVersionId);
+    String queryApiVersionId(String hostId, String apiId, String apiVersion);
+    Result<String> queryApiVersion(String hostId, String apiId);
     Result<String> getApiVersionIdLabel(String hostId);
     Result<String> queryApiVersionLabel(String hostId, String apiId);
-    void updateServiceSpec(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void updateApiVersionSpec(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    Map<String, Object> getEndpointIdMap(String hostId, String apiVersionId);
 
     // Service Endpoint
-    Result<String> queryServiceEndpoint(int offset, int limit, String hostId, String apiVersionId, String apiId, String apiVersion, String endpoint, String method, String path, String desc);
+    Result<String> queryApiEndpoint(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<String> queryEndpointLabel(String hostId, String apiVersionId);
-    Result<String> queryEndpointScope(String hostId, String endpointId);
+    Result<String> queryApiEndpointScope(String hostId, String endpointId);
 
     // Endpoint Rule
-    void createEndpointRule(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void deleteEndpointRule(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    Result<String> queryEndpointRule(String hostId, String apiId, String apiVersion, String endpoint);
+    void createApiEndpointRule(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void deleteApiEndpointRule(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    Result<String> queryApiEndpointRule(String hostId, String endpointId);
     Result<String> queryServiceRule(String hostId, String apiId, String apiVersion);
 
     // Permissions and Filters (Aggregate Queries)
-    Result<String> queryServicePermission(String hostId, String apiId, String apiVersion);
-    Result<List<String>> queryServiceFilter(String hostId, String apiId, String apiVersion);
+    Result<String> queryApiPermission(String hostId, String apiId, String apiVersion);
+    Result<List<String>> queryApiFilter(String hostId, String apiId, String apiVersion);
     Result<String> getServiceIdLabel(String hostId);
 }

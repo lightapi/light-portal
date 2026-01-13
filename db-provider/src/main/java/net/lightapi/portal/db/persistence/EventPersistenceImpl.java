@@ -6,6 +6,7 @@ import com.networknt.monad.Result;
 import com.networknt.monad.Success;
 import com.networknt.status.Status;
 import com.networknt.utility.Constants;
+import com.networknt.utility.UuidUtil;
 import io.cloudevents.CloudEvent;
 import io.cloudevents.jackson.JsonFormat;
 import net.lightapi.portal.PortalConstants;
@@ -32,6 +33,16 @@ public class EventPersistenceImpl implements EventPersistence {
     private static final String OBJECT_NOT_FOUND = PortalDbProvider.OBJECT_NOT_FOUND;
 
     private static final JsonFormat jsonFormat = new JsonFormat();
+
+    public static final String insertEventStoreSql = "INSERT INTO event_store_t " +
+            "(id, host_id, user_id, nonce, aggregate_id, aggregate_version, aggregate_type, event_type, event_ts, payload, metadata) " +
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb)"; // Use ?::jsonb for JSONB casting
+
+    // SQL for outbox_message_t table
+    public static final String insertOutboxMessageSql = "INSERT INTO outbox_message_t " +
+            "(id, host_id, user_id, nonce, aggregate_id, aggregate_version, aggregate_type, event_type, event_ts, payload, metadata, c_offset, transaction_id) " +
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb, ?, ?)"; // Use ?::jsonb for JSONB casting
+
     /**
      * Inserts multiple CloudEvents into the event_store_t and outbox_message_t tables
      * within a single database transaction.
@@ -42,14 +53,6 @@ public class EventPersistenceImpl implements EventPersistence {
     @Override
     public Result<String> insertEventStore(CloudEvent[] events) {
         // SQL for event_store_t table
-        final String insertEventStoreSql = "INSERT INTO event_store_t " +
-                "(id, host_id, user_id, nonce, aggregate_id, aggregate_version, aggregate_type, event_type, event_ts, payload, metadata) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb)"; // Use ?::jsonb for JSONB casting
-
-        // SQL for outbox_message_t table
-        final String insertOutboxMessageSql = "INSERT INTO outbox_message_t " +
-                "(id, host_id, user_id, nonce, aggregate_id, aggregate_version, aggregate_type, event_type, event_ts, payload, metadata) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?::jsonb, ?::jsonb)"; // Use ?::jsonb for JSONB casting
 
         if (events == null || events.length == 0) {
             return Success.of("No events to insert.");
@@ -58,10 +61,11 @@ public class EventPersistenceImpl implements EventPersistence {
         Result<String> result;
         try (Connection conn = ds.getConnection()) {
             conn.setAutoCommit(false); // Start transaction
-
             try (PreparedStatement eventStorePst = conn.prepareStatement(insertEventStoreSql);
                  PreparedStatement outboxPst = conn.prepareStatement(insertOutboxMessageSql)) {
 
+                long currentOffset = reserveOffsets(conn, events.length);
+                UUID transactionId = UuidUtil.getUUID();
                 for (CloudEvent event : events) {
                     // Extract common CloudEvents attributes
                     UUID eventId = UUID.fromString(event.getId());
@@ -156,6 +160,8 @@ public class EventPersistenceImpl implements EventPersistence {
                     outboxPst.setObject(9, eventTs); // Use OffsetDateTime for TIMESTAMP WITH TIME ZONE
                     outboxPst.setString(10, payloadJson);
                     outboxPst.setString(11, metadataJson);
+                    outboxPst.setLong(12, currentOffset++);
+                    outboxPst.setObject(13, transactionId);
                     outboxPst.addBatch();
                 }
 
@@ -257,5 +263,19 @@ public class EventPersistenceImpl implements EventPersistence {
             logger.error("Exception:", e);
         }
         return aggregateVersion;
+    }
+
+    private long reserveOffsets(Connection conn, int batchSize) throws SQLException {
+        String sql = "UPDATE log_counter SET next_offset = next_offset + ? WHERE id = 1 RETURNING next_offset - ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, batchSize);
+            pstmt.setInt(2, batchSize);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getLong(1);
+                }
+            }
+        }
+        throw new SQLException("Failed to reserve offsets from log_counter");
     }
 }
