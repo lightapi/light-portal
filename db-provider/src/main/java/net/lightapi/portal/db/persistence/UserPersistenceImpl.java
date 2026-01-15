@@ -730,7 +730,7 @@ public class UserPersistenceImpl implements UserPersistence {
                 """;
         List<Object> parameters = new ArrayList<>();
 
-        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "u", "uh", "c", "e");
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "u", "uh");
         String[] searchColumns = {"u.email", "u.first_name", "u.last_name", "COALESCE(c.customer_id, e.employee_id)"};
         String sqlBuilder = s + activeClause +
                 dynamicFilter(Arrays.asList("uh.host_id", "u.user_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +

@@ -509,6 +509,19 @@ public class PortalDbProviderImplTest {
             System.out.println(result.getResult());
         }
     }
+
+    @Test
+    void testQueryUserByHostId() {
+        Result<String> result = dbProvider.queryUserByHostId(0, 10,
+                "[{\"id\":\"hostId\",\"value\":\"01964b05-552a-7c4b-9184-6857e7f3dc5f\"}]", null, null,
+                true);
+        if(result.isFailure()) {
+            System.out.println(result.getError());
+        } else {
+            System.out.println(result.getResult());
+        }
+    }
+
     @Test
     void testGetDeploymentInstancePipeline() {
         Result<String> result = dbProvider.getDeploymentInstancePipeline("01964b05-552a-7c4b-9184-6857e7f3dc5f",  "019aa354-dfdb-738e-a02a-e75d8f9b81c3", "VM Ubuntu 24.04", "OpenJDK 21");
