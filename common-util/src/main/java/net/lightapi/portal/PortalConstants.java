@@ -171,10 +171,6 @@ public class PortalConstants {
     public static final String API_VERSION_DELETED_EVENT = "ApiVersionDeletedEvent";
     public static final String API_ENDPOINT_RULE_CREATED_EVENT = "ApiEndpointRuleCreatedEvent";
     public static final String API_ENDPOINT_RULE_DELETED_EVENT = "ApiEndpointRuleDeletedEvent";
-    public static final String API_ENDPOINT_CREATED_EVENT = "ApiEndpointCreatedEvent";
-    public static final String API_ENDPOINT_DELETED_EVENT = "ApiEndpointDeletedEvent";
-    public static final String API_ENDPOINT_SCOPE_CREATED_EVENT = "ApiEndpointScopeCreatedEvent";
-    public static final String API_ENDPOINT_SCOPE_DELETED_EVENT = "ApiEndpointScopeDeletedEvent";
 
     // --- Auth Events ---
     public static final String AUTH_REFRESH_TOKEN_CREATED_EVENT = "AuthRefreshTokenCreatedEvent";
@@ -249,6 +245,7 @@ public class PortalConstants {
     public static final String INSTANCE_API_PATH_PREFIX_UPDATED_EVENT = "InstanceApiPathPrefixUpdatedEvent";
     public static final String INSTANCE_API_PATH_PREFIX_DELETED_EVENT = "InstanceApiPathPrefixDeletedEvent";
     public static final String COMPOSITE_INSTANCE_APP_CREATED_EVENT = "CompositeInstanceAppCreatedEvent";
+    public static final String COMPOSITE_INSTANCE_API_CREATED_EVENT = "CompositeInstanceApiCreatedEvent";
 
 
     // --- Deployment Events ---
