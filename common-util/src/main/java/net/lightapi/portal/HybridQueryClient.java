@@ -1558,5 +1558,27 @@ public class HybridQueryClient {
             return callQueryWithToken(s, authorizationToken);
         }
     }
+    /**
+     * Get instance app ID based on provided parameters.
+     * @param authorizationToken Authorization token for API access
+     * @param hostId Host ID
+     * @param instanceId Instance ID
+     * @param appId Application ID
+     * @param appVersion Application version
+     * @return Result<String> containing instance app information in JSON format
+     */
+    public static Result<String> getInstanceAppIdUsingToken(
+            String authorizationToken, String hostId, String instanceId, String appId, String appVersion) {
+
+        final String s = String.format(
+                "{\"host\":\"lightapi.net\",\"service\":\"client\",\"action\":\"getInstanceAppId\",\"version\":\"0.1.0\",\"data\":{\"hostId\":\"%s\",\"instanceId\":\"%s\",\"appId\":\"%s\",\"appVersion\":\"%s\"}}",
+                hostId, instanceId, appId, appVersion);
+
+        if (config.isPortalByServiceUrl()) {
+            return callQueryTokenUrl(s, authorizationToken, config.getPortalQueryServiceUrl());
+        } else {
+            return callQueryWithToken(s, authorizationToken);
+        }
+    }
 
 }
