@@ -5547,60 +5547,77 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     ) {
 
         Result<String> result;
-        String sql =
-                """
-                    WITH applicable_instance_config_properties AS (
-                        SELECT DISTINCT pvc.config_id, pvcp.property_id, i.host_id, i.instance_id, i.product_version_id
-                        FROM instance_t i
-                        JOIN product_version_config_t pvc ON i.host_id = pvc.host_id AND i.product_version_id = pvc.product_version_id
-                        JOIN product_version_config_property_t pvcp ON i.host_id = pvcp.host_id AND i.product_version_id = pvcp.product_version_id
-                        WHERE i.host_id = ? AND i.instance_id = ?
-                    ),
-                    property_values AS (
-                        SELECT
-                            cp.property_id,
-                            CASE
-                                WHEN ep.property_value IS NOT NULL THEN ep.property_value
-                                WHEN pvp.property_value IS NOT NULL THEN pvp.property_value
-                                WHEN pp.property_value IS NOT NULL THEN pp.property_value
-                                ELSE cp.property_value
-                            END AS effective_property_value,
-                            CASE
-                                WHEN ep.property_value IS NOT NULL THEN 'environment_property'
-                                WHEN pvp.property_value IS NOT NULL THEN 'product_version_property'
-                                WHEN pp.property_value IS NOT NULL THEN 'product_property'
-                                ELSE 'config_property'
-                            END AS property_source_type,
-                            CASE
-                                WHEN ep.property_value IS NOT NULL THEN COALESCE( ep.environment::text, '' )
-                                WHEN pvp.property_value IS NOT NULL THEN CONCAT( COALESCE( pv.product_id::text, '' ), '-', COALESCE( pv.product_version::text, '' ) )
-                                WHEN pp.property_value IS NOT NULL THEN COALESCE ( pp.product_id::text, '' )
-                                ELSE 'global'
-                            END AS property_source
-                        FROM config_property_t cp
-                        JOIN applicable_instance_config_properties aicp ON aicp.config_id = cp.config_id AND aicp.property_id = cp.property_id
-                        JOIN product_version_t pv ON aicp.host_id = pv.host_id AND aicp.product_version_id = pv.product_version_id
-                        LEFT JOIN product_property_t pp ON cp.property_id = pp.property_id AND pv.product_id = pp.product_id
-                        LEFT JOIN product_version_property_t pvp ON cp.property_id = pvp.property_id AND aicp.host_id = pvp.host_id AND aicp.product_version_id = pvp.product_version_id
-                        LEFT JOIN environment_property_t ep ON cp.property_id = ep.property_id AND aicp.host_id = ep.host_id
-                    )
-                    SELECT
-                        COUNT(*) OVER () AS total,
-                        aicp.host_id, aicp.instance_id,
-                        c.config_id, c.config_name, c.config_phase, c.config_type, c.class_path, c.config_desc,
-                        cp.property_id, cp.property_name, cp.property_type, cp.display_order, cp.required, cp.property_desc, cp.value_type, cp.resource_type,
-                        pv.effective_property_value AS property_value, pv.property_source, pv.property_source_type
-                    FROM config_t c
-                    JOIN config_property_t cp ON c.config_id = cp.config_id
-                    JOIN applicable_instance_config_properties aicp ON c.config_id = aicp.config_id AND cp.config_id = aicp.config_id AND cp.property_id = aicp.property_id
-                    LEFT JOIN property_values pv ON cp.property_id = pv.property_id
-                    WHERE 1 = 1
-                        AND ( array_length(?, 1) IS NULL OR cp.resource_type = ANY(?) )
-                        AND ( array_length(?, 1) IS NULL OR c.config_type = ANY(?) )
-                        AND ( array_length(?, 1) IS NULL OR cp.property_type = ANY(?) )
-                    ORDER BY c.config_name, cp.property_name, cp.display_order
-                    LIMIT ? OFFSET ?
-                """;
+        String sql = """
+            WITH active_instance AS ( SELECT * FROM instance_t WHERE active = true ),
+            active_product_version_config AS ( SELECT * FROM product_version_config_t WHERE active = true ),
+            active_product_version_config_property AS ( SELECT * FROM product_version_config_property_t WHERE active = true ),
+            active_config_property AS ( SELECT * FROM config_property_t WHERE active = true ),
+            active_product_version AS ( SELECT * FROM product_version_t WHERE active = true ),
+            active_product_property AS ( SELECT * FROM product_property_t WHERE active = true ),
+            active_product_version_property AS ( SELECT * FROM product_version_property_t WHERE active = true ),
+            active_environment_property AS ( SELECT * FROM environment_property_t WHERE active = true ),
+            active_config AS ( SELECT * FROM config_t WHERE active = true ),
+            applicable_instance_config_properties AS (
+                SELECT DISTINCT pvc.config_id, pvcp.property_id, i.host_id, i.instance_id, i.product_version_id
+                FROM active_instance i
+                JOIN active_product_version_config pvc ON i.host_id = pvc.host_id AND i.product_version_id = pvc.product_version_id
+                JOIN active_product_version_config_property pvcp ON i.host_id = pvcp.host_id AND i.product_version_id = pvcp.product_version_id
+                WHERE i.host_id = ? AND i.instance_id = ?
+            ),
+            property_values AS (
+                SELECT cp.property_id,
+                    CASE
+                        WHEN ep.property_value IS NOT NULL THEN ep.property_value
+                        WHEN pvp.property_value IS NOT NULL THEN pvp.property_value
+                        WHEN pp.property_value IS NOT NULL THEN pp.property_value
+                        ELSE cp.property_value
+                        END AS effective_property_value,
+                    CASE
+                        WHEN ep.property_value IS NOT NULL THEN 'environment_property'
+                        WHEN pvp.property_value IS NOT NULL THEN 'product_version_property'
+                        WHEN pp.property_value IS NOT NULL THEN 'product_property'
+                        ELSE 'config_property'
+                        END AS property_source_type,
+                    CASE
+                        WHEN ep.property_value IS NOT NULL THEN COALESCE( ep.environment::text, '' )
+                        WHEN pvp.property_value IS NOT NULL THEN CONCAT( COALESCE( pv.product_id::text, '' ), '-', COALESCE( pv.product_version::text, '' ) )
+                        WHEN pp.property_value IS NOT NULL THEN COALESCE ( pp.product_id::text, '' )
+                        ELSE 'global'
+                        END AS property_source
+                    FROM active_config_property cp
+                    JOIN applicable_instance_config_properties aicp
+                        ON aicp.config_id = cp.config_id
+                        AND aicp.property_id = cp.property_id
+                    JOIN active_product_version pv
+                        ON aicp.host_id = pv.host_id
+                        AND aicp.product_version_id = pv.product_version_id
+                    LEFT JOIN active_product_property pp
+                        ON cp.property_id = pp.property_id
+                        AND pv.product_id = pp.product_id
+                    LEFT JOIN active_product_version_property pvp
+                        ON cp.property_id = pvp.property_id
+                        AND aicp.host_id = pvp.host_id
+                        AND aicp.product_version_id = pvp.product_version_id
+                    LEFT JOIN active_environment_property ep
+                        ON cp.property_id = ep.property_id
+                        AND aicp.host_id = ep.host_id
+            )
+            SELECT COUNT(*) OVER () AS total,
+                aicp.host_id, aicp.instance_id,
+                c.config_id, c.config_name, c.config_phase, c.config_type, c.class_path, c.config_desc,
+                cp.property_id, cp.property_name, cp.property_type, cp.display_order, cp.required, cp.property_desc, cp.value_type, cp.resource_type,
+                pv.effective_property_value AS property_value, pv.property_source, pv.property_source_type
+                FROM active_config c
+                JOIN active_config_property cp ON c.config_id = cp.config_id
+                JOIN applicable_instance_config_properties aicp ON c.config_id = aicp.config_id AND cp.config_id = aicp.config_id AND cp.property_id = aicp.property_id
+                LEFT JOIN property_values pv ON cp.property_id = pv.property_id
+                WHERE 1 = 1
+                AND ( array_length(?, 1) IS NULL OR cp.resource_type = ANY(?) )
+                AND ( array_length(?, 1) IS NULL OR c.config_type = ANY(?) )
+                AND ( array_length(?, 1) IS NULL OR cp.property_type = ANY(?) )
+            ORDER BY c.config_name, cp.property_name, cp.display_order
+            LIMIT ? OFFSET ?
+            """;
 
         int total = 0;
         List<Map<String, Object>> instanceApplicableProperties = new ArrayList<>();
@@ -5659,6 +5676,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("configDesc", resultSet.getString("config_desc"));
                     map.put("propertyId", resultSet.getObject("property_id", UUID.class));
                     map.put("propertyName", resultSet.getString("property_name"));
+                    map.put("propertyType", resultSet.getString("property_type"));
                     map.put("displayOrder", resultSet.getInt("display_order"));
                     map.put("required", resultSet.getBoolean("required"));
                     map.put("propertyDesc", resultSet.getString("property_desc"));
@@ -5689,61 +5707,72 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
     @Override
     public Result<String> getApplicableConfigPropertiesForInstanceApi(
-        int offset, int limit, String hostId, String instanceApiId
+            int offset, int limit, String hostId, String instanceApiId
     ) {
 
         Result<String> result;
-        String sql =
-            """
-                WITH applicable_instance_config_properties AS (
-                    SELECT DISTINCT pvc.config_id, pvcp.property_id, i.host_id, i.instance_id, i.product_version_id
-                    FROM instance_api_t ia
-                    JOIN instance_t i ON ia.instance_id = i.instance_id AND ia.host_id = i.host_id
-                    JOIN product_version_config_t pvc ON i.host_id = pvc.host_id AND i.product_version_id = pvc.product_version_id
-                    JOIN product_version_config_property_t pvcp ON i.host_id = pvcp.host_id AND i.product_version_id = pvcp.product_version_id
-                    WHERE ia.host_id = ? AND ia.instance_api_id = ?
-                ),
-                property_values AS (
-                    SELECT
-                        cp.property_id,
-                        CASE
-                            WHEN ep.property_value IS NOT NULL THEN ep.property_value
-                            WHEN pvp.property_value IS NOT NULL THEN pvp.property_value
-                            WHEN pp.property_value IS NOT NULL THEN pp.property_value
-                            ELSE cp.property_value
+        String sql = """
+            WITH active_instance_api AS ( SELECT * FROM instance_api_t WHERE active = true ),
+            active_instance AS ( SELECT * FROM instance_t WHERE active = true ),
+            active_product_version_config AS ( SELECT * FROM product_version_config_t WHERE active = true ),
+            active_product_version_config_property AS ( SELECT * FROM product_version_config_property_t WHERE active = true ),
+            active_config_property AS ( SELECT * FROM config_property_t WHERE active = true ),
+            active_product_version AS ( SELECT * FROM product_version_t WHERE active = true ),
+            active_product_property AS ( SELECT * FROM product_property_t WHERE active = true ),
+            active_product_version_property AS ( SELECT * FROM product_version_property_t WHERE active = true ),
+            active_environment_property AS ( SELECT * FROM environment_property_t WHERE active = true ),
+            active_config AS ( SELECT * FROM config_t WHERE active = true ),
+            applicable_instance_config_properties AS (
+                SELECT DISTINCT pvc.config_id, pvcp.property_id, i.host_id, i.instance_id, i.product_version_id
+                FROM active_instance_api ia
+                JOIN active_instance i ON ia.instance_id = i.instance_id AND ia.host_id = i.host_id
+                JOIN active_product_version_config pvc ON i.host_id = pvc.host_id AND i.product_version_id = pvc.product_version_id
+                JOIN active_product_version_config_property pvcp ON i.host_id = pvcp.host_id AND i.product_version_id = pvcp.product_version_id
+                WHERE ia.host_id = ? AND ia.instance_api_id = ?
+            ),
+            property_values AS (
+                SELECT cp.property_id,
+                    CASE
+                        WHEN ep.property_value IS NOT NULL THEN ep.property_value
+                        WHEN pvp.property_value IS NOT NULL THEN pvp.property_value
+                        WHEN pp.property_value IS NOT NULL THEN pp.property_value
+                        ELSE cp.property_value
                         END AS effective_property_value,
-                        CASE
-                            WHEN ep.property_value IS NOT NULL THEN 'environment_property'
-                            WHEN pvp.property_value IS NOT NULL THEN 'product_version_property'
-                            WHEN pp.property_value IS NOT NULL THEN 'product_property'
-                            ELSE 'config_property'
+                    CASE
+                        WHEN ep.property_value IS NOT NULL THEN 'environment_property'
+                        WHEN pvp.property_value IS NOT NULL THEN 'product_version_property'
+                        WHEN pp.property_value IS NOT NULL THEN 'product_property'
+                        ELSE 'config_property'
                         END AS property_source_type,
-                        CASE
-                            WHEN ep.property_value IS NOT NULL THEN COALESCE( ep.environment, '' )
-                            WHEN pvp.property_value IS NOT NULL THEN CONCAT( COALESCE( pv.product_id, '' ), '-', COALESCE( pv.product_version, '' ) )
-                            WHEN pp.property_value IS NOT NULL THEN COALESCE ( pp.product_id, '' )
-                            ELSE 'global'
-                        END AS property_source
-                    FROM config_property_t cp
-                    JOIN applicable_instance_config_properties aicp ON aicp.config_id = cp.config_id AND aicp.property_id = cp.property_id
-                    JOIN product_version_t pv ON aicp.host_id = pv.host_id AND aicp.product_version_id = pv.product_version_id
-                    LEFT JOIN product_property_t pp ON cp.property_id = pp.property_id AND pv.product_id = pp.product_id
-                    LEFT JOIN product_version_property_t pvp ON cp.property_id = pvp.property_id AND aicp.host_id = pvp.host_id AND aicp.product_version_id = pvp.product_version_id
-                    LEFT JOIN environment_property_t ep ON cp.property_id = ep.property_id AND aicp.host_id = ep.host_id
-                )
-                SELECT
-                    COUNT(*) OVER () AS total,
-                    ac.host_id, ac.instance_id,
-                    c.config_id, c.config_name, c.config_phase, c.config_type, c.class_path, c.config_desc,
-                    cp.property_id, cp.property_name, cp.property_type, cp.display_order, cp.required, cp.property_desc, cp.value_type, cp.resource_type,
-                    pv.effective_property_value AS property_value, pv.property_source, pv.property_source_type
-                FROM config_t c
-                JOIN config_property_t cp ON c.config_id = cp.config_id
-                JOIN applicable_instance_config_properties aicp ON c.config_id = aicp.config_id AND cp.config_id = aicp.config_id AND cp.property_id = aicp.property_id
-                LEFT JOIN property_values pv ON cp.property_id = pv.property_id
-                WHERE 1 = 1 AND cp.resource_type IN ('api', 'api|app_api', 'all')
-                ORDER BY c.config_name, cp.property_name, cp.display_order
-                LIMIT ? OFFSET ?
+                    CASE
+                        WHEN ep.property_value IS NOT NULL THEN COALESCE( ep.environment, '' )
+                        WHEN pvp.property_value IS NOT NULL THEN CONCAT( COALESCE( pv.product_id, '' ), '-', COALESCE( pv.product_version, '' ) )
+                        WHEN pp.property_value IS NOT NULL THEN COALESCE ( pp.product_id, '' )
+                        ELSE 'global'
+                    END AS property_source
+                FROM active_config_property cp
+                JOIN applicable_instance_config_properties aicp ON aicp.config_id = cp.config_id AND aicp.property_id = cp.property_id
+                JOIN active_product_version pv ON aicp.host_id = pv.host_id AND aicp.product_version_id = pv.product_version_id
+                LEFT JOIN active_product_property pp ON cp.property_id = pp.property_id AND pv.product_id = pp.product_id
+                LEFT JOIN active_product_version_property pvp
+                    ON cp.property_id = pvp.property_id
+                    AND aicp.host_id = pvp.host_id
+                    AND aicp.product_version_id = pvp.product_version_id
+                LEFT JOIN active_environment_property ep
+                    ON cp.property_id = ep.property_id
+                    AND aicp.host_id = ep.host_id
+            )
+            SELECT COUNT(*) OVER () AS total, aicp.host_id, aicp.instance_id,
+                c.config_id, c.config_name, c.config_phase, c.config_type, c.class_path, c.config_desc,
+                cp.property_id, cp.property_name, cp.property_type, cp.display_order, cp.required, cp.property_desc, cp.value_type, cp.resource_type,
+                pv.effective_property_value AS property_value, pv.property_source, pv.property_source_type
+            FROM active_config c
+            JOIN active_config_property cp ON c.config_id = cp.config_id
+            JOIN applicable_instance_config_properties aicp ON c.config_id = aicp.config_id AND cp.config_id = aicp.config_id AND cp.property_id = aicp.property_id
+            LEFT JOIN property_values pv ON cp.property_id = pv.property_id
+            WHERE 1 = 1 AND cp.resource_type IN ('api', 'api|app_api', 'all')
+            ORDER BY c.config_name, cp.property_name, cp.display_order
+            LIMIT ? OFFSET ?
             """;
 
         int total = 0;
@@ -5776,6 +5805,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("configDesc", resultSet.getString("config_desc"));
                     map.put("propertyId", resultSet.getObject("property_id", UUID.class));
                     map.put("propertyName", resultSet.getString("property_name"));
+                    map.put("propertyType", resultSet.getString("property_type"));
                     map.put("displayOrder", resultSet.getInt("display_order"));
                     map.put("required", resultSet.getBoolean("required"));
                     map.put("propertyDesc", resultSet.getString("property_desc"));
@@ -5806,61 +5836,69 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
     @Override
     public Result<String> getApplicableConfigPropertiesForInstanceApp(
-        int offset, int limit, String hostId, String instanceAppId
+            int offset, int limit, String hostId, String instanceAppId
     ) {
 
         Result<String> result;
-        String sql =
-            """
-                WITH applicable_instance_config_properties AS (
-                    SELECT DISTINCT pvc.config_id, pvcp.property_id, i.host_id, i.instance_id, i.product_version_id
-                    FROM instance_app_t ia
-                    JOIN instance_t i ON ia.instance_id = i.instance_id AND ia.host_id = i.host_id
-                    JOIN product_version_config_t pvc ON i.host_id = pvc.host_id AND i.product_version_id = pvc.product_version_id
-                    JOIN product_version_config_property_t pvcp ON i.host_id = pvcp.host_id AND i.product_version_id = pvcp.product_version_id
-                    WHERE ia.host_id = ? AND ia.instance_app_id = ?
-                ),
-                property_values AS (
-                    SELECT
-                        cp.property_id,
-                        CASE
-                            WHEN ep.property_value IS NOT NULL THEN ep.property_value
-                            WHEN pvp.property_value IS NOT NULL THEN pvp.property_value
-                            WHEN pp.property_value IS NOT NULL THEN pp.property_value
-                            ELSE cp.property_value
-                        END AS effective_property_value,
-                        CASE
-                            WHEN ep.property_value IS NOT NULL THEN 'environment_property'
-                            WHEN pvp.property_value IS NOT NULL THEN 'product_version_property'
-                            WHEN pp.property_value IS NOT NULL THEN 'product_property'
-                            ELSE 'config_property'
-                        END AS property_source_type,
-                        CASE
-                            WHEN ep.property_value IS NOT NULL THEN COALESCE( ep.environment, '' )
-                            WHEN pvp.property_value IS NOT NULL THEN CONCAT( COALESCE( pv.product_id, '' ), '-', COALESCE( pv.product_version, '' ) )
-                            WHEN pp.property_value IS NOT NULL THEN COALESCE ( pp.product_id, '' )
-                            ELSE 'global'
-                        END AS property_source
-                    FROM config_property_t cp
-                    JOIN applicable_instance_config_properties aicp ON aicp.config_id = cp.config_id AND aicp.property_id = cp.property_id
-                    JOIN product_version_t pv ON aicp.host_id = pv.host_id AND aicp.product_version_id = pv.product_version_id
-                    LEFT JOIN product_property_t pp ON cp.property_id = pp.property_id AND pv.product_id = pp.product_id
-                    LEFT JOIN product_version_property_t pvp ON cp.property_id = pvp.property_id AND aicp.host_id = pvp.host_id AND aicp.product_version_id = pvp.product_version_id
-                    LEFT JOIN environment_property_t ep ON cp.property_id = ep.property_id AND aicp.host_id = ep.host_id
-                )
-                SELECT
-                    COUNT(*) OVER () AS total,
-                    ac.host_id, ac.instance_id,
-                    c.config_id, c.config_name, c.config_phase, c.config_type, c.class_path, c.config_desc,
-                    cp.property_id, cp.property_name, cp.property_type, cp.display_order, cp.required, cp.property_desc, cp.value_type, cp.resource_type,
-                    pv.effective_property_value AS property_value, pv.property_source, pv.property_source_type
-                FROM config_t c
-                JOIN config_property_t cp ON c.config_id = cp.config_id
-                JOIN applicable_instance_config_properties aicp ON c.config_id = aicp.config_id AND cp.config_id = aicp.config_id AND cp.property_id = aicp.property_id
-                LEFT JOIN property_values pv ON cp.property_id = pv.property_id
-                WHERE 1 = 1 AND cp.resource_type IN ('app', 'app|app_api', 'all')
-                ORDER BY c.config_name, cp.property_name, cp.display_order
-                LIMIT ? OFFSET ?
+        String sql = """
+            WITH active_instance_app AS ( SELECT * FROM instance_app_t WHERE active = true ),
+            active_instance AS ( SELECT * FROM instance_t WHERE active = true ),
+            active_product_version_config AS ( SELECT * FROM product_version_config_t WHERE active = true ),
+            active_product_version_config_property AS ( SELECT * FROM product_version_config_property_t WHERE active = true ),
+            active_config_property AS ( SELECT * FROM config_property_t WHERE active = true ),
+            active_product_version AS ( SELECT * FROM product_version_t WHERE active = true ),
+            active_product_property AS ( SELECT * FROM product_property_t WHERE active = true ),
+            active_product_version_property AS ( SELECT * FROM product_version_property_t WHERE active = true ),
+            active_environment_property AS ( SELECT * FROM environment_property_t WHERE active = true ),
+            active_config AS ( SELECT * FROM config_t WHERE active = true ),
+            applicable_instance_config_properties AS (
+                SELECT DISTINCT pvc.config_id, pvcp.property_id, i.host_id, i.instance_id, i.product_version_id
+                FROM active_instance_app ia
+                JOIN active_instance i ON ia.instance_id = i.instance_id AND ia.host_id = i.host_id
+                JOIN active_product_version_config pvc ON i.host_id = pvc.host_id AND i.product_version_id = pvc.product_version_id
+                JOIN active_product_version_config_property pvcp ON i.host_id = pvcp.host_id AND i.product_version_id = pvcp.product_version_id
+                WHERE ia.host_id = ? AND ia.instance_app_id = ?
+            ),
+            property_values AS (
+                SELECT cp.property_id,
+                CASE
+                    WHEN ep.property_value IS NOT NULL THEN ep.property_value
+                    WHEN pvp.property_value IS NOT NULL THEN pvp.property_value
+                    WHEN pp.property_value IS NOT NULL THEN pp.property_value
+                    ELSE cp.property_value
+                END AS effective_property_value,
+                CASE
+                    WHEN ep.property_value IS NOT NULL THEN 'environment_property'
+                    WHEN pvp.property_value IS NOT NULL THEN 'product_version_property'
+                    WHEN pp.property_value IS NOT NULL THEN 'product_property'
+                    ELSE 'config_property'
+                END AS property_source_type,
+                CASE
+                    WHEN ep.property_value IS NOT NULL THEN COALESCE( ep.environment, '' )
+                    WHEN pvp.property_value IS NOT NULL THEN CONCAT( COALESCE( pv.product_id, '' ), '-', COALESCE( pv.product_version, '' ) )
+                    WHEN pp.property_value IS NOT NULL THEN COALESCE ( pp.product_id, '' )
+                    ELSE 'global'
+                END AS property_source
+                FROM active_config_property cp
+                JOIN applicable_instance_config_properties aicp ON aicp.config_id = cp.config_id AND aicp.property_id = cp.property_id
+                JOIN active_product_version pv ON aicp.host_id = pv.host_id AND aicp.product_version_id = pv.product_version_id
+                LEFT JOIN active_product_property pp ON cp.property_id = pp.property_id AND pv.product_id = pp.product_id
+                LEFT JOIN active_product_version_property pvp ON cp.property_id = pvp.property_id AND aicp.host_id = pvp.host_id AND aicp.product_version_id = pvp.product_version_id
+                LEFT JOIN active_environment_property ep ON cp.property_id = ep.property_id AND aicp.host_id = ep.host_id
+            )
+            SELECT
+                COUNT(*) OVER () AS total,
+                aicp.host_id, aicp.instance_id,
+                c.config_id, c.config_name, c.config_phase, c.config_type, c.class_path, c.config_desc,
+                cp.property_id, cp.property_name, cp.property_type, cp.display_order, cp.required, cp.property_desc, cp.value_type, cp.resource_type,
+                pv.effective_property_value AS property_value, pv.property_source, pv.property_source_type
+            FROM active_config c
+            JOIN active_config_property cp ON c.config_id = cp.config_id
+            JOIN applicable_instance_config_properties aicp ON c.config_id = aicp.config_id AND cp.config_id = aicp.config_id AND cp.property_id = aicp.property_id
+            LEFT JOIN property_values pv ON cp.property_id = pv.property_id
+            WHERE 1 = 1 AND cp.resource_type IN ('app', 'app|app_api', 'all')
+            ORDER BY c.config_name, cp.property_name, cp.display_order
+            LIMIT ? OFFSET ?
             """;
 
         int total = 0;
@@ -5893,6 +5931,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("configDesc", resultSet.getString("config_desc"));
                     map.put("propertyId", resultSet.getObject("property_id", UUID.class));
                     map.put("propertyName", resultSet.getString("property_name"));
+                    map.put("propertyType", resultSet.getString("property_type"));
                     map.put("displayOrder", resultSet.getInt("display_order"));
                     map.put("required", resultSet.getBoolean("required"));
                     map.put("propertyDesc", resultSet.getString("property_desc"));
@@ -5923,63 +5962,72 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
     @Override
     public Result<String> getApplicableConfigPropertiesForInstanceAppApi(
-        int offset, int limit, String hostId, String instanceAppId, String instanceApiId
+            int offset, int limit, String hostId, String instanceAppId, String instanceApiId
     ) {
 
         Result<String> result;
-        String sql =
-            """
-                WITH applicable_instance_config_properties AS (
-                    SELECT DISTINCT pvc.config_id, pvcp.property_id, i.host_id, i.instance_id, i.product_version_id
-                    FROM instance_app_api_t iappapi
-                    JOIN instance_app_t iapp ON iappapi.instance_app_id = iapp.instance_app_id AND iappapi.host_id = iapp.host_id
-                    JOIN instance_api_t iapi ON iappapi.instance_api_id = iapi.instance_api_id AND iappapi.host_id = iapi.host_id
-                    JOIN instance_t i ON iapp.instance_id = i.instance_id AND iapp.host_id = i.host_id AND iapi.instance_id = i.instance_id AND iapi.host_id = i.host_id
-                    JOIN product_version_config_t pvc ON i.host_id = pvc.host_id AND i.product_version_id = pvc.product_version_id
-                    JOIN product_version_config_property_t pvcp ON i.host_id = pvcp.host_id AND i.product_version_id = pvcp.product_version_id
-                    WHERE iappapi.host_id = ? AND iappapi.instance_api_id = ? AND iappapi.instance_app_id = ?
-                ),
-                property_values AS (
-                    SELECT
-                        cp.property_id,
-                        CASE
-                            WHEN ep.property_value IS NOT NULL THEN ep.property_value
-                            WHEN pvp.property_value IS NOT NULL THEN pvp.property_value
-                            WHEN pp.property_value IS NOT NULL THEN pp.property_value
-                            ELSE cp.property_value
-                        END AS effective_property_value,
-                        CASE
-                            WHEN ep.property_value IS NOT NULL THEN 'environment_property'
-                            WHEN pvp.property_value IS NOT NULL THEN 'product_version_property'
-                            WHEN pp.property_value IS NOT NULL THEN 'product_property'
-                            ELSE 'config_property'
-                        END AS property_source_type,
-                        CASE
-                            WHEN ep.property_value IS NOT NULL THEN COALESCE( ep.environment, '' )
-                            WHEN pvp.property_value IS NOT NULL THEN CONCAT( COALESCE( pv.product_id, '' ), '-', COALESCE( pv.product_version, '' ) )
-                            WHEN pp.property_value IS NOT NULL THEN COALESCE ( pp.product_id, '' )
-                            ELSE 'global'
-                        END AS property_source
-                    FROM config_property_t cp
-                    JOIN applicable_instance_config_properties aicp ON aicp.config_id = cp.config_id AND aicp.property_id = cp.property_id
-                    JOIN product_version_t pv ON aicp.host_id = pv.host_id AND aicp.product_version_id = pv.product_version_id
-                    LEFT JOIN product_property_t pp ON cp.property_id = pp.property_id AND pv.product_id = pp.product_id
-                    LEFT JOIN product_version_property_t pvp ON cp.property_id = pvp.property_id AND aicp.host_id = pvp.host_id AND aicp.product_version_id = pvp.product_version_id
-                    LEFT JOIN environment_property_t ep ON cp.property_id = ep.property_id AND aicp.host_id = ep.host_id
-                )
-                SELECT
-                    COUNT(*) OVER () AS total,
-                    ac.host_id, ac.instance_id,
-                    c.config_id, c.config_name, c.config_phase, c.config_type, c.class_path, c.config_desc,
-                    cp.property_id, cp.property_name, cp.property_type, cp.display_order, cp.required, cp.property_desc, cp.value_type, cp.resource_type,
-                    pv.effective_property_value AS property_value, pv.property_source, pv.property_source_type
-                FROM config_t c
-                JOIN config_property_t cp ON c.config_id = cp.config_id
-                JOIN applicable_instance_config_properties aicp ON c.config_id = aicp.config_id AND cp.config_id = aicp.config_id AND cp.property_id = aicp.property_id
-                LEFT JOIN property_values pv ON cp.property_id = pv.property_id
-                WHERE 1 = 1 AND cp.resource_type IN ('app_api', 'api|app_api', 'app|app_api', 'all')
-                ORDER BY c.config_name, cp.property_name, cp.display_order
-                LIMIT ? OFFSET ?
+        String sql = """
+            WITH active_instance_app_api AS ( SELECT * FROM instance_app_api_t WHERE active = true ),
+            active_instance_app AS ( SELECT * FROM instance_app_t WHERE active = true ),
+            active_instance_api AS ( SELECT * FROM instance_api_t WHERE active = true ),
+            active_instance AS ( SELECT * FROM instance_t WHERE active = true ),
+            active_product_version_config AS ( SELECT * FROM product_version_config_t WHERE active = true ),
+            active_product_version_config_property AS ( SELECT * FROM product_version_config_property_t WHERE active = true ),
+            active_config_property AS ( SELECT * FROM config_property_t WHERE active = true ),
+            active_product_version AS ( SELECT * FROM product_version_t WHERE active = true ),
+            active_product_property AS ( SELECT * FROM product_property_t WHERE active = true ),
+            active_product_version_property AS ( SELECT * FROM product_version_property_t WHERE active = true ),
+            active_environment_property AS ( SELECT * FROM environment_property_t WHERE active = true ),
+            active_config AS ( SELECT * FROM config_t WHERE active = true ),
+            applicable_instance_config_properties AS (
+                SELECT DISTINCT pvc.config_id, pvcp.property_id, i.host_id, i.instance_id, i.product_version_id
+                FROM active_instance_app_api iappapi
+                JOIN active_instance_app iapp ON iappapi.instance_app_id = iapp.instance_app_id AND iappapi.host_id = iapp.host_id
+                JOIN active_instance_api iapi ON iappapi.instance_api_id = iapi.instance_api_id AND iappapi.host_id = iapi.host_id
+                JOIN active_instance i ON iapp.instance_id = i.instance_id AND iapp.host_id = i.host_id AND iapi.instance_id = i.instance_id AND iapi.host_id = i.host_id
+                JOIN active_product_version_config pvc ON i.host_id = pvc.host_id AND i.product_version_id = pvc.product_version_id
+                JOIN active_product_version_config_property pvcp ON i.host_id = pvcp.host_id AND i.product_version_id = pvcp.product_version_id
+                WHERE iappapi.host_id = ? AND iappapi.instance_api_id = ? AND iappapi.instance_app_id = ?
+            ),
+            property_values AS (
+                SELECT cp.property_id,
+                CASE
+                    WHEN ep.property_value IS NOT NULL THEN ep.property_value
+                    WHEN pvp.property_value IS NOT NULL THEN pvp.property_value
+                    WHEN pp.property_value IS NOT NULL THEN pp.property_value
+                    ELSE cp.property_value
+                END AS effective_property_value,
+                CASE
+                    WHEN ep.property_value IS NOT NULL THEN 'environment_property'
+                    WHEN pvp.property_value IS NOT NULL THEN 'product_version_property'
+                    WHEN pp.property_value IS NOT NULL THEN 'product_property'
+                    ELSE 'config_property'
+                END AS property_source_type,
+                CASE
+                    WHEN ep.property_value IS NOT NULL THEN COALESCE( ep.environment, '' )
+                    WHEN pvp.property_value IS NOT NULL THEN CONCAT( COALESCE( pv.product_id, '' ), '-', COALESCE( pv.product_version, '' ) )
+                    WHEN pp.property_value IS NOT NULL THEN COALESCE ( pp.product_id, '' )
+                    ELSE 'global'
+                END AS property_source
+                FROM active_config_property cp
+                JOIN applicable_instance_config_properties aicp ON aicp.config_id = cp.config_id AND aicp.property_id = cp.property_id
+                JOIN active_product_version pv ON aicp.host_id = pv.host_id AND aicp.product_version_id = pv.product_version_id
+                LEFT JOIN active_product_property pp ON cp.property_id = pp.property_id AND pv.product_id = pp.product_id
+                LEFT JOIN active_product_version_property pvp ON cp.property_id = pvp.property_id AND aicp.host_id = pvp.host_id AND aicp.product_version_id = pvp.product_version_id
+                LEFT JOIN active_environment_property ep ON cp.property_id = ep.property_id AND aicp.host_id = ep.host_id
+            )
+            SELECT COUNT(*) OVER () AS total,
+                aicp.host_id, aicp.instance_id,
+                c.config_id, c.config_name, c.config_phase, c.config_type, c.class_path, c.config_desc,
+                cp.property_id, cp.property_name, cp.property_type, cp.display_order, cp.required, cp.property_desc, cp.value_type, cp.resource_type,
+                pv.effective_property_value AS property_value, pv.property_source, pv.property_source_type
+            FROM active_config c
+            JOIN active_config_property cp ON c.config_id = cp.config_id
+            JOIN applicable_instance_config_properties aicp ON c.config_id = aicp.config_id AND cp.config_id = aicp.config_id AND cp.property_id = aicp.property_id
+            LEFT JOIN property_values pv ON cp.property_id = pv.property_id
+            WHERE 1 = 1 AND cp.resource_type IN ('app_api', 'api|app_api', 'app|app_api', 'all')
+            ORDER BY c.config_name, cp.property_name, cp.display_order
+            LIMIT ? OFFSET ?
             """;
 
         int total = 0;
@@ -6013,6 +6061,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("configDesc", resultSet.getString("config_desc"));
                     map.put("propertyId", resultSet.getObject("property_id", UUID.class));
                     map.put("propertyName", resultSet.getString("property_name"));
+                    map.put("propertyType", resultSet.getString("property_type"));
                     map.put("displayOrder", resultSet.getInt("display_order"));
                     map.put("required", resultSet.getBoolean("required"));
                     map.put("propertyDesc", resultSet.getString("property_desc"));
@@ -6070,11 +6119,10 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 CAST (NULL as UUID) as instance_api_id,
                 CAST (NULL as UUID) as instance_app_id,
                 CAST ('instance_property' as VARCHAR) as property_source_type
-            FROM
-                instance_property_t ip
-                JOIN params p ON ip.host_id = p.host_id AND ip.instance_id = p.instance_id
-                JOIN config_property_t cp ON cp.property_id = ip.property_id
-                JOIN config_t c ON c.config_id = cp.config_id AND c.config_phase = 'R'
+            FROM instance_property_t ip
+            JOIN params p ON ip.host_id = p.host_id AND ip.instance_id = p.instance_id AND ip.active = true
+            JOIN config_property_t cp ON cp.property_id = ip.property_id AND cp.active = true
+            JOIN config_t c ON c.config_id = cp.config_id AND c.config_phase = 'R' AND c.active = true
             UNION ALL
             SELECT
                 ia.host_id,
@@ -6092,14 +6140,12 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 ia.instance_api_id as instance_api_id,
                 CAST (NULL as UUID) as instance_app_id,
                 CAST ('instance_api_property' as VARCHAR) as property_source_type
-            FROM
-                instance_api_property_t iap
-                JOIN instance_api_t ia ON iap.host_id = ia.host_id
-                    AND iap.instance_api_id = ia.instance_api_id
-                    AND ia.active = true
-                JOIN params p ON ia.host_id = p.host_id AND ia.instance_id = p.instance_id
-                JOIN config_property_t cp ON cp.property_id = iap.property_id
-                JOIN config_t c ON c.config_id = cp.config_id AND c.config_phase = 'R'
+            FROM instance_api_property_t iap
+            JOIN instance_api_t ia ON iap.host_id = ia.host_id AND iap.instance_api_id = ia.instance_api_id
+                AND ia.active = true AND iap.active = true
+            JOIN params p ON ia.host_id = p.host_id AND ia.instance_id = p.instance_id
+            JOIN config_property_t cp ON cp.property_id = iap.property_id AND cp.active = true
+            JOIN config_t c ON c.config_id = cp.config_id AND c.config_phase = 'R' AND c.active = true
             UNION ALL
             SELECT
                 ia.host_id,
@@ -6117,14 +6163,13 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 CAST (NULL as UUID) as instance_api_id,
                 ia.instance_app_id as instance_app_id,
                 CAST ('instance_app_property' as VARCHAR) as property_source_type
-            FROM
-                instance_app_property_t iap
-                JOIN instance_app_t ia ON iap.host_id = ia.host_id
-                    AND iap.instance_app_id = ia.instance_app_id
-                    AND ia.active = true
-                JOIN params p ON ia.host_id = p.host_id AND ia.instance_id = p.instance_id
-                JOIN config_property_t cp ON cp.property_id = iap.property_id
-                JOIN config_t c ON c.config_id = cp.config_id AND c.config_phase = 'R'
+            FROM instance_app_property_t iap
+            JOIN instance_app_t ia ON iap.host_id = ia.host_id
+                AND iap.instance_app_id = ia.instance_app_id
+                AND ia.active = true AND iap.active = true
+            JOIN params p ON ia.host_id = p.host_id AND ia.instance_id = p.instance_id
+            JOIN config_property_t cp ON cp.property_id = iap.property_id AND cp.active = true
+            JOIN config_t c ON c.config_id = cp.config_id AND c.config_phase = 'R' AND c.active = true
             UNION ALL
             SELECT
                 iappapiprop.host_id,
@@ -6142,25 +6187,24 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 iappapiprop.instance_api_id as instance_api_id,
                 iappapiprop.instance_app_id as instance_app_id,
                 CAST ('instance_app_api_property' as VARCHAR) as property_source_type
-            FROM
-                instance_app_api_property_t iappapiprop
-                JOIN instance_app_api_t iappapi ON iappapiprop.host_id = iappapi.host_id
-                    AND iappapiprop.instance_api_id = iappapi.instance_api_id
-                    AND iappapiprop.instance_app_id = iappapi.instance_app_id
-                    AND iappapi.active = true
-                JOIN instance_app_t iapp ON iapp.host_id = iappapi.host_id
-                    AND iapp.instance_app_id = iappapi.instance_app_id
-                    AND iapp.active = true
-                JOIN instance_api_t iapi ON iapi.host_id = iappapi.host_id
-                    AND iapi.instance_api_id = iappapi.instance_api_id
-                    AND iapi.active = true
-                JOIN params p ON iappapi.host_id = p.host_id
-                    AND iapp.host_id = p.host_id
-                    AND iapi.host_id = p.host_id
-                    AND iapp.instance_id = p.instance_id
-                    AND iapi.instance_id = p.instance_id
-                JOIN config_property_t cp ON cp.property_id = iappapiprop.property_id
-                JOIN config_t c ON c.config_id = cp.config_id AND c.config_phase = 'R'
+            FROM instance_app_api_property_t iappapiprop
+            JOIN instance_app_api_t iappapi ON iappapiprop.host_id = iappapi.host_id
+                AND iappapiprop.instance_api_id = iappapi.instance_api_id
+                AND iappapiprop.instance_app_id = iappapi.instance_app_id
+                AND iappapi.active = true AND iappapiprop.active = true
+            JOIN instance_app_t iapp ON iapp.host_id = iappapi.host_id
+                AND iapp.instance_app_id = iappapi.instance_app_id
+                AND iapp.active = true
+            JOIN instance_api_t iapi ON iapi.host_id = iappapi.host_id
+                AND iapi.instance_api_id = iappapi.instance_api_id
+                AND iapi.active = true
+            JOIN params p ON iappapi.host_id = p.host_id
+                AND iapp.host_id = p.host_id
+                AND iapi.host_id = p.host_id
+                AND iapp.instance_id = p.instance_id
+                AND iapi.instance_id = p.instance_id
+            JOIN config_property_t cp ON cp.property_id = iappapiprop.property_id AND cp.active = true
+            JOIN config_t c ON c.config_id = cp.config_id AND c.config_phase = 'R' AND c.active = true
             """;
 
         final String instanceCustomFilesSql = """
@@ -6175,7 +6219,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             )
             SELECT f.host_id, f.instance_id, f.instance_file_id, f.file_name, f.file_value, f.file_type
             FROM instance_file_t f
-            JOIN params p on f.host_id = p.host_id AND f.instance_id = p.instance_id
+            JOIN params p on f.host_id = p.host_id AND f.instance_id = p.instance_id AND f.active = true
             """;
 
         List<Map<String, Object>> runtimeConfigs = new ArrayList<>();
@@ -6184,7 +6228,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         try (Connection connection = ds.getConnection();
              PreparedStatement instanceRuntimeConfigsPs = connection.prepareStatement(instanceRuntimeConfigsSql);
              PreparedStatement instanceCustomFilesPs = connection.prepareStatement(instanceCustomFilesSql);
-             ) {
+        ) {
 
             instanceRuntimeConfigsPs.setObject(1, hostId != null ? UUID.fromString(hostId) : null);
             instanceRuntimeConfigsPs.setObject(2, instanceId != null ? UUID.fromString(instanceId) : null);
@@ -6239,79 +6283,78 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     public Result<String> getPromotableInstanceConfigs(String hostId, String instanceId, Set<String> propertyNames, Set<String> apiUids) {
         Result<String> result;
         final String instanceConfigsSql = """
-                WITH params AS MATERIALIZED (
+                WITH active_instance_property AS ( SELECT * FROM instance_property_t WHERE active = true ),
+                active_config_property AS ( SELECT * FROM config_property_t WHERE active = true ),
+                active_config AS ( SELECT * FROM config_t WHERE active = true ),
+                active_instance AS ( SELECT * FROM instance_t WHERE active = true ),
+                params AS MATERIALIZED (
                     SELECT
                         CAST(v.host_id as UUID) as host_id,
                         CAST(v.instance_id as UUID) as instance_id,
                         v.property_names::VARCHAR[] as property_names
                     FROM (
-                        values
-                            (?, ?, ?)
+                        values (?, ?, ?)
                     ) as v(host_id, instance_id, property_names)
                 ),
                 instance_properties AS (
-                    SELECT
-                        ip.property_id as property_id,
-                        CASE
-                            WHEN cp.property_type IN ('File', 'Cert') THEN cp.property_name
-                            ELSE CONCAT(config.config_name, '.', cp.property_name)
-                        END as property_name,
-                        ip.property_value as property_value,
-                        cp.value_type as property_value_type,
-                        cp.property_type as property_type,
-                        'instance_property'::VARCHAR as property_source_type
-                    FROM
-                        instance_property_t as ip
-                        JOIN config_property_t as cp ON cp.property_id = ip.property_id
-                        JOIN config_t as config ON config.config_id = cp.config_id AND config.config_phase = 'R'
-                        JOIN instance_t as instance ON instance.instance_id = ip.instance_id
-                            AND instance.host_id = ip.host_id
-                        JOIN params ON params.instance_id = instance.instance_id
-                            AND params.instance_id = ip.instance_id
-                            AND params.host_id = instance.host_id
+                    SELECT ip.property_id as property_id,
+                    CASE
+                        WHEN cp.property_type IN ('File', 'Cert') THEN cp.property_name
+                        ELSE CONCAT(config.config_name, '.', cp.property_name)
+                    END as property_name,
+                    ip.property_value as property_value,
+                    cp.value_type as property_value_type,
+                    cp.property_type as property_type,
+                    'instance_property'::VARCHAR as property_source_type
+                    FROM active_instance_property as ip
+                    JOIN active_config_property as cp ON cp.property_id = ip.property_id
+                    JOIN active_config as config ON config.config_id = cp.config_id AND config.config_phase = 'R'
+                    JOIN active_instance as instance ON instance.instance_id = ip.instance_id AND instance.host_id = ip.host_id
+                    JOIN params ON params.instance_id = instance.instance_id AND params.instance_id = ip.instance_id AND params.host_id = instance.host_id
                 )
                 SELECT p.host_id, p.instance_id, ip.property_id, ip.property_name, ip.property_value,
                     ip.property_value_type, ip.property_type, ip.property_source_type
                 FROM instance_properties ip
-                    JOIN params p ON
-                        array_length(p.property_names, 1) IS NULL
-                            OR ip.property_name = ANY(p.property_names)
-                """;
+                JOIN params p ON array_length(p.property_names, 1) IS NULL OR ip.property_name = ANY(p.property_names)
+            """;
 
         final String subresourceConfigsSql = """
-            WITH params AS MATERIALIZED (
+            WITH active_instance_api AS ( SELECT * FROM instance_api_t WHERE active = true ),
+            active_api_version AS ( SELECT * FROM api_version_t WHERE active = true ),
+            active_instance AS ( SELECT * FROM instance_t WHERE active = true ),
+            active_instance_api_path_prefix AS ( SELECT * FROM instance_api_path_prefix_t WHERE active = true ),
+            active_config_property AS ( SELECT * FROM config_property_t WHERE active = true ),
+            active_config AS ( SELECT * FROM config_t WHERE active = true ),
+            active_instance_api_property AS ( SELECT * FROM instance_api_property_t WHERE active = true ),
+            active_instance_app_property AS ( SELECT * FROM instance_app_property_t WHERE active = true ),
+            active_instance_app AS ( SELECT * FROM instance_app_t WHERE active = true ),
+            active_instance_app_api_property AS ( SELECT * FROM instance_app_api_property_t WHERE active = true ),
+            active_instance_app_api AS ( SELECT * FROM instance_app_api_t WHERE active = true ),
+            params AS MATERIALIZED (
                 SELECT
                     CAST(v.host_id AS UUID) AS host_id,
                     CAST(v.instance_id AS UUID) AS instance_id,
                     v.api_uids::VARCHAR[] AS api_uids
-                FROM (
-                    VALUES (?, ?, ?)
-                ) AS v(host_id, instance_id, api_uids)
+                FROM ( VALUES (?, ?, ?) ) AS v(host_id, instance_id, api_uids)
             ),
             instance_api_path_prefix AS (
-                SELECT
-                    STRING_AGG(iapp.path_prefix, ', ' ORDER BY iapp.path_prefix) AS api_path_prefixes,
-                    ia.instance_api_id,
-                    ia.host_id
-                FROM
-                    instance_api_t ia
-                JOIN api_version_t av ON av.api_version_id = ia.api_version_id AND av.host_id = ia.host_id
-                JOIN instance_t i ON i.instance_id = ia.instance_id AND i.host_id = ia.host_id
-                JOIN params p ON p.instance_id = ia.instance_id
-                    AND p.host_id = ia.host_id
+                SELECT STRING_AGG(iapp.path_prefix, ', ' ORDER BY iapp.path_prefix) AS api_path_prefixes,
+                    ia.instance_api_id,ia.host_id
+                FROM active_instance_api ia
+                JOIN active_api_version av ON av.api_version_id = ia.api_version_id AND av.host_id = ia.host_id
+                JOIN active_instance i ON i.instance_id = ia.instance_id AND i.host_id = ia.host_id
+                JOIN params p ON p.instance_id = ia.instance_id AND p.host_id = ia.host_id
                     AND (array_length(p.api_uids, 1) IS NULL OR av.api_id || '-' || av.api_version = ANY(p.api_uids))
-                LEFT JOIN instance_api_path_prefix_t iapp ON ia.instance_api_id = iapp.instance_api_id AND ia.host_id = iapp.host_id
+                LEFT JOIN active_instance_api_path_prefix iapp ON ia.instance_api_id = iapp.instance_api_id AND ia.host_id = iapp.host_id
                 GROUP BY ia.host_id, ia.instance_api_id
             ),
             configuration_properties AS (
-                SELECT
-                    cp.property_id,
-                    c.config_name || '.' || cp.property_name AS property_name,
-                    cp.value_type AS property_value_type,
-                    cp.property_type
-                FROM
-                    config_property_t cp
-                JOIN config_t c ON c.config_id = cp.config_id
+                SELECT cp.property_id,
+                c.config_name || '.' || cp.property_name AS property_name,
+                cp.value_type AS property_value_type,
+                cp.property_type
+                FROM active_config_property cp
+                JOIN active_config c ON c.config_id = cp.config_id
                 WHERE cp.property_type = 'Config'
             )
             SELECT
@@ -6331,16 +6374,22 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 NULL::UUID AS instance_app_id,
                 NULL::VARCHAR AS app_id
             FROM
-                instance_api_property_t iap
+                active_instance_api_property iap
             JOIN configuration_properties cp ON cp.property_id = iap.property_id
-            JOIN instance_api_t ia ON ia.instance_api_id = iap.instance_api_id AND ia.host_id = iap.host_id
-            JOIN api_version_t av ON av.api_version_id = ia.api_version_id AND av.host_id = ia.host_id
-            JOIN params p ON p.instance_id = ia.instance_id AND p.host_id = ia.host_id
+            JOIN active_instance_api ia
+                ON ia.instance_api_id = iap.instance_api_id
+                AND ia.host_id = iap.host_id
+            JOIN active_api_version av
+                ON av.api_version_id = ia.api_version_id
+                AND av.host_id = ia.host_id
+            JOIN params p
+                ON p.instance_id = ia.instance_id
+                AND p.host_id = ia.host_id
                 AND (array_length(p.api_uids, 1) IS NULL OR av.api_id || '-' || av.api_version = ANY(p.api_uids))
-            LEFT JOIN instance_api_path_prefix iapp ON iapp.instance_api_id = ia.instance_api_id AND iapp.host_id = ia.host_id
-
+            LEFT JOIN instance_api_path_prefix iapp
+                ON iapp.instance_api_id = ia.instance_api_id
+                AND iapp.host_id = ia.host_id
             UNION ALL
-
             SELECT
                 p.host_id,
                 p.instance_id,
@@ -6358,13 +6407,15 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 iap.instance_app_id,
                 ia.app_id
             FROM
-                instance_app_property_t iap
+                active_instance_app_property iap
             JOIN configuration_properties cp ON cp.property_id = iap.property_id
-            JOIN instance_app_t ia ON ia.instance_app_id = iap.instance_app_id AND ia.host_id = iap.host_id
-            JOIN params p ON p.instance_id = ia.instance_id AND p.host_id = ia.host_id
-
+            JOIN active_instance_app ia
+                ON ia.instance_app_id = iap.instance_app_id
+                AND ia.host_id = iap.host_id
+            JOIN params p
+                ON p.instance_id = ia.instance_id
+                AND p.host_id = ia.host_id
             UNION ALL
-
             SELECT
                 p.host_id,
                 p.instance_id,
@@ -6382,41 +6433,46 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 iaap.instance_app_id,
                 ia.app_id
             FROM
-                instance_app_api_property_t iaap
+                active_instance_app_api_property iaap
             JOIN configuration_properties cp ON cp.property_id = iaap.property_id
-            JOIN instance_app_api_t iaa ON iaa.instance_api_id = iaap.instance_api_id
+            JOIN active_instance_app_api iaa
+                ON iaa.instance_api_id = iaap.instance_api_id
                 AND iaa.instance_app_id = iaap.instance_app_id
                 AND iaa.host_id = iaap.host_id
-            JOIN instance_app_t ia ON ia.instance_app_id = iaap.instance_app_id
+            JOIN active_instance_app ia
+                ON ia.instance_app_id = iaap.instance_app_id
                 AND ia.host_id = iaap.host_id
-            JOIN instance_api_t iai ON iai.instance_api_id = iaap.instance_api_id
+            JOIN active_instance_api iai
+                ON iai.instance_api_id = iaap.instance_api_id
                 AND iai.host_id = iaap.host_id
-            JOIN api_version_t av ON av.api_version_id = iai.api_version_id
+            JOIN active_api_version av
+                ON av.api_version_id = iai.api_version_id
                 AND av.host_id = iai.host_id
-            JOIN params p ON p.instance_id = ia.instance_id
+            JOIN params p
+                ON p.instance_id = ia.instance_id
                 AND p.instance_id = iai.instance_id
                 AND p.host_id = ia.host_id
                 AND (array_length(p.api_uids, 1) IS NULL OR av.api_id || '-' || av.api_version = ANY(p.api_uids))
-            LEFT JOIN instance_api_path_prefix iapp ON iapp.instance_api_id = iai.instance_api_id
+            LEFT JOIN instance_api_path_prefix iapp
+                ON iapp.instance_api_id = iai.instance_api_id
                 AND iapp.host_id = iai.host_id
             """;
 
         final String instanceCustomFilesSql = """
-                WITH params AS MATERIALIZED (
-                    SELECT
-                        CAST(v.host_id as UUID) as host_id,
-                        CAST(v.instance_id as UUID) as instance_id,
-                        v.property_names::VARCHAR[] as property_names
-                    FROM (
-                        values
-                            (?, ?, ?)
-                    ) as v(host_id, instance_id, property_names)
-                )
-                SELECT f.host_id, f.instance_id, f.instance_file_id, f.file_name, f.file_value, f.file_type
-                FROM instance_file_t f
-                JOIN instance_t i ON f.instance_id = i.instance_id AND f.host_id = i.host_id
-                JOIN params p on f.host_id = p.host_id AND f.instance_id = p.instance_id
-                    AND (array_length(p.property_names, 1) IS NULL OR f.file_name = ANY(p.property_names))
+            WITH active_instance_file AS ( SELECT * FROM instance_file_t WHERE active = true ),
+            active_instance AS ( SELECT * FROM instance_t WHERE active = true ),
+            params AS MATERIALIZED (
+                SELECT
+                CAST(v.host_id as UUID) as host_id,
+                CAST(v.instance_id as UUID) as instance_id,
+                v.property_names::VARCHAR[] as property_names
+                FROM (values (?, ?, ?)) as v(host_id, instance_id, property_names)
+            )
+            SELECT f.host_id, f.instance_id, f.instance_file_id, f.file_name, f.file_value, f.file_type
+            FROM active_instance_file f
+            JOIN active_instance i ON f.instance_id = i.instance_id AND f.host_id = i.host_id
+            JOIN params p ON f.host_id = p.host_id AND f.instance_id = p.instance_id
+                AND (array_length(p.property_names, 1) IS NULL OR f.file_name = ANY(p.property_names))
             """;
 
         List<Map<String, Object>> instanceConfigs = new ArrayList<>();
