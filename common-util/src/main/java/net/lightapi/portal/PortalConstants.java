@@ -245,6 +245,7 @@ public class PortalConstants {
     public static final String INSTANCE_API_PATH_PREFIX_UPDATED_EVENT = "InstanceApiPathPrefixUpdatedEvent";
     public static final String INSTANCE_API_PATH_PREFIX_DELETED_EVENT = "InstanceApiPathPrefixDeletedEvent";
     public static final String COMPOSITE_INSTANCE_APP_CREATED_EVENT = "CompositeInstanceAppCreatedEvent";
+    public static final String COMPOSITE_INSTANCE_API_CREATED_EVENT = "CompositeInstanceApiCreatedEvent";
 
 
     // --- Deployment Events ---
@@ -365,8 +366,10 @@ public class PortalConstants {
     // -- Instance --
     public static final String AGGREGATE_INSTANCE = "Instance";
     public static final String AGGREGATE_INSTANCE_API = "InstanceApi";
+    public static final String AGGREGATE_COMPOSITE_INSTANCE_API = "CompositeInstanceApi";
     public static final String AGGREGATE_INSTANCE_API_PATH_PREFIX = "InstanceApiPathPrefix";
     public static final String AGGREGATE_INSTANCE_APP = "InstanceApp";
+    public static final String AGGREGATE_COMPOSITE_INSTANCE_APP = "CompositeInstanceApp";
     public static final String AGGREGATE_INSTANCE_APP_API = "InstanceAppApi";
 
     // -- Ref --
