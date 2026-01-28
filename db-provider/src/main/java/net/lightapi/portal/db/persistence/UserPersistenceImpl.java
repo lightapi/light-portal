@@ -494,7 +494,7 @@ public class UserPersistenceImpl implements UserPersistence {
     /**
      * Called by the GetUserById handler to refresh the user_t data before update form is rendered.
      * @param userId userId
-     * @return Result<String> result
+     * @return {@code Result<String>} result
      */
     @Override
     public Result<String> getUserById(String userId) {

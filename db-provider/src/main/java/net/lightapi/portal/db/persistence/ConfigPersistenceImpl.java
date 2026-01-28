@@ -115,7 +115,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * This method implements:
      * 1.  **Soft Delete Principle:** An update implicitly reactivates the record by setting `active = TRUE`.
      * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
-     * 3.  **OCC/Idempotency:** Uses `aggregate_version < ?` to ensure the operation only succeeds if it
+     * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
      * @param conn  The database connection.
@@ -190,7 +190,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * This method implements:
      * 1.  **Soft Delete:** Sets the 'active' flag to false.
      * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
-     * 3.  **OCC/Idempotency:** Uses `aggregate_version < ?` to ensure the operation only succeeds if it
+     * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
      * @param conn  The database connection.
@@ -751,7 +751,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * This method implements:
      * 1.  **Soft Delete Principle:** An update implicitly reactivates the record by setting `active = TRUE`.
      * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
-     * 3.  **OCC/Idempotency:** Uses `aggregate_version < ?` to ensure the operation only succeeds if it
+     * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
      * @param conn  The database connection.
@@ -840,7 +840,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * This method implements:
      * 1.  **Soft Delete:** Sets the 'active' flag to false.
      * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
-     * 3.  **OCC/Idempotency:** Uses `aggregate_version < ?` to ensure the operation only succeeds if it
+     * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
      * @param conn  The database connection.
@@ -1202,7 +1202,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * This method implements:
      * 1.  **Soft Delete Principle:** An update implicitly reactivates the record by setting `active = TRUE`.
      * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
-     * 3.  **OCC/Idempotency:** Uses `aggregate_version < ?` to ensure the operation only succeeds if it
+     * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
      * @param conn  The database connection.
@@ -1272,7 +1272,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * This method implements:
      * 1.  **Soft Delete:** Sets the 'active' flag to false.
      * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
-     * 3.  **OCC/Idempotency:** Uses `aggregate_version < ?` to ensure the operation only succeeds if it
+     * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
      * @param conn  The database connection.
@@ -1568,7 +1568,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * This method implements:
      * 1.  **Soft Delete Principle:** An update implicitly reactivates the record by setting `active = TRUE`.
      * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
-     * 3.  **OCC/Idempotency:** Uses `aggregate_version < ?` to ensure the operation only succeeds if it
+     * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
      * @param conn  The database connection.
@@ -1638,7 +1638,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * This method implements:
      * 1.  **Soft Delete:** Sets the 'active' flag to false.
      * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
-     * 3.  **OCC/Idempotency:** Uses `aggregate_version < ?` to ensure the operation only succeeds if it
+     * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
      * @param conn  The database connection.
@@ -1964,7 +1964,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * This method implements:
      * 1.  **Soft Delete Principle:** An update implicitly reactivates the record by setting `active = TRUE`.
      * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
-     * 3.  **OCC/Idempotency:** Uses `aggregate_version < ?` to ensure the operation only succeeds if it
+     * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
      * @param conn  The database connection.
@@ -2034,7 +2034,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * This method implements:
      * 1.  **Soft Delete:** Sets the 'active' flag to false.
      * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
-     * 3.  **OCC/Idempotency:** Uses `aggregate_version < ?` to ensure the operation only succeeds if it
+     * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
      * @param conn  The database connection.
@@ -2358,7 +2358,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * This method implements:
      * 1.  **Soft Delete Principle:** An update implicitly reactivates the record by setting `active = TRUE`.
      * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
-     * 3.  **OCC/Idempotency:** Uses `aggregate_version < ?` to ensure the operation only succeeds if it
+     * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
      * @param conn  The database connection.
@@ -2431,7 +2431,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * This method implements:
      * 1.  **Soft Delete:** Sets the 'active' flag to false.
      * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
-     * 3.  **OCC/Idempotency:** Uses `aggregate_version < ?` to ensure the operation only succeeds if it
+     * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
      * @param conn  The database connection.
@@ -2769,7 +2769,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * This method implements:
      * 1.  **Soft Delete Principle:** An update implicitly reactivates the record by setting `active = TRUE`.
      * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
-     * 3.  **OCC/Idempotency:** Uses `aggregate_version < ?` to ensure the operation only succeeds if it
+     * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
      * @param conn  The database connection.
@@ -2839,7 +2839,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * This method implements:
      * 1.  **Soft Delete:** Sets the 'active' flag to false.
      * 2.  **IDM:** Explicitly sets 'update_user' and 'update_ts' from the event metadata.
-     * 3.  **OCC/Idempotency:** Uses `aggregate_version < ?` to ensure the operation only succeeds if it
+     * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
      * @param conn  The database connection.
