@@ -328,6 +328,7 @@ public class UserPersistenceImpl implements UserPersistence {
                 WHERE
                     u.email = ?
                     AND u.active = TRUE
+                    AND ru.active = TRUE
                     AND u.locked = FALSE
                     AND u.verified = TRUE
                     AND uh.current = TRUE
