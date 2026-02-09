@@ -1429,7 +1429,7 @@ public class HybridQueryClient {
      * @param offset offset
      * @return Result the instance applicable properties
      */
-    public static Result<String> getApplicableConfigPropertiesForInstance(HttpServerExchange exchange, String hostId, String instanceId, Set<String> resourceTypes, Set<String> configTypes, Set<String> propertyTypes, int offset, int limit) {
+    public static Result<String> getApplicableConfigPropertiesForInstance(HttpServerExchange exchange, String hostId, String instanceId, Set<String> resourceTypes, Set<String> configTypes, Set<String> propertyTypes, Set<String> configPhases,int offset, int limit) {
         final String data = JsonMapper.toJson(
                 Map.of(
                         "hostId", hostId != null ? hostId : "",
@@ -1437,6 +1437,7 @@ public class HybridQueryClient {
                         "resourceTypes", resourceTypes != null ? resourceTypes : Collections.emptySet(),
                         "configTypes", configTypes != null ? configTypes : Collections.emptySet(),
                         "propertyTypes", propertyTypes != null ? propertyTypes : Collections.emptySet(),
+                        "configPhases", configPhases != null ? configPhases : Collections.emptySet(),
                         "limit", limit,
                         "offset", offset
                 )
