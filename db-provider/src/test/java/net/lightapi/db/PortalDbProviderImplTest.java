@@ -186,6 +186,57 @@ public class PortalDbProviderImplTest {
         }
     }
 
+    @Test
+    public void testQueryRoleUser()  {
+        Result<String> result = dbProvider.queryRoleUser(0, 4, null, null, null, true, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
+        if(result.isFailure()) {
+            System.out.println(result.getError());
+            fail();
+        } else {
+            System.out.println(result.getResult());
+            Map<String, Object> entities = JsonMapper.string2Map(result.getResult());
+            assertTrue((Integer)entities.get("total") > 0);
+        }
+    }
+
+    @Test
+    public void testQueryGroupUser()  {
+        Result<String> result = dbProvider.queryGroupUser(0, 4, null, null, null, true, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
+        if(result.isFailure()) {
+            System.out.println(result.getError());
+            fail();
+        } else {
+            System.out.println(result.getResult());
+            Map<String, Object> entities = JsonMapper.string2Map(result.getResult());
+            assertTrue((Integer)entities.get("total") >= 0);
+        }
+    }
+
+    @Test
+    public void testQueryPositionUser()  {
+        Result<String> result = dbProvider.queryPositionUser(0, 4, null, null, null, true, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
+        if(result.isFailure()) {
+            System.out.println(result.getError());
+            fail();
+        } else {
+            System.out.println(result.getResult());
+            Map<String, Object> entities = JsonMapper.string2Map(result.getResult());
+            assertTrue((Integer)entities.get("total") >= 0);
+        }
+    }
+
+    @Test
+    public void testQueryAttributeUser()  {
+        Result<String> result = dbProvider.queryAttributeUser(0, 4, null, null, null, true, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
+        if(result.isFailure()) {
+            System.out.println(result.getError());
+            fail();
+        } else {
+            System.out.println(result.getResult());
+            Map<String, Object> entities = JsonMapper.string2Map(result.getResult());
+            assertTrue((Integer)entities.get("total") >= 0);
+        }
+    }
 
     @Test
     @Disabled

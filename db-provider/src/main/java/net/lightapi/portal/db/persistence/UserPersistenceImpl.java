@@ -328,6 +328,7 @@ public class UserPersistenceImpl implements UserPersistence {
                 WHERE
                     u.email = ?
                     AND u.active = TRUE
+                    AND ru.active = TRUE
                     AND u.locked = FALSE
                     AND u.verified = TRUE
                     AND uh.current = TRUE
@@ -494,7 +495,7 @@ public class UserPersistenceImpl implements UserPersistence {
     /**
      * Called by the GetUserById handler to refresh the user_t data before update form is rendered.
      * @param userId userId
-     * @return Result<String> result
+     * @return {@code Result<String>} result
      */
     @Override
     public Result<String> getUserById(String userId) {

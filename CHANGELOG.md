@@ -1,5 +1,15 @@
 # Change Log
 
+## [2.3.2](https://github.com/networknt/light-portal/tree/2.3.2) (2026-02-02)
+
+
+**Merged pull requests:**
+
+
+- Sync [\#430](https://github.com/lightapi/light-portal/pull/430) ([stevehu](https://github.com/stevehu))
+- Sync [\#429](https://github.com/lightapi/light-portal/pull/429) ([stevehu](https://github.com/stevehu))
+
+
 ## [2.3.1](https://github.com/networknt/light-portal/tree/2.3.1) (2025-09-19)
 
 

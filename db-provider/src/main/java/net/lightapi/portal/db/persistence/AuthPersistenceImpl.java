@@ -526,7 +526,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
      * This method is called by the oauth-kafka for the client authentication. The client must be active in order to
      * be used.
      * @param clientId client id
-     * @return Result<String> the result
+     * @return {@code Result<String>} the result
      */
     @Override
     public Result<String> queryClientByClientId(String clientId) {
@@ -584,7 +584,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
      *
      * @param hostId host id
      * @param clientId client id
-     * @return Result<String> result
+     * @return {@code Result<String>} result
      */
     @Override
     public Result<String> getClientById(String hostId, String clientId) {

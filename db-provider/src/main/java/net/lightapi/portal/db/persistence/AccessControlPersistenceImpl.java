@@ -501,7 +501,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "u", "c", "e", "r");
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "u", "r");
         String[] searchColumns = {"r.role_id", "u.email", "u.first_name", "u.last_name"};
         String sqlBuilder = s + activeClause +
                 dynamicFilter(Arrays.asList("r.host_id", "u.user_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
@@ -2128,7 +2128,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         parameters.add(UUID.fromString(hostId));
 
 
-        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "u", "c", "e", "g");
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "u", "g");
         String[] searchColumns = {"g.group_id", "u.email", "u.first_name", "u.last_name"};
         String sqlBuilder = s + activeClause +
                 dynamicFilter(Arrays.asList("g.host_id", "u.user_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
@@ -3820,7 +3820,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "u", "e", "ep");
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "u", "ep");
         String[] searchColumns = {"ep.position_id", "u.email", "u.first_name", "u.last_name"};
         String sqlBuilder = s + activeClause +
                 dynamicFilter(Arrays.asList("ep.host_id", "u.user_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
@@ -5570,7 +5570,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "u", "c", "e", "a", "at");
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "u", "a", "at");
         String[] searchColumns = {"a.attribute_id", "a.attribute_value", "u.email", "u.first_name", "u.last_name"};
         String sqlBuilder = s + activeClause +
                 dynamicFilter(Arrays.asList("a.host_id", "u.user_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +

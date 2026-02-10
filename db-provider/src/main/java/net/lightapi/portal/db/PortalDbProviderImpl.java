@@ -546,7 +546,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     // --- Product / Instance Applicable Properties
     @Override
-    public Result<String> getApplicableConfigPropertiesForInstance(int offset, int limit, String hostId, String instanceId, Set<String> resourceTypes, Set<String> configTypes, Set<String> propertyTypes) { return configPersistence.getApplicableConfigPropertiesForInstance(offset, limit, hostId, instanceId, resourceTypes, configTypes, propertyTypes); }
+    public Result<String> getApplicableConfigPropertiesForInstance(int offset, int limit, String hostId, String instanceId, Set<String> resourceTypes, Set<String> configTypes, Set<String> propertyTypes,Set<String> configPhases) { return configPersistence.getApplicableConfigPropertiesForInstance(offset, limit, hostId, instanceId, resourceTypes, configTypes, propertyTypes,configPhases); }
 
     @Override
     public Result<String> getApplicableConfigPropertiesForInstanceApi(int offset, int limit, String hostId, String instanceApiId) { return configPersistence.getApplicableConfigPropertiesForInstanceApi(offset, limit, hostId, instanceApiId); }
