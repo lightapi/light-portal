@@ -1416,6 +1416,10 @@ public class HybridQueryClient {
         }
     }
 
+    public static Result<String> getApplicableConfigPropertiesForInstance(HttpServerExchange exchange, String hostId, String instanceId, Set<String> resourceTypes, Set<String> configTypes, Set<String> propertyTypes, int offset, int limit) {
+        return getApplicableConfigPropertiesForInstance(exchange, hostId, instanceId, resourceTypes, configTypes, propertyTypes, Collections.emptySet(), offset, limit);
+    }
+
     /**
      * Get Applicable Config Properties for Instance
      *

@@ -5613,10 +5613,10 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                 JOIN applicable_instance_config_properties aicp ON c.config_id = aicp.config_id AND cp.config_id = aicp.config_id AND cp.property_id = aicp.property_id
                 LEFT JOIN property_values pv ON cp.property_id = pv.property_id
                 WHERE 1 = 1
-                AND ( array_length(?, 1) IS NULL OR cp.resource_type = ANY(?) )
-                AND ( array_length(?, 1) IS NULL OR c.config_type = ANY(?) )
-                AND ( array_length(?, 1) IS NULL OR cp.property_type = ANY(?) )
-                AND ( array_length(?, 1) IS NULL OR c.config_phase = ANY(?) )
+                AND ( array_length(?::varchar[], 1) IS NULL OR cp.resource_type = ANY(?::varchar[]) )
+                AND ( array_length(?::varchar[], 1) IS NULL OR c.config_type = ANY(?::varchar[]) )
+                AND ( array_length(?::varchar[], 1) IS NULL OR cp.property_type = ANY(?::varchar[]) )
+                AND ( array_length(?::char[], 1) IS NULL OR c.config_phase = ANY(?::char[]) )
             ORDER BY c.config_name, cp.property_name, cp.display_order
             LIMIT ? OFFSET ?
             """;
