@@ -629,6 +629,13 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> insertEventStore(CloudEvent[] events);
     int getMaxAggregateVersion(String aggregateId);
 
+    // AgentDefinition
+    void createAgentDefinition(Connection conn, Map<String, Object> event) throws SQLException;
+    void updateAgentDefinition(Connection conn, Map<String, Object> event) throws SQLException;
+    void deleteAgentDefinition(Connection conn, Map<String, Object> event) throws SQLException;
+    Result<String> queryAgentDefinition(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
+    Result<String> getAgentDefinitionById(String hostId, String agentDefId);
+
     /**
      * Builds the CloudEvent object array from the provided map, eventType, aggregateId,
      * aggregateType, userId, host, and nonce. This allows light-portal components to

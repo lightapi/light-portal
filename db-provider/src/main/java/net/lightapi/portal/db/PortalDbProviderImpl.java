@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.SQLException; // Added import
-import java.sql.Timestamp;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +38,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     private final RulePersistence rulePersistence;
     private final NotificationDataPersistence notificationDataPersistence;
     private final EventPersistence eventPersistence;
+    private final GenAIPersistence genAIPersistence;
 
     public PortalDbProviderImpl() {
         NotificationService notificationService = new NotificationServiceImpl();
@@ -58,6 +58,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
         this.rulePersistence = new RulePersistenceImpl(notificationService);
         this.notificationDataPersistence = new NotificationDataPersistenceImpl();
         this.eventPersistence = new EventPersistenceImpl();
+        this.genAIPersistence = new GenAIPersistenceImpl();
     }
 
     // --- Reference ---
@@ -562,4 +563,11 @@ public class PortalDbProviderImpl implements PortalDbProvider {
 
     @Override
     public Result<String> getPromotableInstanceConfigs(String hostId, String instanceId,Set<String> propertyNames,Set<String> apiUids){return configPersistence.getPromotableInstanceConfigs(hostId,instanceId,propertyNames,apiUids);}
+
+    // --- GenAI Agent ---
+    @Override public void createAgentDefinition(Connection conn, Map<String, Object> event) throws SQLException { genAIPersistence.createAgentDefinition(conn, event); }
+    @Override public void updateAgentDefinition(Connection conn, Map<String, Object> event) throws SQLException { genAIPersistence.updateAgentDefinition(conn, event); }
+    @Override public void deleteAgentDefinition(Connection conn, Map<String, Object> event) throws SQLException { genAIPersistence.deleteAgentDefinition(conn, event); }
+    @Override public Result<String> queryAgentDefinition(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return genAIPersistence.queryAgentDefinition(offset, limit, filters, globalFilter, sorting, active, hostId); }
+    @Override public Result<String> getAgentDefinitionById(String hostId, String agentDefId) { return genAIPersistence.getAgentDefinitionById(hostId, agentDefId); }
 }
