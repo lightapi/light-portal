@@ -577,4 +577,106 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void deleteWorkflowDefinition(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.deleteWorkflowDefinition(conn, event); }
     @Override public Result<String> queryWorkflowDefinition(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return genAIPersistence.queryWorkflowDefinition(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getWorkflowDefinitionById(String hostId, String wfDefId) { return genAIPersistence.getWorkflowDefinitionById(hostId, wfDefId); }
+
+    // --- Worklist ---
+    @Override public void createWorklist(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.createWorklist(conn, event); }
+    @Override public void updateWorklist(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.updateWorklist(conn, event); }
+    @Override public void deleteWorklist(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.deleteWorklist(conn, event); }
+    @Override public Result<String> queryWorklist(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return genAIPersistence.queryWorklist(offset, limit, filters, globalFilter, sorting, active, hostId); }
+    @Override public Result<String> getWorklistById(String hostId, String assigneeId, String categoryId) { return genAIPersistence.getWorklistById(hostId, assigneeId, categoryId); }
+
+    // --- WorklistColumn ---
+    @Override public void createWorklistColumn(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.createWorklistColumn(conn, event); }
+    @Override public void updateWorklistColumn(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.updateWorklistColumn(conn, event); }
+    @Override public void deleteWorklistColumn(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.deleteWorklistColumn(conn, event); }
+    @Override public Result<String> queryWorklistColumn(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return genAIPersistence.queryWorklistColumn(offset, limit, filters, globalFilter, sorting, active, hostId); }
+    @Override public Result<String> getWorklistColumnById(String hostId, String assigneeId, String categoryId, int sequenceId) { return genAIPersistence.getWorklistColumnById(hostId, assigneeId, categoryId, sequenceId); }
+
+    // --- ProcessInfo ---
+    @Override public void createProcessInfo(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.createProcessInfo(conn, event); }
+    @Override public void updateProcessInfo(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.updateProcessInfo(conn, event); }
+    @Override public void deleteProcessInfo(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.deleteProcessInfo(conn, event); }
+    @Override public Result<String> queryProcessInfo(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return genAIPersistence.queryProcessInfo(offset, limit, filters, globalFilter, sorting, active, hostId); }
+    @Override public Result<String> getProcessInfoById(String hostId, String processId) { return genAIPersistence.getProcessInfoById(hostId, processId); }
+
+    // --- TaskInfo ---
+    @Override public void createTaskInfo(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.createTaskInfo(conn, event); }
+    @Override public void updateTaskInfo(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.updateTaskInfo(conn, event); }
+    @Override public void deleteTaskInfo(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.deleteTaskInfo(conn, event); }
+    @Override public Result<String> queryTaskInfo(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return genAIPersistence.queryTaskInfo(offset, limit, filters, globalFilter, sorting, active, hostId); }
+    @Override public Result<String> getTaskInfoById(String hostId, String taskId) { return genAIPersistence.getTaskInfoById(hostId, taskId); }
+
+    // --- TaskAssignment ---
+    @Override public void createTaskAssignment(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.createTaskAssignment(conn, event); }
+    @Override public void updateTaskAssignment(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.updateTaskAssignment(conn, event); }
+    @Override public void deleteTaskAssignment(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.deleteTaskAssignment(conn, event); }
+    @Override public Result<String> queryTaskAssignment(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return genAIPersistence.queryTaskAssignment(offset, limit, filters, globalFilter, sorting, active, hostId); }
+    @Override public Result<String> getTaskAssignmentById(String hostId, String taskAsstId) { return genAIPersistence.getTaskAssignmentById(hostId, taskAsstId); }
+
+    // --- AuditLog ---
+    @Override public void createAuditLog(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.createAuditLog(conn, event); }
+    @Override public Result<String> queryAuditLog(int offset, int limit, String filters, String globalFilter, String sorting, String hostId) { return genAIPersistence.queryAuditLog(offset, limit, filters, globalFilter, sorting, hostId); }
+    @Override public Result<String> getAuditLogById(String hostId, String auditLogId) { return genAIPersistence.getAuditLogById(hostId, auditLogId); }
+
+    // --- Skill ---
+    @Override public void createSkill(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.createSkill(conn, event); }
+    @Override public void updateSkill(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.updateSkill(conn, event); }
+    @Override public void deleteSkill(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.deleteSkill(conn, event); }
+    @Override public Result<String> querySkill(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return genAIPersistence.querySkill(offset, limit, filters, globalFilter, sorting, active, hostId); }
+    @Override public Result<String> getSkillById(String hostId, String skillId) { return genAIPersistence.getSkillById(hostId, skillId); }
+
+    // --- SkillParam ---
+    @Override public void createSkillParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.createSkillParam(conn, event); }
+    @Override public void updateSkillParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.updateSkillParam(conn, event); }
+    @Override public void deleteSkillParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.deleteSkillParam(conn, event); }
+    @Override public Result<String> querySkillParam(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return genAIPersistence.querySkillParam(offset, limit, filters, globalFilter, sorting, active, hostId); }
+    @Override public Result<String> getSkillParamById(String hostId, String paramId) { return genAIPersistence.getSkillParamById(hostId, paramId); }
+
+    // --- SkillDependency ---
+    @Override public void createSkillDependency(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.createSkillDependency(conn, event); }
+    @Override public void updateSkillDependency(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.updateSkillDependency(conn, event); }
+    @Override public void deleteSkillDependency(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.deleteSkillDependency(conn, event); }
+    @Override public Result<String> querySkillDependency(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return genAIPersistence.querySkillDependency(offset, limit, filters, globalFilter, sorting, active, hostId); }
+    @Override public Result<String> getSkillDependencyById(String hostId, String skillId, String dependsOnSkillId) { return genAIPersistence.getSkillDependencyById(hostId, skillId, dependsOnSkillId); }
+
+    // --- AgentSkill ---
+    @Override public void createAgentSkill(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.createAgentSkill(conn, event); }
+    @Override public void updateAgentSkill(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.updateAgentSkill(conn, event); }
+    @Override public void deleteAgentSkill(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.deleteAgentSkill(conn, event); }
+    @Override public Result<String> queryAgentSkill(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return genAIPersistence.queryAgentSkill(offset, limit, filters, globalFilter, sorting, active, hostId); }
+    @Override public Result<String> getAgentSkillById(String hostId, String agentDefId, String skillId) { return genAIPersistence.getAgentSkillById(hostId, agentDefId, skillId); }
+
+    // --- AgentSessionHistory ---
+    @Override public void createAgentSessionHistory(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.createAgentSessionHistory(conn, event); }
+    @Override public void deleteAgentSessionHistory(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.deleteAgentSessionHistory(conn, event); }
+    @Override public Result<String> queryAgentSessionHistory(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return genAIPersistence.queryAgentSessionHistory(offset, limit, filters, globalFilter, sorting, active, hostId); }
+    @Override public Result<String> getAgentSessionHistoryById(String hostId, String sessionHistoryId) { return genAIPersistence.getAgentSessionHistoryById(hostId, sessionHistoryId); }
+
+    // --- SessionMemory ---
+    @Override public void createSessionMemory(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.createSessionMemory(conn, event); }
+    @Override public void updateSessionMemory(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.updateSessionMemory(conn, event); }
+    @Override public void deleteSessionMemory(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.deleteSessionMemory(conn, event); }
+    @Override public Result<String> querySessionMemory(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return genAIPersistence.querySessionMemory(offset, limit, filters, globalFilter, sorting, active, hostId); }
+    @Override public Result<String> getSessionMemoryById(String hostId, String memId) { return genAIPersistence.getSessionMemoryById(hostId, memId); }
+
+    // --- UserMemory ---
+    @Override public void createUserMemory(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.createUserMemory(conn, event); }
+    @Override public void updateUserMemory(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.updateUserMemory(conn, event); }
+    @Override public void deleteUserMemory(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.deleteUserMemory(conn, event); }
+    @Override public Result<String> queryUserMemory(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return genAIPersistence.queryUserMemory(offset, limit, filters, globalFilter, sorting, active, hostId); }
+    @Override public Result<String> getUserMemoryById(String hostId, String memId) { return genAIPersistence.getUserMemoryById(hostId, memId); }
+
+    // --- AgentMemory ---
+    @Override public void createAgentMemory(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.createAgentMemory(conn, event); }
+    @Override public void updateAgentMemory(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.updateAgentMemory(conn, event); }
+    @Override public void deleteAgentMemory(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.deleteAgentMemory(conn, event); }
+    @Override public Result<String> queryAgentMemory(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return genAIPersistence.queryAgentMemory(offset, limit, filters, globalFilter, sorting, active, hostId); }
+    @Override public Result<String> getAgentMemoryById(String hostId, String memId) { return genAIPersistence.getAgentMemoryById(hostId, memId); }
+
+    // --- OrgMemory ---
+    @Override public void createOrgMemory(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.createOrgMemory(conn, event); }
+    @Override public void updateOrgMemory(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.updateOrgMemory(conn, event); }
+    @Override public void deleteOrgMemory(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.deleteOrgMemory(conn, event); }
+    @Override public Result<String> queryOrgMemory(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return genAIPersistence.queryOrgMemory(offset, limit, filters, globalFilter, sorting, active, hostId); }
+    @Override public Result<String> getOrgMemoryById(String hostId, String memId) { return genAIPersistence.getOrgMemoryById(hostId, memId); }
 }

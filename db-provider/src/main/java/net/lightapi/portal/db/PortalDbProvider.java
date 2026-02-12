@@ -643,6 +643,108 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> queryWorkflowDefinition(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<String> getWorkflowDefinitionById(String hostId, String wfDefId);
 
+    // Worklist
+    void createWorklist(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void updateWorklist(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteWorklist(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    Result<String> queryWorklist(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
+    Result<String> getWorklistById(String hostId, String assigneeId, String categoryId);
+
+    // WorklistColumn
+    void createWorklistColumn(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void updateWorklistColumn(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteWorklistColumn(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    Result<String> queryWorklistColumn(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
+    Result<String> getWorklistColumnById(String hostId, String assigneeId, String categoryId, int sequenceId);
+
+    // ProcessInfo
+    void createProcessInfo(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void updateProcessInfo(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteProcessInfo(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    Result<String> queryProcessInfo(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
+    Result<String> getProcessInfoById(String hostId, String processId);
+
+    // TaskInfo
+    void createTaskInfo(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void updateTaskInfo(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteTaskInfo(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    Result<String> queryTaskInfo(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
+    Result<String> getTaskInfoById(String hostId, String taskId);
+
+    // TaskAssignment
+    void createTaskAssignment(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void updateTaskAssignment(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteTaskAssignment(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    Result<String> queryTaskAssignment(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
+    Result<String> getTaskAssignmentById(String hostId, String taskAsstId);
+
+    // AuditLog
+    void createAuditLog(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    Result<String> queryAuditLog(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
+    Result<String> getAuditLogById(String hostId, String auditLogId);
+
+    // Skill
+    void createSkill(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void updateSkill(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteSkill(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    Result<String> querySkill(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
+    Result<String> getSkillById(String hostId, String skillId);
+
+    // SkillParam
+    void createSkillParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void updateSkillParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteSkillParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    Result<String> querySkillParam(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
+    Result<String> getSkillParamById(String hostId, String paramId);
+
+    // SkillDependency
+    void createSkillDependency(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void updateSkillDependency(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteSkillDependency(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    Result<String> querySkillDependency(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
+    Result<String> getSkillDependencyById(String hostId, String skillId, String dependsOnSkillId);
+
+    // AgentSkill
+    void createAgentSkill(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void updateAgentSkill(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteAgentSkill(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    Result<String> queryAgentSkill(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
+    Result<String> getAgentSkillById(String hostId, String agentDefId, String skillId);
+
+    // AgentSessionHistory
+    void createAgentSessionHistory(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteAgentSessionHistory(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    Result<String> queryAgentSessionHistory(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
+    Result<String> getAgentSessionHistoryById(String hostId, String sessionHistoryId);
+
+    // SessionMemory
+    void createSessionMemory(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void updateSessionMemory(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteSessionMemory(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    Result<String> querySessionMemory(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
+    Result<String> getSessionMemoryById(String hostId, String memId);
+
+    // UserMemory
+    void createUserMemory(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void updateUserMemory(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteUserMemory(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    Result<String> queryUserMemory(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
+    Result<String> getUserMemoryById(String hostId, String memId);
+
+    // AgentMemory
+    void createAgentMemory(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void updateAgentMemory(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteAgentMemory(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    Result<String> queryAgentMemory(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
+    Result<String> getAgentMemoryById(String hostId, String memId);
+
+    // OrgMemory
+    void createOrgMemory(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void updateOrgMemory(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteOrgMemory(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    Result<String> queryOrgMemory(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
+    Result<String> getOrgMemoryById(String hostId, String memId);
+
     /**
      * Builds the CloudEvent object array from the provided map, eventType, aggregateId,
      * aggregateType, userId, host, and nonce. This allows light-portal components to
@@ -957,6 +1059,56 @@ public interface PortalDbProvider extends DbProvider {
             case PortalConstants.REF_RELATION_CREATED_EVENT: createRefRelation(conn, event); break;
             case PortalConstants.REF_RELATION_UPDATED_EVENT: updateRefRelation(conn, event); break;
             case PortalConstants.REF_RELATION_DELETED_EVENT: deleteRefRelation(conn, event); break;
+
+            // --- GenAI Events ---
+            case PortalConstants.AGENT_DEFINITION_CREATED_EVENT: createAgentDefinition(conn, event); break;
+            case PortalConstants.AGENT_DEFINITION_UPDATED_EVENT: updateAgentDefinition(conn, event); break;
+            case PortalConstants.AGENT_DEFINITION_DELETED_EVENT: deleteAgentDefinition(conn, event); break;
+            case PortalConstants.WORKFLOW_DEFINITION_CREATED_EVENT: createWorkflowDefinition(conn, event); break;
+            case PortalConstants.WORKFLOW_DEFINITION_UPDATED_EVENT: updateWorkflowDefinition(conn, event); break;
+            case PortalConstants.WORKFLOW_DEFINITION_DELETED_EVENT: deleteWorkflowDefinition(conn, event); break;
+            case PortalConstants.WORKLIST_CREATED_EVENT: createWorklist(conn, event); break;
+            case PortalConstants.WORKLIST_UPDATED_EVENT: updateWorklist(conn, event); break;
+            case PortalConstants.WORKLIST_DELETED_EVENT: deleteWorklist(conn, event); break;
+            case PortalConstants.WORKLIST_COLUMN_CREATED_EVENT: createWorklistColumn(conn, event); break;
+            case PortalConstants.WORKLIST_COLUMN_UPDATED_EVENT: updateWorklistColumn(conn, event); break;
+            case PortalConstants.WORKLIST_COLUMN_DELETED_EVENT: deleteWorklistColumn(conn, event); break;
+            case PortalConstants.PROCESS_INFO_CREATED_EVENT: createProcessInfo(conn, event); break;
+            case PortalConstants.PROCESS_INFO_UPDATED_EVENT: updateProcessInfo(conn, event); break;
+            case PortalConstants.PROCESS_INFO_DELETED_EVENT: deleteProcessInfo(conn, event); break;
+            case PortalConstants.TASK_INFO_CREATED_EVENT: createTaskInfo(conn, event); break;
+            case PortalConstants.TASK_INFO_UPDATED_EVENT: updateTaskInfo(conn, event); break;
+            case PortalConstants.TASK_INFO_DELETED_EVENT: deleteTaskInfo(conn, event); break;
+            case PortalConstants.TASK_ASSIGNMENT_CREATED_EVENT: createTaskAssignment(conn, event); break;
+            case PortalConstants.TASK_ASSIGNMENT_UPDATED_EVENT: updateTaskAssignment(conn, event); break;
+            case PortalConstants.TASK_ASSIGNMENT_DELETED_EVENT: deleteTaskAssignment(conn, event); break;
+            case PortalConstants.AUDIT_LOG_CREATED_EVENT: createAuditLog(conn, event); break;
+            case PortalConstants.SKILL_CREATED_EVENT: createSkill(conn, event); break;
+            case PortalConstants.SKILL_UPDATED_EVENT: updateSkill(conn, event); break;
+            case PortalConstants.SKILL_DELETED_EVENT: deleteSkill(conn, event); break;
+            case PortalConstants.SKILL_PARAM_CREATED_EVENT: createSkillParam(conn, event); break;
+            case PortalConstants.SKILL_PARAM_UPDATED_EVENT: updateSkillParam(conn, event); break;
+            case PortalConstants.SKILL_PARAM_DELETED_EVENT: deleteSkillParam(conn, event); break;
+            case PortalConstants.SKILL_DEPENDENCY_CREATED_EVENT: createSkillDependency(conn, event); break;
+            case PortalConstants.SKILL_DEPENDENCY_UPDATED_EVENT: updateSkillDependency(conn, event); break;
+            case PortalConstants.SKILL_DEPENDENCY_DELETED_EVENT: deleteSkillDependency(conn, event); break;
+            case PortalConstants.AGENT_SKILL_CREATED_EVENT: createAgentSkill(conn, event); break;
+            case PortalConstants.AGENT_SKILL_UPDATED_EVENT: updateAgentSkill(conn, event); break;
+            case PortalConstants.AGENT_SKILL_DELETED_EVENT: deleteAgentSkill(conn, event); break;
+            case PortalConstants.AGENT_SESSION_HISTORY_CREATED_EVENT: createAgentSessionHistory(conn, event); break;
+            case PortalConstants.AGENT_SESSION_HISTORY_DELETED_EVENT: deleteAgentSessionHistory(conn, event); break;
+            case PortalConstants.SESSION_MEMORY_CREATED_EVENT: createSessionMemory(conn, event); break;
+            case PortalConstants.SESSION_MEMORY_UPDATED_EVENT: updateSessionMemory(conn, event); break;
+            case PortalConstants.SESSION_MEMORY_DELETED_EVENT: deleteSessionMemory(conn, event); break;
+            case PortalConstants.USER_MEMORY_CREATED_EVENT: createUserMemory(conn, event); break;
+            case PortalConstants.USER_MEMORY_UPDATED_EVENT: updateUserMemory(conn, event); break;
+            case PortalConstants.USER_MEMORY_DELETED_EVENT: deleteUserMemory(conn, event); break;
+            case PortalConstants.AGENT_MEMORY_CREATED_EVENT: createAgentMemory(conn, event); break;
+            case PortalConstants.AGENT_MEMORY_UPDATED_EVENT: updateAgentMemory(conn, event); break;
+            case PortalConstants.AGENT_MEMORY_DELETED_EVENT: deleteAgentMemory(conn, event); break;
+            case PortalConstants.ORG_MEMORY_CREATED_EVENT: createOrgMemory(conn, event); break;
+            case PortalConstants.ORG_MEMORY_UPDATED_EVENT: updateOrgMemory(conn, event); break;
+            case PortalConstants.ORG_MEMORY_DELETED_EVENT: deleteOrgMemory(conn, event); break;
 
             // --- Default Case ---
             default:

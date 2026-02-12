@@ -314,6 +314,56 @@ public class PortalConstants {
     // --- Platform Queried Events ---
     public static final String PLATFORM_QUERIED_EVENT = "PlatformQueriedEvent";
 
+    // --- GenAI Events ---
+    public static final String AGENT_DEFINITION_CREATED_EVENT = "AgentDefinitionCreatedEvent";
+    public static final String AGENT_DEFINITION_UPDATED_EVENT = "AgentDefinitionUpdatedEvent";
+    public static final String AGENT_DEFINITION_DELETED_EVENT = "AgentDefinitionDeletedEvent";
+    public static final String WORKFLOW_DEFINITION_CREATED_EVENT = "WorkflowDefinitionCreatedEvent";
+    public static final String WORKFLOW_DEFINITION_UPDATED_EVENT = "WorkflowDefinitionUpdatedEvent";
+    public static final String WORKFLOW_DEFINITION_DELETED_EVENT = "WorkflowDefinitionDeletedEvent";
+    public static final String WORKLIST_CREATED_EVENT = "WorklistCreatedEvent";
+    public static final String WORKLIST_UPDATED_EVENT = "WorklistUpdatedEvent";
+    public static final String WORKLIST_DELETED_EVENT = "WorklistDeletedEvent";
+    public static final String WORKLIST_COLUMN_CREATED_EVENT = "WorklistColumnCreatedEvent";
+    public static final String WORKLIST_COLUMN_UPDATED_EVENT = "WorklistColumnUpdatedEvent";
+    public static final String WORKLIST_COLUMN_DELETED_EVENT = "WorklistColumnDeletedEvent";
+    public static final String PROCESS_INFO_CREATED_EVENT = "ProcessInfoCreatedEvent";
+    public static final String PROCESS_INFO_UPDATED_EVENT = "ProcessInfoUpdatedEvent";
+    public static final String PROCESS_INFO_DELETED_EVENT = "ProcessInfoDeletedEvent";
+    public static final String TASK_INFO_CREATED_EVENT = "TaskInfoCreatedEvent";
+    public static final String TASK_INFO_UPDATED_EVENT = "TaskInfoUpdatedEvent";
+    public static final String TASK_INFO_DELETED_EVENT = "TaskInfoDeletedEvent";
+    public static final String TASK_ASSIGNMENT_CREATED_EVENT = "TaskAssignmentCreatedEvent";
+    public static final String TASK_ASSIGNMENT_UPDATED_EVENT = "TaskAssignmentUpdatedEvent";
+    public static final String TASK_ASSIGNMENT_DELETED_EVENT = "TaskAssignmentDeletedEvent";
+    public static final String AUDIT_LOG_CREATED_EVENT = "AuditLogCreatedEvent";
+    public static final String SKILL_CREATED_EVENT = "SkillCreatedEvent";
+    public static final String SKILL_UPDATED_EVENT = "SkillUpdatedEvent";
+    public static final String SKILL_DELETED_EVENT = "SkillDeletedEvent";
+    public static final String SKILL_PARAM_CREATED_EVENT = "SkillParamCreatedEvent";
+    public static final String SKILL_PARAM_UPDATED_EVENT = "SkillParamUpdatedEvent";
+    public static final String SKILL_PARAM_DELETED_EVENT = "SkillParamDeletedEvent";
+    public static final String SKILL_DEPENDENCY_CREATED_EVENT = "SkillDependencyCreatedEvent";
+    public static final String SKILL_DEPENDENCY_UPDATED_EVENT = "SkillDependencyUpdatedEvent";
+    public static final String SKILL_DEPENDENCY_DELETED_EVENT = "SkillDependencyDeletedEvent";
+    public static final String AGENT_SKILL_CREATED_EVENT = "AgentSkillCreatedEvent";
+    public static final String AGENT_SKILL_UPDATED_EVENT = "AgentSkillUpdatedEvent";
+    public static final String AGENT_SKILL_DELETED_EVENT = "AgentSkillDeletedEvent";
+    public static final String AGENT_SESSION_HISTORY_CREATED_EVENT = "AgentSessionHistoryCreatedEvent";
+    public static final String AGENT_SESSION_HISTORY_DELETED_EVENT = "AgentSessionHistoryDeletedEvent";
+    public static final String SESSION_MEMORY_CREATED_EVENT = "SessionMemoryCreatedEvent";
+    public static final String SESSION_MEMORY_UPDATED_EVENT = "SessionMemoryUpdatedEvent";
+    public static final String SESSION_MEMORY_DELETED_EVENT = "SessionMemoryDeletedEvent";
+    public static final String USER_MEMORY_CREATED_EVENT = "UserMemoryCreatedEvent";
+    public static final String USER_MEMORY_UPDATED_EVENT = "UserMemoryUpdatedEvent";
+    public static final String USER_MEMORY_DELETED_EVENT = "UserMemoryDeletedEvent";
+    public static final String AGENT_MEMORY_CREATED_EVENT = "AgentMemoryCreatedEvent";
+    public static final String AGENT_MEMORY_UPDATED_EVENT = "AgentMemoryUpdatedEvent";
+    public static final String AGENT_MEMORY_DELETED_EVENT = "AgentMemoryDeletedEvent";
+    public static final String ORG_MEMORY_CREATED_EVENT = "OrgMemoryCreatedEvent";
+    public static final String ORG_MEMORY_UPDATED_EVENT = "OrgMemoryUpdatedEvent";
+    public static final String ORG_MEMORY_DELETED_EVENT = "OrgMemoryDeletedEvent";
+
     // aggregate
 
     // aggregate id
@@ -437,5 +487,24 @@ public class PortalConstants {
     public static final String AGGREGATE_API_ENDPOINT = "ApiEndpoint";
     public static final String AGGREGATE_API_ENDPOINT_SCOPE = "ApiEndpointScope";
     public static final String AGGREGATE_API_ENDPOINT_RULE = "ApiEndpointRule";
+
+    // -- GenAI --
+    public static final String AGGREGATE_AGENT_DEFINITION = "AgentDefinition";
+    public static final String AGGREGATE_WORKFLOW_DEFINITION = "WorkflowDefinition";
+    public static final String AGGREGATE_WORKLIST = "Worklist";
+    public static final String AGGREGATE_WORKLIST_COLUMN = "WorklistColumn";
+    public static final String AGGREGATE_PROCESS_INFO = "ProcessInfo";
+    public static final String AGGREGATE_TASK_INFO = "TaskInfo";
+    public static final String AGGREGATE_TASK_ASSIGNMENT = "TaskAssignment";
+    public static final String AGGREGATE_AUDIT_LOG = "AuditLog";
+    public static final String AGGREGATE_SKILL = "Skill";
+    public static final String AGGREGATE_SKILL_PARAM = "SkillParam";
+    public static final String AGGREGATE_SKILL_DEPENDENCY = "SkillDependency";
+    public static final String AGGREGATE_AGENT_SKILL = "AgentSkill";
+    public static final String AGGREGATE_AGENT_SESSION_HISTORY = "AgentSessionHistory";
+    public static final String AGGREGATE_SESSION_MEMORY = "SessionMemory";
+    public static final String AGGREGATE_USER_MEMORY = "UserMemory";
+    public static final String AGGREGATE_AGENT_MEMORY = "AgentMemory";
+    public static final String AGGREGATE_ORG_MEMORY = "OrgMemory";
 
 }

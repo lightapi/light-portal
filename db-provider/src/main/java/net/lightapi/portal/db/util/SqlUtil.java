@@ -388,4 +388,48 @@ public class SqlUtil {
         return sb.toString();
     }
 
+    public static void setIntegerOrNull(PreparedStatement statement, int index, Object value) throws SQLException {
+        if (value != null) {
+            statement.setInt(index, ((Number) value).intValue());
+        } else {
+            statement.setNull(index, java.sql.Types.INTEGER);
+        }
+    }
+
+    public static void setBigDecimalOrNull(PreparedStatement statement, int index, Object value) throws SQLException {
+        if (value != null) {
+            if (value instanceof java.math.BigDecimal) {
+                statement.setBigDecimal(index, (java.math.BigDecimal) value);
+            } else if (value instanceof Number) {
+                // If the object comes from JSON as Integer or Double, convert it
+                statement.setBigDecimal(index, new java.math.BigDecimal(value.toString()));
+            } else if (value instanceof String) {
+                statement.setBigDecimal(index, new java.math.BigDecimal((String) value));
+            } else {
+                throw new SQLException("Cannot convert " + value.getClass().getName() + " to BigDecimal");
+            }
+        } else {
+            statement.setNull(index, java.sql.Types.NUMERIC);
+        }
+    }
+
+    public static void setUuidOrNull(PreparedStatement statement, int index, Object value) throws SQLException {
+        if (value != null) {
+            if (value instanceof UUID) {
+                statement.setObject(index, value);
+            } else {
+                statement.setObject(index, UUID.fromString(value.toString()));
+            }
+        } else {
+            statement.setNull(index, java.sql.Types.OTHER);
+        }
+    }
+
+    public static void setFloatOrNull(PreparedStatement statement, int index, Object value) throws SQLException {
+        if (value != null) {
+            statement.setFloat(index, ((Number) value).floatValue());
+        } else {
+            statement.setNull(index, java.sql.Types.FLOAT);
+        }
+    }
 }
