@@ -8,6 +8,7 @@ import com.networknt.status.Status;
 import com.networknt.utility.Constants;
 import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.db.PortalDbProvider;
+import net.lightapi.portal.db.PortalPersistenceException;
 import net.lightapi.portal.db.util.SqlUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +27,7 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
     private static final String OBJECT_NOT_FOUND = PortalDbProvider.OBJECT_NOT_FOUND;
 
     @Override
-    public void createAgentDefinition(Connection conn, Map<String, Object> event) throws Exception {
+    public void createAgentDefinition(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String sql =
                 """
                 INSERT INTO agent_definition_t (host_id, agent_def_id, agent_name, model_provider, model_name, api_key_ref, temperature, max_tokens, update_user, update_ts, aggregate_version, active)
@@ -77,15 +78,15 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createAgentDefinition for hostId {} agentDefId {} aggregateVersion {}: {}", hostId, agentDefId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createAgentDefinition for hostId {} agentDefId {} aggregateVersion {}: {}", hostId, agentDefId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateAgentDefinition(Connection conn, Map<String, Object> event) throws Exception {
+    public void updateAgentDefinition(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String sql =
             """
             UPDATE agent_definition_t
@@ -125,15 +126,15 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateAgentDefinition for hostId {} agentDefId {} aggregateVersion {}: {}", hostId, agentDefId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateAgentDefinition for hostId {} agentDefId {} aggregateVersion {}: {}", hostId, agentDefId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteAgentDefinition(Connection conn, Map<String, Object> event) throws Exception {
+    public void deleteAgentDefinition(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String sql =
             """
             UPDATE agent_definition_t
@@ -162,10 +163,10 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteAgentDefinition for hostId {} agentDefId {} aggregateVersion {}: {}", hostId, agentDefId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteAgentDefinition for hostId {} agentDefId {} aggregateVersion {}: {}", hostId, agentDefId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -273,7 +274,7 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
     }
 
     @Override
-    public void createWorkflowDefinition(Connection conn, Map<String, Object> event) throws Exception {
+    public void createWorkflowDefinition(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String sql =
                 """
                 INSERT INTO wf_definition_t (host_id, wf_def_id, namespace, name, version, definition, update_user, update_ts, aggregate_version, active)
@@ -312,15 +313,15 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createWorkflowDefinition for hostId {} wfDefId {} aggregateVersion {}: {}", hostId, wfDefId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createWorkflowDefinition for hostId {} wfDefId {} aggregateVersion {}: {}", hostId, wfDefId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateWorkflowDefinition(Connection conn, Map<String, Object> event) throws Exception {
+    public void updateWorkflowDefinition(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String sql =
                 """
                 UPDATE wf_definition_t
@@ -350,15 +351,15 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateWorkflowDefinition for hostId {} wfDefId {} aggregateVersion {}: {}", hostId, wfDefId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateWorkflowDefinition for hostId {} wfDefId {} aggregateVersion {}: {}", hostId, wfDefId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteWorkflowDefinition(Connection conn, Map<String, Object> event) throws Exception {
+    public void deleteWorkflowDefinition(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String sql =
                 """
                 UPDATE wf_definition_t
@@ -387,10 +388,10 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteWorkflowDefinition for hostId {} wfDefId {} aggregateVersion {}: {}", hostId, wfDefId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteWorkflowDefinition for hostId {} wfDefId {} aggregateVersion {}: {}", hostId, wfDefId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 

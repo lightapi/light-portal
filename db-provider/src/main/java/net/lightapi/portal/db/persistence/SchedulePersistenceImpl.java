@@ -15,6 +15,7 @@ import net.lightapi.portal.EventTypeUtil;
 import net.lightapi.portal.PortalConstants;
 import net.lightapi.portal.db.ConcurrencyException;
 import net.lightapi.portal.db.PortalDbProvider;
+import net.lightapi.portal.db.PortalPersistenceException;
 import net.lightapi.portal.db.util.NotificationService;
 import net.lightapi.portal.db.util.SqlUtil;
 import org.slf4j.Logger;
@@ -48,7 +49,7 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
     }
 
     @Override
-    public void createSchedule(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createSchedule(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT based on the Primary Key (schedule_id): INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -143,15 +144,15 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createSchedule for scheduleId {} aggregateVersion {}: {}", scheduleId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createSchedule for scheduleId {} aggregateVersion {}: {}", scheduleId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateSchedule(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateSchedule(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the schedule should be active.
@@ -224,15 +225,15 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateSchedule for scheduleId {} aggregateVersion {}: {}", scheduleId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateSchedule for scheduleId {} aggregateVersion {}: {}", scheduleId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteSchedule(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteSchedule(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -278,10 +279,10 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteSchedule for scheduleId {} aggregateVersion {}: {}", scheduleId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteSchedule for scheduleId {} aggregateVersion {}: {}", scheduleId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -448,7 +449,7 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
         return result;
     }
     @Override
-    public int acquireLock(String instanceId, int lockId, OffsetDateTime lockTimeout) throws Exception {
+    public int acquireLock(String instanceId, int lockId, OffsetDateTime lockTimeout) throws PortalPersistenceException {
         // Try to update the lock if it's expired or held by us (from a previous run/crash)
         String sql =
             """
@@ -463,12 +464,18 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
             ps.setString(4, instanceId);
             ps.setObject(5, lockTimeout);
             updated = ps.executeUpdate();
+        } catch (SQLException e) {
+            logger.error("SQLException in acquireLock", e);
+            throw new PortalPersistenceException("SQLException in acquireLock", e);
+        } catch (Exception e) {
+            logger.error("Exception in acquireLock", e);
+            throw new PortalPersistenceException("Exception in acquireLock", e);
         }
         return updated;
     }
 
     @Override
-    public int renewLock(String instanceId, int lockId) throws Exception {
+    public int renewLock(String instanceId, int lockId) throws PortalPersistenceException {
         String sql =
             """
             UPDATE scheduler_lock_t SET instance_id = ?, last_heartbeat = ?
@@ -482,12 +489,18 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
             ps.setString(4, instanceId);
             ps.setObject(5, OffsetDateTime.now());
             updated = ps.executeUpdate();
+        } catch (SQLException e) {
+            logger.error("SQLException in renewLock", e);
+            throw new PortalPersistenceException("SQLException in renewLock", e);
+        } catch (Exception e) {
+            logger.error("Exception in renewLock", e);
+            throw new PortalPersistenceException("Exception in renewLock", e);
         }
         return updated;
     }
 
     @Override
-    public int releaseLock(String instanceId, int lockId) throws Exception{
+    public int releaseLock(String instanceId, int lockId) throws PortalPersistenceException {
         String sql =
             """
             UPDATE scheduler_lock_t SET instance_id = 'none' WHERE lock_id = ? AND instance_id = ?
@@ -497,6 +510,12 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
             ps.setInt(1, lockId);
             ps.setString(2, instanceId);
             updated = ps.executeUpdate();
+        } catch (SQLException e) {
+            logger.error("SQLException in releaseLock", e);
+            throw new PortalPersistenceException("SQLException in releaseLock", e);
+        } catch (Exception e) {
+            logger.error("Exception in releaseLock", e);
+            throw new PortalPersistenceException("Exception in releaseLock", e);
         }
         return updated;
     }
@@ -647,7 +666,7 @@ public class SchedulePersistenceImpl implements SchedulePersistence {
                 result = Success.of(eventId.toString());
             } catch (Exception e) {
                 conn.rollback();
-                throw e;
+                throw new PortalPersistenceException("Persistence Error", e);
             } finally {
                 conn.setAutoCommit(true);
             }

@@ -9,6 +9,7 @@ import com.networknt.utility.Constants;
 import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.PortalConstants;
 import net.lightapi.portal.db.PortalDbProvider;
+import net.lightapi.portal.db.PortalPersistenceException;
 import net.lightapi.portal.db.util.NotificationService;
 import net.lightapi.portal.db.util.SqlUtil;
 import org.slf4j.Logger;
@@ -35,7 +36,7 @@ public class UserPersistenceImpl implements UserPersistence {
     }
 
     @Override
-    public void createUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createUser(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String queryEmailEntityId = """
                 SELECT u.user_id, u.email, COALESCE(c.customer_id, e.employee_id) AS entity_id
                 FROM user_t u
@@ -149,15 +150,15 @@ public class UserPersistenceImpl implements UserPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createUser for userId {} aggregateVersion {}: {}", userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createUser for userId {} aggregateVersion {}: {}", userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void onboardUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void onboardUser(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String queryEmailEntityId = """
                 SELECT u.user_id, u.email, COALESCE(c.customer_id, e.employee_id) AS entity_id
                 FROM user_t u
@@ -271,10 +272,10 @@ public class UserPersistenceImpl implements UserPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during onboardUser for userId {} aggregateVersion {}: {}", userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during onboardUser for userId {} aggregateVersion {}: {}", userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -948,7 +949,7 @@ public class UserPersistenceImpl implements UserPersistence {
      * @param event event that is created by user service
      */
     @Override
-    public void confirmUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void confirmUser(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String queryTokenByEmail = "SELECT token FROM user_t WHERE user_id = ? AND token = ?";
         final String updateUserByEmail =
         """
@@ -982,10 +983,10 @@ public class UserPersistenceImpl implements UserPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during confirmUser for userId {}: {}", userId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during confirmUser for userId {}: {}", userId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -995,7 +996,7 @@ public class UserPersistenceImpl implements UserPersistence {
      * @param event UserVerifiedEvent
      */
     @Override
-    public void verifyUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void verifyUser(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String updateUserByUserId =
         """
             UPDATE user_t SET token = null, verified = true, aggregate_version = ?
@@ -1015,10 +1016,10 @@ public class UserPersistenceImpl implements UserPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during verifyUser for userId {} aggregateVersion {}: {}", userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during verifyUser for userId {} aggregateVersion {}: {}", userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -1029,7 +1030,7 @@ public class UserPersistenceImpl implements UserPersistence {
      * @param event event that is created by user service
      */
     @Override
-    public void createSocialUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createSocialUser(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String queryIdEmail = "SELECT nonce FROM user_t WHERE user_id = ? OR email = ?";
         final String insertUser =
                 """
@@ -1123,10 +1124,10 @@ public class UserPersistenceImpl implements UserPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createSocialUser for hostId {} userId {} aggregateVersion {}: {}", hostId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createSocialUser for hostId {} userId {} aggregateVersion {}: {}", hostId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -1136,7 +1137,7 @@ public class UserPersistenceImpl implements UserPersistence {
      * @param event event that is created by user service
      */
     @Override
-    public void updateUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateUser(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String updateUserSql =
                 """
                 UPDATE user_t SET language = ?, first_name = ?, last_name = ?, phone_number = ?,
@@ -1258,10 +1259,10 @@ public class UserPersistenceImpl implements UserPersistence {
             if(logger.isTraceEnabled()) logger.trace("update user success: {}", userId);
         } catch (SQLException e) {
             logger.error("SQLException during updateUser for userId {} aggregateVersion {}: {}", userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateUser for userId {} aggregateVersion {}: {}", userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -1271,7 +1272,7 @@ public class UserPersistenceImpl implements UserPersistence {
      * @param event event that is created by user service
      */
     @Override
-    public void deleteUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteUser(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // delete only user_t, other tables will be cacade deleted by database
         final String sql =
             """
@@ -1299,10 +1300,10 @@ public class UserPersistenceImpl implements UserPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteUser for userId {} aggregateVersion {}: {}", userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteUser for userId {} aggregateVersion {}: {}", userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -1312,7 +1313,7 @@ public class UserPersistenceImpl implements UserPersistence {
      * @param event event that is created by user service
      */
     @Override
-    public void forgetPassword(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void forgetPassword(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String updateForgetPassword =
         """
             UPDATE user_t SET token = ?, nonce = ?, aggregate_version = ? WHERE email = ? AND aggregate_version < ?
@@ -1334,10 +1335,10 @@ public class UserPersistenceImpl implements UserPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during forgetPassword for email {} aggregateVersion {}: {}", email, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during forgetPassword for email {} aggregateVersion {}: {}", email, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -1347,7 +1348,7 @@ public class UserPersistenceImpl implements UserPersistence {
      * @param event event that is created by user service
      */
     @Override
-    public void resetPassword(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void resetPassword(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String updateResetPassword = "UPDATE user_t SET token = ?, nonce = ?, aggregate_version = ? WHERE email = ? AND aggregate_version < ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String email = (String)map.get("email");
@@ -1365,10 +1366,10 @@ public class UserPersistenceImpl implements UserPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during resetPassword for email {} aggregateVersion {}: {}", email, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during resetPassword for email {} aggregateVersion {}: {}", email, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -1378,7 +1379,7 @@ public class UserPersistenceImpl implements UserPersistence {
      * @param event event that is created by user service
      */
     @Override
-    public void changePassword(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void changePassword(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String updatePasswordByEmail = "UPDATE user_t SET password = ?, nonce = ?, aggregate_version = ? WHERE email = ? AND password = ? AND aggregate_version < ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String email = (String)map.get("email");
@@ -1398,15 +1399,15 @@ public class UserPersistenceImpl implements UserPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during changePassword for email {} aggregateVersion {}: {}", email, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during changePassword for email {} aggregateVersion {}: {}", email, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updatePayment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updatePayment(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // This is a placeholder. Add actual SQL logic here.
         // For demonstration, simulating an update operation.
         String paymentId = (String) event.get("paymentId"); // Assuming some ID is in the event for logging
@@ -1417,12 +1418,12 @@ public class UserPersistenceImpl implements UserPersistence {
             // if (updatedRows == 0) throw new SQLException("No payment updated for " + paymentId);
         } catch (Exception e) {
             logger.error("Exception during updatePayment for paymentId {}: {}", paymentId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deletePayment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deletePayment(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // This is a placeholder. Add actual SQL logic here.
         String paymentId = (String) event.get("paymentId");
         try {
@@ -1431,12 +1432,12 @@ public class UserPersistenceImpl implements UserPersistence {
             // if (deletedRows == 0) throw new SQLException("No payment deleted for " + paymentId);
         } catch (Exception e) {
             logger.error("Exception during deletePayment for paymentId {}: {}", paymentId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void createOrder(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createOrder(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // This is a placeholder. Add actual SQL logic here.
         String orderId = (String) event.get("orderId");
         try {
@@ -1445,12 +1446,12 @@ public class UserPersistenceImpl implements UserPersistence {
             // if (insertedRows == 0) throw new SQLException("Order creation failed for " + orderId);
         } catch (Exception e) {
             logger.error("Exception during createOrder for orderId {}: {}", orderId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void cancelOrder(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void cancelOrder(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // This is a placeholder. Add actual SQL logic here.
         String orderId = (String) event.get("orderId");
         try {
@@ -1459,12 +1460,12 @@ public class UserPersistenceImpl implements UserPersistence {
             // if (updatedRows == 0) throw new SQLException("Order cancellation failed for " + orderId);
         } catch (Exception e) {
             logger.error("Exception during cancelOrder for orderId {}: {}", orderId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deliverOrder(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deliverOrder(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // This is a placeholder. Add actual SQL logic here.
         String orderId = (String) event.get("orderId");
         try {
@@ -1473,7 +1474,7 @@ public class UserPersistenceImpl implements UserPersistence {
             // if (updatedRows == 0) throw new SQLException("Order delivery failed for " + orderId);
         } catch (Exception e) {
             logger.error("Exception during deliverOrder for orderId {}: {}", orderId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -1484,7 +1485,7 @@ public class UserPersistenceImpl implements UserPersistence {
      * @param event event that is created by user service
      */
     @Override
-    public void sendPrivateMessage(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void sendPrivateMessage(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String insertMessage = "INSERT INTO message_t (from_id, nonce, to_email, subject, content, send_time) VALUES (?, ?, ?, ?, ?, ?)";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String fromId = (String)map.get("fromId");
@@ -1500,10 +1501,10 @@ public class UserPersistenceImpl implements UserPersistence {
 
         } catch (SQLException e) {
             logger.error("SQLException during sendPrivateMessage for fromId {}: {}", fromId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during sendPrivateMessage for fromId {}: {}", fromId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 

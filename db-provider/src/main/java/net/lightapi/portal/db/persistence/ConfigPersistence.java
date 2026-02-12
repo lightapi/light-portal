@@ -1,6 +1,8 @@
 package net.lightapi.portal.db.persistence;
 
 import com.networknt.monad.Result;
+import net.lightapi.portal.db.PortalPersistenceException;
+
 import java.sql.Connection; // Added import
 import java.sql.SQLException; // Added import
 import java.util.Map;
@@ -8,9 +10,9 @@ import java.util.Set;
 
 public interface ConfigPersistence {
     // Config
-    void createConfig(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void updateConfig(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void deleteConfig(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void createConfig(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void updateConfig(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteConfig(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
     Result<String> getConfig(int offset, int limit, String filters, String globalFilter, String sorting, boolean active);
     Result<String> queryConfigById(String configId);
     String queryConfigId(String configName);
@@ -18,9 +20,9 @@ public interface ConfigPersistence {
     Result<String> getConfigIdApiAppLabel(String resourceType);
 
     // ConfigProperty
-    void createConfigProperty(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void updateConfigProperty(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void deleteConfigProperty(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void createConfigProperty(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void updateConfigProperty(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteConfigProperty(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
     Result<String> getConfigProperty(int offset, int limit, String filters, String globalFilter, String sorting, boolean active);
     Result<String> queryConfigPropertyById(String configId); // Gets all properties for a configId
     Result<String> queryConfigPropertyByPropertyId(String configId, String propertyId); // Gets a specific property
@@ -31,72 +33,72 @@ public interface ConfigPersistence {
     String getPropertyId(String configId, String propertyName);
 
     // EnvironmentProperty
-    void createConfigEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void updateConfigEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void deleteConfigEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void createConfigEnvironment(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void updateConfigEnvironment(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteConfigEnvironment(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
     Result<String> getConfigEnvironment(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<String> getConfigEnvironmentById(String hostId, String environmentId, String propertyId);
 
     // InstanceProperty (was ConfigInstance)
-    void createConfigInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void updateConfigInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void deleteConfigInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void createConfigInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void updateConfigInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteConfigInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
     Result<String> getConfigInstance(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<String> getConfigInstanceById(String hostId, String instanceId, String propertyId);
 
     // InstanceApiProperty (was ConfigInstanceApi)
-    void createConfigInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void updateConfigInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void deleteConfigInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void createConfigInstanceApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void updateConfigInstanceApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteConfigInstanceApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
     Result<String> getConfigInstanceApi(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<String> getConfigInstanceApiById(String hostId, String instanceApiId, String propertyId);
 
     // InstanceAppProperty (was ConfigInstanceApp)
-    void createConfigInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void updateConfigInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void deleteConfigInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void createConfigInstanceApp(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void updateConfigInstanceApp(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteConfigInstanceApp(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
     Result<String> getConfigInstanceApp(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<String> getConfigInstanceAppById(String hostId, String instanceAppId, String propertyId);
 
     // InstanceAppApiProperty (was ConfigInstanceAppApi)
-    void createConfigInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void updateConfigInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void deleteConfigInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void createConfigInstanceAppApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void updateConfigInstanceAppApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteConfigInstanceAppApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
     Result<String> getConfigInstanceAppApi(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<String> getConfigInstanceAppApiById(String hostId, String instanceAppId, String instanceApiId, String propertyId);
 
     // DeploymentInstanceProperty (was ConfigDeploymentInstance)
-    void createConfigDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void updateConfigDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void deleteConfigDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void createConfigDeploymentInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void updateConfigDeploymentInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteConfigDeploymentInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
     Result<String> getConfigDeploymentInstance(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<String> getConfigDeploymentInstanceById(String hostId, String deploymentInstanceId, String propertyId);
 
     // ProductProperty (was ConfigProduct)
-    void createConfigProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void updateConfigProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void deleteConfigProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void createConfigProduct(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void updateConfigProduct(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteConfigProduct(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
     Result<String> getConfigProduct(int offset, int limit, String filters, String globalFilter, String sorting, boolean active);
     Result<String> getConfigProductById(String productId, String propertyId);
 
     // ProductVersionProperty (was ConfigProductVersion)
-    void createConfigProductVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void updateConfigProductVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void deleteConfigProductVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void createConfigProductVersion(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void updateConfigProductVersion(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteConfigProductVersion(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
     Result<String> getConfigProductVersion(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<String> getConfigProductVersionById(String hostId, String productVersionId, String propertyId);
 
     // InstanceFile (was ConfigInstanceFile)
-    void createConfigInstanceFile(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void updateConfigInstanceFile(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void deleteConfigInstanceFile(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void createConfigInstanceFile(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void updateConfigInstanceFile(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteConfigInstanceFile(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
     Result<String> getConfigInstanceFile(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<String> getConfigInstanceFileById(String hostId, String instanceFileId);
 
     // Snapshot
-    void createConfigSnapshot(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void updateConfigSnapshot(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void deleteConfigSnapshot(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void createConfigSnapshot(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void updateConfigSnapshot(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteConfigSnapshot(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
     Result<String> getConfigSnapshot(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
 
     // Product / Instance Applicable Properties

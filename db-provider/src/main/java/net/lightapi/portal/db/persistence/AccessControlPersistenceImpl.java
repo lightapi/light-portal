@@ -7,6 +7,7 @@ import com.networknt.status.Status;
 import com.networknt.utility.Constants;
 import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.db.PortalDbProvider;
+import net.lightapi.portal.db.PortalPersistenceException;
 import net.lightapi.portal.db.util.NotificationService;
 import net.lightapi.portal.db.util.SqlUtil;
 import org.slf4j.Logger;
@@ -33,7 +34,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public void createRole(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createRole(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -87,15 +88,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createRole for hostId {} roleId {} aggregateVersion {}: {}", hostId, roleId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createRole for hostId {} roleId {} aggregateVersion {}: {}", hostId, roleId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateRole(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateRole(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the role should be active.
@@ -147,15 +148,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateRole for hostId {} roleId {} aggregateVersion {}: {}", hostId, roleId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateRole for hostId {} roleId {} aggregateVersion: {}: {}", hostId, roleId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteRole(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteRole(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -200,10 +201,10 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteRole for hostId {} roleId {} aggregateVersion {}: {}", hostId, roleId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteRole for hostId {} roleId {} aggregateVersion {}: {}", hostId, roleId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -612,7 +613,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public void createRolePermission(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createRolePermission(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -662,15 +663,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createRolePermission for hostId {} roleId {} endpointId {} aggregateVersion {}: {}", hostId, roleId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createRolePermission for hostId {} roleId {} endpointId {} aggregateVersion {}: {}", hostId, roleId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteRolePermission(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteRolePermission(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -722,15 +723,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteRolePermission for hostId {} roleId {} endpointId {} aggregateVersion {}: {}", hostId, roleId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteRolePermission for hostId {} roleId {} endpointId {} aggregateVersion {}: {}", hostId, roleId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void createRoleUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createRoleUser(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -796,15 +797,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createRoleUser for hostId {} roleId {} userId {} and aggregateVersion {}: {}", hostId, roleId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createRoleUser for hostId {} roleId {} userId {} and aggregateVersion {}: {}", hostId, roleId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateRoleUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateRoleUser(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the role-user assignment should be active.
@@ -876,15 +877,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateRoleUser for hostId {} roleId {} userId {} aggregateVersion {}: {}", hostId, roleId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateRoleUser for hostId {} roleId {} userId {} aggregateVersion {}: {}", hostId, roleId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteRoleUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteRoleUser(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -936,10 +937,10 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteRoleUser for hostId {} roleId {} userId {} aggregateVersion {}: {}", hostId, roleId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteRoleUser for hostId {} roleId {} userId {} aggregateVersion {}: {}", hostId, roleId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
     @Override
@@ -1093,7 +1094,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public void deleteRoleRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteRoleRowFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -1149,15 +1150,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteRoleRowFilter for hostId {} roleId {} endpointId {} colName {} aggregateVersion {}: {}", hostId, roleId, endpointId, colName, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteRoleRowFilter for hostId {} roleId {} endpointId {} colName {} aggregateVersion {}: {}", hostId, roleId, endpointId, colName, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void createRoleRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createRoleRowFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -1224,16 +1225,16 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createRoleRowFilter for hostId {} roleId {} endpointId {} colName {} aggregateVersion {}: {}", hostId, roleId, endpointId, colName, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createRoleRowFilter for hostId {} roleId {} endpointId {} colName {} aggregateVersion {}: {}", hostId, roleId, endpointId, colName, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
 
     @Override
-    public void updateRoleRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateRoleRowFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the row filter should be active.
@@ -1299,10 +1300,10 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateRoleRowFilter for hostId {} roleId {} endpointId {} colName {} aggregateVersion {}: {}", hostId, roleId, endpointId, colName, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateRoleRowFilter for hostId {} roleId {} endpointId {} colName {} aggregateVersion {}: {}", hostId, roleId, endpointId, colName, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -1451,7 +1452,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public void createRoleColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createRoleColFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -1513,15 +1514,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createRoleColFilter for hostId {} roleId {} endpointId {} aggregateVersion {}: {}", hostId, roleId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createRoleColFilter for hostId {} roleId {} endpointId {} aggregateVersion {}: {}", hostId, roleId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteRoleColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteRoleColFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -1576,15 +1577,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteRoleColFilter for hostId {} roleId {} endpointId {} aggregateVersion {}: {}", hostId, roleId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteRoleColFilter for hostId {} roleId {} endpointId {} aggregateVersion {}: {}", hostId, roleId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateRoleColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateRoleColFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the column filter should be active.
@@ -1643,15 +1644,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateRoleColFilter for hostId {} roleId {} endpointId {} aggregateVersion {}: {}", hostId, roleId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateRoleColFilter for hostId {} roleId {} endpointId {} aggregateVersion {}: {}", hostId, roleId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void createGroup(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createGroup(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -1708,15 +1709,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createGroup for hostId {} groupId {} aggregateVersion {}: {}", hostId, groupId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createGroup for hostId {} groupId {} aggregateVersion {}: {}", hostId, groupId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateGroup(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateGroup(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the group should be active.
@@ -1774,15 +1775,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateGroup for hostId {} groupId {} aggregateVersion {}: {}", hostId, groupId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateGroup for hostId {} groupId {} aggregateVersion {}: {}", hostId, groupId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteGroup(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteGroup(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -1833,10 +1834,10 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteGroup for hostId {} groupId {} aggregateVersion {}: {}", hostId, groupId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteGroup for hostId {} groupId {} aggregateVersion {}: {}", hostId, groupId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -2239,7 +2240,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public void createGroupPermission(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createGroupPermission(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -2297,15 +2298,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createGroupPermission for hostId {} groupId {} endpointId {} aggregateVersion {}: {}", hostId, groupId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createGroupPermission for hostId {} groupId {} endpointId {} aggregateVersion {}: {}", hostId, groupId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteGroupPermission(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteGroupPermission(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -2360,15 +2361,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteGroupPermission for hostId {} groupId {} endpointId {} aggregateVersion {}: {}", hostId, groupId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteGroupPermission for hostId {} groupId {} endpointId {} aggregateVersion {}: {}", hostId, groupId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void createGroupUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createGroupUser(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -2438,15 +2439,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createGroupUser for hostId {} groupId {} userId {} and aggregateVersion {}: {}", hostId, groupId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createGroupUser for hostId {} groupId {} userId {} and aggregateVersion {}: {}", hostId, groupId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateGroupUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateGroupUser(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the group-user assignment should be active.
@@ -2518,16 +2519,16 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateGroupUser for hostId {} groupId {} userId {} aggregateVersion {}: {}", hostId, groupId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateGroupUser for hostId {} groupId {} userId {} aggregateVersion {}: {}", hostId, groupId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
 
     @Override
-    public void deleteGroupUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteGroupUser(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -2582,10 +2583,10 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteGroupUser for hostId {} groupId {} userId {} aggregateVersion {}: {}", hostId, groupId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteGroupUser for hostId {} groupId {} userId {} aggregateVersion {}: {}", hostId, groupId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -2739,7 +2740,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public void createGroupRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createGroupRowFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -2809,15 +2810,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createGroupRowFilter for hostId {} groupId {} endpointId {} colName {} aggregateVersion {}: {}", hostId, groupId, endpointId, colName, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createGroupRowFilter for hostId {} groupId {} endpointId {} colName {} aggregateVersion {}: {}", hostId, groupId, endpointId, colName, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateGroupRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateGroupRowFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the row filter should be active.
@@ -2883,15 +2884,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateGroupRowFilter for hostId {} groupId {} endpointId {} colName {} aggregateVersion {}: {}", hostId, groupId, endpointId, colName, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateGroupRowFilter for hostId {} groupId {} endpointId {} colName {} aggregateVersion {}: {}", hostId, groupId, endpointId, colName, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteGroupRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteGroupRowFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -2950,10 +2951,10 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteGroupRowFilter for hostId {} groupId {} endpointId {} colName {} aggregateVersion {}: {}", hostId, groupId, endpointId, colName, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteGroupRowFilter for hostId {} groupId {} endpointId {} colName {} aggregateVersion {}: {}", hostId, groupId, endpointId, colName, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -3100,7 +3101,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public void createGroupColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createGroupColFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -3162,15 +3163,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createGroupColFilter for hostId {} groupId {} endpointId {} aggregateVersion {}: {}", hostId, groupId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createGroupColFilter for hostId {} groupId {} endpointId {} aggregateVersion {}: {}", hostId, groupId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateGroupColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateGroupColFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the column filter should be active.
@@ -3229,15 +3230,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateGroupColFilter for hostId {} groupId {} endpointId {} aggregateVersion {}: {}", hostId, groupId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateGroupColFilter for hostId {} groupId {} endpointId {} aggregateVersion {}: {}", hostId, groupId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteGroupColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteGroupColFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -3292,15 +3293,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteGroupColFilter for hostId {} groupId {} endpointId {} aggregateVersion {}: {}", hostId, groupId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteGroupColFilter for hostId {} groupId {} endpointId {} aggregateVersion {}: {}", hostId, groupId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void createPosition(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createPosition(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -3382,15 +3383,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createPosition for hostId {} positionId {} aggregateVersion {}: {}", hostId, positionId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createPosition for hostId {} positionId {} aggregateVersion {}: {}", hostId, positionId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updatePosition(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updatePosition(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the position should be active.
@@ -3464,15 +3465,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updatePosition for hostId {} positionId {} aggregateVersion {}: {}", hostId, positionId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updatePosition for hostId {} positionId {} aggregateVersion {}: {}", hostId, positionId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deletePosition(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deletePosition(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -3523,10 +3524,10 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deletePosition for hostId {} positionId {} aggregateVersion {}: {}", hostId, positionId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deletePosition for hostId {} positionId {} aggregateVersion {}: {}", hostId, positionId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -3934,7 +3935,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public void createPositionPermission(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createPositionPermission(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -3992,15 +3993,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createPositionPermission for hostId {} positionId {} endpointId {} aggregateVersion {}: {}", hostId, positionId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createPositionPermission for hostId {} positionId {} endpointId {} aggregateVersion {}: {}", hostId, positionId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deletePositionPermission(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deletePositionPermission(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -4055,15 +4056,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deletePositionPermission for hostId {} positionId {} endpointId {} aggregateVersion {}: {}", hostId, positionId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deletePositionPermission for hostId {} positionId {} endpointId {} aggregateVersion {}: {}", hostId, positionId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void createPositionUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createPositionUser(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -4142,15 +4143,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createPositionUser for hostId {} positionId {} userId {} and aggregateVersion {}: {}", hostId, positionId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createPositionUser for hostId {} positionId {} userId {} and aggregateVersion {}: {}", hostId, positionId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updatePositionUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updatePositionUser(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the assignment should be active.
@@ -4225,15 +4226,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updatePositionUser for hostId {} positionId {} userId {} aggregateVersion {}: {}", hostId, positionId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updatePositionUser for hostId {} positionId {} userId {} aggregateVersion {}: {}", hostId, positionId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deletePositionUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deletePositionUser(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE) on the directly assigned position ('P').
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -4289,10 +4290,10 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deletePositionUser for hostId {} positionId {} userId {} aggregateVersion {}: {}", hostId, positionId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deletePositionUser for hostId {} positionId {} userId {} aggregateVersion {}: {}", hostId, positionId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -4445,7 +4446,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public void createPositionRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createPositionRowFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -4515,15 +4516,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createPositionRowFilter for hostId {} positionId {} endpointId {} colName {} aggregateVersion {}: {}", hostId, positionId, endpointId, colName, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createPositionRowFilter for hostId {} positionId {} endpointId {} colName {} aggregateVersion {}: {}", hostId, positionId, endpointId, colName, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updatePositionRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updatePositionRowFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the row filter should be active.
@@ -4589,15 +4590,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updatePositionRowFilter for hostId {} positionId {} endpointId {} colName {} aggregateVersion {}: {}", hostId, positionId, endpointId, colName, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updatePositionRowFilter for hostId {} positionId {} endpointId {} colName {} aggregateVersion {}: {}", hostId, positionId, endpointId, colName, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deletePositionRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deletePositionRowFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -4656,10 +4657,10 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deletePositionRowFilter for hostId {} positionId {} endpointId {} colName {} aggregateVersion {}: {}", hostId, positionId, endpointId, colName, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deletePositionRowFilter for hostId {} positionId {} endpointId {} colName {} aggregateVersion {}: {}", hostId, positionId, endpointId, colName, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -4806,7 +4807,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public void createPositionColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createPositionColFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -4868,15 +4869,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createPositionColFilter for hostId {} positionId {} endpointId {} aggregateVersion {}: {}", hostId, positionId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createPositionColFilter for hostId {} positionId {} endpointId {} aggregateVersion {}: {}", hostId, positionId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updatePositionColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updatePositionColFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the column filter should be active.
@@ -4935,15 +4936,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updatePositionColFilter for hostId {} positionId {} endpointId {} aggregateVersion {}: {}", hostId, positionId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updatePositionColFilter for hostId {} positionId {} endpointId {} aggregateVersion {}: {}", hostId, positionId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deletePositionColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deletePositionColFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -4998,15 +4999,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deletePositionColFilter for hostId {} positionId {} endpointId {} aggregateVersion {}: {}", hostId, positionId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deletePositionColFilter for hostId {} positionId {} endpointId {} aggregateVersion {}: {}", hostId, positionId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void createAttribute(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createAttribute(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -5079,15 +5080,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createAttribute for hostId {} attributeId {} aggregateVersion {}: {}", hostId, attributeId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createAttribute for hostId {} attributeId {} aggregateVersion {}: {}", hostId, attributeId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateAttribute(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateAttribute(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the attribute should be active.
@@ -5153,15 +5154,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateAttribute for hostId {} attributeId {} aggregateVersion {}: {}", hostId, attributeId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateAttribute for hostId {} attributeId {} aggregateVersion {}: {}", hostId, attributeId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteAttribute(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteAttribute(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -5212,10 +5213,10 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteAttribute for hostId {} attributeId {} aggregateVersion {}: {}", hostId, attributeId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteAttribute for hostId {} attributeId {} aggregateVersion {}: {}", hostId, attributeId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -5684,7 +5685,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public void createAttributePermission(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createAttributePermission(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -5746,15 +5747,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createAttributePermission for hostId {} attributeId {} endpointId {} aggregateVersion {}: {}", hostId, attributeId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createAttributePermission for hostId {} attributeId {} endpointId {} aggregateVersion {}: {}", hostId, attributeId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateAttributePermission(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateAttributePermission(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the permission should be active.
@@ -5811,15 +5812,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateAttributePermission for hostId {} attributeId {} endpointId {} aggregateVersion {}: {}", hostId, attributeId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateAttributePermission for hostId {} attributeId {} endpointId {} aggregateVersion {}: {}", hostId, attributeId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteAttributePermission(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteAttributePermission(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -5874,15 +5875,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteAttributePermission for hostId {} attributeId {} endpointId {} aggregateVersion {}: {}", hostId, attributeId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteAttributePermission for hostId {} attributeId {} endpointId {} aggregateVersion {}: {}", hostId, attributeId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void createAttributeUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createAttributeUser(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -5964,15 +5965,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createAttributeUser for hostId {} attributeId {} userId {} and aggregateVersion {}: {}", hostId, attributeId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createAttributeUser for hostId {} attributeId {} userId {} and aggregateVersion {}: {}", hostId, attributeId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateAttributeUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateAttributeUser(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the attribute assignment should be active.
@@ -6047,15 +6048,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateAttributeUser for hostId {} attributeId {} userId {} aggregateVersion {}: {}", hostId, attributeId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateAttributeUser for hostId {} attributeId {} userId {} aggregateVersion {}: {}", hostId, attributeId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteAttributeUser(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteAttributeUser(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -6110,10 +6111,10 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteAttributeUser for hostId {} attributeId {} userId {} aggregateVersion {}: {}", hostId, attributeId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteAttributeUser for hostId {} attributeId {} userId {} aggregateVersion {}: {}", hostId, attributeId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -6273,7 +6274,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public void createAttributeRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createAttributeRowFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -6347,15 +6348,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createAttributeRowFilter for hostId {} attributeId {} endpointId {} colName {} aggregateVersion {}: {}", hostId, attributeId, endpointId, colName, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createAttributeRowFilter for hostId {} attributeId {} endpointId {} colName {} aggregateVersion {}: {}", hostId, attributeId, endpointId, colName, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateAttributeRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateAttributeRowFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the row filter should be active.
@@ -6425,15 +6426,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateAttributeRowFilter for hostId {} attributeId {} endpointId {} colName {} aggregateVersion {}: {}", hostId, attributeId, endpointId, colName, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateAttributeRowFilter for hostId {} attributeId {} endpointId {} colName {} aggregateVersion {}: {}", hostId, attributeId, endpointId, colName, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteAttributeRowFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteAttributeRowFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -6492,10 +6493,10 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteAttributeRowFilter for hostId {} attributeId {} endpointId {} colName {} aggregateVersion {}: {}", hostId, attributeId, endpointId, colName, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteAttributeRowFilter for hostId {} attributeId {} endpointId {} colName {} aggregateVersion {}: {}", hostId, attributeId, endpointId, colName, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -6648,7 +6649,7 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
     @Override
-    public void createAttributeColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createAttributeColFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -6714,16 +6715,16 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createAttributeColFilter for hostId {} attributeId {} endpointId {} aggregateVersion {}: {}", hostId, attributeId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createAttributeColFilter for hostId {} attributeId {} endpointId {} aggregateVersion {}: {}", hostId, attributeId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
 
     @Override
-    public void updateAttributeColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateAttributeColFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the column filter should be active.
@@ -6785,15 +6786,15 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateAttributeColFilter for hostId {} attributeId {} endpointId {} aggregateVersion {}: {}", hostId, attributeId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateAttributeColFilter for hostId {} attributeId {} endpointId {} aggregateVersion {}: {}", hostId, attributeId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteAttributeColFilter(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteAttributeColFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -6848,10 +6849,10 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteAttributeColFilter for hostId {} attributeId {} endpointId {} aggregateVersion {}: {}", hostId, attributeId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteAttributeColFilter for hostId {} attributeId {} endpointId {} aggregateVersion {}: {}", hostId, attributeId, endpointId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 }

@@ -8,6 +8,7 @@ import com.networknt.status.Status;
 import com.networknt.utility.Constants;
 import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.db.PortalDbProvider;
+import net.lightapi.portal.db.PortalPersistenceException;
 import net.lightapi.portal.db.util.NotificationService;
 import net.lightapi.portal.db.util.SqlUtil;
 import org.slf4j.Logger;
@@ -34,7 +35,7 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
     }
 
     @Override
-    public void createRefTable(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createRefTable(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT based on the Primary Key (table_id): INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -124,16 +125,16 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createRefTable for tableId {} aggregateVersion {}: {}", tableId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createRefTable for tableId {} aggregateVersion {}: {}", tableId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
 
     @Override
-    public void updateRefTable(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateRefTable(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // Note: The 'active' state is updated based on the event payload, supporting both activation/deactivation.
@@ -210,15 +211,15 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateRefTable for tableId {} aggregateVersion {}: {}", tableId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) { // Catch other potential runtime exceptions
             logger.error("Exception during updateRefTable for tableId {} aggregateVersion {}: {}", tableId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteRefTable(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteRefTable(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -264,10 +265,10 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteRefTable for tableId {} aggregateVersion {}: {}", tableId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteRefTable for tableId {} aggregateVersion {}: {}", tableId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -448,7 +449,7 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
     }
 
     @Override
-    public void createRefValue(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createRefValue(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT based on the Primary Key (value_id): INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -561,15 +562,15 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createRefValue for valueId {} aggregateVersion {}: {}", valueId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createRefValue for valueId {} aggregateVersion {}: {}", valueId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateRefValue(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateRefValue(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // Note: The 'active' state is updated based on the event payload (if present).
@@ -671,15 +672,15 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateRefValue for valueId {} aggregateVersion {}: {}", valueId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) { // Catch other potential runtime exceptions
             logger.error("Exception during updateRefValue for valueId {} aggregateVersion {}: {}", valueId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteRefValue(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteRefValue(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -725,10 +726,10 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteRefValue for valueId {} aggregateVersion {}: {}", valueId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) { // Catch other potential runtime exceptions
             logger.error("Exception during deleteRefValue for valueId {} aggregateVersion {}: {}", valueId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -912,7 +913,7 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
     }
 
     @Override
-    public void createRefLocale(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createRefLocale(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT based on the Primary Key (value_id, language): INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -986,15 +987,15 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createRefLocale for valueId {} language {} aggregateVersion {}: {}", createdId, language, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) { // Catch other potential runtime exceptions
             logger.error("Exception during createRefLocale for valueId {} language {} aggregateVersion {}: {}", createdId, language, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateRefLocale(Connection conn, Map<String, Object> event) throws SQLException, Exception{
+    public void updateRefLocale(Connection conn, Map<String, Object> event) throws PortalPersistenceException{
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the locale should be active.
@@ -1056,15 +1057,15 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateRefLocale for valueId {} language {}  aggregateVersion {}: {}", valueId, language, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateRefLocale for valueId {} language {}  aggregateVersion {}: {}", valueId, language, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteRefLocale(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteRefLocale(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -1116,10 +1117,10 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteRefLocale for valueId {} language {} aggregateVersion {}: {}", valueId, language, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteRefLocale for valueId {} language {} aggregateVersion {}: {}", valueId, language, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -1208,7 +1209,7 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
     }
 
     @Override
-    public void createRefRelationType(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createRefRelationType(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT based on the Primary Key (relation_id): INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -1269,16 +1270,16 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createRefRelationType for relationId {} aggregateVersion {}: {}", relationId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createRefRelationType for relationId {} aggregateVersion {}: {}", relationId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
 
     @Override
-    public void updateRefRelationType(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateRefRelationType(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the relation type should be active.
@@ -1330,15 +1331,15 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateRefRelationType for relationId {} aggregateVersion {}: {}", relationId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) { // Catch other potential runtime exceptions
             logger.error("Exception during updateRefRelationType for relationId {} aggregateVersion {}: {}", relationId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteRefRelationType(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteRefRelationType(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -1384,10 +1385,10 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteRefRelationType for relationId {} aggregateVersion {}: {}", relationId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) { // Catch other potential runtime exceptions
             logger.error("Exception during deleteRefRelationType for relationId {} aggregateVersion {}: {}", relationId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -1463,7 +1464,7 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
 
 
     @Override
-    public void createRefRelation(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createRefRelation(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT based on the Primary Key (relation_id, value_id_from, value_id_to): INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -1533,15 +1534,15 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createRefRelation for relationId {} valueIdFrom {} valueIdTo {} aggregateVersion {}: {}", relationId, valueIdFrom, valueIdTo, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createRefRelation for relationId {} valueIdFrom {} valueIdTo {} aggregateVersion {}: {}", relationId, valueIdFrom, valueIdTo, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateRefRelation(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateRefRelation(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // Note: The 'active' state is updated based on the event payload (if present).
@@ -1602,15 +1603,15 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateRefRelation for relationId {} valueIdFrom {} valueIdTo {} aggregateVersion {}: {}", relationId, valueIdFrom, valueIdTo, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateRefRelation for relationId {} valueIdFrom {} valueIdTo {} aggregateVersion {}: {}", relationId, valueIdFrom, valueIdTo, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteRefRelation(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteRefRelation(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -1667,10 +1668,10 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteRefRelation for relationId {} valueIdFrom {} valueIdTo {} aggregateVersion {}: {}", relationId, valueIdFrom, valueIdTo, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteRefRelation for relationId {} valueIdFrom {} valueIdTo {} aggregateVersion {}: {}", relationId, valueIdFrom, valueIdTo, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 

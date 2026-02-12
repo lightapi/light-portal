@@ -14,6 +14,7 @@ import com.networknt.utility.UuidUtil;
 import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.PortalConstants;
 import net.lightapi.portal.db.PortalDbProvider;
+import net.lightapi.portal.db.PortalPersistenceException;
 import net.lightapi.portal.db.model.DbConsumablePromotableInstance;
 import net.lightapi.portal.db.util.NotificationService;
 import net.lightapi.portal.db.util.SqlUtil;
@@ -42,7 +43,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
     /*
     @Override
-    public void createInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String sql =
                 """
                 INSERT INTO instance_t(host_id, instance_id, instance_name, product_version_id,
@@ -197,10 +198,10 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             }
         } catch (SQLException e) {
             logger.error("SQLException during createInstance for hostId {} instanceId {} aggregateVersion {}: {}", hostId, instanceId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createInstance for hostId {} instanceId {} aggregateVersion {}: {}", hostId, instanceId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
         upsertPlatformProductInstanceProperties(hostId,instanceId,properties,user);
     }
@@ -360,15 +361,15 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             preparedStatement.executeBatch();
         } catch (SQLException e) {
             logger.error("SQLException during createInstance for hostId {} instanceId {} : {}", hostId, instanceId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createInstance for hostId {} instanceId {} : {}", hostId, instanceId,  e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void createInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT based on the Primary Key (host_id, instance_id): INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -550,15 +551,15 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             }
         } catch (SQLException e) {
             logger.error("SQLException during createInstance for hostId {} instanceId {} aggregateVersion {}: {}", hostId, instanceId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createInstance for hostId {} instanceId {} aggregateVersion {}: {}", hostId, instanceId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We will attempt to update the record IF the incoming event is newer than the current projection version.
         // We also explicitly set active = TRUE (reactivation).
         final String sql =
@@ -739,15 +740,15 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateInstance for hostId {} instanceId {} (old: {}) -> (new: {}): {}", hostId, instanceId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateInstance for hostId {} instanceId {} (old: {}) -> (new: {}): {}", hostId, instanceId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String softDeleteSql =
@@ -802,15 +803,15 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
         } catch (SQLException e) {
             logger.error("SQLException during deleteInstance for hostId {} instanceId {} (old: {}) -> (new: {}): {}", hostId, instanceId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw SQLException
+            throw new PortalPersistenceException("Persistence Error", e); // Re-throw SQLException
         } catch (Exception e) {
             logger.error("Exception during deleteInstance for hostId {} instanceId {} (old: {}) -> (new: {}): {}", hostId, instanceId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw generic Exception
+            throw new PortalPersistenceException("Persistence Error", e); // Re-throw generic Exception
         }
     }
 
     @Override
-    public void lockInstance(Connection conn, Map<String, Object> event) throws Exception {
+    public void lockInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to lock the record (set readonly = TRUE) IF the incoming event is newer than the current projection version.
         // We also explicitly set active = TRUE (assuming a lock event implies the instance is active).
         final String sql =
@@ -867,15 +868,15 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
         } catch (SQLException e) {
             logger.error("SQLException during lockInstance for hostId {} instanceId {} (old: {}) -> (new: {}): {}", hostId, instanceId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("SQLException during lockInstance", e);
         } catch (Exception e) {
             logger.error("Exception during lockInstance for hostId {} instanceId {} (old: {}) -> (new: {}): {}", hostId, instanceId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Exception during lockInstance", e);
         }
     }
 
     @Override
-    public void unlockInstance(Connection conn, Map<String, Object> event) throws Exception {
+    public void unlockInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to unlock the record (set readonly = FALSE) IF the incoming event is newer than the current projection version.
         // We also explicitly set active = TRUE (assuming an unlock event implies the instance is active).
         final String sql =
@@ -932,21 +933,21 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
         } catch (SQLException e) {
             logger.error("SQLException during unlockInstance for hostId {} instanceId {} (old: {}) -> (new: {}): {}", hostId, instanceId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("SQLException during unlockInstance", e);
         } catch (Exception e) {
             logger.error("Exception during unlockInstance for hostId {} instanceId {} (old: {}) -> (new: {}): {}", hostId, instanceId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Exception during unlockInstance", e);
         }
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    public void cloneInstance(Connection conn, Map<String, Object> event) throws Exception {
-        final Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
-        final String hostId = (String) map.get("hostId");
-        final String sourceInstanceId = (String) map.get("sourceInstanceId");
-        final String targetInstanceId = (String) map.get("targetInstanceId");
-
+    public void cloneInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
+        // extract the source instanceId
+        Map<String, Object> map = SqlUtil.extractEventData(event); // Assuming extractEventData is the helper to get PortalConstants.DATA
+        String sourceInstanceId = (String)map.get("sourceInstanceId");
+        if(logger.isTraceEnabled()) logger.trace("sourceInstanceId {}", sourceInstanceId);
+        // query all events for the source instanceId from the event store.
         String s =
             """
             SELECT event_type, payload FROM (
@@ -994,6 +995,12 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     if(logger.isTraceEnabled()) logger.trace("eventType {} payload {}", eventType, payload);
                 }
             }
+        } catch (SQLException e) {
+            logger.error("SQLException during cloneInstance for sourceInstanceId {}: {}", sourceInstanceId, e.getMessage(), e);
+            throw new PortalPersistenceException("SQLException during cloneInstance", e);
+        } catch (Exception e) {
+            logger.error("Exception during cloneInstance for sourceInstanceId {}: {}", sourceInstanceId, e.getMessage(), e);
+            throw new PortalPersistenceException("Exception during cloneInstance", e);
         }
         // For now, it just output the event type and payload. It will run replacement and enrichment logic like the import
         // and then push the events back into the event_store_t and outbox_message_t tables for processing.
@@ -1006,9 +1013,10 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         // Since the query will be shared by two events, we might extract it into another method for code sharing.
     }
 
+
     @SuppressWarnings("unchecked")
     @Override
-    public void promoteInstance(Connection conn, Map<String, Object> event) throws Exception {
+    public void promoteInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
 
         final String hostId = (String) event.get(Constants.HOST);
@@ -1018,17 +1026,22 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         final String updateTs = (String) event.get(CloudEventV1.TIME);
         final Map<String, Object> promotableConfigs = (Map<String, Object>) map.get("promotableConfigs");
 
-        transact(
-            conn,
-            connection -> {
-                try {
-                    tryIncrementAggregateVersionOfInstance(conn, hostId, instanceId, oldAggregateVersion, SqlUtil.getNewAggregateVersion(event));
-                    promoteConfigs(conn, new DbConsumablePromotableInstance(hostId, instanceId, promotableConfigs, user, updateTs));
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
+        try {
+            transact(
+                conn,
+                connection -> {
+                    try {
+                        tryIncrementAggregateVersionOfInstance(conn, hostId, instanceId, oldAggregateVersion, SqlUtil.getNewAggregateVersion(event));
+                        promoteConfigs(conn, new DbConsumablePromotableInstance(hostId, instanceId, promotableConfigs, user, updateTs));
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
                 }
-            }
-        );
+            );
+        } catch (Exception e) {
+            logger.error("Exception during promoteInstance for hostId {} instanceId {}: {}", hostId, instanceId, e.getMessage(), e);
+            throw new PortalPersistenceException("Exception during promoteInstance", e);
+        }
     }
 
     private void tryIncrementAggregateVersionOfInstance(Connection conn, String hostId,
@@ -1050,11 +1063,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         } catch (SQLException e) {
             logger.error("SQLException on increment of aggregate version for hostId {} instanceId {} aggregateVersion {}: {}",
                 hostId, instanceId, oldAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception on increment of aggregate version for hostId {} instanceId {} aggregateVersion {}: {}",
                 hostId, instanceId, oldAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -2178,7 +2191,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public void createInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createInstanceApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT based on the Primary Key (host_id, instance_api_id): INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -2248,15 +2261,15 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             }
         } catch (SQLException e) {
             logger.error("SQLException during createInstanceApi for hostId {} instanceApiId {} aggregateVersion {}: {}", hostId, instanceApiId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createInstanceApi for hostId {} instanceApiId {} aggregateVersion {}: {}", hostId, instanceApiId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
     /*
     @Override
-    public void updateInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateInstanceApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // Note: The 'active' state is updated based on the event payload (if present).
@@ -2317,15 +2330,15 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateInstanceApi for hostId {} instanceApiId {} aggregateVersion {}: {}", hostId, instanceApiId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateInstanceApi for hostId {} instanceApiId {} aggregateVersion {}: {}", hostId, instanceApiId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
     */
     @Override
-    public void deleteInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteInstanceApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -2375,10 +2388,10 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteInstanceApi for hostId {} instanceApiId {} aggregateVersion {}: {}", hostId, instanceApiId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteInstanceApi for hostId {} instanceApiId {} aggregateVersion {}: {}", hostId, instanceApiId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -2584,7 +2597,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public void createInstanceApiPathPrefix(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createInstanceApiPathPrefix(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT based on the Primary Key (host_id, instance_api_id, path_prefix): INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -2644,15 +2657,15 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             }
         } catch (SQLException e) {
             logger.error("SQLException during createInstanceApiPathPrefix for hostId {} instanceApiId {} pathPrefix {} aggregateVersion {}: {}", hostId, instanceApiId, pathPrefix, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createInstanceApiPathPrefix for hostId {} instanceApiId {} pathPrefix {} aggregateVersion {}: {}", hostId, instanceApiId, pathPrefix, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateInstanceApiPathPrefix(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateInstanceApiPathPrefix(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the path prefix should be active.
@@ -2707,10 +2720,10 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateInstanceApiPathPrefix for hostId {} instanceApiId {} pathPrefix {} aggregateVersion {}: {}", hostId, instanceApiId, pathPrefix, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateInstanceApiPathPrefix for hostId {} instanceApiId {} pathPrefix {} aggregateVersion {}: {}", hostId, instanceApiId, pathPrefix, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -2729,7 +2742,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      * @throws Exception    For other generic errors.
      */
     @Override
-    public void deleteInstanceApiPathPrefix(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteInstanceApiPathPrefix(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // SQL statement updated to match the idempotent soft-delete pattern.
         final String sql =
                 """
@@ -2781,11 +2794,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         } catch (SQLException e) {
             logger.error("SQLException during soft delete of InstanceApiPathPrefix for hostId {} instanceApiId {} pathPrefix {}: {}",
                     hostId, instanceApiId, pathPrefix, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during soft delete of InstanceApiPathPrefix for hostId {} instanceApiId {} pathPrefix {}: {}",
                     hostId, instanceApiId, pathPrefix, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -2954,7 +2967,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      * @throws Exception    For other generic errors.
      */
     @Override
-    public void createInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createInstanceAppApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String sql =
                 """
                 INSERT INTO instance_app_api_t(
@@ -3009,11 +3022,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         } catch (SQLException e) {
             logger.error("SQLException during createInstanceAppApi for hostId {} instanceAppId {} instanceApiId {}: {}",
                     hostId, instanceAppId, instanceApiId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createInstanceAppApi for hostId {} instanceAppId {} instanceApiId {}: {}",
                     hostId, instanceAppId, instanceApiId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -3032,7 +3045,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      */
     /*
     @Override
-    public void updateInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateInstanceAppApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // SQL statement updated to match the idempotent update pattern.
         final String sql =
                 """
@@ -3084,11 +3097,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         } catch (SQLException e) {
             logger.error("SQLException during updateInstanceAppApi for hostId {} instanceAppId {} instanceApiId {}: {}",
                     hostId, instanceAppId, instanceApiId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateInstanceAppApi for hostId {} instanceAppId {} instanceApiId {}: {}",
                     hostId, instanceAppId, instanceApiId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
     */
@@ -3107,7 +3120,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      * @throws Exception    For other generic errors.
      */
     @Override
-    public void deleteInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteInstanceAppApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // SQL statement updated to match the idempotent soft-delete pattern.
         final String sql =
                 """
@@ -3160,11 +3173,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         } catch (SQLException e) {
             logger.error("SQLException during soft delete of InstanceAppApi for hostId {} instanceAppId {} instanceApiId {}: {}",
                     hostId, instanceAppId, instanceApiId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during soft delete of InstanceAppApi for hostId {} instanceAppId {} instanceApiId {}: {}",
                     hostId, instanceAppId, instanceApiId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -3339,7 +3352,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      * @throws Exception    For other generic errors.
      */
     @Override
-    public void createInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createInstanceApp(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String sql =
                 """
                 INSERT INTO instance_app_t(
@@ -3403,11 +3416,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         } catch (SQLException e) {
             logger.error("SQLException during createInstanceApp for hostId {} instanceAppId {}: {}",
                     hostId, instanceAppId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createInstanceApp for hostId {} instanceAppId {}: {}",
                     hostId, instanceAppId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -3426,7 +3439,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      */
     /*
     @Override
-    public void updateInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateInstanceApp(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // SQL statement updated to match the idempotent update pattern.
         // Includes mutable fields from the event data in the SET clause.
         final String sql =
@@ -3484,11 +3497,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         } catch (SQLException e) {
             logger.error("SQLException during updateInstanceApp for hostId {} instanceAppId {}: {}",
                     hostId, instanceAppId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateInstanceApp for hostId {} instanceAppId {}: {}",
                     hostId, instanceAppId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
     */
@@ -3507,7 +3520,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      * @throws Exception    For other generic errors.
      */
     @Override
-    public void deleteInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteInstanceApp(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // SQL statement updated to match the idempotent soft-delete pattern.
         final String sql =
                 """
@@ -3556,11 +3569,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         } catch (SQLException e) {
             logger.error("SQLException during soft delete of InstanceApp for hostId {} instanceAppId {}: {}",
                     hostId, instanceAppId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during soft delete of InstanceApp for hostId {} instanceAppId {}: {}",
                     hostId, instanceAppId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -3767,7 +3780,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public void createProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createProduct(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // --- 1. PRIMARY UPSERT SQL (Creates or Reactivates the specific product version) ---
         // PRIMARY KEY is assumed to be (host_id, product_version_id)
         final String upsertSql =
@@ -3885,15 +3898,15 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
         } catch (SQLException e) {
             logger.error("SQLException during createProduct (version) UPSERT for productId {} version {} aggregateVersion {}: {}", productId, productVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createProduct (version) for productId {} version {} aggregateVersion {}: {}", productId, productVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateProduct(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // --- 1. PRIMARY UPDATE SQL (Monotonicity Check) ---
         // Changed WHERE aggregate_version = ? to aggregate_version < ?
         final String sql =
@@ -3989,10 +4002,10 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
         } catch (SQLException e) {
             logger.error("SQLException during updateProduct for hostId {} productVersionId {} (old: {}) -> (new: {}): {}", hostId, productVersionId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateProduct for hostId {} productVersionId {} (old: {}) -> (new: {}): {}", hostId, productVersionId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -4001,7 +4014,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      *
      */
     @Override
-    public void deleteProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteProduct(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // --- UPDATED SQL FOR SOFT DELETE + MONOTONICITY ---
         // Updates the 'active' flag to FALSE and sets the new version IF the current DB version is older than the incoming event's version.
         final String softDeleteProductSql =
@@ -4057,10 +4070,10 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
         } catch (SQLException e) {
             logger.error("SQLException during softDeleteProduct for hostId {} productVersionId {} aggregateVersion {}: {}", hostId, productVersionId, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw SQLException
+            throw new PortalPersistenceException("Persistence Error", e); // Re-throw SQLException
         } catch (Exception e) {
             logger.error("Exception during softDeleteProduct for hostId {} productVersionId {} aggregateVersion {}: {}", hostId, productVersionId, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw generic Exception
+            throw new PortalPersistenceException("Persistence Error", e); // Re-throw generic Exception
         }
     }
 
@@ -4324,7 +4337,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public void createProductVersionEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createProductVersionEnvironment(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // --- UPDATED SQL FOR UPSERT ---
         // Assuming the Unique Constraint is (host_id, product_version_id, system_env, runtime_env)
         final String upsertSql =
@@ -4373,15 +4386,15 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
         } catch (SQLException e) {
             logger.error("SQLException during UPSERT for hostId {} productVersionId {} systemEnv {} runtimeEnv {} aggregateVersion {}: {}", hostId, productVersionId, systemEnv, runtimeEnv, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw SQLException
+            throw new PortalPersistenceException("Persistence Error", e); // Re-throw SQLException
         } catch (Exception e) {
             logger.error("Exception during UPSERT for hostId {} productVersionId {} systemEnv {} runtimeEnv {} aggregateVersion {}: {}", hostId, productVersionId, systemEnv, runtimeEnv, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw generic Exception
+            throw new PortalPersistenceException("Persistence Error", e); // Re-throw generic Exception
         }
     }
 
     @Override
-    public void updateProductVersionEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateProductVersionEnvironment(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // --- 1. PRIMARY UPDATE SQL (Updates the specific product version environment) ---
         final String updateSql =
                 """
@@ -4454,16 +4467,16 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         } catch (SQLException e) {
             logger.error("SQLException during updateProductVersionEnvironment for hostId {} productVersionId {} systemEnv {} runtimeEnv {} aggregateVersion {}: {}",
                     hostId, productVersionId, systemEnv, runtimeEnv, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateProductVersionEnvironment for hostId {} productVersionId {} systemEnv {} runtimeEnv {} aggregateVersion {}: {}",
                     hostId, productVersionId, systemEnv, runtimeEnv, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteProductVersionEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteProductVersionEnvironment(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // --- UPDATED SQL FOR SOFT DELETE + MONOTONICITY ---
         // Updates the 'active' flag to FALSE and sets the new version IF the current DB version is older than the incoming event's version.
         final String softDeleteSql =
@@ -4520,10 +4533,10 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             // NO THROW on count == 0. The method is now idempotent.
         } catch (SQLException e) {
             logger.error("SQLException during softDeleteEnvironment for hostId {} productVersionId {} aggregateVersion {}: {}", hostId, productVersionId, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw SQLException
+            throw new PortalPersistenceException("Persistence Error", e); // Re-throw SQLException
         } catch (Exception e) {
             logger.error("Exception during softDeleteEnvironment for hostId {} productVersionId {} aggregateVersion {}: {}", hostId, productVersionId, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw generic Exception
+            throw new PortalPersistenceException("Persistence Error", e); // Re-throw generic Exception
         }
     }
 
@@ -4665,7 +4678,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public void createProductVersionPipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createProductVersionPipeline(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // --- UPDATED SQL FOR UPSERT ---
         // Assuming the Unique Constraint is (host_id, product_version_id, pipeline_id)
         final String upsertSql =
@@ -4711,15 +4724,15 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
         } catch (SQLException e) {
             logger.error("SQLException during UPSERT for hostId {} productVersionId {} pipelineId {} aggregateVersion {}: {}", hostId, productVersionId, pipelineId, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw SQLException
+            throw new PortalPersistenceException("Persistence Error", e); // Re-throw SQLException
         } catch (Exception e) {
             logger.error("Exception during UPSERT for hostId {} productVersionId {} pipelineId {} aggregateVersion {}: {}", hostId, productVersionId, pipelineId, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw generic Exception
+            throw new PortalPersistenceException("Persistence Error", e); // Re-throw generic Exception
         }
     }
 
     @Override
-    public void deleteProductVersionPipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteProductVersionPipeline(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // --- UPDATED SQL FOR SOFT DELETE + MONOTONICITY ---
         // Updates the 'active' flag to FALSE and sets the new version IF the current DB version is older than the incoming event's version.
         final String softDeleteSql =
@@ -4774,10 +4787,10 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             // NO THROW on count == 0. The method is now idempotent.
         } catch (SQLException e) {
             logger.error("SQLException during softDeleteProductVersionPipeline for productVersionId {} pipelineId {} new version {}: {}", productVersionId, pipelineId, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw SQLException
+            throw new PortalPersistenceException("Persistence Error", e); // Re-throw SQLException
         } catch (Exception e) {
             logger.error("Exception during softDeleteProductVersionPipeline for productVersionId {} pipelineId {} new version {}: {}", productVersionId, pipelineId, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw generic Exception
+            throw new PortalPersistenceException("Persistence Error", e); // Re-throw generic Exception
         }
     }
 
@@ -4870,7 +4883,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public void createProductVersionConfig(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createProductVersionConfig(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // --- UPDATED SQL FOR UPSERT ---
         // Assuming the Unique Constraint is (host_id, product_version_id, config_id)
         final String upsertSql =
@@ -4917,15 +4930,15 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
         } catch (SQLException e) {
             logger.error("SQLException during UPSERT for hostId {} productVersionId {} configId {} aggregateVersion {}: {}", hostId, productVersionId, configId, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw SQLException
+            throw new PortalPersistenceException("Persistence Error", e); // Re-throw SQLException
         } catch (Exception e) {
             logger.error("Exception during UPSERT for hostId {} productVersionId {} configId {} aggregateVersion {}: {}", hostId, productVersionId, configId, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw generic Exception
+            throw new PortalPersistenceException("Persistence Error", e); // Re-throw generic Exception
         }
     }
 
     @Override
-    public void deleteProductVersionConfig(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteProductVersionConfig(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // --- UPDATED SQL FOR SOFT DELETE + MONOTONICITY ---
         // Updates the 'active' flag to FALSE and sets the new version IF the current DB version is older than the incoming event's version.
         final String softDeleteSql =
@@ -4979,10 +4992,10 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             // NO THROW on count == 0. The method is now idempotent.
         } catch (SQLException e) {
             logger.error("SQLException during softDeleteProductVersionConfig for hostId {} productVersionId {} configId {} new version {}: {}", hostId, productVersionId, configId, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw SQLException
+            throw new PortalPersistenceException("Persistence Error", e); // Re-throw SQLException
         } catch (Exception e) {
             logger.error("Exception during softDeleteProductVersionConfig for hostId {} productVersionId {} configId {} new version {}: {}", hostId, productVersionId, configId, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw generic Exception
+            throw new PortalPersistenceException("Persistence Error", e); // Re-throw generic Exception
         }
     }
 
@@ -5070,7 +5083,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     }
 
     @Override
-    public void createProductVersionConfigProperty(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createProductVersionConfigProperty(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // --- UPDATED SQL FOR UPSERT ---
         // Assuming the Unique Constraint is (host_id, product_version_id, property_id)
         final String upsertSql =
@@ -5117,15 +5130,15 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
         } catch (SQLException e) {
             logger.error("SQLException during UPSERT for hostId {} productVersionId {} propertyId {} aggregateVersion {}: {}", hostId, productVersionId, propertyId, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw SQLException
+            throw new PortalPersistenceException("Persistence Error", e); // Re-throw SQLException
         } catch (Exception e) {
             logger.error("Exception during UPSERT for hostId {} productVersionId {} propertyId {} aggregateVersion {}: {}", hostId, productVersionId, propertyId, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw generic Exception
+            throw new PortalPersistenceException("Persistence Error", e); // Re-throw generic Exception
         }
     }
 
     @Override
-    public void deleteProductVersionConfigProperty(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteProductVersionConfigProperty(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // --- UPDATED SQL FOR SOFT DELETE + MONOTONICITY ---
         // Updates the 'active' flag to FALSE and sets the new version IF the current DB version is older than the incoming event's version.
         final String softDeleteSql =
@@ -5179,10 +5192,10 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             // NO THROW on count == 0. The method is now idempotent.
         } catch (SQLException e) {
             logger.error("SQLException during softDeleteProductVersionConfigProperty for hostId {} productVersionId {} propertyId {} new version {}: {}", hostId, productVersionId, propertyId, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw SQLException
+            throw new PortalPersistenceException("Persistence Error", e); // Re-throw SQLException
         } catch (Exception e) {
             logger.error("Exception during softDeleteProductVersionConfigProperty for hostId {} productVersionId {} propertyId {} new version {}: {}", hostId, productVersionId, propertyId, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw generic Exception
+            throw new PortalPersistenceException("Persistence Error", e); // Re-throw generic Exception
         }
     }
 
@@ -5294,7 +5307,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      * @throws Exception    For other generic errors.
      */
     @Override
-    public void createPipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createPipeline(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // --- 1. PRIMARY UPSERT SQL (Creates or Reactivates the specific pipeline) ---
         final String upsertSql =
                 """
@@ -5387,10 +5400,10 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
 
         } catch (SQLException e) {
             logger.error("SQLException during createPipeline UPSERT for hostId {} pipelineId {} aggregateVersion {}: {}", hostId, pipelineId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createPipeline for hostId {} pipelineId {} aggregateVersion {}: {}", hostId, pipelineId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -5411,7 +5424,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      * @throws Exception    For other generic errors.
      */
     @Override
-    public void updatePipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updatePipeline(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // --- 1. PRIMARY UPDATE SQL (Updates the specific pipeline) ---
         final String updateSql =
                 """
@@ -5503,11 +5516,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         } catch (SQLException e) {
             logger.error("SQLException during updatePipeline for hostId {} pipelineId {}: {}",
                     hostId, pipelineId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updatePipeline for hostId {} pipelineId {}: {}",
                     hostId, pipelineId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -5525,7 +5538,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      * @throws Exception    For other generic errors.
      */
     @Override
-    public void deletePipeline(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deletePipeline(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // SQL statement updated to match the idempotent soft-delete pattern.
         final String sql =
                 """
@@ -5574,11 +5587,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         } catch (SQLException e) {
             logger.error("SQLException during soft delete of Pipeline for hostId {} pipelineId {}: {}",
                     hostId, pipelineId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during soft delete of Pipeline for hostId {} pipelineId {}: {}",
                     hostId, pipelineId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -5809,7 +5822,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      * @throws Exception    For other generic errors.
      */
     @Override
-    public void createPlatform(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createPlatform(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String sql =
                 """
                 INSERT INTO platform_t(host_id, platform_id, platform_name, platform_version,
@@ -5883,11 +5896,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         } catch (SQLException e) {
             logger.error("SQLException during createPlatform for hostId {} platformId {}: {}",
                     hostId, platformId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createPlatform for hostId {} platformId {}: {}",
                     hostId, platformId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -5927,7 +5940,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      * @throws Exception    For other generic errors.
      */
     @Override
-    public void updatePlatform(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updatePlatform(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // SQL statement updated to match the idempotent update pattern.
         final String sql =
                 """
@@ -6002,11 +6015,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         } catch (SQLException e) {
             logger.error("SQLException during updatePlatform for hostId {} platformId {}: {}",
                     hostId, platformId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updatePlatform for hostId {} platformId {}: {}",
                     hostId, platformId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -6024,7 +6037,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      * @throws Exception    For other generic errors.
      */
     @Override
-    public void deletePlatform(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deletePlatform(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // SQL statement updated to match the idempotent soft-delete pattern.
         final String sql =
                 """
@@ -6073,11 +6086,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         } catch (SQLException e) {
             logger.error("SQLException during soft delete of Platform for hostId {} platformId {}: {}",
                     hostId, platformId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during soft delete of Platform for hostId {} platformId {}: {}",
                     hostId, platformId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -6266,7 +6279,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      * @throws Exception    For other generic errors.
      */
     @Override
-    public void createDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createDeploymentInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String sql =
                 """
                 INSERT INTO deployment_instance_t(host_id, deployment_instance_id, instance_id,
@@ -6328,11 +6341,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         } catch (SQLException e) {
             logger.error("SQLException during createDeploymentInstance for hostId {} deploymentInstanceId {}: {}",
                     hostId, deploymentInstanceId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createDeploymentInstance for hostId {} deploymentInstanceId {}: {}",
                     hostId, deploymentInstanceId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -6350,7 +6363,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      * @throws Exception    For other generic errors.
      */
     @Override
-    public void updateDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateDeploymentInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // SQL statement updated to match the idempotent update pattern.
         final String sql =
                 """
@@ -6411,11 +6424,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         } catch (SQLException e) {
             logger.error("SQLException during updateDeploymentInstance for hostId {} deploymentInstanceId {}: {}",
                     hostId, deploymentInstanceId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateDeploymentInstance for hostId {} deploymentInstanceId {}: {}",
                     hostId, deploymentInstanceId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -6434,7 +6447,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      * @throws Exception    For other generic errors.
      */
     @Override
-    public void deleteDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteDeploymentInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // SQL statement updated to match the idempotent soft-delete pattern.
         final String sql =
                 """
@@ -6482,11 +6495,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         } catch (SQLException e) {
             logger.error("SQLException during soft delete of DeploymentInstance for hostId {} deploymentInstanceId {}: {}",
                     hostId, deploymentInstanceId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during soft delete of DeploymentInstance for hostId {} deploymentInstanceId {}: {}",
                     hostId, deploymentInstanceId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -6793,7 +6806,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      * @throws Exception    For other generic errors.
      */
     @Override
-    public void createDeployment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createDeployment(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String sql =
                 """
                 INSERT INTO deployment_t(host_id, deployment_id, deployment_instance_id,
@@ -6847,11 +6860,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         } catch (SQLException e) {
             logger.error("SQLException during createDeployment for hostId {} deploymentId {}: {}",
                     hostId, deploymentId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createDeployment for hostId {} deploymentId {}: {}",
                     hostId, deploymentId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -6869,7 +6882,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      * @throws Exception    For other generic errors.
      */
     @Override
-    public void updateDeployment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateDeployment(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // SQL statement updated to match the idempotent update pattern.
         final String sql =
                 """
@@ -6923,11 +6936,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         } catch (SQLException e) {
             logger.error("SQLException during updateDeployment for hostId {} deploymentId {}: {}",
                     hostId, deploymentId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateDeployment for hostId {} deploymentId {}: {}",
                     hostId, deploymentId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -6946,7 +6959,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      * @throws Exception    For other generic errors.
      */
     @Override
-    public void updateDeploymentJobId(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateDeploymentJobId(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // SQL statement updated to match the idempotent update pattern.
         final String sql =
                 """
@@ -6992,11 +7005,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         } catch (SQLException e) {
             logger.error("SQLException during updateDeploymentJobId for hostId {} deploymentId {}: {}",
                     hostId, deploymentId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateDeploymentJobId for hostId {} deploymentId {}: {}",
                     hostId, deploymentId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -7015,7 +7028,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      * @throws Exception    For other generic errors.
      */
     @Override
-    public void updateDeploymentStatus(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateDeploymentStatus(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // SQL statement updated to match the idempotent update pattern.
         final String sql =
                 """
@@ -7060,11 +7073,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         } catch (SQLException e) {
             logger.error("SQLException during updateDeploymentStatus for hostId {} deploymentId {}: {}",
                     hostId, deploymentId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateDeploymentStatus for hostId {} deploymentId {}: {}",
                     hostId, deploymentId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -7082,7 +7095,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      * @throws Exception    For other generic errors.
      */
     @Override
-    public void deleteDeployment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteDeployment(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // SQL statement updated to match the idempotent soft-delete pattern.
         final String sql =
                 """
@@ -7131,11 +7144,11 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         } catch (SQLException e) {
             logger.error("SQLException during soft delete of Deployment for hostId {} deploymentId {}: {}",
                     hostId, deploymentId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during soft delete of Deployment for hostId {} deploymentId {}: {}",
                     hostId, deploymentId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
