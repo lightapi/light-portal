@@ -713,56 +713,54 @@ public class PortalDbProviderImplTest {
     }
 
     @Test
-    void testAgentDefinition() throws Exception {
-        String agentDefId = UUID.randomUUID().toString();
+    void testWorkflowDefinition() throws Exception {
+        String wfDefId = UUID.randomUUID().toString();
         String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
         String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
-        String agentName = "TestAgent-" + agentDefId;
+        String name = "TestWorkflow-" + wfDefId;
         Map<String, Object> data = new HashMap<>();
-        data.put("agentDefId", agentDefId);
+        data.put("wfDefId", wfDefId);
         data.put("hostId", hostId);
-        data.put("agentName", agentName);
-        data.put("modelProvider", "openai");
-        data.put("modelName", "gpt-4");
-        data.put("apiKeyRef", "secret-key");
-        data.put("temperature", 0.7);
-        data.put("maxTokens", 1000);
+        data.put("namespace", "lightapi");
+        data.put("name", name);
+        data.put("version", "1.0.0");
+        data.put("definition", "steps: []");
         data.put("newAggregateVersion", 1);
 
-        Map<String, Object> event = createEvent(hostId, userId, agentDefId, "AgentDefinition", 1, data);
+        Map<String, Object> event = createEvent(hostId, userId, wfDefId, "WorkflowDefinition", 1, data);
 
         try (Connection conn = SqlDbStartupHook.ds.getConnection()) {
-            dbProvider.createAgentDefinition(conn, event);
+            dbProvider.createWorkflowDefinition(conn, event);
 
-            Result<String> result = dbProvider.getAgentDefinitionById(hostId, agentDefId);
+            Result<String> result = dbProvider.getWorkflowDefinitionById(hostId, wfDefId);
             if(result.isFailure()) {
                 System.out.println("Create failed: " + result.getError());
                 fail(result.getError().toString());
             }
             Map<String, Object> retrieved = JsonMapper.string2Map(result.getResult());
-            assertEquals(agentName, retrieved.get("agentName"));
+            assertEquals(name, retrieved.get("name"));
 
-            data.put("modelName", "gpt-4-turbo");
+            data.put("definition", "steps: [{name: step1}]");
             data.put("newAggregateVersion", 2);
-            event = createEvent(hostId, userId, agentDefId, "AgentDefinition", 2, data);
-            dbProvider.updateAgentDefinition(conn, event);
+            event = createEvent(hostId, userId, wfDefId, "WorkflowDefinition", 2, data);
+            dbProvider.updateWorkflowDefinition(conn, event);
 
-            result = dbProvider.getAgentDefinitionById(hostId, agentDefId);
+            result = dbProvider.getWorkflowDefinitionById(hostId, wfDefId);
             retrieved = JsonMapper.string2Map(result.getResult());
-            assertEquals("gpt-4-turbo", retrieved.get("modelName"));
+            assertEquals("steps: [{name: step1}]", retrieved.get("definition"));
 
-            result = dbProvider.queryAgentDefinition(0, 10, null, null, null, true, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
+            result = dbProvider.queryWorkflowDefinition(0, 10, null, null, null, true, hostId);
             assertTrue(result.isSuccess());
             Map<String, Object> queryResult = JsonMapper.string2Map(result.getResult());
             assertTrue((Integer)queryResult.get("total") > 0);
 
             data.put("newAggregateVersion", 3);
-            dbProvider.deleteAgentDefinition(conn, event);
-            result = dbProvider.getAgentDefinitionById(hostId, agentDefId);
+            dbProvider.deleteWorkflowDefinition(conn, event);
+            result = dbProvider.getWorkflowDefinitionById(hostId, wfDefId);
+            // It should still return the record but with active=false
             assertTrue(result.isSuccess());
             retrieved = JsonMapper.string2Map(result.getResult());
             assertEquals(false, retrieved.get("active"));
-
         }
     }
 }

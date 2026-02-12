@@ -565,9 +565,16 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     public Result<String> getPromotableInstanceConfigs(String hostId, String instanceId,Set<String> propertyNames,Set<String> apiUids){return configPersistence.getPromotableInstanceConfigs(hostId,instanceId,propertyNames,apiUids);}
 
     // --- GenAI Agent ---
-    @Override public void createAgentDefinition(Connection conn, Map<String, Object> event) throws SQLException { genAIPersistence.createAgentDefinition(conn, event); }
-    @Override public void updateAgentDefinition(Connection conn, Map<String, Object> event) throws SQLException { genAIPersistence.updateAgentDefinition(conn, event); }
-    @Override public void deleteAgentDefinition(Connection conn, Map<String, Object> event) throws SQLException { genAIPersistence.deleteAgentDefinition(conn, event); }
+    @Override public void createAgentDefinition(Connection conn, Map<String, Object> event) throws Exception { genAIPersistence.createAgentDefinition(conn, event); }
+    @Override public void updateAgentDefinition(Connection conn, Map<String, Object> event) throws Exception { genAIPersistence.updateAgentDefinition(conn, event); }
+    @Override public void deleteAgentDefinition(Connection conn, Map<String, Object> event) throws Exception { genAIPersistence.deleteAgentDefinition(conn, event); }
     @Override public Result<String> queryAgentDefinition(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return genAIPersistence.queryAgentDefinition(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getAgentDefinitionById(String hostId, String agentDefId) { return genAIPersistence.getAgentDefinitionById(hostId, agentDefId); }
+
+    // --- Workflow Definition ---
+    @Override public void createWorkflowDefinition(Connection conn, Map<String, Object> event) throws Exception { genAIPersistence.createWorkflowDefinition(conn, event); }
+    @Override public void updateWorkflowDefinition(Connection conn, Map<String, Object> event) throws Exception { genAIPersistence.updateWorkflowDefinition(conn, event); }
+    @Override public void deleteWorkflowDefinition(Connection conn, Map<String, Object> event) throws Exception { genAIPersistence.deleteWorkflowDefinition(conn, event); }
+    @Override public Result<String> queryWorkflowDefinition(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return genAIPersistence.queryWorkflowDefinition(offset, limit, filters, globalFilter, sorting, active, hostId); }
+    @Override public Result<String> getWorkflowDefinitionById(String hostId, String wfDefId) { return genAIPersistence.getWorkflowDefinitionById(hostId, wfDefId); }
 }

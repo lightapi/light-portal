@@ -26,7 +26,7 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
     private static final String OBJECT_NOT_FOUND = PortalDbProvider.OBJECT_NOT_FOUND;
 
     @Override
-    public void createAgentDefinition(Connection conn, Map<String, Object> event) throws SQLException {
+    public void createAgentDefinition(Connection conn, Map<String, Object> event) throws Exception {
         final String sql =
                 """
                 INSERT INTO agent_definition_t (host_id, agent_def_id, agent_name, model_provider, model_name, api_key_ref, temperature, max_tokens, update_user, update_ts, aggregate_version, active)
@@ -85,7 +85,7 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
     }
 
     @Override
-    public void updateAgentDefinition(Connection conn, Map<String, Object> event) throws SQLException {
+    public void updateAgentDefinition(Connection conn, Map<String, Object> event) throws Exception {
         final String sql =
             """
             UPDATE agent_definition_t
@@ -133,7 +133,7 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
     }
 
     @Override
-    public void deleteAgentDefinition(Connection conn, Map<String, Object> event) throws SQLException {
+    public void deleteAgentDefinition(Connection conn, Map<String, Object> event) throws Exception {
         final String sql =
             """
             UPDATE agent_definition_t
@@ -260,6 +260,226 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
                     result = Success.of(JsonMapper.toJson(map));
                 } else {
                     result = Failure.of(new Status(OBJECT_NOT_FOUND, "agent_definition", agentDefId));
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public void createWorkflowDefinition(Connection conn, Map<String, Object> event) throws Exception {
+        final String sql =
+                """
+                INSERT INTO wf_definition_t (host_id, wf_def_id, namespace, name, version, definition, update_user, update_ts, aggregate_version, active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (host_id, wf_def_id) DO UPDATE
+                SET namespace = EXCLUDED.namespace,
+                    name = EXCLUDED.name,
+                    version = EXCLUDED.version,
+                    definition = EXCLUDED.definition,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                WHERE wf_definition_t.aggregate_version < EXCLUDED.aggregate_version
+                AND wf_definition_t.active = FALSE
+                """;
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String wfDefId = (String)map.get("wfDefId");
+        String hostId = (String)map.get("hostId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(wfDefId));
+            statement.setString(3, (String)map.get("namespace"));
+            statement.setString(4, (String)map.get("name"));
+            statement.setString(5, (String)map.get("version"));
+            statement.setString(6, (String)map.get("definition"));
+            statement.setString(7, (String)event.get(Constants.USER));
+            statement.setObject(8, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(9, newAggregateVersion);
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                logger.warn("Creation skipped for hostId {} wfDefId {} aggregateVersion {}. A newer or same version already exists.", hostId, wfDefId, newAggregateVersion);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during createWorkflowDefinition for hostId {} wfDefId {} aggregateVersion {}: {}", hostId, wfDefId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during createWorkflowDefinition for hostId {} wfDefId {} aggregateVersion {}: {}", hostId, wfDefId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public void updateWorkflowDefinition(Connection conn, Map<String, Object> event) throws Exception {
+        final String sql =
+                """
+                UPDATE wf_definition_t
+                SET namespace=?, name=?, version=?, definition=?, update_user=?, update_ts=?, aggregate_version=?, active=TRUE
+                WHERE host_id=? AND wf_def_id=? AND aggregate_version < ?
+                """;
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String wfDefId = (String)map.get("wfDefId");
+        String hostId = (String)map.get("hostId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setString(1, (String)map.get("namespace"));
+            statement.setString(2, (String)map.get("name"));
+            statement.setString(3, (String)map.get("version"));
+            statement.setString(4, (String)map.get("definition"));
+            statement.setString(5, (String)event.get(Constants.USER));
+            statement.setObject(6, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(7, newAggregateVersion);
+            statement.setObject(8, UUID.fromString(hostId));
+            statement.setObject(9, UUID.fromString(wfDefId));
+            statement.setLong(10, newAggregateVersion);
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                logger.warn("Update skipped for hostId {} wfDefId {} aggregateVersion {}. Record not found or a newer/same version already exists.", hostId, wfDefId, newAggregateVersion);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during updateWorkflowDefinition for hostId {} wfDefId {} aggregateVersion {}: {}", hostId, wfDefId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during updateWorkflowDefinition for hostId {} wfDefId {} aggregateVersion {}: {}", hostId, wfDefId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public void deleteWorkflowDefinition(Connection conn, Map<String, Object> event) throws Exception {
+        final String sql =
+                """
+                UPDATE wf_definition_t
+                SET active = FALSE,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?
+                WHERE host_id=? AND wf_def_id=? AND aggregate_version < ?
+                """;
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String wfDefId = (String)map.get("wfDefId");
+        String hostId = (String)map.get("hostId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setString(1, (String)event.get(Constants.USER));
+            statement.setObject(2, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(3, newAggregateVersion);
+            statement.setObject(4, UUID.fromString(hostId));
+            statement.setObject(5, UUID.fromString(wfDefId));
+            statement.setLong(6, newAggregateVersion);
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                logger.warn("Delete skipped for hostId {} wfDefId {} aggregateVersion {}. Record not found or a newer/same version already exists.", hostId, wfDefId, newAggregateVersion);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during deleteWorkflowDefinition for hostId {} wfDefId {} aggregateVersion {}: {}", hostId, wfDefId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            logger.error("Exception during deleteWorkflowDefinition for hostId {} wfDefId {} aggregateVersion {}: {}", hostId, wfDefId, newAggregateVersion, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @Override
+    public Result<String> queryWorkflowDefinition(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
+        Result<String> result;
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total, host_id, wf_def_id, namespace,
+                name, version, definition, update_user,
+                update_ts, aggregate_version, active
+                FROM wf_definition_t WHERE host_id = ?
+                """;
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active);
+        String[] searchColumns = {"namespace", "name", "version"};
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("host_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("name", sorting, null) +
+                "\nLIMIT ? OFFSET ?";
+        parameters.add(limit);
+        parameters.add(offset);
+        if(logger.isTraceEnabled()) logger.trace("queryWorkflowDefinition sql: {}", sqlBuilder);
+        int total = 0;
+        List<Map<String, Object>> workflows = new ArrayList<>();
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("wfDefId", resultSet.getObject("wf_def_id", UUID.class));
+                    map.put("namespace", resultSet.getString("namespace"));
+                    map.put("name", resultSet.getString("name"));
+                    map.put("version", resultSet.getString("version"));
+                    map.put("definition", resultSet.getString("definition"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts", OffsetDateTime.class));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    workflows.add(map);
+                }
+            }
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("workflows", workflows);
+            result = Success.of(JsonMapper.toJson(resultMap));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getWorkflowDefinitionById(String hostId, String wfDefId) {
+        final String sql = "SELECT host_id, wf_def_id, namespace, name, version, definition, update_user, update_ts, aggregate_version, active FROM wf_definition_t WHERE host_id = ? AND wf_def_id = ?";
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+        try (Connection conn = ds.getConnection(); PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(wfDefId));
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("wfDefId", resultSet.getObject("wf_def_id", UUID.class));
+                    map.put("namespace", resultSet.getString("namespace"));
+                    map.put("name", resultSet.getString("name"));
+                    map.put("version", resultSet.getString("version"));
+                    map.put("definition", resultSet.getString("definition"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts", OffsetDateTime.class));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "workflow_definition", wfDefId));
                 }
             }
         } catch (SQLException e) {
