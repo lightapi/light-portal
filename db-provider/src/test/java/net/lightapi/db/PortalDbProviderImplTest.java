@@ -898,11 +898,57 @@ public class PortalDbProviderImplTest {
     }
 
     @Test
+    void testAgentDefinition() throws Exception {
+        String agentDefId = "019c52a8-805e-73dc-8cb3-cdebf02944d3";
+        String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
+        String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
+        String agentName = "TestAgent-" + agentDefId;
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("hostId", hostId);
+        data.put("agentDefId", agentDefId);
+        data.put("agentName", agentName);
+        data.put("modelProvider", "openai");
+        data.put("modelName", "gpt-4");
+        data.put("temperature", 0.7);
+        data.put("newAggregateVersion", 1);
+
+        Map<String, Object> event = createEvent(hostId, userId, agentDefId, "AgentDefinition", 1, data);
+
+        try (Connection conn = SqlDbStartupHook.ds.getConnection()) {
+            dbProvider.createAgentDefinition(conn, event);
+
+            Result<String> result = dbProvider.getAgentDefinitionById(hostId, agentDefId);
+            assertTrue(result.isSuccess());
+            Map<String, Object> retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals(agentName, retrieved.get("agentName"));
+
+            data.put("modelName", "gpt-4-turbo");
+            data.put("newAggregateVersion", 2);
+            event = createEvent(hostId, userId, agentDefId, "AgentDefinition", 2, data);
+            dbProvider.updateAgentDefinition(conn, event);
+
+            result = dbProvider.getAgentDefinitionById(hostId, agentDefId);
+            retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals("gpt-4-turbo", retrieved.get("modelName"));
+
+            result = dbProvider.queryAgentDefinition(0, 10, null, null, null, true, hostId);
+            assertTrue(result.isSuccess());
+
+            data.put("newAggregateVersion", 3);
+            dbProvider.deleteAgentDefinition(conn, event);
+            result = dbProvider.getAgentDefinitionById(hostId, agentDefId);
+            retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals(false, retrieved.get("active"));
+        }
+    }
+
+    @Test
     void testTaskInfo() throws Exception {
         String taskId = "019c52a8-805e-73c0-8cb2-1fb26074e97f";
         String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
         String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
-        String agentDefId = hostId; // reuse
+        String agentDefId = "019c52a8-805e-73dc-8cb3-cdebf02944d3";
         String processId = "019c52a8-805e-7316-8cb1-29048d87ed51";
 
         Map<String, Object> data = new HashMap<>();
@@ -916,6 +962,7 @@ public class PortalDbProviderImplTest {
         data.put("statusCode", "U");
         data.put("locked", "N");
         data.put("priority", 1);
+        data.put("startedTs", OffsetDateTime.now().toString());
         data.put("newAggregateVersion", 1);
 
         Map<String, Object> event = createEvent(hostId, userId, taskId, "TaskInfo", 1, data);
@@ -948,10 +995,10 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testTaskAssignment() throws Exception {
-        String taskAsstId = UUID.randomUUID().toString();
+        String taskAsstId = "019c52a8-805e-7410-8cb4-f41f9befce0c";
         String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
         String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
-        String taskId = hostId;
+        String taskId = "019c52a8-805e-73c0-8cb2-1fb26074e97f";
 
         Map<String, Object> data = new HashMap<>();
         data.put("hostId", hostId);
@@ -959,6 +1006,7 @@ public class PortalDbProviderImplTest {
         data.put("taskId", taskId);
         data.put("assigneeId", "assignee1");
         data.put("reasonCode", "reason1");
+        data.put("assignedTs", OffsetDateTime.now().toString());
         data.put("newAggregateVersion", 1);
 
         Map<String, Object> event = createEvent(hostId, userId, taskAsstId, "TaskAssignment", 1, data);
@@ -991,7 +1039,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testAuditLog() throws Exception {
-        String auditLogId = UUID.randomUUID().toString();
+        String auditLogId = "019c52a8-805e-7428-8cb5-7a38fa49bcce";
         String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
         String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
 
@@ -1020,50 +1068,93 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testSkill() throws Exception {
-        String skillId = UUID.randomUUID().toString();
-        String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
-        String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
+        {
+            String skillId = "019c52a8-805e-74c7-8cb6-bda239814500";
+            String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
+            String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
 
-        Map<String, Object> data = new HashMap<>();
-        data.put("hostId", hostId);
-        data.put("skillId", skillId);
-        data.put("name", "TestSkill");
-        data.put("contentMarkdown", "# Skill Content");
-        data.put("implementationClass", "net.lightapi.portal.SkillImpl");
-        data.put("newAggregateVersion", 1);
+            Map<String, Object> data = new HashMap<>();
+            data.put("hostId", hostId);
+            data.put("skillId", skillId);
+            data.put("name", "TestSkill");
+            data.put("contentMarkdown", "# Skill Content");
+            data.put("implementationClass", "net.lightapi.portal.SkillImpl");
+            data.put("newAggregateVersion", 1);
 
-        Map<String, Object> event = createEvent(hostId, userId, skillId, "Skill", 1, data);
+            Map<String, Object> event = createEvent(hostId, userId, skillId, "Skill", 1, data);
 
-        try (Connection conn = SqlDbStartupHook.ds.getConnection()) {
-            dbProvider.createSkill(conn, event);
-            Result<String> result = dbProvider.getSkillById(hostId, skillId);
-            assertTrue(result.isSuccess());
-            Map<String, Object> retrieved = JsonMapper.string2Map(result.getResult());
-            assertEquals("TestSkill", retrieved.get("name"));
+            try (Connection conn = SqlDbStartupHook.ds.getConnection()) {
+                dbProvider.createSkill(conn, event);
+                Result<String> result = dbProvider.getSkillById(hostId, skillId);
+                assertTrue(result.isSuccess());
+                Map<String, Object> retrieved = JsonMapper.string2Map(result.getResult());
+                assertEquals("TestSkill", retrieved.get("name"));
 
-            data.put("name", "TestSkillUpdated");
-            data.put("newAggregateVersion", 2);
-            event = createEvent(hostId, userId, skillId, "Skill", 2, data);
-            dbProvider.updateSkill(conn, event);
-            result = dbProvider.getSkillById(hostId, skillId);
-            retrieved = JsonMapper.string2Map(result.getResult());
-            assertEquals("TestSkillUpdated", retrieved.get("name"));
+                data.put("name", "TestSkillUpdated");
+                data.put("newAggregateVersion", 2);
+                event = createEvent(hostId, userId, skillId, "Skill", 2, data);
+                dbProvider.updateSkill(conn, event);
+                result = dbProvider.getSkillById(hostId, skillId);
+                retrieved = JsonMapper.string2Map(result.getResult());
+                assertEquals("TestSkillUpdated", retrieved.get("name"));
 
-            result = dbProvider.querySkill(0, 10, null, null, null, true, hostId);
-            assertTrue(result.isSuccess());
+                result = dbProvider.querySkill(0, 10, null, null, null, true, hostId);
+                assertTrue(result.isSuccess());
 
-            data.put("newAggregateVersion", 3);
-            dbProvider.deleteSkill(conn, event);
-            result = dbProvider.getSkillById(hostId, skillId);
-            retrieved = JsonMapper.string2Map(result.getResult());
-            assertEquals(false, retrieved.get("active"));
+                data.put("newAggregateVersion", 3);
+                dbProvider.deleteSkill(conn, event);
+                result = dbProvider.getSkillById(hostId, skillId);
+                retrieved = JsonMapper.string2Map(result.getResult());
+                assertEquals(false, retrieved.get("active"));
+            }
         }
+        {
+            String skillId = "019c52ce-9aae-7491-8988-ede4daaaf1fe";
+            String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
+            String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("hostId", hostId);
+            data.put("skillId", skillId);
+            data.put("name", "TestSkill");
+            data.put("contentMarkdown", "# Skill Content");
+            data.put("implementationClass", "net.lightapi.portal.SkillImpl");
+            data.put("newAggregateVersion", 1);
+
+            Map<String, Object> event = createEvent(hostId, userId, skillId, "Skill", 1, data);
+
+            try (Connection conn = SqlDbStartupHook.ds.getConnection()) {
+                dbProvider.createSkill(conn, event);
+                Result<String> result = dbProvider.getSkillById(hostId, skillId);
+                assertTrue(result.isSuccess());
+                Map<String, Object> retrieved = JsonMapper.string2Map(result.getResult());
+                assertEquals("TestSkill", retrieved.get("name"));
+
+                data.put("name", "TestSkillUpdated");
+                data.put("newAggregateVersion", 2);
+                event = createEvent(hostId, userId, skillId, "Skill", 2, data);
+                dbProvider.updateSkill(conn, event);
+                result = dbProvider.getSkillById(hostId, skillId);
+                retrieved = JsonMapper.string2Map(result.getResult());
+                assertEquals("TestSkillUpdated", retrieved.get("name"));
+
+                result = dbProvider.querySkill(0, 10, null, null, null, true, hostId);
+                assertTrue(result.isSuccess());
+
+                data.put("newAggregateVersion", 3);
+                dbProvider.deleteSkill(conn, event);
+                result = dbProvider.getSkillById(hostId, skillId);
+                retrieved = JsonMapper.string2Map(result.getResult());
+                assertEquals(false, retrieved.get("active"));
+            }
+        }
+
     }
 
     @Test
     void testSkillParam() throws Exception {
-        String paramId = UUID.randomUUID().toString();
-        String skillId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
+        String paramId = "019c52a8-805e-74e0-8cb7-04a5060f192b";
+        String skillId = "019c52a8-805e-74c7-8cb6-bda239814500";
         String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
         String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
 
@@ -1106,8 +1197,9 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testSkillDependency() throws Exception {
-        String skillId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
-        String dependsOnSkillId = UUID.randomUUID().toString();
+        String skillId = "019c52a8-805e-74c7-8cb6-bda239814500";
+        String dependsOnSkillId = "019c52ce-9aae-7491-8988-ede4daaaf1fe";
+
         String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
         String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
 
@@ -1148,8 +1240,8 @@ public class PortalDbProviderImplTest {
 
     @Test
     void testAgentSkill() throws Exception {
-        String agentDefId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
-        String skillId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
+        String agentDefId = "019c52a8-805e-73dc-8cb3-cdebf02944d3";
+        String skillId = "019c52a8-805e-74c7-8cb6-bda239814500";
         String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
         String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
 
@@ -1193,7 +1285,7 @@ public class PortalDbProviderImplTest {
         String sessionHistoryId = UUID.randomUUID().toString();
         String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
         String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
-        String processId = hostId;
+        String processId = "019c52a8-805e-7316-8cb1-29048d87ed51";
 
         Map<String, Object> data = new HashMap<>();
         data.put("hostId", hostId);
@@ -1227,7 +1319,7 @@ public class PortalDbProviderImplTest {
         String memId = UUID.randomUUID().toString();
         String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
         String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
-        String agentDefId = hostId;
+        String agentDefId = "019c52a8-805e-73dc-8cb3-cdebf02944d3";
 
         Map<String, Object> data = new HashMap<>();
         data.put("hostId", hostId);
@@ -1313,7 +1405,7 @@ public class PortalDbProviderImplTest {
         String memId = UUID.randomUUID().toString();
         String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
         String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
-        String agentDefId = hostId;
+        String agentDefId = "019c52a8-805e-73dc-8cb3-cdebf02944d3";
 
         Map<String, Object> data = new HashMap<>();
         data.put("hostId", hostId);
@@ -1356,7 +1448,7 @@ public class PortalDbProviderImplTest {
         String memId = UUID.randomUUID().toString();
         String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
         String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
-        String domain = "lightapi.net";
+        String domain = "networknt.com";
 
         Map<String, Object> data = new HashMap<>();
         data.put("hostId", hostId);

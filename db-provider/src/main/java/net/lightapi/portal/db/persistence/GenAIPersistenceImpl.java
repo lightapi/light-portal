@@ -1462,7 +1462,7 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
             statement.setString(i++, (String)map.get("wfInstanceId"));
             statement.setString(i++, (String)map.get("wfTaskId"));
             statement.setString(i++, (String)map.get("statusCode"));
-            statement.setObject(i++, map.get("startedTs") != null ? OffsetDateTime.parse((String)map.get("startedTs")) : null);
+            statement.setObject(i++, OffsetDateTime.parse((String)map.get("startedTs")));
             statement.setString(i++, (String)map.get("locked"));
             setIntegerOrNull(statement, i++, map.get("priority"));
             statement.setObject(i++, map.get("completedTs") != null ? OffsetDateTime.parse((String)map.get("completedTs")) : null);
@@ -1722,7 +1722,7 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             int i = 1;
             statement.setObject(i++, UUID.fromString((String)map.get("taskId")));
-            statement.setObject(i++, map.get("assignedTs") != null ? OffsetDateTime.parse((String)map.get("assignedTs")) : null);
+            statement.setObject(i++, OffsetDateTime.parse((String)map.get("assignedTs")));
             statement.setString(i++, (String)map.get("assigneeId"));
             statement.setString(i++, (String)map.get("reasonCode"));
             statement.setObject(i++, map.get("unassignedTs") != null ? OffsetDateTime.parse((String)map.get("unassignedTs")) : null);
