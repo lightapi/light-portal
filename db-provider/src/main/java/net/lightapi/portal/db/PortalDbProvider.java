@@ -635,6 +635,7 @@ public interface PortalDbProvider extends DbProvider {
     void deleteAgentDefinition(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
     Result<String> queryAgentDefinition(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<String> getAgentDefinitionById(String hostId, String agentDefId);
+    Result<String> getAgentDefinitionLabel(String hostId);
 
     // WorkflowDefinition
     void createWorkflowDefinition(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
@@ -642,6 +643,7 @@ public interface PortalDbProvider extends DbProvider {
     void deleteWorkflowDefinition(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
     Result<String> queryWorkflowDefinition(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<String> getWorkflowDefinitionById(String hostId, String wfDefId);
+    Result<String> getWfDefinitionLabel(String hostId);
 
     // Worklist
     void createWorklist(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
@@ -649,6 +651,7 @@ public interface PortalDbProvider extends DbProvider {
     void deleteWorklist(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
     Result<String> queryWorklist(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<String> getWorklistById(String hostId, String assigneeId, String categoryId);
+    Result<String> getWorklistLabel(String hostId);
 
     // WorklistColumn
     void createWorklistColumn(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
@@ -663,6 +666,7 @@ public interface PortalDbProvider extends DbProvider {
     void deleteProcessInfo(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
     Result<String> queryProcessInfo(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<String> getProcessInfoById(String hostId, String processId);
+    Result<String> getProcessInfoLabel(String hostId);
 
     // TaskInfo
     void createTaskInfo(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
@@ -670,6 +674,7 @@ public interface PortalDbProvider extends DbProvider {
     void deleteTaskInfo(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
     Result<String> queryTaskInfo(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<String> getTaskInfoById(String hostId, String taskId);
+    Result<String> getTaskInfoLabel(String hostId);
 
     // TaskAssignment
     void createTaskAssignment(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
@@ -689,6 +694,7 @@ public interface PortalDbProvider extends DbProvider {
     void deleteSkill(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
     Result<String> querySkill(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<String> getSkillById(String hostId, String skillId);
+    Result<String> getSkillLabel(String hostId);
 
     // SkillParam
     void createSkillParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException;

@@ -3920,7 +3920,7 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
                     map.put("content", resultSet.getString("content"));
                     map.put("chunkIndex", resultSet.getObject("chunk_index") != null ? resultSet.getInt("chunk_index") : null);
                     map.put("documentId", resultSet.getObject("document_id", UUID.class));
-                    map.put("metadata", resultSet.getString("metadata"));
+                    map.put("metadata", JsonMapper.string2Map(resultSet.getString("metadata")));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts", OffsetDateTime.class));
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
@@ -3938,6 +3938,42 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
             result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
         return result;
+    }
+
+    @Override
+    public Result<String> getAgentDefinitionLabel(String hostId) {
+        String sql = "SELECT agent_def_id, agent_name FROM agent_definition_t WHERE host_id = ? AND active = TRUE";
+        return getLabels(sql, hostId, "agent_def_id", "agent_name");
+    }
+
+    @Override
+    public Result<String> getWfDefinitionLabel(String hostId) {
+        String sql = "SELECT wf_def_id, name FROM wf_definition_t WHERE host_id = ? AND active = TRUE";
+        return getLabels(sql, hostId, "wf_def_id", "name");
+    }
+
+    @Override
+    public Result<String> getWorklistLabel(String hostId) {
+        String sql = "SELECT assignee_id || ':' || category_id as id, assignee_id || ' (' || category_id || ')' as label FROM worklist_t WHERE host_id = ? AND active = TRUE";
+        return getLabels(sql, hostId, "id", "label");
+    }
+
+    @Override
+    public Result<String> getProcessInfoLabel(String hostId) {
+        String sql = "SELECT process_id, process_type FROM process_info_t WHERE host_id = ? AND active = TRUE";
+        return getLabels(sql, hostId, "process_id", "process_type");
+    }
+
+    @Override
+    public Result<String> getTaskInfoLabel(String hostId) {
+        String sql = "SELECT task_id, task_type FROM task_info_t WHERE host_id = ? AND active = TRUE";
+        return getLabels(sql, hostId, "task_id", "task_type");
+    }
+
+    @Override
+    public Result<String> getSkillLabel(String hostId) {
+        String sql = "SELECT skill_id, name FROM skill_t WHERE host_id = ? AND active = TRUE";
+        return getLabels(sql, hostId, "skill_id", "name");
     }
 
     @Override
@@ -4226,4 +4262,26 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
         return result;
     }
 
+    private Result<String> getLabels(String sql, String hostId, String idCol, String labelCol) {
+        List<Map<String, Object>> labels = new ArrayList<>();
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+            preparedStatement.setObject(1, UUID.fromString(hostId));
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", resultSet.getString(idCol));
+                    map.put("label", resultSet.getString(labelCol));
+                    labels.add(map);
+                }
+            }
+            return Success.of(JsonMapper.toJson(labels));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            return Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            return Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+    }
 }

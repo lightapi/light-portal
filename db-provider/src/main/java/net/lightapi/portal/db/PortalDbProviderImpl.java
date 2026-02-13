@@ -570,6 +570,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void deleteAgentDefinition(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.deleteAgentDefinition(conn, event); }
     @Override public Result<String> queryAgentDefinition(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return genAIPersistence.queryAgentDefinition(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getAgentDefinitionById(String hostId, String agentDefId) { return genAIPersistence.getAgentDefinitionById(hostId, agentDefId); }
+    @Override public Result<String> getAgentDefinitionLabel(String hostId) { return genAIPersistence.getAgentDefinitionLabel(hostId); }
 
     // --- Workflow Definition ---
     @Override public void createWorkflowDefinition(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.createWorkflowDefinition(conn, event); }
@@ -577,6 +578,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void deleteWorkflowDefinition(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.deleteWorkflowDefinition(conn, event); }
     @Override public Result<String> queryWorkflowDefinition(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return genAIPersistence.queryWorkflowDefinition(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getWorkflowDefinitionById(String hostId, String wfDefId) { return genAIPersistence.getWorkflowDefinitionById(hostId, wfDefId); }
+    @Override public Result<String> getWfDefinitionLabel(String hostId) { return genAIPersistence.getWfDefinitionLabel(hostId); }
 
     // --- Worklist ---
     @Override public void createWorklist(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.createWorklist(conn, event); }
@@ -584,6 +586,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void deleteWorklist(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.deleteWorklist(conn, event); }
     @Override public Result<String> queryWorklist(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return genAIPersistence.queryWorklist(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getWorklistById(String hostId, String assigneeId, String categoryId) { return genAIPersistence.getWorklistById(hostId, assigneeId, categoryId); }
+    @Override public Result<String> getWorklistLabel(String hostId) { return genAIPersistence.getWorklistLabel(hostId); }
 
     // --- WorklistColumn ---
     @Override public void createWorklistColumn(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.createWorklistColumn(conn, event); }
@@ -598,6 +601,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void deleteProcessInfo(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.deleteProcessInfo(conn, event); }
     @Override public Result<String> queryProcessInfo(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return genAIPersistence.queryProcessInfo(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getProcessInfoById(String hostId, String processId) { return genAIPersistence.getProcessInfoById(hostId, processId); }
+    @Override public Result<String> getProcessInfoLabel(String hostId) { return genAIPersistence.getProcessInfoLabel(hostId); }
 
     // --- TaskInfo ---
     @Override public void createTaskInfo(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.createTaskInfo(conn, event); }
@@ -605,6 +609,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void deleteTaskInfo(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.deleteTaskInfo(conn, event); }
     @Override public Result<String> queryTaskInfo(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return genAIPersistence.queryTaskInfo(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getTaskInfoById(String hostId, String taskId) { return genAIPersistence.getTaskInfoById(hostId, taskId); }
+    @Override public Result<String> getTaskInfoLabel(String hostId) { return genAIPersistence.getTaskInfoLabel(hostId); }
 
     // --- TaskAssignment ---
     @Override public void createTaskAssignment(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.createTaskAssignment(conn, event); }
@@ -624,6 +629,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void deleteSkill(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.deleteSkill(conn, event); }
     @Override public Result<String> querySkill(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return genAIPersistence.querySkill(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getSkillById(String hostId, String skillId) { return genAIPersistence.getSkillById(hostId, skillId); }
+    @Override public Result<String> getSkillLabel(String hostId) { return genAIPersistence.getSkillLabel(hostId); }
 
     // --- SkillParam ---
     @Override public void createSkillParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.createSkillParam(conn, event); }
