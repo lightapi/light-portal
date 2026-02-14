@@ -1,6 +1,6 @@
 package net.lightapi.portal;
 
-import com.networknt.client.simplepool.SimpleConnectionHolder;
+import com.networknt.client.simplepool.SimpleConnectionState;
 import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
 import com.networknt.monad.Failure;
@@ -57,7 +57,7 @@ public class HybridQueryClient {
 
     public static Result<String> callQueryWithToken(String command, String token) {
         Result<String> result = null;
-        SimpleConnectionHolder.ConnectionToken connectionToken = null;
+        SimpleConnectionState.ConnectionToken connectionToken = null;
         try {
             String host = cluster.serviceToUrl("https", config.getPortalQueryServiceId(), tag, null);
             if(logger.isTraceEnabled()) logger.trace("serviceId " + config.getPortalQueryServiceId() + " with result " + host);
@@ -92,7 +92,7 @@ public class HybridQueryClient {
 
     public static Result<String> callQueryExchangeUrl(String command, HttpServerExchange exchange, String url) {
         Result<String> result = null;
-        SimpleConnectionHolder.ConnectionToken connectionToken = null;
+        SimpleConnectionState.ConnectionToken connectionToken = null;
         try {
             URI uri = new URI(url);
             connectionToken = client.borrow(uri, Http2Client.WORKER, client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true));
@@ -127,7 +127,7 @@ public class HybridQueryClient {
 
     public static Result<String> callQueryExchange(String command, HttpServerExchange exchange) {
         Result<String> result = null;
-        SimpleConnectionHolder.ConnectionToken connectionToken = null;
+        SimpleConnectionState.ConnectionToken connectionToken = null;
         try {
             String host = cluster.serviceToUrl("https", config.getPortalQueryServiceId(), tag, null);
             if(logger.isTraceEnabled()) logger.trace("serviceId " + config.getPortalQueryServiceId() + " with result " + host);
@@ -166,7 +166,7 @@ public class HybridQueryClient {
 
     public static Result<String> callQueryUrl(String command, String url) {
         Result<String> result = null;
-        SimpleConnectionHolder.ConnectionToken connectionToken = null;
+        SimpleConnectionState.ConnectionToken connectionToken = null;
         try {
             URI uri = new URI(url);
             connectionToken = client.borrow(uri, Http2Client.WORKER, client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true));
@@ -198,7 +198,7 @@ public class HybridQueryClient {
 
     public static Result<String> callQueryTokenUrl(String command, String token, String url) {
         Result<String> result = null;
-        SimpleConnectionHolder.ConnectionToken connectionToken = null;
+        SimpleConnectionState.ConnectionToken connectionToken = null;
         try {
             URI uri = new URI(url);
             connectionToken = client.borrow(uri, Http2Client.WORKER, client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true));
@@ -902,7 +902,7 @@ public class HybridQueryClient {
     public static Result<String> getHosts() {
         String path = "/r/data?name=host";
         Result<String> result = null;
-        SimpleConnectionHolder.ConnectionToken connectionToken = null;
+        SimpleConnectionState.ConnectionToken connectionToken = null;
         try {
             String host = cluster.serviceToUrl(Http2Client.HTTPS, config.getPortalReferenceServiceId(), tag, null);
             URI uri = new URI(host);
