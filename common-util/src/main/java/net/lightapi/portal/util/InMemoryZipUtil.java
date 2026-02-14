@@ -5,6 +5,9 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.zip.ZipOutputStream;
 
+/**
+ * Utility for in-memory zipping of files.
+ */
 public class InMemoryZipUtil {
 
     private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger(InMemoryZipUtil.class);

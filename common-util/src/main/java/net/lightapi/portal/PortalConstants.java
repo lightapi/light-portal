@@ -2,14 +2,25 @@ package net.lightapi.portal;
 
 import java.net.URI;
 
+/**
+ * Constants used throughout the portal application.
+ */
 public class PortalConstants {
 
+    /** Event Source URI */
     public static final URI EVENT_SOURCE = URI.create("https://github.com/lightapi/light-portal");
 
     // order event handling
+    /** Order Confirmed */
     public static final String ORDER_CONFIRMED = "Confirmed";
+    /** Order Cancelled */
     public static final String ORDER_CANCELLED = "Cancelled";
+    /** Order Delivered */
     public static final String ORDER_DELIVERED = "Delivered";
+
+    private PortalConstants() {
+        // Prevent instantiation
+    }
 
     // fields
     /** global flag */
