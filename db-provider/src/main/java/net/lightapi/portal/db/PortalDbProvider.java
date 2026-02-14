@@ -28,8 +28,11 @@ import java.util.Set;
  * @author Steve Hu
  */
 public interface PortalDbProvider extends DbProvider {
+    /** SQL_EXCEPTION */
     String SQL_EXCEPTION = "ERR10017";
+    /** GENERIC_EXCEPTION */
     String GENERIC_EXCEPTION = "ERR10014";
+    /** OBJECT_NOT_FOUND */
     String OBJECT_NOT_FOUND = "ERR11637";
 
     // RefTable
@@ -755,6 +758,13 @@ public interface PortalDbProvider extends DbProvider {
      * Builds the CloudEvent object array from the provided map, eventType, aggregateId,
      * aggregateType, userId, host, and nonce. This allows light-portal components to
      * directly push the event into kafka without calling the command handler API endpoint.
+     * @param map The input map.
+     * @param eventType The event type.
+     * @param aggregateId The aggregate id.
+     * @param aggregateType The aggregate type.
+     * @param userId The user id.
+     * @param host The host.
+     * @return CloudEvent array
      */
     default CloudEvent[] buildCloudEvent(Map<String, Object> map, String eventType, String aggregateId,
                                        String aggregateType, String userId, String host) {

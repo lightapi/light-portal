@@ -2738,8 +2738,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
+
      */
     @Override
     public void deleteInstanceApiPathPrefix(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -2963,8 +2962,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
+
      */
     @Override
     public void createInstanceAppApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -3040,8 +3038,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
+
      */
     /*
     @Override
@@ -3116,8 +3113,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
+
      */
     @Override
     public void deleteInstanceAppApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -3348,8 +3344,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
+
      */
     @Override
     public void createInstanceApp(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -3434,8 +3429,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
+
      */
     /*
     @Override
@@ -3516,8 +3510,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
+
      */
     @Override
     public void deleteInstanceApp(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -5303,8 +5296,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
+
      */
     @Override
     public void createPipeline(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -5420,8 +5412,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
+
      */
     @Override
     public void updatePipeline(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -5534,8 +5525,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
+
      */
     @Override
     public void deletePipeline(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -5818,8 +5808,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
+
      */
     @Override
     public void createPlatform(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -5936,8 +5925,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
+
      */
     @Override
     public void updatePlatform(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -6033,8 +6021,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
+
      */
     @Override
     public void deletePlatform(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -6275,8 +6262,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
+
      */
     @Override
     public void createDeploymentInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -6359,8 +6345,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
+
      */
     @Override
     public void updateDeploymentInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -6443,8 +6428,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
+
      */
     @Override
     public void deleteDeploymentInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -6802,8 +6786,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
+
      */
     @Override
     public void createDeployment(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -6878,8 +6861,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
+
      */
     @Override
     public void updateDeployment(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -6955,8 +6937,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
+
      */
     @Override
     public void updateDeploymentJobId(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -7024,8 +7005,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
+
      */
     @Override
     public void updateDeploymentStatus(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -7091,8 +7071,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
      *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
+
      */
     @Override
     public void deleteDeployment(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
