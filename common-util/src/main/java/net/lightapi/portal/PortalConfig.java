@@ -9,6 +9,7 @@ package net.lightapi.portal;
  * @author Steve Hu
  */
 public class PortalConfig {
+    /** Config Name */
     public static final String CONFIG_NAME = "portal";
 
     String topic;
@@ -21,6 +22,9 @@ public class PortalConfig {
     String dataPath;
     String scheduleApplicationId;
 
+    /**
+     * Default constructor
+     */
     public PortalConfig() {
     }
 

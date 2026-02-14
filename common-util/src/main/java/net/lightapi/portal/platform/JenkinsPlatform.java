@@ -10,7 +10,16 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Deployment platform handler for Jenkins.
+ */
 public class JenkinsPlatform implements DeploymentPlatformHandler {
+    /**
+     * Default constructor
+     */
+    public JenkinsPlatform() {
+    }
+
     private static final Logger logger = LoggerFactory.getLogger(JenkinsPlatform.class);
     private static final ObjectMapper mapper = new ObjectMapper();
 

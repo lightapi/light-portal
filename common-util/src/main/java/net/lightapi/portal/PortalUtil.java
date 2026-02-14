@@ -18,13 +18,29 @@ import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * Utility class for Portal operations.
+ */
 public class PortalUtil {
+
+    private PortalUtil() {
+        // Prevent instantiation
+    }
 
     private static final HttpClient client = HttpClient.newBuilder()
             .version(HttpClient.Version.HTTP_1_1) //Good practice to specify the version
             .connectTimeout(Duration.ofSeconds(10)) //Add a connection timeout
             .build();
 
+    /**
+     * Reads content from a URL.
+     *
+     * @param url The URL to read from.
+     * @return The content of the URL as a String.
+     * @throws IOException If an I/O error occurs.
+     * @throws InterruptedException If the operation is interrupted.
+     * @throws URISyntaxException If the URL syntax is invalid.
+     */
     public static String readUrl(String url) throws IOException, InterruptedException, URISyntaxException {
         // HttpClient is *not* AutoCloseable.  Do NOT use try-with-resources here.
         // The HttpClient is intended to be long-lived and reused.
@@ -52,6 +68,12 @@ public class PortalUtil {
         }
     }
 
+    /**
+     * Checks if a string is valid YAML.
+     *
+     * @param yamlString The string to check.
+     * @return true if valid YAML, false otherwise.
+     */
     public static boolean isValidYaml(String yamlString) {
         try {
             Yaml yaml = new Yaml(new SafeConstructor(new LoaderOptions()));
@@ -64,6 +86,12 @@ public class PortalUtil {
         }
     }
 
+    /**
+     * Converts a YAML string to a Map.
+     *
+     * @param yamlString The YAML string to convert.
+     * @return A Map representation of the YAML, or an empty map if conversion fails or input is not a map.
+     */
     public static Map<String, Object> yamlToMap(String yamlString) {
         // Use SafeConstructor for security and LoaderOptions for safety defaults.
         LoaderOptions options = new LoaderOptions();
@@ -77,6 +105,13 @@ public class PortalUtil {
         }
     }
 
+    /**
+     * Parses a string into a Number (Integer, Long, BigInteger, Double, or BigDecimal).
+     *
+     * @param str The string to parse.
+     * @return The parsed Number.
+     * @throws NumberFormatException If the string cannot be parsed as a number.
+     */
     public static Number parseNumber(String str) throws NumberFormatException {
         if (str == null || str.trim().isEmpty()) {
             throw new NumberFormatException("Input string is null or empty");

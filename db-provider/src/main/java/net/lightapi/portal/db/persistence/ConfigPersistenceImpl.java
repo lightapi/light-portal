@@ -46,8 +46,6 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
     public void createConfig(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -119,10 +117,9 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
     public void updateConfig(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -194,10 +191,9 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
     public void deleteConfig(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -663,10 +659,9 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Monotonicity:** The `WHERE` clause in the `DO UPDATE` part ensures that an update
      *     only occurs if the incoming event's version is strictly greater than the existing record's version.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
     public void createConfigProperty(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -755,10 +750,9 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
     public void updateConfigProperty(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -844,10 +838,9 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
     public void deleteConfigProperty(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -1128,10 +1121,9 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Monotonicity:** The `WHERE` clause in the `DO UPDATE` part ensures that an update
      *     only occurs if the incoming event's version is strictly greater than the existing record's version.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
     public void createConfigEnvironment(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -1206,10 +1198,9 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
     public void updateConfigEnvironment(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -1276,10 +1267,9 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
     public void deleteConfigEnvironment(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -1495,10 +1485,9 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Monotonicity:** The `WHERE` clause in the `DO UPDATE` part ensures that an update
      *     only occurs if the incoming event's version is strictly greater than the existing record's version.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
     public void createConfigInstanceApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -1572,10 +1561,9 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
     public void updateConfigInstanceApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -1642,10 +1630,9 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
     public void deleteConfigInstanceApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -1890,10 +1877,9 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Monotonicity:** The `WHERE` clause in the `DO UPDATE` part ensures that an update
      *     only occurs if the incoming event's version is strictly greater than the existing record's version.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
     public void createConfigInstanceApp(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -1968,10 +1954,9 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
     public void updateConfigInstanceApp(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -2038,10 +2023,9 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
     public void deleteConfigInstanceApp(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -2282,10 +2266,9 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Monotonicity:** The `WHERE` clause in the `DO UPDATE` part ensures that an update
      *     only occurs if the incoming event's version is strictly greater than the existing record's version.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
     public void createConfigInstanceAppApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -2362,10 +2345,9 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
     public void updateConfigInstanceAppApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -2435,10 +2417,9 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
     public void deleteConfigInstanceAppApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -2696,10 +2677,9 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Monotonicity:** The `WHERE` clause in the `DO UPDATE` part ensures that an update
      *     only occurs if the incoming event's version is strictly greater than the existing record's version.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
     public void createConfigInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -2773,10 +2753,9 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
     public void updateConfigInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -2843,10 +2822,9 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
     public void deleteConfigInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -4092,10 +4070,9 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Monotonicity:** The `WHERE` clause in the `DO UPDATE` part ensures that an update
      *     only occurs if the incoming event's version is strictly greater than the existing record's version.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
     public void createConfigInstanceFile(Connection conn, Map<String, Object> event) throws PortalPersistenceException {

@@ -6,6 +6,10 @@ package net.lightapi.portal;
  * @author Steve Hu
  */
 public class SchemaUtil {
+
+    private SchemaUtil() {
+    }
+
     /**
      * Detect if a string is JSON or not by checking the first char { | [
      * This is not a strict check but only a validation check, so further check is
