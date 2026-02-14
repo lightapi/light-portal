@@ -744,8 +744,6 @@ public class AuthPersistenceImpl implements AuthPersistence {
      * deleted record. If you want to recover a deleted record, please use the update.
      * @param conn Connection
      * @param event Event object
-     * @throws SQLException SQL exception
-     * @throws Exception generic exception
      */
     @Override
     public void createAuthProvider(Connection conn, Map<String, Object> event) throws PortalPersistenceException {

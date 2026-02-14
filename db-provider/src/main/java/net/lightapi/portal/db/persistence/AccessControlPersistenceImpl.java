@@ -21,6 +21,9 @@ import static com.networknt.db.provider.SqlDbStartupHook.ds;
 import static java.sql.Types.NULL;
 import static net.lightapi.portal.db.util.SqlUtil.*;
 
+/**
+ * Access control persistence implementation
+ */
 public class AccessControlPersistenceImpl implements AccessControlPersistence {
     private static final Logger logger = LoggerFactory.getLogger(AccessControlPersistenceImpl.class);
     private static final String SQL_EXCEPTION = PortalDbProvider.SQL_EXCEPTION;
@@ -33,6 +36,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         this.notificationService = notificationService;
     }
 
+    /**
+     * Create role
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void createRole(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
@@ -95,6 +104,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Update role
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void updateRole(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
@@ -155,6 +170,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Delete role
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void deleteRole(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
@@ -208,6 +229,17 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Query role
+     * @param offset int
+     * @param limit int
+     * @param filtersJson String
+     * @param globalFilter String
+     * @param sortingJson String
+     * @param active boolean
+     * @param hostId String
+     * @return Result
+     */
     @Override
     public Result<String> queryRole(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
@@ -283,6 +315,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Get role by id
+     * @param hostId String
+     * @param roleId String
+     * @return Result
+     */
     @Override
     public Result<String> getRoleById(String hostId, String roleId) {
         final String sql =
@@ -328,6 +366,11 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Query role label
+     * @param hostId String
+     * @return Result
+     */
     @Override
     public Result<String> queryRoleLabel(String hostId) {
         final String sql = "SELECT role_id from role_t WHERE host_id = ? AND active = TRUE";
@@ -360,6 +403,17 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Query role permission
+     * @param offset int
+     * @param limit int
+     * @param filtersJson String
+     * @param globalFilter String
+     * @param sortingJson String
+     * @param active boolean
+     * @param hostId String
+     * @return Result
+     */
     @Override
     public Result<String> queryRolePermission(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
@@ -452,6 +506,17 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Query role user
+     * @param offset int
+     * @param limit int
+     * @param filtersJson String
+     * @param globalFilter String
+     * @param sortingJson String
+     * @param active boolean
+     * @param hostId String
+     * @return Result
+     */
     @Override
     public Result<String> queryRoleUser(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
@@ -563,6 +628,13 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
     }
 
+    /**
+     * Get role user by id
+     * @param hostId String
+     * @param roleId String
+     * @param userId String
+     * @return Result
+     */
     @Override
     public Result<String> getRoleUserById(String hostId, String roleId, String userId) {
         final String sql =
@@ -612,6 +684,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Create role permission
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void createRolePermission(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
@@ -670,6 +748,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Delete role permission
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void deleteRolePermission(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
@@ -730,6 +814,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Create role user
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void createRoleUser(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
@@ -804,6 +894,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Update role user
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void updateRoleUser(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
@@ -884,6 +980,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Delete role user
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void deleteRoleUser(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
@@ -943,6 +1045,17 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
             throw new PortalPersistenceException("Persistence Error", e);
         }
     }
+    /**
+     * Query role row filter
+     * @param offset int
+     * @param limit int
+     * @param filtersJson String
+     * @param globalFilter String
+     * @param sortingJson String
+     * @param active boolean
+     * @param hostId String
+     * @return Result
+     */
     @Override
     public Result<String> queryRoleRowFilter(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
@@ -1042,6 +1155,14 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Get role row filter by id
+     * @param hostId String
+     * @param roleId String
+     * @param endpointId String
+     * @param colName String
+     * @return Result
+     */
     @Override
     public Result<String> getRoleRowFilterById(String hostId, String roleId, String endpointId, String colName) {
         final String sql =
@@ -1093,6 +1214,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Delete role row filter
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void deleteRoleRowFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
@@ -1157,6 +1284,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Create role row filter
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void createRoleRowFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
@@ -1233,6 +1366,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
 
+    /**
+     * Update role row filter
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void updateRoleRowFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
@@ -1308,6 +1447,17 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
 
+    /**
+     * Query role col filter
+     * @param offset int
+     * @param limit int
+     * @param filtersJson String
+     * @param globalFilter String
+     * @param sortingJson String
+     * @param active boolean
+     * @param hostId String
+     * @return Result
+     */
     @Override
     public Result<String> queryRoleColFilter(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
@@ -1403,6 +1553,13 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Get role col filter by id
+     * @param hostId String
+     * @param roleId String
+     * @param endpointId String
+     * @return Result
+     */
     @Override
     public Result<String> getRoleColFilterById(String hostId, String roleId, String endpointId) {
         final String sql =
@@ -1451,6 +1608,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Create role col filter
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void createRoleColFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
@@ -1521,6 +1684,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Delete role col filter
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void deleteRoleColFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
@@ -1584,6 +1753,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Update role col filter
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void updateRoleColFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
@@ -1651,6 +1826,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Create group
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void createGroup(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
@@ -1716,6 +1897,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Update group
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void updateGroup(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
@@ -1782,6 +1969,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Delete group
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void deleteGroup(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
@@ -1841,6 +2034,17 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Query group
+     * @param offset int
+     * @param limit int
+     * @param filtersJson String
+     * @param globalFilter String
+     * @param sortingJson String
+     * @param active boolean
+     * @param hostId String
+     * @return Result
+     */
     @Override
     public Result<String> queryGroup(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
@@ -1907,6 +2111,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Get group by id
+     * @param hostId String
+     * @param groupId String
+     * @return Result
+     */
     @Override
     public Result<String> getGroupById(String hostId, String groupId) {
         final String sql =
@@ -1952,6 +2162,11 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Query group label
+     * @param hostId String
+     * @return Result
+     */
     @Override
     public Result<String> queryGroupLabel(String hostId) {
         final String sql = "SELECT group_id from group_t WHERE host_id = ? AND active = TRUE";
@@ -1984,6 +2199,17 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Query group permission
+     * @param offset int
+     * @param limit int
+     * @param filtersJson String
+     * @param globalFilter String
+     * @param sortingJson String
+     * @param active boolean
+     * @param hostId String
+     * @return Result
+     */
     @Override
     public Result<String> queryGroupPermission(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
@@ -2078,6 +2304,17 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
     }
 
+    /**
+     * Query group user
+     * @param offset int
+     * @param limit int
+     * @param filtersJson String
+     * @param globalFilter String
+     * @param sortingJson String
+     * @param active boolean
+     * @param hostId String
+     * @return Result
+     */
     @Override
     public Result<String> queryGroupUser(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
@@ -2190,6 +2427,13 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
     }
 
+    /**
+     * Get group user by id
+     * @param hostId String
+     * @param groupId String
+     * @param userId String
+     * @return Result
+     */
     @Override
     public Result<String> getGroupUserById(String hostId, String groupId, String userId) {
         final String sql =
@@ -2239,6 +2483,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Create group permission
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void createGroupPermission(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
@@ -2305,6 +2555,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Delete group permission
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void deleteGroupPermission(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
@@ -2368,6 +2624,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Create group user
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void createGroupUser(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
@@ -2446,6 +2708,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Update group user
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void updateGroupUser(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
@@ -2527,6 +2795,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
 
+    /**
+     * Delete group user
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void deleteGroupUser(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
@@ -2590,6 +2864,17 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Query group row filter
+     * @param offset int
+     * @param limit int
+     * @param filtersJson String
+     * @param globalFilter String
+     * @param sortingJson String
+     * @param active boolean
+     * @param hostId String
+     * @return Result
+     */
     @Override
     public Result<String> queryGroupRowFilter(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
@@ -2688,6 +2973,14 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Get group row filter by id
+     * @param hostId String
+     * @param groupId String
+     * @param endpointId String
+     * @param colName String
+     * @return Result
+     */
     @Override
     public Result<String> getGroupRowFilterById(String hostId, String groupId, String endpointId, String colName) {
         final String sql =
@@ -2739,6 +3032,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Create group row filter
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void createGroupRowFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
@@ -2817,6 +3116,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Update group row filter
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void updateGroupRowFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
@@ -2891,6 +3196,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Delete group row filter
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void deleteGroupRowFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
@@ -2958,6 +3269,17 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Query group col filter
+     * @param offset int
+     * @param limit int
+     * @param filtersJson String
+     * @param globalFilter String
+     * @param sortingJson String
+     * @param active boolean
+     * @param hostId String
+     * @return Result
+     */
     @Override
     public Result<String> queryGroupColFilter(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
@@ -3052,6 +3374,13 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Get group col filter by id
+     * @param hostId String
+     * @param groupId String
+     * @param endpointId String
+     * @return Result
+     */
     @Override
     public Result<String> getGroupColFilterById(String hostId, String groupId, String endpointId) {
         final String sql =
@@ -3100,6 +3429,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Create group col filter
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void createGroupColFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
@@ -3170,6 +3505,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Update group col filter
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void updateGroupColFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
@@ -3237,6 +3578,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Delete group col filter
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void deleteGroupColFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
@@ -3300,6 +3647,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Create position
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void createPosition(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
@@ -3390,6 +3743,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Update position
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void updatePosition(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
@@ -3472,6 +3831,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Delete position
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void deletePosition(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
@@ -3531,6 +3896,17 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Query position
+     * @param offset int
+     * @param limit int
+     * @param filtersJson String
+     * @param globalFilter String
+     * @param sortingJson String
+     * @param active boolean
+     * @param hostId String
+     * @return Result
+     */
     @Override
     public Result<String> queryPosition(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
@@ -3598,6 +3974,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Get position by id
+     * @param hostId String
+     * @param positionId String
+     * @return Result
+     */
     @Override
     public Result<String> getPositionById(String hostId, String positionId) {
         final String sql =
@@ -3646,6 +4028,11 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Query position label
+     * @param hostId String
+     * @return Result
+     */
     @Override
     public Result<String> queryPositionLabel(String hostId) {
         final String sql = "SELECT position_id from position_t WHERE host_id = ? AND active = TRUE";
@@ -3678,6 +4065,17 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Query position permission
+     * @param offset int
+     * @param limit int
+     * @param filtersJson String
+     * @param globalFilter String
+     * @param sortingJson String
+     * @param active boolean
+     * @param hostId String
+     * @return Result
+     */
     @Override
     public Result<String> queryPositionPermission(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
@@ -3776,6 +4174,17 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
     }
 
+    /**
+     * Query position user
+     * @param offset int
+     * @param limit int
+     * @param filtersJson String
+     * @param globalFilter String
+     * @param sortingJson String
+     * @param active boolean
+     * @param hostId String
+     * @return Result
+     */
     @Override
     public Result<String> queryPositionUser(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
@@ -3883,6 +4292,13 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
     }
 
+    /**
+     * Get position user by id
+     * @param hostId String
+     * @param positionId String
+     * @param userId String
+     * @return Result
+     */
     @Override
     public Result<String> getPositionUserById(String hostId, String positionId, String userId) {
         final String sql =
@@ -3934,6 +4350,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Create position permission
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void createPositionPermission(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
@@ -4000,6 +4422,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Delete position permission
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void deletePositionPermission(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
@@ -4063,6 +4491,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Create position user
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void createPositionUser(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
@@ -4150,6 +4584,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Update position user
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void updatePositionUser(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
@@ -4233,6 +4673,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Delete position user
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void deletePositionUser(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE) on the directly assigned position ('P').
@@ -4297,6 +4743,17 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Query position row filter
+     * @param offset int
+     * @param limit int
+     * @param filtersJson String
+     * @param globalFilter String
+     * @param sortingJson String
+     * @param active boolean
+     * @param hostId String
+     * @return Result
+     */
     @Override
     public Result<String> queryPositionRowFilter(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
@@ -4394,6 +4851,14 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Get position row filter by id
+     * @param hostId String
+     * @param positionId String
+     * @param endpointId String
+     * @param colName String
+     * @return Result
+     */
     @Override
     public Result<String> getPositionRowFilterById(String hostId, String positionId, String endpointId, String colName) {
         final String sql =
@@ -4664,6 +5129,17 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Query position col filter
+     * @param offset int
+     * @param limit int
+     * @param filtersJson String
+     * @param globalFilter String
+     * @param sortingJson String
+     * @param active boolean
+     * @param hostId String
+     * @return Result
+     */
     @Override
     public Result<String> queryPositionColFilter(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
@@ -4758,6 +5234,13 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Get position col filter by id
+     * @param hostId String
+     * @param positionId String
+     * @param endpointId String
+     * @return Result
+     */
     @Override
     public Result<String> getPositionColFilterById(String hostId, String positionId, String endpointId) {
         final String sql =
@@ -4806,6 +5289,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Create position col filter
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void createPositionColFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
@@ -4876,6 +5365,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Update position col filter
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void updatePositionColFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
@@ -4943,6 +5438,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Delete position col filter
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void deletePositionColFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
@@ -5006,6 +5507,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Create attribute
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void createAttribute(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
@@ -5087,6 +5594,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Update attribute
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void updateAttribute(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
@@ -5161,6 +5674,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Delete attribute
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void deleteAttribute(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
@@ -5220,6 +5739,17 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Query attribute
+     * @param offset int
+     * @param limit int
+     * @param filtersJson String
+     * @param globalFilter String
+     * @param sortingJson String
+     * @param active boolean
+     * @param hostId String
+     * @return Result
+     */
     @Override
     public Result<String> queryAttribute(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
@@ -5288,6 +5818,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Get attribute by id
+     * @param hostId String
+     * @param attributeId String
+     * @return Result
+     */
     @Override
     public Result<String> getAttributeById(String hostId, String attributeId) {
         final String sql =
@@ -5335,6 +5871,11 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Query attribute label
+     * @param hostId String
+     * @return Result
+     */
     @Override
     public Result<String> queryAttributeLabel(String hostId) {
         final String sql = "SELECT attribute_id from attribute_t WHERE host_id = ? AND active = TRUE";
@@ -5367,6 +5908,17 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Query attribute permission
+     * @param offset int
+     * @param limit int
+     * @param filtersJson String
+     * @param globalFilter String
+     * @param sortingJson String
+     * @param active boolean
+     * @param hostId String
+     * @return Result
+     */
     @Override
     public Result<String> queryAttributePermission(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
@@ -5466,6 +6018,13 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
     }
 
+    /**
+     * Get attribute permission by id
+     * @param hostId String
+     * @param attributeId String
+     * @param endpointId String
+     * @return Result
+     */
     @Override
     public Result<String> getAttributePermissionById(String hostId, String attributeId, String endpointId) {
         final String sql =
@@ -5514,6 +6073,17 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Query attribute user
+     * @param offset int
+     * @param limit int
+     * @param filtersJson String
+     * @param globalFilter String
+     * @param sortingJson String
+     * @param active boolean
+     * @param hostId String
+     * @return Result
+     */
     @Override
     public Result<String> queryAttributeUser(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
@@ -5634,6 +6204,13 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
 
     }
 
+    /**
+     * Get attribute user by id
+     * @param hostId String
+     * @param attributeId String
+     * @param userId String
+     * @return Result
+     */
     @Override
     public Result<String> getAttributeUserById(String hostId, String attributeId, String userId) {
         final String sql =
@@ -5684,6 +6261,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Create attribute permission
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void createAttributePermission(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
@@ -5754,6 +6337,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Update attribute permission
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void updateAttributePermission(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
@@ -5819,6 +6408,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Delete attribute permission
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void deleteAttributePermission(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
@@ -5882,6 +6477,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Create attribute user
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void createAttributeUser(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
@@ -5972,6 +6573,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Update attribute user
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void updateAttributeUser(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
@@ -6055,6 +6662,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Delete attribute user
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void deleteAttributeUser(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
@@ -6118,6 +6731,17 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Query attribute row filter
+     * @param offset int
+     * @param limit int
+     * @param filtersJson String
+     * @param globalFilter String
+     * @param sortingJson String
+     * @param active boolean
+     * @param hostId String
+     * @return Result
+     */
     @Override
     public Result<String> queryAttributeRowFilter(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
@@ -6221,6 +6845,14 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Get attribute row filter by id
+     * @param hostId String
+     * @param attributeId String
+     * @param endpointId String
+     * @param colName String
+     * @return Result
+     */
     @Override
     public Result<String> getAttributeRowFilterById(String hostId, String attributeId, String endpointId, String colName) {
         final String sql =
@@ -6273,6 +6905,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Create attribute row filter
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void createAttributeRowFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
@@ -6355,6 +6993,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Update attribute row filter
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void updateAttributeRowFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
@@ -6433,6 +7077,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Delete attribute row filter
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void deleteAttributeRowFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
@@ -6500,6 +7150,17 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Query attribute col filter
+     * @param offset int
+     * @param limit int
+     * @param filtersJson String
+     * @param globalFilter String
+     * @param sortingJson String
+     * @param active boolean
+     * @param hostId String
+     * @return Result
+     */
     @Override
     public Result<String> queryAttributeColFilter(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
         Result<String> result;
@@ -6599,6 +7260,13 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Get attribute col filter by id
+     * @param hostId String
+     * @param attributeId String
+     * @param endpointId String
+     * @return Result
+     */
     @Override
     public Result<String> getAttributeColFilterById(String hostId, String attributeId, String endpointId) {
         final String sql =
@@ -6648,6 +7316,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         return result;
     }
 
+    /**
+     * Create attribute col filter
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void createAttributeColFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
@@ -6723,6 +7397,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
     }
 
 
+    /**
+     * Update attribute col filter
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void updateAttributeColFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
@@ -6793,6 +7473,12 @@ public class AccessControlPersistenceImpl implements AccessControlPersistence {
         }
     }
 
+    /**
+     * Delete attribute col filter
+     * @param conn Connection
+     * @param event Map
+     * @throws PortalPersistenceException PortalPersistenceException
+     */
     @Override
     public void deleteAttributeColFilter(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).

@@ -46,8 +46,6 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
     public void createConfig(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -121,8 +119,6 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
     public void updateConfig(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -196,8 +192,6 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
     public void deleteConfig(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -665,8 +659,6 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
     public void createConfigProperty(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -757,8 +749,6 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
     public void updateConfigProperty(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
