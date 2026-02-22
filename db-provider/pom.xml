@@ -39,10 +39,6 @@
         </dependency>
         <dependency>
             <groupId>net.lightapi</groupId>
-            <artifactId>portal-event</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>net.lightapi</groupId>
             <artifactId>common-util</artifactId>
         </dependency>
         <dependency>
@@ -52,10 +48,6 @@
         <dependency>
             <groupId>com.networknt</groupId>
             <artifactId>db-provider</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.networknt</groupId>
-            <artifactId>kafka-common</artifactId>
         </dependency>
 
         <dependency>
@@ -82,14 +74,6 @@
         <dependency>
             <groupId>io.undertow</groupId>
             <artifactId>undertow-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.confluent</groupId>
-            <artifactId>kafka-schema-registry-client</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.cloudevents</groupId>
-            <artifactId>cloudevents-kafka</artifactId>
         </dependency>
         <dependency>
             <groupId>io.cloudevents</groupId>
