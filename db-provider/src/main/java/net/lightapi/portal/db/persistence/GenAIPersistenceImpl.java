@@ -2053,9 +2053,7 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
         Map<String, Object> map = SqlUtil.extractEventData(event);
         String hostId = (String)map.get("hostId");
         String toolId = (String)map.get("toolId");
-        String updateUser = (String)map.get("updateUser");
-        Long updateTs = (Long)map.get("updateTs");
-        Long aggregateVersion = SqlUtil.getNewAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             int i = 1;
             statement.setObject(i++, UUID.fromString(hostId));
@@ -2068,14 +2066,25 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
             statement.setString(i++, (String)map.get("apiEndpoint"));
             statement.setString(i++, (String)map.get("apiMethod"));
             statement.setString(i++, (String)map.get("scriptContent"));
-            statement.setString(i++, (String)map.get("version"));
-            statement.setString(i++, updateUser);
-            statement.setObject(i, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(i+1, aggregateVersion);
-            statement.executeUpdate();
+            if(map.get("version") != null) {
+                statement.setString(i++, (String)map.get("version"));
+            } else {
+                statement.setString(i++, "1.0.0");
+            }
+            statement.setString(i++, (String)event.get(Constants.USER));
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(i++, newAggregateVersion);
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                logger.warn("Creation skipped for hostId {} toolId {} aggregateVersion {}. A newer or same version already exists.", hostId, toolId, newAggregateVersion);
+            }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            throw new PortalPersistenceException("SQLException:", e);
+            logger.error("SQLException during createTool for hostId {} toolId {} aggregateVersion {}: {}", hostId, toolId, newAggregateVersion, e.getMessage(), e);
+            throw new PortalPersistenceException("Persistence Error", e);
+        } catch (Exception e) {
+            logger.error("Exception during createTool for hostId {} toolId {} aggregateVersion {}: {}", hostId, toolId, newAggregateVersion, e.getMessage(), e);
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -2090,9 +2099,7 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
         Map<String, Object> map = SqlUtil.extractEventData(event);
         String hostId = (String)map.get("hostId");
         String toolId = (String)map.get("toolId");
-        String updateUser = (String)map.get("updateUser");
-        Long updateTs = (Long)map.get("updateTs");
-        Long aggregateVersion = SqlUtil.getNewAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             int i = 1;
             statement.setString(i++, (String)map.get("name"));
@@ -2103,40 +2110,64 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
             statement.setString(i++, (String)map.get("apiEndpoint"));
             statement.setString(i++, (String)map.get("apiMethod"));
             statement.setString(i++, (String)map.get("scriptContent"));
-            statement.setString(i++, (String)map.get("version"));
-            statement.setString(i++, updateUser);
+            if(map.get("version") != null) {
+                statement.setString(i++, (String)map.get("version"));
+            } else {
+                statement.setString(i++, "1.0.0");
+            }
+            statement.setString(i++, (String)event.get(Constants.USER));
             statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(i++, aggregateVersion);
+            statement.setLong(i++, newAggregateVersion);
             statement.setObject(i++, UUID.fromString(hostId));
             statement.setObject(i++, UUID.fromString(toolId));
-            statement.setLong(i, aggregateVersion);
-            statement.executeUpdate();
+            statement.setLong(i++, newAggregateVersion);
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                logger.warn("Update skipped for hostId {} toolId {} aggregateVersion {}. Record not found or a newer/same version already exists.", hostId, toolId, newAggregateVersion);
+            }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            throw new PortalPersistenceException("SQLException:", e);
+            logger.error("SQLException during updateTool for hostId {} toolId {} aggregateVersion {}: {}", hostId, toolId, newAggregateVersion, e.getMessage(), e);
+            throw new PortalPersistenceException("Persistence Error", e);
+        } catch (Exception e) {
+            logger.error("Exception during updateTool for hostId {} toolId {} aggregateVersion {}: {}", hostId, toolId, newAggregateVersion, e.getMessage(), e);
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
     public void deleteTool(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
-        final String sql = "UPDATE tool_t SET active = FALSE, update_user = ?, update_ts = ?, aggregate_version = ? WHERE host_id = ? AND tool_id = ? AND aggregate_version < ?";
+        final String sql =
+                """
+                UPDATE tool_t
+                SET active = FALSE,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?
+                WHERE host_id=? AND tool_id=? AND aggregate_version < ?
+                """;
         Map<String, Object> map = SqlUtil.extractEventData(event);
         String hostId = (String)map.get("hostId");
         String toolId = (String)map.get("toolId");
-        String updateUser = (String)map.get("updateUser");
-        Long updateTs = (Long)map.get("updateTs");
-        Long aggregateVersion = SqlUtil.getNewAggregateVersion(event);
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setString(1, updateUser);
+            statement.setString(1, (String)event.get(Constants.USER));
             statement.setObject(2, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(3, aggregateVersion);
+            statement.setLong(3, newAggregateVersion);
             statement.setObject(4, UUID.fromString(hostId));
             statement.setObject(5, UUID.fromString(toolId));
-            statement.setLong(6, aggregateVersion);
-            statement.executeUpdate();
+            statement.setLong(6, newAggregateVersion);
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                logger.warn("Delete skipped for hostId {} toolId {} aggregateVersion {}. Record not found or a newer/same version already exists.", hostId, toolId, newAggregateVersion);
+            }
         } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            throw new PortalPersistenceException("SQLException:", e);
+            logger.error("SQLException during deleteTool for hostId {} toolId {} aggregateVersion {}: {}", hostId, toolId, newAggregateVersion, e.getMessage(), e);
+            throw new PortalPersistenceException("Persistence Error", e);
+        } catch (Exception e) {
+            logger.error("Exception during deleteTool for hostId {} toolId {} aggregateVersion {}: {}", hostId, toolId, newAggregateVersion, e.getMessage(), e);
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 

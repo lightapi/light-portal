@@ -1170,8 +1170,8 @@ public class PortalDbProviderImplTest {
         Map<String, Object> event = createEvent(hostId, userId, paramId, "SkillParam", 1, data);
 
         try (Connection conn = SqlDbStartupHook.ds.getConnection()) {
-            dbProvider.createSkillParam(conn, event);
-            Result<String> result = dbProvider.getSkillParamById(hostId, paramId);
+            dbProvider.createToolParam(conn, event);
+            Result<String> result = dbProvider.getToolParamById(hostId, paramId);
             assertTrue(result.isSuccess());
             Map<String, Object> retrieved = JsonMapper.string2Map(result.getResult());
             assertEquals("param1", retrieved.get("name"));
@@ -1179,17 +1179,17 @@ public class PortalDbProviderImplTest {
             data.put("name", "param1_updated");
             data.put("newAggregateVersion", 2);
             event = createEvent(hostId, userId, paramId, "SkillParam", 2, data);
-            dbProvider.updateSkillParam(conn, event);
-            result = dbProvider.getSkillParamById(hostId, paramId);
+            dbProvider.updateToolParam(conn, event);
+            result = dbProvider.getToolParamById(hostId, paramId);
             retrieved = JsonMapper.string2Map(result.getResult());
             assertEquals("param1_updated", retrieved.get("name"));
 
-            result = dbProvider.querySkillParam(0, 10, null, null, null, true, hostId);
+            result = dbProvider.queryToolParam(0, 10, null, null, null, true, hostId);
             assertTrue(result.isSuccess());
 
             data.put("newAggregateVersion", 3);
-            dbProvider.deleteSkillParam(conn, event);
-            result = dbProvider.getSkillParamById(hostId, paramId);
+            dbProvider.deleteToolParam(conn, event);
+            result = dbProvider.getToolParamById(hostId, paramId);
             retrieved = JsonMapper.string2Map(result.getResult());
             assertEquals(false, retrieved.get("active"));
         }
