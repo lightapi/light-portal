@@ -706,6 +706,13 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> queryToolParam(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<String> getToolParamById(String hostId, String paramId);
 
+    // SkillTool
+    void createSkillTool(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void updateSkillTool(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteSkillTool(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    Result<String> querySkillTool(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
+    Result<String> getSkillToolById(String hostId, String skillId, String toolId);
+
     // SkillDependency
     void createSkillDependency(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
     void updateSkillDependency(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
@@ -1105,6 +1112,9 @@ public interface PortalDbProvider extends DbProvider {
             case PortalConstants.TOOL_PARAM_CREATED_EVENT: createToolParam(conn, event); break;
             case PortalConstants.TOOL_PARAM_UPDATED_EVENT: updateToolParam(conn, event); break;
             case PortalConstants.TOOL_PARAM_DELETED_EVENT: deleteToolParam(conn, event); break;
+            case PortalConstants.SKILL_TOOL_CREATED_EVENT: createSkillTool(conn, event); break;
+            case PortalConstants.SKILL_TOOL_UPDATED_EVENT: updateSkillTool(conn, event); break;
+            case PortalConstants.SKILL_TOOL_DELETED_EVENT: deleteSkillTool(conn, event); break;
             case PortalConstants.SKILL_DEPENDENCY_CREATED_EVENT: createSkillDependency(conn, event); break;
             case PortalConstants.SKILL_DEPENDENCY_UPDATED_EVENT: updateSkillDependency(conn, event); break;
             case PortalConstants.SKILL_DEPENDENCY_DELETED_EVENT: deleteSkillDependency(conn, event); break;

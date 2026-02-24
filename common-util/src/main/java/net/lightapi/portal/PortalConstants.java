@@ -619,6 +619,12 @@ public class PortalConstants {
     public static final String TOOL_PARAM_UPDATED_EVENT = "ToolParamUpdatedEvent";
     /** ToolParamDeletedEvent */
     public static final String TOOL_PARAM_DELETED_EVENT = "ToolParamDeletedEvent";
+    /** SkillToolCreatedEvent */
+    public static final String SKILL_TOOL_CREATED_EVENT = "SkillToolCreatedEvent";
+    /** SkillToolUpdatedEvent */
+    public static final String SKILL_TOOL_UPDATED_EVENT = "SkillToolUpdatedEvent";
+    /** SkillToolDeletedEvent */
+    public static final String SKILL_TOOL_DELETED_EVENT = "SkillToolDeletedEvent";
     /** SkillDependencyCreatedEvent */
     public static final String SKILL_DEPENDENCY_CREATED_EVENT = "SkillDependencyCreatedEvent";
     /** SkillDependencyUpdatedEvent */
@@ -882,8 +888,10 @@ public class PortalConstants {
     public static final String AGGREGATE_AUDIT_LOG = "AuditLog";
     /** Skill aggregate */
     public static final String AGGREGATE_SKILL = "Skill";
-    /** SkillParam aggregate */
+    /** ToolParam aggregate */
     public static final String AGGREGATE_TOOL_PARAM = "ToolParam";
+    /** SkillTool aggregate */
+    public static final String AGGREGATE_SKILL_TOOL = "SkillTool";
     /** SkillDependency aggregate */
     public static final String AGGREGATE_SKILL_DEPENDENCY = "SkillDependency";
     /** AgentSkill aggregate */

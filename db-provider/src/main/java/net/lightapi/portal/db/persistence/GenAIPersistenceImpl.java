@@ -2808,7 +2808,242 @@ public Result<String> getToolParamById(String hostId, String paramId) {
         result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
     }
     return result;
-}
+    }
+
+    // --- SkillTool ---
+
+    @Override
+    public void createSkillTool(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
+        final String sql =
+                """
+                INSERT INTO skill_tool_t (host_id, skill_id, tool_id, config, access_level, update_user, update_ts, aggregate_version, active)
+                VALUES (?, ?, ?, ?::jsonb, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (host_id, skill_id, tool_id) DO UPDATE
+                SET config = EXCLUDED.config,
+                    access_level = EXCLUDED.access_level,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                WHERE skill_tool_t.aggregate_version < EXCLUDED.aggregate_version
+                AND skill_tool_t.active = FALSE
+                """;
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String)map.get("hostId");
+        String skillId = (String)map.get("skillId");
+        String toolId = (String)map.get("toolId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            int i = 1;
+            statement.setObject(i++, UUID.fromString(hostId));
+            statement.setObject(i++, UUID.fromString(skillId));
+            statement.setObject(i++, UUID.fromString(toolId));
+
+            String config = (String)map.get("config");
+            statement.setString(i++, config == null || config.isEmpty() ? "{}" : config);
+
+            String accessLevel = (String)map.get("accessLevel");
+            statement.setString(i++, accessLevel == null ? "read" : accessLevel);
+
+            statement.setString(i++, (String)event.get(Constants.USER));
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(i++, newAggregateVersion);
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                logger.warn("Creation skipped for hostId {} skillId {} toolId {} aggregateVersion {}. A newer or same version already exists.", hostId, skillId, toolId, newAggregateVersion);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during createSkillTool for hostId {} skillId {} toolId {} aggregateVersion {}: {}", hostId, skillId, toolId, newAggregateVersion, e.getMessage(), e);
+            throw new PortalPersistenceException("Persistence Error", e);
+        } catch (Exception e) {
+            logger.error("Exception during createSkillTool for hostId {} skillId {} toolId {} aggregateVersion {}: {}", hostId, skillId, toolId, newAggregateVersion, e.getMessage(), e);
+            throw new PortalPersistenceException("Persistence Error", e);
+        }
+    }
+
+    @Override
+    public void updateSkillTool(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
+        final String sql =
+                """
+                UPDATE skill_tool_t
+                SET config=?::jsonb, access_level=?, update_user=?, update_ts=?, aggregate_version=?, active=TRUE
+                WHERE host_id=? AND skill_id=? AND tool_id=? AND aggregate_version < ?
+                """;
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String)map.get("hostId");
+        String skillId = (String)map.get("skillId");
+        String toolId = (String)map.get("toolId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            int i = 1;
+            String config = (String)map.get("config");
+            statement.setString(i++, config == null || config.isEmpty() ? "{}" : config);
+
+            String accessLevel = (String)map.get("accessLevel");
+            statement.setString(i++, accessLevel == null ? "read" : accessLevel);
+
+            statement.setString(i++, (String)event.get(Constants.USER));
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(i++, newAggregateVersion);
+            statement.setObject(i++, UUID.fromString(hostId));
+            statement.setObject(i++, UUID.fromString(skillId));
+            statement.setObject(i++, UUID.fromString(toolId));
+            statement.setLong(i++, newAggregateVersion);
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                logger.warn("Update skipped for hostId {} skillId {} toolId {} aggregateVersion {}. Record not found or a newer/same version already exists.", hostId, skillId, toolId, newAggregateVersion);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during updateSkillTool for hostId {} skillId {} toolId {} aggregateVersion {}: {}", hostId, skillId, toolId, newAggregateVersion, e.getMessage(), e);
+            throw new PortalPersistenceException("Persistence Error", e);
+        } catch (Exception e) {
+            logger.error("Exception during updateSkillTool for hostId {} skillId {} toolId {} aggregateVersion {}: {}", hostId, skillId, toolId, newAggregateVersion, e.getMessage(), e);
+            throw new PortalPersistenceException("Persistence Error", e);
+        }
+    }
+
+    @Override
+    public void deleteSkillTool(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
+        final String sql =
+                """
+                UPDATE skill_tool_t
+                SET active = FALSE,
+                    update_user = ?,
+                    update_ts = ?,
+                    aggregate_version = ?
+                WHERE host_id=? AND skill_id=? AND tool_id=? AND aggregate_version < ?
+                """;
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String)map.get("hostId");
+        String skillId = (String)map.get("skillId");
+        String toolId = (String)map.get("toolId");
+        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setString(1, (String)event.get(Constants.USER));
+            statement.setObject(2, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(3, newAggregateVersion);
+            statement.setObject(4, UUID.fromString(hostId));
+            statement.setObject(5, UUID.fromString(skillId));
+            statement.setObject(6, UUID.fromString(toolId));
+            statement.setLong(7, newAggregateVersion);
+
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                logger.warn("Delete skipped for hostId {} skillId {} toolId {} aggregateVersion {}. Record not found or a newer/same version already exists.", hostId, skillId, toolId, newAggregateVersion);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during deleteSkillTool for hostId {} skillId {} toolId {} aggregateVersion {}: {}", hostId, skillId, toolId, newAggregateVersion, e.getMessage(), e);
+            throw new PortalPersistenceException("Persistence Error", e);
+        } catch (Exception e) {
+            logger.error("Exception during deleteSkillTool for hostId {} skillId {} toolId {} aggregateVersion {}: {}", hostId, skillId, toolId, newAggregateVersion, e.getMessage(), e);
+            throw new PortalPersistenceException("Persistence Error", e);
+        }
+    }
+
+    @Override
+    public Result<String> querySkillTool(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
+        Result<String> result;
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total, host_id, skill_id, tool_id, config, access_level, update_user, update_ts, aggregate_version, active
+                FROM skill_tool_t WHERE host_id = ?
+                """;
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
+
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active);
+        String[] searchColumns = {"access_level", "config"};
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("host_id", "skill_id", "tool_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("update_ts", sorting, null) +
+                "\nLIMIT ? OFFSET ?";
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        if(logger.isTraceEnabled()) logger.trace("querySkillTool sql: {}", sqlBuilder);
+
+        int total = 0;
+        List<Map<String, Object>> items = new ArrayList<>();
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("skillId", resultSet.getObject("skill_id", UUID.class));
+                    map.put("toolId", resultSet.getObject("tool_id", UUID.class));
+                    map.put("config", resultSet.getString("config"));
+                    map.put("accessLevel", resultSet.getString("access_level"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts", OffsetDateTime.class));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    items.add(map);
+                }
+            }
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("skillTools", items);
+            result = Success.of(JsonMapper.toJson(resultMap));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getSkillToolById(String hostId, String skillId, String toolId) {
+        Result<String> result;
+        final String sql = "SELECT * FROM skill_tool_t WHERE host_id = ? AND skill_id = ? AND tool_id = ?";
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sql)) {
+            preparedStatement.setObject(1, UUID.fromString(hostId));
+            preparedStatement.setObject(2, UUID.fromString(skillId));
+            preparedStatement.setObject(3, UUID.fromString(toolId));
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("skillId", resultSet.getObject("skill_id", UUID.class));
+                    map.put("toolId", resultSet.getObject("tool_id", UUID.class));
+                    map.put("config", resultSet.getString("config"));
+                    map.put("accessLevel", resultSet.getString("access_level"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts", OffsetDateTime.class));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "skill_tool_t", "hostId " + hostId + " skillId " + skillId + " toolId " + toolId));
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
 
     @Override
     public void createSkillDependency(Connection conn, Map<String, Object> event) throws PortalPersistenceException {

@@ -90,6 +90,13 @@ public interface GenAIPersistence {
     Result<String> queryToolParam(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<String> getToolParamById(String hostId, String paramId);
 
+    // SkillTool
+    void createSkillTool(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void updateSkillTool(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteSkillTool(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    Result<String> querySkillTool(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
+    Result<String> getSkillToolById(String hostId, String skillId, String toolId);
+
     // SkillDependency
     void createSkillDependency(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
     void updateSkillDependency(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
