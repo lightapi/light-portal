@@ -2028,22 +2028,261 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
     }
 
     @Override
+    public void createTool(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
+        final String sql =
+                """
+                INSERT INTO tool_t (host_id, tool_id, name, description, implementation_type, implementation_class, mcp_server_name, api_endpoint, api_method, script_content, version, update_user, update_ts, aggregate_version, active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)
+                ON CONFLICT (host_id, tool_id) DO UPDATE
+                SET name = EXCLUDED.name,
+                    description = EXCLUDED.description,
+                    implementation_type = EXCLUDED.implementation_type,
+                    implementation_class = EXCLUDED.implementation_class,
+                    mcp_server_name = EXCLUDED.mcp_server_name,
+                    api_endpoint = EXCLUDED.api_endpoint,
+                    api_method = EXCLUDED.api_method,
+                    script_content = EXCLUDED.script_content,
+                    version = EXCLUDED.version,
+                    update_user = EXCLUDED.update_user,
+                    update_ts = EXCLUDED.update_ts,
+                    aggregate_version = EXCLUDED.aggregate_version,
+                    active = TRUE
+                WHERE tool_t.aggregate_version < EXCLUDED.aggregate_version
+                AND tool_t.active = FALSE
+                """;
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String)map.get("hostId");
+        String toolId = (String)map.get("toolId");
+        String updateUser = (String)map.get("updateUser");
+        Long updateTs = (Long)map.get("updateTs");
+        Long aggregateVersion = SqlUtil.getNewAggregateVersion(event);
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            int i = 1;
+            statement.setObject(i++, UUID.fromString(hostId));
+            statement.setObject(i++, UUID.fromString(toolId));
+            statement.setString(i++, (String)map.get("name"));
+            statement.setString(i++, (String)map.get("description"));
+            statement.setString(i++, (String)map.get("implementationType"));
+            statement.setString(i++, (String)map.get("implementationClass"));
+            statement.setString(i++, (String)map.get("mcpServerName"));
+            statement.setString(i++, (String)map.get("apiEndpoint"));
+            statement.setString(i++, (String)map.get("apiMethod"));
+            statement.setString(i++, (String)map.get("scriptContent"));
+            statement.setString(i++, (String)map.get("version"));
+            statement.setString(i++, updateUser);
+            statement.setObject(i, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(i+1, aggregateVersion);
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            throw new PortalPersistenceException("SQLException:", e);
+        }
+    }
+
+    @Override
+    public void updateTool(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
+        final String sql =
+                """
+                UPDATE tool_t
+                SET name=?, description=?, implementation_type=?, implementation_class=?, mcp_server_name=?, api_endpoint=?, api_method=?, script_content=?, version=?, update_user=?, update_ts=?, aggregate_version=?, active=TRUE
+                WHERE host_id=? AND tool_id=? AND aggregate_version < ?
+                """;
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String)map.get("hostId");
+        String toolId = (String)map.get("toolId");
+        String updateUser = (String)map.get("updateUser");
+        Long updateTs = (Long)map.get("updateTs");
+        Long aggregateVersion = SqlUtil.getNewAggregateVersion(event);
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            int i = 1;
+            statement.setString(i++, (String)map.get("name"));
+            statement.setString(i++, (String)map.get("description"));
+            statement.setString(i++, (String)map.get("implementationType"));
+            statement.setString(i++, (String)map.get("implementationClass"));
+            statement.setString(i++, (String)map.get("mcpServerName"));
+            statement.setString(i++, (String)map.get("apiEndpoint"));
+            statement.setString(i++, (String)map.get("apiMethod"));
+            statement.setString(i++, (String)map.get("scriptContent"));
+            statement.setString(i++, (String)map.get("version"));
+            statement.setString(i++, updateUser);
+            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(i++, aggregateVersion);
+            statement.setObject(i++, UUID.fromString(hostId));
+            statement.setObject(i++, UUID.fromString(toolId));
+            statement.setLong(i, aggregateVersion);
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            throw new PortalPersistenceException("SQLException:", e);
+        }
+    }
+
+    @Override
+    public void deleteTool(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
+        final String sql = "UPDATE tool_t SET active = FALSE, update_user = ?, update_ts = ?, aggregate_version = ? WHERE host_id = ? AND tool_id = ? AND aggregate_version < ?";
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String hostId = (String)map.get("hostId");
+        String toolId = (String)map.get("toolId");
+        String updateUser = (String)map.get("updateUser");
+        Long updateTs = (Long)map.get("updateTs");
+        Long aggregateVersion = SqlUtil.getNewAggregateVersion(event);
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setString(1, updateUser);
+            statement.setObject(2, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+            statement.setLong(3, aggregateVersion);
+            statement.setObject(4, UUID.fromString(hostId));
+            statement.setObject(5, UUID.fromString(toolId));
+            statement.setLong(6, aggregateVersion);
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            throw new PortalPersistenceException("SQLException:", e);
+        }
+    }
+
+    @Override
+    public Result<String> queryTool(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
+        Result<String> result;
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total, host_id, tool_id, name, description, implementation_type, implementation_class, mcp_server_name, api_endpoint, api_method, script_content, version, update_user, update_ts, aggregate_version, active
+                FROM tool_t WHERE host_id = ?
+                """;
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active);
+        String[] searchColumns = {"name", "description"};
+        String sqlBuilder = s + activeClause +
+                dynamicFilter(Arrays.asList("host_id", "tool_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("name", sorting, null) +
+                "\nLIMIT ? OFFSET ?";
+        parameters.add(limit);
+        parameters.add(offset);
+        if(logger.isTraceEnabled()) logger.trace("queryTool sql: {}", sqlBuilder);
+        int total = 0;
+        List<Map<String, Object>> tools = new ArrayList<>();
+        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("toolId", resultSet.getObject("tool_id", UUID.class));
+                    map.put("name", resultSet.getString("name"));
+                    map.put("description", resultSet.getString("description"));
+                    map.put("implementationType", resultSet.getString("implementation_type"));
+                    map.put("implementationClass", resultSet.getString("implementation_class"));
+                    map.put("mcpServerName", resultSet.getString("mcp_server_name"));
+                    map.put("apiEndpoint", resultSet.getString("api_endpoint"));
+                    map.put("apiMethod", resultSet.getString("api_method"));
+                    map.put("scriptContent", resultSet.getString("script_content"));
+                    map.put("version", resultSet.getString("version"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts", OffsetDateTime.class));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    tools.add(map);
+                }
+            }
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("tools", tools);
+            result = Success.of(JsonMapper.toJson(resultMap));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getToolById(String hostId, String toolId) {
+        final String sql = "SELECT host_id, tool_id, name, description, implementation_type, implementation_class, mcp_server_name, api_endpoint, api_method, script_content, version, update_user, update_ts, aggregate_version, active FROM tool_t WHERE host_id = ? AND tool_id = ?";
+        Result<String> result;
+        Map<String, Object> map = new HashMap<>();
+        try (Connection conn = ds.getConnection(); PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            statement.setObject(2, UUID.fromString(toolId));
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("toolId", resultSet.getObject("tool_id", UUID.class));
+                    map.put("name", resultSet.getString("name"));
+                    map.put("description", resultSet.getString("description"));
+                    map.put("implementationType", resultSet.getString("implementation_type"));
+                    map.put("implementationClass", resultSet.getString("implementation_class"));
+                    map.put("mcpServerName", resultSet.getString("mcp_server_name"));
+                    map.put("apiEndpoint", resultSet.getString("api_endpoint"));
+                    map.put("apiMethod", resultSet.getString("api_method"));
+                    map.put("scriptContent", resultSet.getString("script_content"));
+                    map.put("version", resultSet.getString("version"));
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts", OffsetDateTime.class));
+                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                    map.put("active", resultSet.getBoolean("active"));
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "tool", toolId));
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getToolLabel(String hostId) {
+        final String sql = "SELECT tool_id, name FROM tool_t WHERE host_id = ? AND active = TRUE";
+        Result<String> result;
+        List<Map<String, String>> labels = new ArrayList<>();
+        try (Connection conn = ds.getConnection(); PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setObject(1, UUID.fromString(hostId));
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, String> map = new HashMap<>();
+                    map.put("value", resultSet.getObject("tool_id", UUID.class).toString());
+                    map.put("label", resultSet.getString("name"));
+                    labels.add(map);
+                }
+                result = Success.of(JsonMapper.toJson(labels));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
     public void createSkill(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String sql =
                 """
-                INSERT INTO skill_t (host_id, skill_id, parent_skill_id, name, description, content_markdown, implementation_type, implementation_class, script_content, api_endpoint, api_method, author, version, update_user, update_ts, aggregate_version, active)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)
+                INSERT INTO skill_t (host_id, skill_id, parent_skill_id, name, description, content_markdown, version, update_user, update_ts, aggregate_version, active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)
                 ON CONFLICT (host_id, skill_id) DO UPDATE
                 SET parent_skill_id = EXCLUDED.parent_skill_id,
                     name = EXCLUDED.name,
                     description = EXCLUDED.description,
                     content_markdown = EXCLUDED.content_markdown,
-                    implementation_type = EXCLUDED.implementation_type,
-                    implementation_class = EXCLUDED.implementation_class,
-                    script_content = EXCLUDED.script_content,
-                    api_endpoint = EXCLUDED.api_endpoint,
-                    api_method = EXCLUDED.api_method,
-                    author = EXCLUDED.author,
                     version = EXCLUDED.version,
                     update_user = EXCLUDED.update_user,
                     update_ts = EXCLUDED.update_ts,
@@ -2065,12 +2304,6 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
             statement.setString(i++, (String)map.get("name"));
             statement.setString(i++, (String)map.get("description"));
             statement.setString(i++, (String)map.get("contentMarkdown"));
-            statement.setString(i++, (String)map.get("implementationType"));
-            statement.setString(i++, (String)map.get("implementationClass"));
-            statement.setString(i++, (String)map.get("scriptContent"));
-            statement.setString(i++, (String)map.get("apiEndpoint"));
-            statement.setString(i++, (String)map.get("apiMethod"));
-            statement.setString(i++, (String)map.get("author"));
             if(map.get("version") != null) {
                 statement.setString(i++, (String)map.get("version"));
             } else {
@@ -2098,7 +2331,7 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
         final String sql =
                 """
                 UPDATE skill_t
-                SET parent_skill_id=?, name=?, description=?, content_markdown=?, implementation_type=?, implementation_class=?, script_content=?, api_endpoint=?, api_method=?, author=?, version=?, update_user=?, update_ts=?, aggregate_version=?, active=TRUE
+                SET parent_skill_id=?, name=?, description=?, content_markdown=?, version=?, update_user=?, update_ts=?, aggregate_version=?, active=TRUE
                 WHERE host_id=? AND skill_id=? AND aggregate_version < ?
                 """;
         Map<String, Object> map = SqlUtil.extractEventData(event);
@@ -2112,12 +2345,6 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
             statement.setString(i++, (String)map.get("name"));
             statement.setString(i++, (String)map.get("description"));
             statement.setString(i++, (String)map.get("contentMarkdown"));
-            statement.setString(i++, (String)map.get("implementationType"));
-            statement.setString(i++, (String)map.get("implementationClass"));
-            statement.setString(i++, (String)map.get("scriptContent"));
-            statement.setString(i++, (String)map.get("apiEndpoint"));
-            statement.setString(i++, (String)map.get("apiMethod"));
-            statement.setString(i++, (String)map.get("author"));
             if(map.get("version") != null) {
                 statement.setString(i++, (String)map.get("version"));
             } else {
@@ -2187,13 +2414,13 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
         String s =
                 """
-                SELECT COUNT(*) OVER () AS total, host_id, skill_id, parent_skill_id, name, description, content_markdown, implementation_type, implementation_class, script_content, api_endpoint, api_method, author, version, update_user, update_ts, aggregate_version, active
+                SELECT COUNT(*) OVER () AS total, host_id, skill_id, parent_skill_id, name, description, content_markdown, version, update_user, update_ts, aggregate_version, active
                 FROM skill_t WHERE host_id = ?
                 """;
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
         String activeClause = SqlUtil.buildMultiTableActiveClause(active);
-        String[] searchColumns = {"name", "description", "implementation_type", "implementation_class", "author"};
+        String[] searchColumns = {"name", "description"};
         String sqlBuilder = s + activeClause +
                 dynamicFilter(Arrays.asList("host_id", "skill_id", "parent_skill_id"), Arrays.asList(searchColumns), filters, null, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
@@ -2220,12 +2447,6 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
                     map.put("name", resultSet.getString("name"));
                     map.put("description", resultSet.getString("description"));
                     map.put("contentMarkdown", resultSet.getString("content_markdown"));
-                    map.put("implementationType", resultSet.getString("implementation_type"));
-                    map.put("implementationClass", resultSet.getString("implementation_class"));
-                    map.put("scriptContent", resultSet.getString("script_content"));
-                    map.put("apiEndpoint", resultSet.getString("api_endpoint"));
-                    map.put("apiMethod", resultSet.getString("api_method"));
-                    map.put("author", resultSet.getString("author"));
                     map.put("version", resultSet.getString("version"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts", OffsetDateTime.class));
@@ -2250,7 +2471,7 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
 
     @Override
     public Result<String> getSkillById(String hostId, String skillId) {
-        final String sql = "SELECT host_id, skill_id, parent_skill_id, name, description, content_markdown, implementation_type, implementation_class, script_content, api_endpoint, api_method, author, version, update_user, update_ts, aggregate_version, active FROM skill_t WHERE host_id = ? AND skill_id = ?";
+        final String sql = "SELECT host_id, skill_id, parent_skill_id, name, description, content_markdown, version, update_user, update_ts, aggregate_version, active FROM skill_t WHERE host_id = ? AND skill_id = ?";
         Result<String> result;
         Map<String, Object> map = new HashMap<>();
         try (Connection conn = ds.getConnection(); PreparedStatement statement = conn.prepareStatement(sql)) {
@@ -2264,12 +2485,6 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
                     map.put("name", resultSet.getString("name"));
                     map.put("description", resultSet.getString("description"));
                     map.put("contentMarkdown", resultSet.getString("content_markdown"));
-                    map.put("implementationType", resultSet.getString("implementation_type"));
-                    map.put("implementationClass", resultSet.getString("implementation_class"));
-                    map.put("scriptContent", resultSet.getString("script_content"));
-                    map.put("apiEndpoint", resultSet.getString("api_endpoint"));
-                    map.put("apiMethod", resultSet.getString("api_method"));
-                    map.put("author", resultSet.getString("author"));
                     map.put("version", resultSet.getString("version"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts", OffsetDateTime.class));
@@ -2291,278 +2506,278 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
     }
 
     @Override
-    public void createSkillParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
-        final String sql =
-                """
-                INSERT INTO skill_param_t (host_id, param_id, skill_id, name, param_type, required, default_value, description, validation_schema, order_index, update_user, update_ts, aggregate_version, active)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)
-                ON CONFLICT (host_id, param_id) DO UPDATE
-                SET skill_id = EXCLUDED.skill_id,
-                    name = EXCLUDED.name,
-                    param_type = EXCLUDED.param_type,
-                    required = EXCLUDED.required,
-                    default_value = EXCLUDED.default_value,
-                    description = EXCLUDED.description,
-                    validation_schema = EXCLUDED.validation_schema,
-                    order_index = EXCLUDED.order_index,
-                    update_user = EXCLUDED.update_user,
-                    update_ts = EXCLUDED.update_ts,
-                    aggregate_version = EXCLUDED.aggregate_version,
-                    active = TRUE
-                WHERE skill_param_t.aggregate_version < EXCLUDED.aggregate_version
-                AND skill_param_t.active = FALSE
-                """;
-        Map<String, Object> map = SqlUtil.extractEventData(event);
-        String hostId = (String)map.get("hostId");
-        String paramId = (String)map.get("paramId");
-        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+public void createToolParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
+    final String sql =
+            """
+            INSERT INTO tool_param_t (host_id, param_id, tool_id, name, param_type, required, default_value, description, validation_schema, order_index, update_user, update_ts, aggregate_version, active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)
+            ON CONFLICT (host_id, param_id) DO UPDATE
+            SET tool_id = EXCLUDED.tool_id,
+                name = EXCLUDED.name,
+                param_type = EXCLUDED.param_type,
+                required = EXCLUDED.required,
+                default_value = EXCLUDED.default_value,
+                description = EXCLUDED.description,
+                validation_schema = EXCLUDED.validation_schema,
+                order_index = EXCLUDED.order_index,
+                update_user = EXCLUDED.update_user,
+                update_ts = EXCLUDED.update_ts,
+                aggregate_version = EXCLUDED.aggregate_version,
+                active = TRUE
+            WHERE tool_param_t.aggregate_version < EXCLUDED.aggregate_version
+            AND tool_param_t.active = FALSE
+            """;
+    Map<String, Object> map = SqlUtil.extractEventData(event);
+    String hostId = (String)map.get("hostId");
+    String paramId = (String)map.get("paramId");
+    long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            int i = 1;
-            statement.setObject(i++, UUID.fromString(hostId));
-            statement.setObject(i++, UUID.fromString(paramId));
-            statement.setObject(i++, UUID.fromString((String)map.get("skillId")));
-            statement.setString(i++, (String)map.get("name"));
-            statement.setString(i++, (String)map.get("paramType"));
+    try (PreparedStatement statement = conn.prepareStatement(sql)) {
+        int i = 1;
+        statement.setObject(i++, UUID.fromString(hostId));
+        statement.setObject(i++, UUID.fromString(paramId));
+        statement.setObject(i++, UUID.fromString((String)map.get("toolId")));
+        statement.setString(i++, (String)map.get("name"));
+        statement.setString(i++, (String)map.get("paramType"));
 
-            if(map.get("required") != null) {
-                statement.setBoolean(i++, (Boolean)map.get("required"));
-            } else {
-                statement.setBoolean(i++, true);
-            }
-
-            if(map.get("defaultValue") != null) {
-                statement.setObject(i++, JsonMapper.toJson(map.get("defaultValue")), Types.OTHER);
-            } else {
-                statement.setNull(i++, Types.OTHER);
-            }
-
-            statement.setString(i++, (String)map.get("description"));
-
-            if(map.get("validationSchema") != null) {
-                statement.setObject(i++, JsonMapper.toJson(map.get("validationSchema")), Types.OTHER);
-            } else {
-                statement.setNull(i++, Types.OTHER);
-            }
-
-            setIntegerOrNull(statement, i++, map.get("orderIndex"));
-            statement.setString(i++, (String)event.get(Constants.USER));
-            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(i++, newAggregateVersion);
-
-            int count = statement.executeUpdate();
-            if (count == 0) {
-                logger.warn("Creation skipped for hostId {} paramId {} aggregateVersion {}. A newer or same version already exists.", hostId, paramId, newAggregateVersion);
-            }
-        } catch (SQLException e) {
-            logger.error("SQLException during createSkillParam for hostId {} paramId {} aggregateVersion {}: {}", hostId, paramId, newAggregateVersion, e.getMessage(), e);
-            throw new PortalPersistenceException("Persistence Error", e);
-        } catch (Exception e) {
-            logger.error("Exception during createSkillParam for hostId {} paramId {} aggregateVersion {}: {}", hostId, paramId, newAggregateVersion, e.getMessage(), e);
-            throw new PortalPersistenceException("Persistence Error", e);
+        if(map.get("required") != null) {
+            statement.setBoolean(i++, (Boolean)map.get("required"));
+        } else {
+            statement.setBoolean(i++, true);
         }
+
+        if(map.get("defaultValue") != null) {
+            statement.setObject(i++, JsonMapper.toJson(map.get("defaultValue")), Types.OTHER);
+        } else {
+            statement.setNull(i++, Types.OTHER);
+        }
+
+        statement.setString(i++, (String)map.get("description"));
+
+        if(map.get("validationSchema") != null) {
+            statement.setObject(i++, JsonMapper.toJson(map.get("validationSchema")), Types.OTHER);
+        } else {
+            statement.setNull(i++, Types.OTHER);
+        }
+
+        setIntegerOrNull(statement, i++, map.get("orderIndex"));
+        statement.setString(i++, (String)event.get(Constants.USER));
+        statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+        statement.setLong(i++, newAggregateVersion);
+
+        int count = statement.executeUpdate();
+        if (count == 0) {
+            logger.warn("Creation skipped for hostId {} paramId {} aggregateVersion {}. A newer or same version already exists.", hostId, paramId, newAggregateVersion);
+        }
+    } catch (SQLException e) {
+        logger.error("SQLException during createToolParam for hostId {} paramId {} aggregateVersion {}: {}", hostId, paramId, newAggregateVersion, e.getMessage(), e);
+        throw new PortalPersistenceException("Persistence Error", e);
+    } catch (Exception e) {
+        logger.error("Exception during createToolParam for hostId {} paramId {} aggregateVersion {}: {}", hostId, paramId, newAggregateVersion, e.getMessage(), e);
+        throw new PortalPersistenceException("Persistence Error", e);
     }
+}
 
     @Override
-    public void updateSkillParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
-        final String sql =
-                """
-                UPDATE skill_param_t
-                SET skill_id=?, name=?, param_type=?, required=?, default_value=?, description=?, validation_schema=?, order_index=?, update_user=?, update_ts=?, aggregate_version=?, active=TRUE
-                WHERE host_id=? AND param_id=? AND aggregate_version < ?
-                """;
-        Map<String, Object> map = SqlUtil.extractEventData(event);
-        String hostId = (String)map.get("hostId");
-        String paramId = (String)map.get("paramId");
-        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+public void updateToolParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
+    final String sql =
+            """
+            UPDATE tool_param_t
+            SET tool_id=?, name=?, param_type=?, required=?, default_value=?, description=?, validation_schema=?, order_index=?, update_user=?, update_ts=?, aggregate_version=?, active=TRUE
+            WHERE host_id=? AND param_id=? AND aggregate_version < ?
+            """;
+    Map<String, Object> map = SqlUtil.extractEventData(event);
+    String hostId = (String)map.get("hostId");
+    String paramId = (String)map.get("paramId");
+    long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            int i = 1;
-            statement.setObject(i++, UUID.fromString((String)map.get("skillId")));
-            statement.setString(i++, (String)map.get("name"));
-            statement.setString(i++, (String)map.get("paramType"));
+    try (PreparedStatement statement = conn.prepareStatement(sql)) {
+        int i = 1;
+        statement.setObject(i++, UUID.fromString((String)map.get("toolId")));
+        statement.setString(i++, (String)map.get("name"));
+        statement.setString(i++, (String)map.get("paramType"));
 
-            if(map.get("required") != null) {
-                statement.setBoolean(i++, (Boolean)map.get("required"));
-            } else {
-                statement.setBoolean(i++, true);
-            }
-
-            if(map.get("defaultValue") != null) {
-                statement.setObject(i++, JsonMapper.toJson(map.get("defaultValue")), Types.OTHER);
-            } else {
-                statement.setNull(i++, Types.OTHER);
-            }
-
-            statement.setString(i++, (String)map.get("description"));
-
-            if(map.get("validationSchema") != null) {
-                statement.setObject(i++, JsonMapper.toJson(map.get("validationSchema")), Types.OTHER);
-            } else {
-                statement.setNull(i++, Types.OTHER);
-            }
-
-            setIntegerOrNull(statement, i++, map.get("orderIndex"));
-            statement.setString(i++, (String)event.get(Constants.USER));
-            statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(i++, newAggregateVersion);
-            statement.setObject(i++, UUID.fromString(hostId));
-            statement.setObject(i++, UUID.fromString(paramId));
-            statement.setLong(i++, newAggregateVersion);
-
-            int count = statement.executeUpdate();
-            if (count == 0) {
-                logger.warn("Update skipped for hostId {} paramId {} aggregateVersion {}. Record not found or a newer/same version already exists.", hostId, paramId, newAggregateVersion);
-            }
-        } catch (SQLException e) {
-            logger.error("SQLException during updateSkillParam for hostId {} paramId {} aggregateVersion {}: {}", hostId, paramId, newAggregateVersion, e.getMessage(), e);
-            throw new PortalPersistenceException("Persistence Error", e);
-        } catch (Exception e) {
-            logger.error("Exception during updateSkillParam for hostId {} paramId {} aggregateVersion {}: {}", hostId, paramId, newAggregateVersion, e.getMessage(), e);
-            throw new PortalPersistenceException("Persistence Error", e);
+        if(map.get("required") != null) {
+            statement.setBoolean(i++, (Boolean)map.get("required"));
+        } else {
+            statement.setBoolean(i++, true);
         }
+
+        if(map.get("defaultValue") != null) {
+            statement.setObject(i++, JsonMapper.toJson(map.get("defaultValue")), Types.OTHER);
+        } else {
+            statement.setNull(i++, Types.OTHER);
+        }
+
+        statement.setString(i++, (String)map.get("description"));
+
+        if(map.get("validationSchema") != null) {
+            statement.setObject(i++, JsonMapper.toJson(map.get("validationSchema")), Types.OTHER);
+        } else {
+            statement.setNull(i++, Types.OTHER);
+        }
+
+        setIntegerOrNull(statement, i++, map.get("orderIndex"));
+        statement.setString(i++, (String)event.get(Constants.USER));
+        statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+        statement.setLong(i++, newAggregateVersion);
+        statement.setObject(i++, UUID.fromString(hostId));
+        statement.setObject(i++, UUID.fromString(paramId));
+        statement.setLong(i++, newAggregateVersion);
+
+        int count = statement.executeUpdate();
+        if (count == 0) {
+            logger.warn("Update skipped for hostId {} paramId {} aggregateVersion {}. Record not found or a newer/same version already exists.", hostId, paramId, newAggregateVersion);
+        }
+    } catch (SQLException e) {
+        logger.error("SQLException during updateToolParam for hostId {} paramId {} aggregateVersion {}: {}", hostId, paramId, newAggregateVersion, e.getMessage(), e);
+        throw new PortalPersistenceException("Persistence Error", e);
+    } catch (Exception e) {
+        logger.error("Exception during updateToolParam for hostId {} paramId {} aggregateVersion {}: {}", hostId, paramId, newAggregateVersion, e.getMessage(), e);
+        throw new PortalPersistenceException("Persistence Error", e);
     }
+}
 
     @Override
-    public void deleteSkillParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
-        final String sql =
-                """
-                UPDATE skill_param_t
-                SET active = FALSE,
-                    update_user = ?,
-                    update_ts = ?,
-                    aggregate_version = ?
-                WHERE host_id=? AND param_id=? AND aggregate_version < ?
-                """;
-        Map<String, Object> map = SqlUtil.extractEventData(event);
-        String hostId = (String)map.get("hostId");
-        String paramId = (String)map.get("paramId");
-        long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
+public void deleteToolParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
+    final String sql =
+            """
+            UPDATE tool_param_t
+            SET active = FALSE,
+                update_user = ?,
+                update_ts = ?,
+                aggregate_version = ?
+            WHERE host_id=? AND param_id=? AND aggregate_version < ?
+            """;
+    Map<String, Object> map = SqlUtil.extractEventData(event);
+    String hostId = (String)map.get("hostId");
+    String paramId = (String)map.get("paramId");
+    long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
-        try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setString(1, (String)event.get(Constants.USER));
-            statement.setObject(2, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            statement.setLong(3, newAggregateVersion);
-            statement.setObject(4, UUID.fromString(hostId));
-            statement.setObject(5, UUID.fromString(paramId));
-            statement.setLong(6, newAggregateVersion);
+    try (PreparedStatement statement = conn.prepareStatement(sql)) {
+        statement.setString(1, (String)event.get(Constants.USER));
+        statement.setObject(2, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
+        statement.setLong(3, newAggregateVersion);
+        statement.setObject(4, UUID.fromString(hostId));
+        statement.setObject(5, UUID.fromString(paramId));
+        statement.setLong(6, newAggregateVersion);
 
-            int count = statement.executeUpdate();
-            if (count == 0) {
-                logger.warn("Delete skipped for hostId {} paramId {} aggregateVersion {}. Record not found or a newer/same version already exists.", hostId, paramId, newAggregateVersion);
-            }
-        } catch (SQLException e) {
-            logger.error("SQLException during deleteSkillParam for hostId {} paramId {} aggregateVersion {}: {}", hostId, paramId, newAggregateVersion, e.getMessage(), e);
-            throw new PortalPersistenceException("Persistence Error", e);
-        } catch (Exception e) {
-            logger.error("Exception during deleteSkillParam for hostId {} paramId {} aggregateVersion {}: {}", hostId, paramId, newAggregateVersion, e.getMessage(), e);
-            throw new PortalPersistenceException("Persistence Error", e);
+        int count = statement.executeUpdate();
+        if (count == 0) {
+            logger.warn("Delete skipped for hostId {} paramId {} aggregateVersion {}. Record not found or a newer/same version already exists.", hostId, paramId, newAggregateVersion);
         }
+    } catch (SQLException e) {
+        logger.error("SQLException during deleteToolParam for hostId {} paramId {} aggregateVersion {}: {}", hostId, paramId, newAggregateVersion, e.getMessage(), e);
+        throw new PortalPersistenceException("Persistence Error", e);
+    } catch (Exception e) {
+        logger.error("Exception during deleteToolParam for hostId {} paramId {} aggregateVersion {}: {}", hostId, paramId, newAggregateVersion, e.getMessage(), e);
+        throw new PortalPersistenceException("Persistence Error", e);
     }
+}
 
     @Override
-    public Result<String> querySkillParam(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
-        Result<String> result;
-        List<Map<String, Object>> filters = parseJsonList(filtersJson);
-        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
-        String s =
-                """
-                SELECT COUNT(*) OVER () AS total, host_id, param_id, skill_id, name, param_type, required, default_value, description, validation_schema, order_index, update_user, update_ts, aggregate_version, active
-                FROM skill_param_t WHERE host_id = ?
-                """;
-        List<Object> parameters = new ArrayList<>();
-        parameters.add(UUID.fromString(hostId));
-        String activeClause = SqlUtil.buildMultiTableActiveClause(active);
-        String[] searchColumns = {"name", "param_type", "description"};
-        String sqlBuilder = s + activeClause +
-                dynamicFilter(Arrays.asList("host_id", "param_id", "skill_id"), Arrays.asList(searchColumns), filters, null, parameters) +
-                globalFilter(globalFilter, searchColumns, parameters) +
-                dynamicSorting("order_index", sorting, null) +
-                "\nLIMIT ? OFFSET ?";
-        parameters.add(limit);
-        parameters.add(offset);
-        if(logger.isTraceEnabled()) logger.trace("querySkillParam sql: {}", sqlBuilder);
-        int total = 0;
-        List<Map<String, Object>> skillParams = new ArrayList<>();
-        try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sqlBuilder)) {
-            populateParameters(preparedStatement, parameters);
-            boolean isFirstRow = true;
-            try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                while (resultSet.next()) {
-                    Map<String, Object> map = new HashMap<>();
-                    if (isFirstRow) {
-                        total = resultSet.getInt("total");
-                        isFirstRow = false;
-                    }
-                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
-                    map.put("paramId", resultSet.getObject("param_id", UUID.class));
-                    map.put("skillId", resultSet.getObject("skill_id", UUID.class));
-                    map.put("name", resultSet.getString("name"));
-                    map.put("paramType", resultSet.getString("param_type"));
-                    map.put("required", resultSet.getBoolean("required"));
-                    map.put("defaultValue", resultSet.getString("default_value"));
-                    map.put("description", resultSet.getString("description"));
-                    map.put("validationSchema", resultSet.getString("validation_schema"));
-                    map.put("orderIndex", resultSet.getObject("order_index") != null ? resultSet.getInt("order_index") : null);
-                    map.put("updateUser", resultSet.getString("update_user"));
-                    map.put("updateTs", resultSet.getObject("update_ts", OffsetDateTime.class));
-                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
-                    map.put("active", resultSet.getBoolean("active"));
-                    skillParams.add(map);
+public Result<String> queryToolParam(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
+    Result<String> result;
+    List<Map<String, Object>> filters = parseJsonList(filtersJson);
+    List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+    String s =
+            """
+            SELECT COUNT(*) OVER () AS total, host_id, param_id, tool_id, name, param_type, required, default_value, description, validation_schema, order_index, update_user, update_ts, aggregate_version, active
+            FROM tool_param_t WHERE host_id = ?
+            """;
+    List<Object> parameters = new ArrayList<>();
+    parameters.add(UUID.fromString(hostId));
+    String activeClause = SqlUtil.buildMultiTableActiveClause(active);
+    String[] searchColumns = {"name", "param_type", "description"};
+    String sqlBuilder = s + activeClause +
+            dynamicFilter(Arrays.asList("host_id", "param_id", "tool_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+            globalFilter(globalFilter, searchColumns, parameters) +
+            dynamicSorting("order_index", sorting, null) +
+            "\nLIMIT ? OFFSET ?";
+    parameters.add(limit);
+    parameters.add(offset);
+    if(logger.isTraceEnabled()) logger.trace("queryToolParam sql: {}", sqlBuilder);
+    int total = 0;
+    List<Map<String, Object>> toolParams = new ArrayList<>();
+    try (final Connection conn = ds.getConnection(); PreparedStatement preparedStatement = conn.prepareStatement(sqlBuilder)) {
+        populateParameters(preparedStatement, parameters);
+        boolean isFirstRow = true;
+        try (ResultSet resultSet = preparedStatement.executeQuery()) {
+            while (resultSet.next()) {
+                Map<String, Object> map = new HashMap<>();
+                if (isFirstRow) {
+                    total = resultSet.getInt("total");
+                    isFirstRow = false;
                 }
+                map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                map.put("paramId", resultSet.getObject("param_id", UUID.class));
+                map.put("toolId", resultSet.getObject("tool_id", UUID.class));
+                map.put("name", resultSet.getString("name"));
+                map.put("paramType", resultSet.getString("param_type"));
+                map.put("required", resultSet.getBoolean("required"));
+                map.put("defaultValue", resultSet.getString("default_value"));
+                map.put("description", resultSet.getString("description"));
+                map.put("validationSchema", resultSet.getString("validation_schema"));
+                map.put("orderIndex", resultSet.getObject("order_index") != null ? resultSet.getInt("order_index") : null);
+                map.put("updateUser", resultSet.getString("update_user"));
+                map.put("updateTs", resultSet.getObject("update_ts", OffsetDateTime.class));
+                map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                map.put("active", resultSet.getBoolean("active"));
+                toolParams.add(map);
             }
-            Map<String, Object> resultMap = new HashMap<>();
-            resultMap.put("total", total);
-            resultMap.put("skillParams", skillParams);
-            result = Success.of(JsonMapper.toJson(resultMap));
-        } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-        } catch (Exception e) {
-            logger.error("Exception:", e);
-            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
-        return result;
+        Map<String, Object> resultMap = new HashMap<>();
+        resultMap.put("total", total);
+        resultMap.put("toolParams", toolParams);
+        result = Success.of(JsonMapper.toJson(resultMap));
+    } catch (SQLException e) {
+        logger.error("SQLException:", e);
+        result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+    } catch (Exception e) {
+        logger.error("Exception:", e);
+        result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
     }
+    return result;
+}
 
     @Override
-    public Result<String> getSkillParamById(String hostId, String paramId) {
-        final String sql = "SELECT host_id, param_id, skill_id, name, param_type, required, default_value, description, validation_schema, order_index, update_user, update_ts, aggregate_version, active FROM skill_param_t WHERE host_id = ? AND param_id = ?";
-        Result<String> result;
-        Map<String, Object> map = new HashMap<>();
-        try (Connection conn = ds.getConnection(); PreparedStatement statement = conn.prepareStatement(sql)) {
-            statement.setObject(1, UUID.fromString(hostId));
-            statement.setObject(2, UUID.fromString(paramId));
-            try (ResultSet resultSet = statement.executeQuery()) {
-                if (resultSet.next()) {
-                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
-                    map.put("paramId", resultSet.getObject("param_id", UUID.class));
-                    map.put("skillId", resultSet.getObject("skill_id", UUID.class));
-                    map.put("name", resultSet.getString("name"));
-                    map.put("paramType", resultSet.getString("param_type"));
-                    map.put("required", resultSet.getBoolean("required"));
-                    map.put("defaultValue", resultSet.getString("default_value"));
-                    map.put("description", resultSet.getString("description"));
-                    map.put("validationSchema", resultSet.getString("validation_schema"));
-                    map.put("orderIndex", resultSet.getObject("order_index") != null ? resultSet.getInt("order_index") : null);
-                    map.put("updateUser", resultSet.getString("update_user"));
-                    map.put("updateTs", resultSet.getObject("update_ts", OffsetDateTime.class));
-                    map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
-                    map.put("active", resultSet.getBoolean("active"));
-                    result = Success.of(JsonMapper.toJson(map));
-                } else {
-                    result = Failure.of(new Status(OBJECT_NOT_FOUND, "skill_param", paramId));
-                }
+public Result<String> getToolParamById(String hostId, String paramId) {
+    final String sql = "SELECT host_id, param_id, tool_id, name, param_type, required, default_value, description, validation_schema, order_index, update_user, update_ts, aggregate_version, active FROM tool_param_t WHERE host_id = ? AND param_id = ?";
+    Result<String> result;
+    Map<String, Object> map = new HashMap<>();
+    try (Connection conn = ds.getConnection(); PreparedStatement statement = conn.prepareStatement(sql)) {
+        statement.setObject(1, UUID.fromString(hostId));
+        statement.setObject(2, UUID.fromString(paramId));
+        try (ResultSet resultSet = statement.executeQuery()) {
+            if (resultSet.next()) {
+                map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                map.put("paramId", resultSet.getObject("param_id", UUID.class));
+                map.put("toolId", resultSet.getObject("tool_id", UUID.class));
+                map.put("name", resultSet.getString("name"));
+                map.put("paramType", resultSet.getString("param_type"));
+                map.put("required", resultSet.getBoolean("required"));
+                map.put("defaultValue", resultSet.getString("default_value"));
+                map.put("description", resultSet.getString("description"));
+                map.put("validationSchema", resultSet.getString("validation_schema"));
+                map.put("orderIndex", resultSet.getObject("order_index") != null ? resultSet.getInt("order_index") : null);
+                map.put("updateUser", resultSet.getString("update_user"));
+                map.put("updateTs", resultSet.getObject("update_ts", OffsetDateTime.class));
+                map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
+                map.put("active", resultSet.getBoolean("active"));
+                result = Success.of(JsonMapper.toJson(map));
+            } else {
+                result = Failure.of(new Status(OBJECT_NOT_FOUND, "tool_param", paramId));
             }
-        } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-        } catch (Exception e) {
-            logger.error("Exception:", e);
-            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
         }
-        return result;
+    } catch (SQLException e) {
+        logger.error("SQLException:", e);
+        result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+    } catch (Exception e) {
+        logger.error("Exception:", e);
+        result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
     }
+    return result;
+}
 
     @Override
     public void createSkillDependency(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
@@ -2792,13 +3007,11 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
     public void createAgentSkill(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String sql =
                 """
-                INSERT INTO agent_skill_t (host_id, agent_def_id, skill_id, config, priority, timeout_seconds, max_retries, sequence_id, update_user, update_ts, aggregate_version, active)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)
+                INSERT INTO agent_skill_t (host_id, agent_def_id, skill_id, config, priority, sequence_id, update_user, update_ts, aggregate_version, active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)
                 ON CONFLICT (host_id, agent_def_id, skill_id) DO UPDATE
                 SET config = EXCLUDED.config,
                     priority = EXCLUDED.priority,
-                    timeout_seconds = EXCLUDED.timeout_seconds,
-                    max_retries = EXCLUDED.max_retries,
                     sequence_id = EXCLUDED.sequence_id,
                     update_user = EXCLUDED.update_user,
                     update_ts = EXCLUDED.update_ts,
@@ -2826,8 +3039,6 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
             }
 
             setIntegerOrNull(statement, i++, map.get("priority"));
-            setIntegerOrNull(statement, i++, map.get("timeoutSeconds"));
-            setIntegerOrNull(statement, i++, map.get("maxRetries"));
             setIntegerOrNull(statement, i++, map.get("sequenceId"));
 
             statement.setString(i++, (String)event.get(Constants.USER));
@@ -2852,7 +3063,7 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
         final String sql =
                 """
                 UPDATE agent_skill_t
-                SET config=?, priority=?, timeout_seconds=?, max_retries=?, sequence_id=?, update_user=?, update_ts=?, aggregate_version=?, active=TRUE
+                SET config=?, priority=?, sequence_id=?, update_user=?, update_ts=?, aggregate_version=?, active=TRUE
                 WHERE host_id=? AND agent_def_id=? AND skill_id=? AND aggregate_version < ?
                 """;
         Map<String, Object> map = SqlUtil.extractEventData(event);
@@ -2869,8 +3080,6 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
                 statement.setObject(i++, "{}", Types.OTHER);
             }
             setIntegerOrNull(statement, i++, map.get("priority"));
-            setIntegerOrNull(statement, i++, map.get("timeoutSeconds"));
-            setIntegerOrNull(statement, i++, map.get("maxRetries"));
             setIntegerOrNull(statement, i++, map.get("sequenceId"));
 
             statement.setString(i++, (String)event.get(Constants.USER));
@@ -2940,7 +3149,7 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
         String s =
                 """
-                SELECT COUNT(*) OVER () AS total, host_id, agent_def_id, skill_id, config, priority, timeout_seconds, max_retries, sequence_id, update_user, update_ts, aggregate_version, active
+                SELECT COUNT(*) OVER () AS total, host_id, agent_def_id, skill_id, config, priority, sequence_id, update_user, update_ts, aggregate_version, active
                 FROM agent_skill_t WHERE host_id = ?
                 """;
         List<Object> parameters = new ArrayList<>();
@@ -2998,7 +3207,7 @@ public class GenAIPersistenceImpl implements GenAIPersistence {
 
     @Override
     public Result<String> getAgentSkillById(String hostId, String agentDefId, String skillId) {
-        final String sql = "SELECT host_id, agent_def_id, skill_id, config, priority, timeout_seconds, max_retries, sequence_id, update_user, update_ts, aggregate_version, active FROM agent_skill_t WHERE host_id = ? AND agent_def_id = ? AND skill_id = ?";
+        final String sql = "SELECT host_id, agent_def_id, skill_id, config, priority, sequence_id, update_user, update_ts, aggregate_version, active FROM agent_skill_t WHERE host_id = ? AND agent_def_id = ? AND skill_id = ?";
         Result<String> result;
         Map<String, Object> map = new HashMap<>();
         try (Connection conn = ds.getConnection(); PreparedStatement statement = conn.prepareStatement(sql)) {

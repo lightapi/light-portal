@@ -699,12 +699,12 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> getSkillById(String hostId, String skillId);
     Result<String> getSkillLabel(String hostId);
 
-    // SkillParam
-    void createSkillParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
-    void updateSkillParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
-    void deleteSkillParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
-    Result<String> querySkillParam(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
-    Result<String> getSkillParamById(String hostId, String paramId);
+    // ToolParam
+    void createToolParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void updateToolParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteToolParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    Result<String> queryToolParam(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
+    Result<String> getToolParamById(String hostId, String paramId);
 
     // SkillDependency
     void createSkillDependency(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
@@ -1102,9 +1102,9 @@ public interface PortalDbProvider extends DbProvider {
             case PortalConstants.SKILL_CREATED_EVENT: createSkill(conn, event); break;
             case PortalConstants.SKILL_UPDATED_EVENT: updateSkill(conn, event); break;
             case PortalConstants.SKILL_DELETED_EVENT: deleteSkill(conn, event); break;
-            case PortalConstants.SKILL_PARAM_CREATED_EVENT: createSkillParam(conn, event); break;
-            case PortalConstants.SKILL_PARAM_UPDATED_EVENT: updateSkillParam(conn, event); break;
-            case PortalConstants.SKILL_PARAM_DELETED_EVENT: deleteSkillParam(conn, event); break;
+            case PortalConstants.TOOL_PARAM_CREATED_EVENT: createToolParam(conn, event); break;
+            case PortalConstants.TOOL_PARAM_UPDATED_EVENT: updateToolParam(conn, event); break;
+            case PortalConstants.TOOL_PARAM_DELETED_EVENT: deleteToolParam(conn, event); break;
             case PortalConstants.SKILL_DEPENDENCY_CREATED_EVENT: createSkillDependency(conn, event); break;
             case PortalConstants.SKILL_DEPENDENCY_UPDATED_EVENT: updateSkillDependency(conn, event); break;
             case PortalConstants.SKILL_DEPENDENCY_DELETED_EVENT: deleteSkillDependency(conn, event); break;

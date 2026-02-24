@@ -631,12 +631,12 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public Result<String> getSkillById(String hostId, String skillId) { return genAIPersistence.getSkillById(hostId, skillId); }
     @Override public Result<String> getSkillLabel(String hostId) { return genAIPersistence.getSkillLabel(hostId); }
 
-    // --- SkillParam ---
-    @Override public void createSkillParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.createSkillParam(conn, event); }
-    @Override public void updateSkillParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.updateSkillParam(conn, event); }
-    @Override public void deleteSkillParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.deleteSkillParam(conn, event); }
-    @Override public Result<String> querySkillParam(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return genAIPersistence.querySkillParam(offset, limit, filters, globalFilter, sorting, active, hostId); }
-    @Override public Result<String> getSkillParamById(String hostId, String paramId) { return genAIPersistence.getSkillParamById(hostId, paramId); }
+    // --- ToolParam ---
+    @Override public void createToolParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.createToolParam(conn, event); }
+    @Override public void updateToolParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.updateToolParam(conn, event); }
+    @Override public void deleteToolParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.deleteToolParam(conn, event); }
+    @Override public Result<String> queryToolParam(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return genAIPersistence.queryToolParam(offset, limit, filters, globalFilter, sorting, active, hostId); }
+    @Override public Result<String> getToolParamById(String hostId, String paramId) { return genAIPersistence.getToolParamById(hostId, paramId); }
 
     // --- SkillDependency ---
     @Override public void createSkillDependency(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.createSkillDependency(conn, event); }

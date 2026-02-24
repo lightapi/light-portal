@@ -67,6 +67,14 @@ public interface GenAIPersistence {
     Result<String> queryAuditLog(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> getAuditLogById(String hostId, String auditLogId);
 
+    // Tool
+    void createTool(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void updateTool(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteTool(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    Result<String> queryTool(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
+    Result<String> getToolById(String hostId, String toolId);
+    Result<String> getToolLabel(String hostId);
+
     // Skill
     void createSkill(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
     void updateSkill(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
@@ -75,12 +83,12 @@ public interface GenAIPersistence {
     Result<String> getSkillById(String hostId, String skillId);
     Result<String> getSkillLabel(String hostId);
 
-    // SkillParam
-    void createSkillParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
-    void updateSkillParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
-    void deleteSkillParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
-    Result<String> querySkillParam(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
-    Result<String> getSkillParamById(String hostId, String paramId);
+    // ToolParam
+    void createToolParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void updateToolParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteToolParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    Result<String> queryToolParam(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
+    Result<String> getToolParamById(String hostId, String paramId);
 
     // SkillDependency
     void createSkillDependency(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
