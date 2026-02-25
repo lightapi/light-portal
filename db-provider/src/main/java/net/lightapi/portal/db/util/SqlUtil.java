@@ -16,6 +16,7 @@ import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import net.lightapi.portal.db.PortalPersistenceException;
 
 public class SqlUtil {
     private static final Logger logger = LoggerFactory.getLogger(SqlUtil.class);
@@ -168,22 +169,37 @@ public class SqlUtil {
      *
      * @param connection JDBC Connection to use for the transaction.
      * @param callback Consumer that performs database operations using the provided Connection.
-     * @throws SQLException if a database access error occurs or the callback throws an exception.
+     * @throws PortalPersistenceException if a database access error occurs or the callback throws an exception.
      */
     public static void transact(
         final Connection connection,
         Consumer<Connection> callback
-    ) throws SQLException {
+    ) throws PortalPersistenceException {
         Objects.requireNonNull(connection, "Connection must not be null");
         try {
             connection.setAutoCommit(false);
             callback.accept(connection);
             connection.commit();
+        } catch (SQLException e) {
+            try {
+                connection.rollback();
+            } catch (SQLException rollbackEx) {
+                logger.error("Failed to rollback transaction", rollbackEx);
+            }
+            throw new PortalPersistenceException("Transaction failed", e);
         } catch (Exception e) {
-            connection.rollback();
-            throw e;
+            try {
+                connection.rollback();
+            } catch (SQLException rollbackEx) {
+                logger.error("Failed to rollback transaction", rollbackEx);
+            }
+            throw new PortalPersistenceException("Transaction failed due to unexpected error", e);
         } finally {
-            connection.close();
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                logger.error("Failed to close connection", e);
+            }
         }
     }
 
@@ -195,23 +211,38 @@ public class SqlUtil {
      * @param callback Function that performs database operations using the provided Connection and returns a result.
      * @param <T> The type of the result returned by the callback.
      * @return The result from the callback function.
-     * @throws SQLException if a database access error occurs or the callback throws an exception.
+     * @throws PortalPersistenceException if a database access error occurs or the callback throws an exception.
      */
     public static <T> T transactWithResult(
         final Connection connection,
         Function<Connection, T> callback
-    ) throws SQLException {
+    ) throws PortalPersistenceException {
         Objects.requireNonNull(connection, "Connection must not be null");
         try {
             connection.setAutoCommit(false);
             T result = callback.apply(connection);
             connection.commit();
             return result;
+        } catch (SQLException e) {
+            try {
+                connection.rollback();
+            } catch (SQLException rollbackEx) {
+                logger.error("Failed to rollback transaction", rollbackEx);
+            }
+            throw new PortalPersistenceException("Transaction with result failed", e);
         } catch (Exception e) {
-            connection.rollback();
-            throw e;
+            try {
+                connection.rollback();
+            } catch (SQLException rollbackEx) {
+                logger.error("Failed to rollback transaction", rollbackEx);
+            }
+            throw new PortalPersistenceException("Transaction with result failed due to unexpected error", e);
         } finally {
-            connection.close();
+            try {
+                connection.close();
+            } catch (SQLException e) {
+                logger.error("Failed to close connection", e);
+            }
         }
     }
 
@@ -357,4 +388,48 @@ public class SqlUtil {
         return sb.toString();
     }
 
+    public static void setIntegerOrNull(PreparedStatement statement, int index, Object value) throws SQLException {
+        if (value != null) {
+            statement.setInt(index, ((Number) value).intValue());
+        } else {
+            statement.setNull(index, java.sql.Types.INTEGER);
+        }
+    }
+
+    public static void setBigDecimalOrNull(PreparedStatement statement, int index, Object value) throws SQLException {
+        if (value != null) {
+            if (value instanceof java.math.BigDecimal) {
+                statement.setBigDecimal(index, (java.math.BigDecimal) value);
+            } else if (value instanceof Number) {
+                // If the object comes from JSON as Integer or Double, convert it
+                statement.setBigDecimal(index, new java.math.BigDecimal(value.toString()));
+            } else if (value instanceof String) {
+                statement.setBigDecimal(index, new java.math.BigDecimal((String) value));
+            } else {
+                throw new SQLException("Cannot convert " + value.getClass().getName() + " to BigDecimal");
+            }
+        } else {
+            statement.setNull(index, java.sql.Types.NUMERIC);
+        }
+    }
+
+    public static void setUuidOrNull(PreparedStatement statement, int index, Object value) throws SQLException {
+        if (value != null) {
+            if (value instanceof UUID) {
+                statement.setObject(index, value);
+            } else {
+                statement.setObject(index, UUID.fromString(value.toString()));
+            }
+        } else {
+            statement.setNull(index, java.sql.Types.OTHER);
+        }
+    }
+
+    public static void setFloatOrNull(PreparedStatement statement, int index, Object value) throws SQLException {
+        if (value != null) {
+            statement.setFloat(index, ((Number) value).floatValue());
+        } else {
+            statement.setNull(index, java.sql.Types.FLOAT);
+        }
+    }
 }

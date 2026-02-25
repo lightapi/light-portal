@@ -9,6 +9,7 @@ import com.networknt.utility.Constants;
 import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.PortalConstants;
 import net.lightapi.portal.db.PortalDbProvider;
+import net.lightapi.portal.db.PortalPersistenceException;
 import net.lightapi.portal.db.util.NotificationService;
 import net.lightapi.portal.db.util.SqlUtil;
 import org.slf4j.Logger;
@@ -35,7 +36,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
     }
 
     @Override
-    public void createApp(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createApp(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -97,15 +98,15 @@ public class AuthPersistenceImpl implements AuthPersistence {
                 logger.warn("Creation/Reactivation skipped for hostId {} appId {} aggregateVersion {}. A newer or same version already exists.", hostId, appId, newAggregateVersion);            }
         } catch (SQLException e) {
             logger.error("SQLException during createApp for hostId {} appId {} aggregateVersion {}: {}", hostId, appId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createApp for hostId {} appId {} aggregateVersion {}: {}", hostId, appId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateApp(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateApp(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We will attempt to update the record IF the incoming event is newer than the current projection version.
         // We also explicitly set active = TRUE if the record exists, as an UPDATE event implies the app is active.
         final String sql =
@@ -159,15 +160,15 @@ public class AuthPersistenceImpl implements AuthPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateApp for hostId {} appId {} aggregateVersion {}: {}", hostId, appId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateApp for hostId {} appId {} aggregateVersion {}: {}", hostId, appId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteApp(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteApp(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // The delete event's sequence number is the NEW version for the soft-deleted state.
         // We UPDATE to set active=false IF the incoming event is newer than the current projection version.
         final String sql =
@@ -197,10 +198,10 @@ public class AuthPersistenceImpl implements AuthPersistence {
                 logger.warn("Deletion skipped for hostId {} appId {} aggregateVersion {}. Record not found or a newer version already exists.", hostId, appId, newAggregateVersion);            }
         } catch (SQLException e) {
             logger.error("SQLException during deleteApp for appId {} aggregateVersion {}: {}", appId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteApp for appId {} aggregateVersion {}: {}", appId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -233,7 +234,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
     }
 
     @Override
-    public void createClient(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createClient(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // --- UPDATED SQL FOR UPSERT ---
         final String upsertClient =
                 """
@@ -348,15 +349,15 @@ public class AuthPersistenceImpl implements AuthPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during UPSERT for clientId {} aggregateVersion {}: {}", clientId, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw for transaction management
+            throw new PortalPersistenceException("Persistence Error", e); // Re-throw for transaction management
         } catch (Exception e) {
             logger.error("Exception during UPSERT for clientId {} aggregateVersion {}: {}", clientId, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw for transaction management
+            throw new PortalPersistenceException("Persistence Error", e); // Re-throw for transaction management
         }
     }
 
     @Override
-    public void updateClient(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateClient(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // --- UPDATED SQL FOR MONOTONICITY CHECK ---
         // SQL now includes aggregate_version in SET clause and uses a monotonicity check in the WHERE clause.
         final String updateClient =
@@ -472,15 +473,15 @@ public class AuthPersistenceImpl implements AuthPersistence {
             // NO THROW on count == 0. The method is now idempotent.
         } catch (SQLException e) {
             logger.error("SQLException during updateClient for clientId {} (new: {}): {}", clientId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateClient for clientId {} (new: {}): {}", clientId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteClient(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteClient(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // --- UPDATED SQL FOR SOFT DELETE + MONOTONICITY CHECK ---
         // SQL updates the 'active' flag and aggregate_version IF the current DB version is older than the incoming event's version.
         final String softDeleteClient =
@@ -515,10 +516,10 @@ public class AuthPersistenceImpl implements AuthPersistence {
             // NO THROW on count == 0. The method is now idempotent.
         } catch (SQLException e) {
             logger.error("SQLException during deleteClient for hostId {} clientId {} aggregateVersion {}: {}", hostId, clientId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteClient for hostId {} clientId {} aggregateVersion {}: {}", hostId, clientId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -743,11 +744,9 @@ public class AuthPersistenceImpl implements AuthPersistence {
      * deleted record. If you want to recover a deleted record, please use the update.
      * @param conn Connection
      * @param event Event object
-     * @throws SQLException SQL exception
-     * @throws Exception generic exception
      */
     @Override
-    public void createAuthProvider(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createAuthProvider(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
 
         // Use UPSERT based on the Primary Key (provider_id): INSERT ON CONFLICT DO UPDATE
         // This handles:
@@ -897,15 +896,15 @@ public class AuthPersistenceImpl implements AuthPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createAuthProvider for providerId {} aggregateVersion {}: {}", providerId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createAuthProvider for providerId {} aggregateVersion {}: {}", providerId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void rotateAuthProvider(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void rotateAuthProvider(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // update the auth_provider_t table with the new jwk
         final String sqlJwk = "UPDATE auth_provider_t SET jwk = ?, update_user = ?, update_ts = ?, aggregate_version = ?, active = TRUE" +
                 "WHERE provider_id = ? AND aggregate_version < ?";
@@ -976,15 +975,15 @@ public class AuthPersistenceImpl implements AuthPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during rotateAuthProvider for id {}: {}", providerId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during rotateAuthProvider for id {}: {}", providerId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateAuthProvider(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateAuthProvider(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the auth provider should be active.
@@ -1068,16 +1067,16 @@ public class AuthPersistenceImpl implements AuthPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateAuthProvider for providerId {} aggregateVersion {}: {}", providerId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateAuthProvider for providerId {} aggregateVersion {}: {}", providerId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
 
     @Override
-    public void deleteAuthProvider(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteAuthProvider(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -1130,10 +1129,10 @@ public class AuthPersistenceImpl implements AuthPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteAuthProvider for providerId {} aggregateVersion {}: {}", providerId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteAuthProvider for providerId {} aggregateVersion {}: {}", providerId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -1178,7 +1177,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
     }
 
     @Override
-    public void createAuthProviderApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createAuthProviderApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT based on the Primary Key (host_id, api_id, provider_id): INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -1238,15 +1237,15 @@ public class AuthPersistenceImpl implements AuthPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createAuthProviderApi for hostId {} apiId {} providerId {} aggregateVersion {}: {}", hostId, apiId, providerId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createAuthProviderApi for hostId {} apiId {} providerId {} aggregateVersion {}: {}", hostId, apiId, providerId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateAuthProviderApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateAuthProviderApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the assignment should be active.
@@ -1300,15 +1299,15 @@ public class AuthPersistenceImpl implements AuthPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateAuthProviderApi for hostId {} apiId {} providerId {} aggregateVersion {}: {}", hostId, apiId, providerId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateAuthProviderApi for hostId {} apiId {} providerId {} aggregateVersion {}: {}", hostId, apiId, providerId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteAuthProviderApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteAuthProviderApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -1362,10 +1361,10 @@ public class AuthPersistenceImpl implements AuthPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteAuthProviderApi for hostId {} apiId {} providerId {} aggregateVersion {}: {}", hostId, apiId, providerId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteAuthProviderApi for hostId {} apiId {} providerId {} aggregateVersion {}: {}", hostId, apiId, providerId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -1444,7 +1443,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
     }
 
     @Override
-    public void createAuthProviderClient(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createAuthProviderClient(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT based on the Primary Key (host_id, client_id, provider_id): INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -1504,15 +1503,15 @@ public class AuthPersistenceImpl implements AuthPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createAuthProviderClient for hostId {} clientId {} providerId {} aggregateVersion {}: {}", hostId, clientId, providerId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createAuthProviderClient for hostId {} clientId {} providerId {} aggregateVersion {}: {}", hostId, clientId, providerId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateAuthProviderClient(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateAuthProviderClient(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the assignment should be active.
@@ -1566,15 +1565,15 @@ public class AuthPersistenceImpl implements AuthPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateAuthProviderClient for hostId {} clientId {} providerId {} aggregateVersion {}: {}", hostId, clientId, providerId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateAuthProviderClient for hostId {} clientId {} providerId {} aggregateVersion {}: {}", hostId, clientId, providerId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteAuthProviderClient(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteAuthProviderClient(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -1628,10 +1627,10 @@ public class AuthPersistenceImpl implements AuthPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteAuthProviderClient for hostId {} clientId {} providerId {} aggregateVersion {}: {}", hostId, clientId, providerId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteAuthProviderClient for hostId {} clientId {} providerId {} aggregateVersion {}: {}", hostId, clientId, providerId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -1935,7 +1934,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
     }
 
     @Override
-    public void createRefreshToken(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createRefreshToken(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String insertRefreshToken = "INSERT INTO auth_refresh_token_t (refresh_token, host_id, provider_id, user_id, entity_id, user_type, " +
                 "email, roles, groups, positions, attributes, client_id, scope, csrf, custom_claim, update_user, update_ts, aggregate_version) " +
                 "VALUES (?, ?, ?, ?, ?,   ?, ?, ?, ?, ?,   ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -2001,15 +2000,15 @@ public class AuthPersistenceImpl implements AuthPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createRefreshToken for refreshToken {} aggregateVersion {}: {}", refreshToken, aggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createRefreshToken for refreshToken {} aggregateVersion {}: {}", refreshToken, aggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteRefreshToken(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteRefreshToken(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String deleteRefreshToken = "DELETE from auth_refresh_token_t WHERE refresh_token = ? AND user_id = ? AND aggregate_version = ?";
         Map<String, Object> map = SqlUtil.extractEventData(event);
         String refreshToken = (String) map.get("refreshToken");
@@ -2024,10 +2023,10 @@ public class AuthPersistenceImpl implements AuthPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteRefreshToken for refreshToken {} aggregateVersion {}: {}", refreshToken, oldAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteRefreshToken for refreshToken {} aggregateVersion {}: {}", refreshToken, oldAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -2194,7 +2193,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
     }
 
     @Override
-    public void createAuthCode(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createAuthCode(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
 
         final String insertAuthCode = "INSERT INTO auth_code_t(host_id, provider_id, auth_code, user_id, entity_id, user_type, email, roles," +
                 "redirect_uri, scope, remember, code_challenge, challenge_method, update_user, update_ts, aggregate_version) " +
@@ -2265,15 +2264,15 @@ public class AuthPersistenceImpl implements AuthPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createAuthCode for authCode {} aggregateVersion {}: {}", authCode, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createAuthCode for authCode {} aggregateVersion {}: {}", authCode, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteAuthCode(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteAuthCode(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String deleteAuthCode = "DELETE FROM auth_code_t WHERE host_id = ? AND auth_code = ? AND aggregate_version = ?";
         Map<String, Object> map = SqlUtil.extractEventData(event);
         String authCode = (String) map.get("authCode");
@@ -2289,10 +2288,10 @@ public class AuthPersistenceImpl implements AuthPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteAuthCode for authCode {} aggregateVersion {}: {}", authCode, oldAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteAuthCode for authCode {} aggregateVersion {}: {}", authCode, oldAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -2672,7 +2671,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
     }
 
     @Override
-    public void createRefToken(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createRefToken(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String insertRefreshToken =
                 """
                 INSERT INTO auth_ref_token_t (ref_token, host_id, jwt, client_id, update_user, update_ts, aggregate_version)
@@ -2695,15 +2694,15 @@ public class AuthPersistenceImpl implements AuthPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createRefToken for refToken {} aggregateVersion {}: {}", refToken, aggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createRefToken for refToken {} aggregateVersion {}: {}", refToken, aggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteRefToken(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteRefToken(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String deleteRefToken = "DELETE from auth_ref_token_t WHERE ref_token = ? AND aggregate_version = ?";
         Map<String, Object> map = SqlUtil.extractEventData(event);
         String refToken = (String) map.get("refToken");
@@ -2717,10 +2716,10 @@ public class AuthPersistenceImpl implements AuthPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteRefToken for refToken {} aggregateVersion {}: {}", refToken, oldAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteRefToken for refToken {} aggregateVersion {}: {}", refToken, oldAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 

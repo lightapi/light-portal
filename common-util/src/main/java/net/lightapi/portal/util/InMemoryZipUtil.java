@@ -2,12 +2,22 @@ package net.lightapi.portal.util;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Base64;
 import java.util.Map;
 import java.util.zip.ZipOutputStream;
 
+/**
+ * Utility for in-memory zipping of files.
+ */
 public class InMemoryZipUtil {
 
     private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger(InMemoryZipUtil.class);
+
+    private static class DecodeException extends Exception {
+        public DecodeException(Throwable cause) {
+            super(cause);
+        }
+    }
 
     private InMemoryZipUtil() {
         // Prevent instantiation
@@ -32,7 +42,7 @@ public class InMemoryZipUtil {
                 byte[] fileContent;
                 try {
                     // Decode the base64 content
-                    fileContent = java.util.Base64.getDecoder().decode(base64Content);
+                    fileContent = decodeBase64(base64Content);
                 } catch (Exception e) {
                     LOGGER.warn("Unable to decode base64 content for file '{}': {}", fileName, e.getMessage());
                     continue; // Skip files with invalid base64 content
@@ -49,6 +59,19 @@ public class InMemoryZipUtil {
             }
             zos.finish();
             return baos.toByteArray();
+        }
+    }
+
+    private static byte[] decodeBase64(String base64Content) throws DecodeException {
+        try {
+            return Base64.getDecoder().decode(base64Content);
+        } catch (Exception e1) {
+            try {
+                LOGGER.warn("Unable to decode base64 content using basic decoder (Error {}), attempting to decode base64 content using MIME decoder", e1.getMessage());
+                return Base64.getMimeDecoder().decode(base64Content);
+            } catch (Exception e2) {
+                throw new DecodeException(e2);
+            }
         }
     }
 }

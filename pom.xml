@@ -19,7 +19,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>net.lightapi</groupId>
     <artifactId>light-portal</artifactId>
-    <version>2.3.3-SNAPSHOT</version>
+    <version>2.3.4-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>Parent POM</name>
     <description>light portal build pom</description>
@@ -99,21 +99,21 @@
     <properties>
         <java.version>21</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <version.light-4j>2.3.3-SNAPSHOT</version.light-4j>
+        <version.light-4j>2.3.4-SNAPSHOT</version.light-4j>
         <version.kafka>3.9.1</version.kafka>
         <version.jackson>2.18.3</version.jackson>
         <version.slf4j>2.0.17</version.slf4j>
         <version.jose4j>0.6.0</version.jose4j>
         <version.logback>1.5.26</version.logback>
-        <version.junit>5.11.3</version.junit>
+        <version.junit>5.11.4</version.junit>
         <version.undertow>2.3.22.Final</version.undertow>
         <version.json-schema-validator>1.5.1</version.json-schema-validator>
         <version.javamail>1.6.2</version.javamail>
         <version.caffeine>3.2.0</version.caffeine>
         <version.hikaricp>6.2.1</version.hikaricp>
-        <version.postgres>42.7.5</version.postgres>
+        <version.postgres>42.7.7</version.postgres>
         <version.h2>2.3.232</version.h2>
-        <version.avro>1.12.0</version.avro>
+        <version.avro>1.12.1</version.avro>
         <version.confluent>7.9.1</version.confluent>
         <version.jcommander>1.82</version.jcommander>
         <version.avroConverter>0.2.9</version.avroConverter>

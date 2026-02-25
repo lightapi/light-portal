@@ -10,6 +10,7 @@ import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.PortalConstants;
 import net.lightapi.portal.db.ConcurrencyException;
 import net.lightapi.portal.db.PortalDbProvider;
+import net.lightapi.portal.db.PortalPersistenceException;
 import net.lightapi.portal.db.util.NotificationService;
 import net.lightapi.portal.db.util.SqlUtil;
 import org.slf4j.Logger;
@@ -39,7 +40,7 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
     }
 
     @Override
-    public void createCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createCategory(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT based on the Primary Key (category_id): INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -140,15 +141,15 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createCategory for id {} aggregateVersion {}: {}", categoryId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) { // Catch other potential runtime exceptions
             logger.error("Exception during createCategory for id {} aggregateVersion {}: {}", categoryId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateCategory(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the category should be active.
@@ -221,15 +222,15 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateCategory for id {} aggregateVersion {}: {}", categoryId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) { // Catch other potential runtime exceptions
             logger.error("Exception during updateCategory for id {} aggregateVersion {}: {}", categoryId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteCategory(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -275,15 +276,15 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteCategory for id {} aggregateVersion {}: {}", categoryId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteCategory for id {} aggregateVersion {}: {}", categoryId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void createEntityCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createEntityCategory(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT based on the Primary Key (entity_id, entity_type, category_id): INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -343,15 +344,15 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createEntityCategory for entityId {} entityType {} categoryId {} aggregateVersion {}: {}", entityId, entityType, categoryId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createEntityCategory for entityId {} entityType {} categoryId {} aggregateVersion {}: {}", entityId, entityType, categoryId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateEntityCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateEntityCategory(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the assignment should be active.
@@ -405,15 +406,15 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateEntityCategory for entityId {} entityType {} categoryId {} aggregateVersion {}: {}", entityId, entityType, categoryId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateEntityCategory for entityId {} entityType {} categoryId {} aggregateVersion {}: {}", entityId, entityType, categoryId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteEntityCategory(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteEntityCategory(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -467,10 +468,10 @@ public class CategoryPersistenceImpl implements CategoryPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteEntityCategory for entityId {} entityType {} categoryId {} aggregateVersion {}: {}", entityId, entityType, categoryId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteEntityCategory for entityId {} entityType {} categoryId {} aggregateVersion {}: {}", entityId, entityType, categoryId,  newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 

@@ -10,6 +10,7 @@ import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.PortalConstants;
 import net.lightapi.portal.db.ConcurrencyException;
 import net.lightapi.portal.db.PortalDbProvider;
+import net.lightapi.portal.db.PortalPersistenceException;
 import net.lightapi.portal.db.util.NotificationService;
 import net.lightapi.portal.db.util.SqlUtil;
 import org.slf4j.Logger;
@@ -43,7 +44,7 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
 
     /*
     @Override
-    public void createSchema(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createSchema(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String sql =
                 """
                 INSERT INTO schema_t(host_id, schema_id, schema_version, schema_type, spec_version, schema_source, schema_name,
@@ -127,10 +128,10 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createSchema for schemaId {} aggregateVersion {}: {}", schemaId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createSchema for schemaId {} aggregateVersion {}: {}", schemaId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -148,7 +149,7 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
     }
 
     @Override
-    public void updateSchema(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateSchema(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String sql =
                 """
                 UPDATE schema_t SET schema_version = ?, schema_type = ?, spec_version = ?,
@@ -247,15 +248,15 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateSchema for schemaId {} (old: {}) -> (new: {}): {}", schemaId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateSchema for schemaId {} (old: {}) -> (new: {}): {}", schemaId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteSchema(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteSchema(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String sql = "DELETE FROM schema_t WHERE schema_id = ? AND aggregate_version = ?";
         Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
         String schemaId = (String) map.get("schemaId");
@@ -274,16 +275,16 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteSchema for schemaId {} aggregateVersion {}: {}", schemaId, oldAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteSchema for schemaId {} aggregateVersion {}: {}", schemaId, oldAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
     */
 
     @Override
-    public void createSchema(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createSchema(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT based on the Primary Key (schema_id): INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -402,15 +403,15 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createSchema for schemaId {} aggregateVersion {}: {}", schemaId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createSchema for schemaId {} aggregateVersion {}: {}", schemaId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateSchema(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateSchema(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the schema should be active.
@@ -512,15 +513,15 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateSchema for schemaId {} aggregateVersion {}: {}", schemaId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateSchema for schemaId {} aggregateVersion {}: {}", schemaId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteSchema(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteSchema(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -566,10 +567,10 @@ public class SchemaPersistenceImpl implements SchemaPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteSchema for schemaId {} aggregateVersion {}: {}", schemaId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteSchema for schemaId {} aggregateVersion {}: {}", schemaId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 

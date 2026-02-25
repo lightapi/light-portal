@@ -39,7 +39,11 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class HybridCommandClient {
     static final Logger logger = LoggerFactory.getLogger(HybridCommandClient.class);
+    /** Portal Client Config */
     public static final PortalClientConfig config = (PortalClientConfig) Config.getInstance().getJsonObjectConfig(PortalClientConfig.CONFIG_NAME, PortalClientConfig.class);
+
+    private HybridCommandClient() {
+    }
     static String tag = ServerConfig.getInstance().getEnvironment();
     // Get the singleton Cluster instance
     static Cluster cluster = SingletonServiceFactory.getBean(Cluster.class);
@@ -61,6 +65,12 @@ public class HybridCommandClient {
     static final String ESTABLISH_CONNECTION_ERROR = "ERR10053";
     static Map<String, ClientConnection> connCache = new ConcurrentHashMap<>();
 
+    /**
+     * Call command with token
+     * @param command command
+     * @param token token
+     * @return Result
+     */
     public static Result<String> callCommandWithToken(String command, String token) {
         try {
             if(connection == null || !connection.isOpen()) {
@@ -76,6 +86,13 @@ public class HybridCommandClient {
         }
     }
 
+    /**
+     * Call command with token and url
+     * @param command command
+     * @param token token
+     * @param url url
+     * @return Result
+     */
     public static Result<String> callCommandWithToken(String command, String token, String url) {
         try {
             ClientConnection conn = connCache.get(url);
@@ -91,6 +108,13 @@ public class HybridCommandClient {
         }
     }
 
+    /**
+     * Call command with token and connection
+     * @param connection ClientConnection
+     * @param command command
+     * @param token token
+     * @return Result
+     */
     public  static Result<String> callCommandWithToken(ClientConnection connection, String command, String token) {
         Result<String> result = null;
         try {

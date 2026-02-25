@@ -9,6 +9,7 @@ import com.networknt.utility.Constants;
 import com.networknt.utility.UuidUtil;
 import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.db.PortalDbProvider;
+import net.lightapi.portal.db.PortalPersistenceException;
 import net.lightapi.portal.db.util.NotificationService;
 import net.lightapi.portal.db.util.SqlUtil;
 import org.slf4j.Logger;
@@ -45,11 +46,9 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
-    public void createConfig(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createConfig(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String sql =
                 """
                 INSERT INTO config_t(config_id, config_name, config_phase, config_type, light4j_version,
@@ -101,11 +100,11 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         } catch (SQLException e) {
             logger.error("SQLException during createConfig for configId {}: {}",
                     configId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createConfig for configId {}: {}",
                     configId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -118,13 +117,12 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
-    public void updateConfig(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateConfig(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // SQL statement updated to match the idempotent update pattern.
         final String sql =
                 """
@@ -177,11 +175,11 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         } catch (SQLException e) {
             logger.error("SQLException during updateConfig for configId {}: {}",
                     configId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateConfig for configId {}: {}",
                     configId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -193,13 +191,12 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
-    public void deleteConfig(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteConfig(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // SQL statement updated to match the idempotent soft-delete pattern.
         final String sql =
                 """
@@ -244,11 +241,11 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         } catch (SQLException e) {
             logger.error("SQLException during soft delete of Config for configId {}: {}",
                     configId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during soft delete of Config for configId {}: {}",
                     configId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -662,13 +659,12 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Monotonicity:** The `WHERE` clause in the `DO UPDATE` part ensures that an update
      *     only occurs if the incoming event's version is strictly greater than the existing record's version.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
-    public void createConfigProperty(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createConfigProperty(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String sql =
                 """
                 INSERT INTO config_property_t (config_id, property_id, property_name, property_type,
@@ -738,11 +734,11 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         } catch (SQLException e) {
             logger.error("SQLException during createConfigProperty for propertyId {}: {}",
                     propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createConfigProperty for propertyId {}: {}",
                     propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -754,13 +750,12 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
-    public void updateConfigProperty(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateConfigProperty(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String sql =
                 """
                 UPDATE config_property_t
@@ -827,11 +822,11 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         } catch (SQLException e) {
             logger.error("SQLException during updateConfigProperty for propertyId {}: {}",
                     propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateConfigProperty for propertyId {}: {}",
                     propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -843,13 +838,12 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
-    public void deleteConfigProperty(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteConfigProperty(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // SQL statement updated to match the idempotent soft-delete pattern.
         final String sql =
                 """
@@ -894,11 +888,11 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         } catch (SQLException e) {
             logger.error("SQLException during soft delete of ConfigProperty for propertyId {}: {}",
                     propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during soft delete of ConfigProperty for propertyId {}: {}",
                     propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -1127,13 +1121,12 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Monotonicity:** The `WHERE` clause in the `DO UPDATE` part ensures that an update
      *     only occurs if the incoming event's version is strictly greater than the existing record's version.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
-    public void createConfigEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createConfigEnvironment(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String sql =
                 """
                 INSERT INTO environment_property_t (
@@ -1188,11 +1181,11 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         } catch (SQLException e) {
             logger.error("SQLException during createConfigEnvironment for hostId {} environment {} propertyId {}: {}",
                     hostId, environment, propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createConfigEnvironment for hostId {} environment {} propertyId {}: {}",
                     hostId, environment, propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -1205,13 +1198,12 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
-    public void updateConfigEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateConfigEnvironment(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // SQL statement updated to match the idempotent update pattern.
         final String sql =
                 """
@@ -1259,11 +1251,11 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         } catch (SQLException e) {
             logger.error("SQLException during updateConfigEnvironment for hostId {} environment {} propertyId {}: {}",
                     hostId, environment, propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateConfigEnvironment for hostId {} environment {} propertyId {}: {}",
                     hostId, environment, propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -1275,13 +1267,12 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
-    public void deleteConfigEnvironment(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteConfigEnvironment(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // SQL statement updated to match the idempotent soft-delete pattern.
         final String sql =
                 """
@@ -1334,11 +1325,11 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         } catch (SQLException e) {
             logger.error("SQLException during soft delete of ConfigEnvironment for hostId {} environment {} propertyId {}: {}",
                     hostId, environment, propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during soft delete of ConfigEnvironment for hostId {} environment {} propertyId {}: {}",
                     hostId, environment, propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -1494,13 +1485,12 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Monotonicity:** The `WHERE` clause in the `DO UPDATE` part ensures that an update
      *     only occurs if the incoming event's version is strictly greater than the existing record's version.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
-    public void createConfigInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createConfigInstanceApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String sql =
                 """
                 INSERT INTO instance_api_property_t (
@@ -1555,11 +1545,11 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         } catch (SQLException e) {
             logger.error("SQLException during createConfigInstanceApi for hostId {} instanceApiId {} propertyId {}: {}",
                     hostId, instanceApiId, propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createConfigInstanceApi for hostId {} instanceApiId {} propertyId {}: {}",
                     hostId, instanceApiId, propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -1571,13 +1561,12 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
-    public void updateConfigInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateConfigInstanceApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // SQL statement updated to match the idempotent update pattern.
         final String sql =
                 """
@@ -1625,11 +1614,11 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         } catch (SQLException e) {
             logger.error("SQLException during updateConfigInstanceApi for hostId {} instanceApiId {} propertyId {}: {}",
                     hostId, instanceApiId, propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateConfigInstanceApi for hostId {} instanceApiId {} propertyId {}: {}",
                     hostId, instanceApiId, propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -1641,13 +1630,12 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
-    public void deleteConfigInstanceApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteConfigInstanceApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // SQL statement updated to match the idempotent soft-delete pattern.
         final String sql =
                 """
@@ -1699,11 +1687,11 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         } catch (SQLException e) {
             logger.error("SQLException during soft delete of ConfigInstanceApi for hostId {} instanceApiId {} propertyId {}: {}",
                     hostId, instanceApiId, propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during soft delete of ConfigInstanceApi for hostId {} instanceApiId {} propertyId {}: {}",
                     hostId, instanceApiId, propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -1889,13 +1877,12 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Monotonicity:** The `WHERE` clause in the `DO UPDATE` part ensures that an update
      *     only occurs if the incoming event's version is strictly greater than the existing record's version.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
-    public void createConfigInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createConfigInstanceApp(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String sql =
                 """
                 INSERT INTO instance_app_property_t (
@@ -1950,11 +1937,11 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         } catch (SQLException e) {
             logger.error("SQLException during createConfigInstanceApp for hostId {} instanceAppId {} propertyId {}: {}",
                     hostId, instanceAppId, propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createConfigInstanceApp for hostId {} instanceAppId {} propertyId {}: {}",
                     hostId, instanceAppId, propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -1967,13 +1954,12 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
-    public void updateConfigInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateConfigInstanceApp(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // SQL statement updated to match the idempotent update pattern.
         final String sql =
                 """
@@ -2021,11 +2007,11 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         } catch (SQLException e) {
             logger.error("SQLException during updateConfigInstanceApp for hostId {} instanceAppId {} propertyId {}: {}",
                     hostId, instanceAppId, propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateConfigInstanceApp for hostId {} instanceAppId {} propertyId {}: {}",
                     hostId, instanceAppId, propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -2037,13 +2023,12 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
-    public void deleteConfigInstanceApp(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteConfigInstanceApp(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // SQL statement updated to match the idempotent soft-delete pattern.
         final String sql =
                 """
@@ -2095,11 +2080,11 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         } catch (SQLException e) {
             logger.error("SQLException during soft delete of ConfigInstanceApp for hostId {} instanceAppId {} propertyId {}: {}",
                     hostId, instanceAppId, propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during soft delete of ConfigInstanceApp for hostId {} instanceAppId {} propertyId {}: {}",
                     hostId, instanceAppId, propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -2281,13 +2266,12 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Monotonicity:** The `WHERE` clause in the `DO UPDATE` part ensures that an update
      *     only occurs if the incoming event's version is strictly greater than the existing record's version.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
-    public void createConfigInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createConfigInstanceAppApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String sql =
                 """
                 INSERT INTO instance_app_api_property_t (
@@ -2345,11 +2329,11 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         } catch (SQLException e) {
             logger.error("SQLException during createConfigInstanceAppApi for hostId {} instanceAppId {} instanceApiId {} propertyId {}: {}",
                     hostId, instanceAppId, instanceApiId, propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createConfigInstanceAppApi for hostId {} instanceAppId {} instanceApiId {} propertyId {}: {}",
                     hostId, instanceAppId, instanceApiId, propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -2361,13 +2345,12 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
-    public void updateConfigInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateConfigInstanceAppApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // SQL statement updated to match the idempotent update pattern.
         final String sql =
                 """
@@ -2418,11 +2401,11 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         } catch (SQLException e) {
             logger.error("SQLException during updateConfigInstanceAppApi for hostId {} instanceAppId {} instanceApiId {} propertyId {}: {}",
                     hostId, instanceAppId, instanceApiId, propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateConfigInstanceAppApi for hostId {} instanceAppId {} instanceApiId {} propertyId {}: {}",
                     hostId, instanceAppId, instanceApiId, propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -2434,13 +2417,12 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
-    public void deleteConfigInstanceAppApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteConfigInstanceAppApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // SQL statement updated to match the idempotent soft-delete pattern.
         final String sql =
                 """
@@ -2496,11 +2478,11 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         } catch (SQLException e) {
             logger.error("SQLException during soft delete of ConfigInstanceAppApi for hostId {} instanceAppId {} instanceApiId {} propertyId {}: {}",
                     hostId, instanceAppId, instanceApiId, propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during soft delete of ConfigInstanceAppApi for hostId {} instanceAppId {} instanceApiId {} propertyId {}: {}",
                     hostId, instanceAppId, instanceApiId, propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -2695,13 +2677,12 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Monotonicity:** The `WHERE` clause in the `DO UPDATE` part ensures that an update
      *     only occurs if the incoming event's version is strictly greater than the existing record's version.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
-    public void createConfigInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createConfigInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String sql =
                 """
                 INSERT INTO instance_property_t (
@@ -2756,11 +2737,11 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         } catch (SQLException e) {
             logger.error("SQLException during createConfigInstance for hostId {} instanceId {} propertyId {}: {}",
                     hostId, instanceId, propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createConfigInstance for hostId {} instanceId {} propertyId {}: {}",
                     hostId, instanceId, propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -2772,13 +2753,12 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
-    public void updateConfigInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateConfigInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // SQL statement updated to match the idempotent update pattern.
         final String sql =
                 """
@@ -2826,11 +2806,11 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         } catch (SQLException e) {
             logger.error("SQLException during updateConfigInstance for hostId {} instanceId {} propertyId {}: {}",
                     hostId, instanceId, propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateConfigInstance for hostId {} instanceId {} propertyId {}: {}",
                     hostId, instanceId, propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -2842,13 +2822,12 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Idempotency:** Uses `aggregate_version &lt; ?` to ensure the operation only succeeds if it
      *     represents a new state, preventing re-processing of old events or concurrent conflicts.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
-    public void deleteConfigInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteConfigInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // SQL statement updated to match the idempotent soft-delete pattern.
         final String sql =
                 """
@@ -2900,16 +2879,16 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         } catch (SQLException e) {
             logger.error("SQLException during soft delete of ConfigInstance for hostId {} instanceId {} propertyId {}: {}",
                     hostId, instanceId, propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during soft delete of ConfigInstance for hostId {} instanceId {} propertyId {}: {}",
                     hostId, instanceId, propertyId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void createConfigSnapshot(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createConfigSnapshot(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // 1. Extract Input Parameters
         UUID hostId = UUID.fromString((String) event.get("hostId"));
         UUID instanceId = UUID.fromString((String) event.get("instanceId"));
@@ -2932,16 +2911,16 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             stmt.execute();
         } catch (SQLException e) {
             logger.error("SQLException during createConfigSnapshot for hostId {} instanceId {}: {}", hostId, instanceId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createConfigSnapshot for hostId {} instanceId {}: {}", hostId, instanceId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
 
     }
 
     @Override
-    public void updateConfigSnapshot(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateConfigSnapshot(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
 
         String s =
             """
@@ -2963,16 +2942,16 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         } catch (SQLException e) {
             logger.error("SQLException during updateConfigSnapshot for snapshotId {}: {}",
                     snapshotId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateConfigSnapshot for snapshotId {}: {}",
                     snapshotId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteConfigSnapshot(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteConfigSnapshot(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         String s =
                 """
                 DELETE FROM config_snapshot_t WHERE snapshot_id = ?
@@ -2993,11 +2972,11 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         } catch (SQLException e) {
             logger.error("SQLException during deleteConfigSnapshot for snapshotId {}: {}",
                     snapshotId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteConfigSnapshot for snapshotId {}: {}",
                     snapshotId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -3101,7 +3080,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
     /*
     @Override
-    public void commitConfigInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void commitConfigInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
 
         try {
             // 2. Derive Scope IDs
@@ -3132,10 +3111,10 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             logger.info("Successfully prepared config snapshot: {}", snapshotId);
         } catch (SQLException e) {
             logger.error("SQLException during snapshot creation for instance {}: {}", instanceId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) { // Catch other potential errors (e.g., during scope derivation)
             logger.error("Exception during snapshot creation for instance {}: {}", instanceId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -3629,7 +3608,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
     /*
     @Override
-    public void rollbackConfigInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void rollbackConfigInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String DELETE_INSTANCE_PROPS_SQL = "DELETE FROM instance_property_t WHERE host_id = ? AND instance_id = ?";
         final String DELETE_INSTANCE_API_PROPS_SQL = "DELETE FROM instance_api_property_t WHERE host_id = ? AND instance_api_id = ANY(?)";
         final String DELETE_INSTANCE_APP_PROPS_SQL = "DELETE FROM instance_app_property_t WHERE host_id = ? AND instance_app_id = ANY(?)";
@@ -3760,11 +3739,11 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         } catch (SQLException e) {
             logger.error("SQLException during rollback for instance {} to snapshot {}: {}", instanceId, snapshotId, e.getMessage(), e);
             notificationService.insertNotification(event, false, e.getMessage());
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) { // Catch other potential errors
             logger.error("Exception during rollback for instance {} to snapshot {}: {}", instanceId, snapshotId, e.getMessage(), e);
             notificationService.insertNotification(event, false, e.getMessage());
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
     */
@@ -4091,13 +4070,12 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
      * 3.  **OCC/Monotonicity:** The `WHERE` clause in the `DO UPDATE` part ensures that an update
      *     only occurs if the incoming event's version is strictly greater than the existing record's version.
      *
+     *
      * @param conn  The database connection.
      * @param event The event map containing the data and metadata for the operation.
-     * @throws SQLException If a database access error occurs.
-     * @throws Exception    For other generic errors.
      */
     @Override
-    public void createConfigInstanceFile(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createConfigInstanceFile(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String sql =
                 """
                 INSERT INTO instance_file_t (
@@ -4167,16 +4145,16 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         } catch (SQLException e) {
             logger.error("SQLException during createConfigInstanceFile for hostId {} instanceFileId {}: {}",
                     hostId, instanceFileId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createConfigInstanceFile for hostId {} instanceFileId {}: {}",
                     hostId, instanceFileId, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateConfigInstanceFile(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateConfigInstanceFile(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the file should be active.
@@ -4268,15 +4246,15 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateConfigInstanceFile for hostId {} instanceFileId {} (old: {}) -> (new: {}): {}", hostId, instanceFileId, oldAggregateVersion, newAggregateVersion,  e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateConfigInstanceFile for hostId {} instanceFileId {} (old: {}) -> (new: {}): {}", hostId, instanceFileId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteConfigInstanceFile(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteConfigInstanceFile(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -4328,10 +4306,10 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteConfigInstanceFile for hostId {} instanceFileId {} (old: {}) -> (new: {}): {}", hostId, instanceFileId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteConfigInstanceFile for hostId {} instanceFileId {} (old: {}) -> (new: {}): {}", hostId, instanceFileId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -4482,7 +4460,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     }
 
     @Override
-    public void createConfigDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createConfigDeploymentInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT based on the Primary Key (host_id, deployment_instance_id, property_id): INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -4552,15 +4530,15 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createConfigDeploymentInstance for hostId {} deploymentInstanceId {} propertyId {} aggregateVersion {}: {}", hostId, deploymentInstanceId, propertyId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createConfigDeploymentInstance for hostId {} deploymentInstanceId {} propertyId {} aggregateVersion {}: {}", hostId, deploymentInstanceId, propertyId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateConfigDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateConfigDeploymentInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the property should be active.
@@ -4623,15 +4601,15 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateConfigDeploymentInstance for hostId {} deploymentInstanceId {} propertyId {} (old: {}) -> (new: {}): {}", hostId, deploymentInstanceId, propertyId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateConfigDeploymentInstance for hostId {} deploymentInstanceId {} propertyId {} (old: {}) -> (new: {}): {}", hostId, deploymentInstanceId, propertyId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteConfigDeploymentInstance(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteConfigDeploymentInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -4687,10 +4665,10 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteConfigDeploymentInstance for hostId {} deploymentInstanceId {} propertyId {} (old: {}) -> (new: {}): {}", hostId, deploymentInstanceId, propertyId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteConfigDeploymentInstance for hostId {} deploymentInstanceId {} propertyId {} (old: {}) -> (new: {}): {}", hostId, deploymentInstanceId, propertyId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -4849,7 +4827,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     }
 
     @Override
-    public void createConfigProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createConfigProduct(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT based on the Primary Key (product_id, property_id): INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -4914,15 +4892,15 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createConfigProduct for productId {} propertyId {} aggregateVersion {}: {}", productId, propertyId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createConfigProduct for productId {} propertyId {} aggregateVersion {}: {}", productId, propertyId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateConfigProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateConfigProduct(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the property should be active.
@@ -4980,15 +4958,15 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateConfigProduct for productId {} propertyId {} (old: {}) -> (new: {}): {}", productId, propertyId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateConfigProduct for productId {} propertyId {} (old: {}) -> (new: {}): {}", productId, propertyId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteConfigProduct(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteConfigProduct(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -5040,10 +5018,10 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteConfigProduct for productId {} propertyId {} (old: {}) -> (new: {}): {}", productId, propertyId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteConfigProduct for productId {} propertyId {} (old: {}) -> (new: {}): {}", productId, propertyId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -5183,7 +5161,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     }
 
     @Override
-    public void createConfigProductVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createConfigProductVersion(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT based on the Primary Key (host_id, product_version_id, property_id): INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -5252,15 +5230,15 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createConfigProductVersion for hostId {} productVersionId {} propertyId {} aggregateVersion {}: {}", hostId, productVersionId, propertyId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createConfigProductVersion for hostId {} productVersionId {} propertyId {} aggregateVersion {}: {}", hostId, productVersionId, propertyId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateConfigProductVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateConfigProductVersion(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the property should be active.
@@ -5322,15 +5300,15 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateConfigProductVersion for hostId {} productVersionId {} propertyId {} (old: {}) -> (new: {}): {}", hostId, productVersionId, propertyId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateConfigProductVersion for hostId {} productVersionId {} propertyId {} (old: {}) -> (new: {}): {}", hostId, productVersionId, propertyId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteConfigProductVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteConfigProductVersion(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -5386,10 +5364,10 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteConfigProductVersion for hostId {} productVersionId {} propertyId {} (old: {}) -> (new: {}): {}", hostId, productVersionId, propertyId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteConfigProductVersion for hostId {} productVersionId {} propertyId {} (old: {}) -> (new: {}): {}", hostId, productVersionId, propertyId, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -6241,8 +6219,11 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
              PreparedStatement instanceCustomFilesPs = connection.prepareStatement(instanceCustomFilesSql);
         ) {
 
-            instanceRuntimeConfigsPs.setObject(1, hostId != null ? UUID.fromString(hostId) : null);
-            instanceRuntimeConfigsPs.setObject(2, instanceId != null ? UUID.fromString(instanceId) : null);
+            UUID hostUuid = hostId != null ? UUID.fromString(hostId) : null;
+            UUID instanceUuid = instanceId != null ? UUID.fromString(instanceId) : null;
+
+            instanceRuntimeConfigsPs.setObject(1, hostUuid);
+            instanceRuntimeConfigsPs.setObject(2, instanceUuid);
 
             try (ResultSet resultSet = instanceRuntimeConfigsPs.executeQuery()) {
                 while (resultSet.next()) {
@@ -6262,6 +6243,9 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     runtimeConfigs.add(map);
                 }
             }
+
+            instanceCustomFilesPs.setObject(1, hostUuid);
+            instanceCustomFilesPs.setObject(2, instanceUuid);
 
             try (ResultSet resultSet = instanceCustomFilesPs.executeQuery()) {
                 while (resultSet.next()) {

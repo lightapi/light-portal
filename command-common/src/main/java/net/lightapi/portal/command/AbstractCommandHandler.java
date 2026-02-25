@@ -38,8 +38,11 @@ public abstract class AbstractCommandHandler implements HybridHandler {
     // protected final Logger logger = LoggerFactory.getLogger(getClass());
 
     // Make config and constants protected or private static final
+    /** dbProvider */
     public static PortalDbProvider dbProvider = (PortalDbProvider) SingletonServiceFactory.getBean(DbProvider.class);
+    /** userId */
     public static final String USER_ID = "userId";
+    /** hostId */
     public static final String HOST_ID = "hostId";
 
     protected static final String INCORRECT_TOKEN_TYPE = "ERR11601";
@@ -72,6 +75,9 @@ public abstract class AbstractCommandHandler implements HybridHandler {
      * Subclasses can implement this to do additional validation with input map.
      * @param exchange The HTTP server exchange.
      * @param map The input map.
+     * @param userId The user id.
+     * @param host The host.
+     * @return Result map
      */
     protected Result<Map<String, Object>> validateInput(HttpServerExchange exchange, Map<String, Object> map, String userId, String host) {
         // Default implementation does nothing. Subclasses can override if needed.
@@ -82,6 +88,7 @@ public abstract class AbstractCommandHandler implements HybridHandler {
      * Subclasses can implement this to enrich the input map. In most cases, it will call the query side service to get some data and put it in the map.
      * @param exchange The HTTP server exchange.
      * @param map The input map.
+     * @return Result map
      */
     protected Result<Map<String, Object>> enrichInput(HttpServerExchange exchange, Map<String, Object> map) {
         // Default implementation does nothing. Subclasses can override if needed.
@@ -91,6 +98,7 @@ public abstract class AbstractCommandHandler implements HybridHandler {
     /**
      * Subclasses can override this to return customized response to the caller.
      * @param map The input map.
+     * @return json String
      */
     protected String customizeOutput(Map<String, Object> map) {
         // Default implementation does nothing. Just return the map.
@@ -101,6 +109,9 @@ public abstract class AbstractCommandHandler implements HybridHandler {
      * Subclasses can override this to return customized status to the caller. By default, it validates
      * the token as authorization code token as most portal command services require a login user. However,
      * some service like createAuthCode does not require a login user and the token type is client credentials token.
+     * @param userId The user id.
+     * @param map The input map.
+     * @return Result map
      */
     protected Result<Map<String, Object>> validateTokenType(String userId, Map<String, Object> map) {
         if (userId == null) {
@@ -116,7 +127,10 @@ public abstract class AbstractCommandHandler implements HybridHandler {
      * If there is no additional action, just return the input map.
      *
      * @param exchange The HTTP server exchange.
-     *
+     * @param map The input map.
+     * @param userId The user id.
+     * @param host The host.
+     * @return Result map
      */
     protected Result<Map<String, Object>> additionalAction(HttpServerExchange exchange, Map<String, Object> map, String userId, String host) {
         return Success.of(map);
@@ -125,7 +139,7 @@ public abstract class AbstractCommandHandler implements HybridHandler {
     /**
      * Subclasses can override this to use customized logic to populate the old aggregateVersion and new aggregateVersion
      * based on the event type and existing aggregateVersion in the data map.
-     *
+     * @param map The input map.
      */
     protected void populateAggregateVersion(Map<String, Object> map) {
         String aggregateId = EventTypeUtil.getAggregateId(getCloudEventType(), map);
@@ -144,7 +158,8 @@ public abstract class AbstractCommandHandler implements HybridHandler {
     /**
      * Subclasses can override this to use customized logic to populate the old aggregateVersion and new aggregateVersion
      * based on the event type and existing aggregateVersion in the data map.
-     *
+     * @param map The input map.
+     * @param aggregateId The aggregate id.
      */
     protected void populateAggregateVersion(Map<String, Object> map, String aggregateId) {
         int aggregateVersion = dbProvider.getMaxAggregateVersion(aggregateId);
@@ -246,6 +261,11 @@ public abstract class AbstractCommandHandler implements HybridHandler {
     /**
      * Builds the CloudEvent object array from the provided map, userId, host, and nonce. Overrides the default method if
      * you want to customize the CloudEvent creation logic to emit more than one CloudEvent.
+     * @param map The input map.
+     * @param userId The user id.
+     * @param host The host.
+     * @param nonce The nonce.
+     * @return CloudEvent array
      */
     protected CloudEvent[] buildCloudEvent(Map<String, Object> map, String userId, String host, Number nonce) {
         String eventType = getCloudEventType(); // e.g., "ClientCreatedEvent"
@@ -290,6 +310,7 @@ public abstract class AbstractCommandHandler implements HybridHandler {
     /**
      * Gets the specific logger instance for the concrete subclass.
      * Must be implemented by subclasses.
+     * @return The logger instance
      */
     protected abstract Logger getLogger();
 

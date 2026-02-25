@@ -1,6 +1,7 @@
 package net.lightapi.portal.db.persistence;
 
 import com.networknt.monad.Result;
+import net.lightapi.portal.db.PortalPersistenceException;
 
 import java.sql.Connection; // Added import
 import java.sql.SQLException; // Added import
@@ -8,9 +9,9 @@ import java.util.List;
 import java.util.Map;
 
 public interface RulePersistence {
-    void createRule(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void updateRule(Connection conn, Map<String, Object> event) throws SQLException, Exception;
-    void deleteRule(Connection conn, Map<String, Object> event) throws SQLException, Exception;
+    void createRule(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void updateRule(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteRule(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
     Result<List<Map<String, Object>>> queryRuleByGroup(String groupId);
     Result<String> queryRule(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<Map<String, Object>> queryRuleById(String ruleId);

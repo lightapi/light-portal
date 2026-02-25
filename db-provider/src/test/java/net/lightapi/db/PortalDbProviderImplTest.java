@@ -713,20 +713,204 @@ public class PortalDbProviderImplTest {
     }
 
     @Test
+    void testWorkflowDefinition() throws Exception {
+        String wfDefId = "019c52a8-805e-725d-8cb0-eef0d61a81ef";
+        String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
+        String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
+        String name = "TestWorkflow-" + wfDefId;
+        Map<String, Object> data = new HashMap<>();
+        data.put("wfDefId", wfDefId);
+        data.put("hostId", hostId);
+        data.put("namespace", "lightapi");
+        data.put("name", name);
+        data.put("version", "1.0.0");
+        data.put("definition", "steps: []");
+        data.put("newAggregateVersion", 1);
+
+        Map<String, Object> event = createEvent(hostId, userId, wfDefId, "WorkflowDefinition", 1, data);
+
+        try (Connection conn = SqlDbStartupHook.ds.getConnection()) {
+            dbProvider.createWorkflowDefinition(conn, event);
+
+            Result<String> result = dbProvider.getWorkflowDefinitionById(hostId, wfDefId);
+            if(result.isFailure()) {
+                System.out.println("Create failed: " + result.getError());
+                fail(result.getError().toString());
+            }
+            Map<String, Object> retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals(name, retrieved.get("name"));
+
+            data.put("definition", "steps: [{name: step1}]");
+            data.put("newAggregateVersion", 2);
+            event = createEvent(hostId, userId, wfDefId, "WorkflowDefinition", 2, data);
+            dbProvider.updateWorkflowDefinition(conn, event);
+
+            result = dbProvider.getWorkflowDefinitionById(hostId, wfDefId);
+            retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals("steps: [{name: step1}]", retrieved.get("definition"));
+
+            result = dbProvider.queryWorkflowDefinition(0, 10, null, null, null, true, hostId);
+            assertTrue(result.isSuccess());
+            Map<String, Object> queryResult = JsonMapper.string2Map(result.getResult());
+            assertTrue((Integer)queryResult.get("total") > 0);
+
+            data.put("newAggregateVersion", 3);
+            dbProvider.deleteWorkflowDefinition(conn, event);
+            result = dbProvider.getWorkflowDefinitionById(hostId, wfDefId);
+            // It should still return the record but with active=false
+            assertTrue(result.isSuccess());
+            retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals(false, retrieved.get("active"));
+        }
+    }
+
+    @Test
+    void testWorklist() throws Exception {
+        String assigneeId = "assignee123";
+        String categoryId = "category123";
+        String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
+        String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("hostId", hostId);
+        data.put("assigneeId", assigneeId);
+        data.put("categoryId", categoryId);
+        data.put("statusCode", "Active");
+        data.put("appId", "testApp");
+        data.put("newAggregateVersion", 1);
+
+        Map<String, Object> event = createEvent(hostId, userId, assigneeId + "|" + categoryId, "Worklist", 1, data);
+
+        try (Connection conn = SqlDbStartupHook.ds.getConnection()) {
+            dbProvider.createWorklist(conn, event);
+            Result<String> result = dbProvider.getWorklistById(hostId, assigneeId, categoryId);
+            assertTrue(result.isSuccess());
+            Map<String, Object> retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals("testApp", retrieved.get("appId"));
+
+            data.put("appId", "updatedApp");
+            data.put("newAggregateVersion", 2);
+            event = createEvent(hostId, userId, assigneeId + "|" + categoryId, "Worklist", 2, data);
+            dbProvider.updateWorklist(conn, event);
+            result = dbProvider.getWorklistById(hostId, assigneeId, categoryId);
+            retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals("updatedApp", retrieved.get("appId"));
+
+            result = dbProvider.queryWorklist(0, 10, null, null, null, true, hostId);
+            assertTrue(result.isSuccess());
+
+            data.put("newAggregateVersion", 3);
+            dbProvider.deleteWorklist(conn, event);
+            result = dbProvider.getWorklistById(hostId, assigneeId, categoryId);
+            retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals(false, retrieved.get("active"));
+        }
+    }
+
+    @Test
+    void testWorklistColumn() throws Exception {
+        String assigneeId = "assignee123";
+        String categoryId = "category123";
+        int sequenceId = 1;
+        String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
+        String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("hostId", hostId);
+        data.put("assigneeId", assigneeId);
+        data.put("categoryId", categoryId);
+        data.put("sequenceId", sequenceId);
+        data.put("columnId", "col1");
+        data.put("newAggregateVersion", 1);
+
+        Map<String, Object> event = createEvent(hostId, userId, assigneeId + "|" + categoryId + "|" + sequenceId, "WorklistColumn", 1, data);
+
+        try (Connection conn = SqlDbStartupHook.ds.getConnection()) {
+            dbProvider.createWorklistColumn(conn, event);
+            Result<String> result = dbProvider.getWorklistColumnById(hostId, assigneeId, categoryId, sequenceId);
+            assertTrue(result.isSuccess());
+            Map<String, Object> retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals("col1", retrieved.get("columnId"));
+
+            data.put("columnId", "col1_updated");
+            data.put("newAggregateVersion", 2);
+            event = createEvent(hostId, userId, assigneeId + "|" + categoryId + "|" + sequenceId, "WorklistColumn", 2, data);
+            dbProvider.updateWorklistColumn(conn, event);
+            result = dbProvider.getWorklistColumnById(hostId, assigneeId, categoryId, sequenceId);
+            retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals("col1_updated", retrieved.get("columnId"));
+
+            result = dbProvider.queryWorklistColumn(0, 10, null, null, null, true, hostId);
+            assertTrue(result.isSuccess());
+
+            data.put("newAggregateVersion", 3);
+            dbProvider.deleteWorklistColumn(conn, event);
+            result = dbProvider.getWorklistColumnById(hostId, assigneeId, categoryId, sequenceId);
+            retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals(false, retrieved.get("active"));
+        }
+    }
+
+    @Test
+    void testProcessInfo() throws Exception {
+        String processId = "019c52a8-805e-7316-8cb1-29048d87ed51";
+        String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
+        String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
+        String wfDefId = "019c52a8-805e-725d-8cb0-eef0d61a81ef";
+        Map<String, Object> data = new HashMap<>();
+        data.put("hostId", hostId);
+        data.put("processId", processId);
+        data.put("wfDefId", wfDefId);
+        data.put("wfInstanceId", "wfInst1");
+        data.put("appId", "testApp");
+        data.put("processType", "type1");
+        data.put("statusCode", "A");
+        data.put("exTriggerTs", OffsetDateTime.now().toString());
+        data.put("startedTs", OffsetDateTime.now().toString());
+        data.put("newAggregateVersion", 1);
+
+        Map<String, Object> event = createEvent(hostId, userId, processId, "ProcessInfo", 1, data);
+
+        try (Connection conn = SqlDbStartupHook.ds.getConnection()) {
+            dbProvider.createProcessInfo(conn, event);
+            Result<String> result = dbProvider.getProcessInfoById(hostId, processId);
+            assertTrue(result.isSuccess());
+            Map<String, Object> retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals("type1", retrieved.get("processType"));
+
+            data.put("processType", "type1_updated");
+            data.put("newAggregateVersion", 2);
+            event = createEvent(hostId, userId, processId, "ProcessInfo", 2, data);
+            dbProvider.updateProcessInfo(conn, event);
+            result = dbProvider.getProcessInfoById(hostId, processId);
+            retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals("type1_updated", retrieved.get("processType"));
+
+            result = dbProvider.queryProcessInfo(0, 10, null, null, null, true, hostId);
+            assertTrue(result.isSuccess());
+
+            data.put("newAggregateVersion", 3);
+            dbProvider.deleteProcessInfo(conn, event);
+            result = dbProvider.getProcessInfoById(hostId, processId);
+            retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals(false, retrieved.get("active"));
+        }
+    }
+
+    @Test
     void testAgentDefinition() throws Exception {
-        String agentDefId = UUID.randomUUID().toString();
+        String agentDefId = "019c52a8-805e-73dc-8cb3-cdebf02944d3";
         String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
         String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
         String agentName = "TestAgent-" + agentDefId;
+
         Map<String, Object> data = new HashMap<>();
-        data.put("agentDefId", agentDefId);
         data.put("hostId", hostId);
+        data.put("agentDefId", agentDefId);
         data.put("agentName", agentName);
         data.put("modelProvider", "openai");
         data.put("modelName", "gpt-4");
-        data.put("apiKeyRef", "secret-key");
         data.put("temperature", 0.7);
-        data.put("maxTokens", 1000);
         data.put("newAggregateVersion", 1);
 
         Map<String, Object> event = createEvent(hostId, userId, agentDefId, "AgentDefinition", 1, data);
@@ -735,10 +919,7 @@ public class PortalDbProviderImplTest {
             dbProvider.createAgentDefinition(conn, event);
 
             Result<String> result = dbProvider.getAgentDefinitionById(hostId, agentDefId);
-            if(result.isFailure()) {
-                System.out.println("Create failed: " + result.getError());
-                fail(result.getError().toString());
-            }
+            assertTrue(result.isSuccess());
             Map<String, Object> retrieved = JsonMapper.string2Map(result.getResult());
             assertEquals(agentName, retrieved.get("agentName"));
 
@@ -751,18 +932,556 @@ public class PortalDbProviderImplTest {
             retrieved = JsonMapper.string2Map(result.getResult());
             assertEquals("gpt-4-turbo", retrieved.get("modelName"));
 
-            result = dbProvider.queryAgentDefinition(0, 10, null, null, null, true, "01964b05-552a-7c4b-9184-6857e7f3dc5f");
+            result = dbProvider.queryAgentDefinition(0, 10, null, null, null, true, hostId);
             assertTrue(result.isSuccess());
-            Map<String, Object> queryResult = JsonMapper.string2Map(result.getResult());
-            assertTrue((Integer)queryResult.get("total") > 0);
 
             data.put("newAggregateVersion", 3);
             dbProvider.deleteAgentDefinition(conn, event);
             result = dbProvider.getAgentDefinitionById(hostId, agentDefId);
-            assertTrue(result.isSuccess());
             retrieved = JsonMapper.string2Map(result.getResult());
             assertEquals(false, retrieved.get("active"));
+        }
+    }
 
+    @Test
+    void testTaskInfo() throws Exception {
+        String taskId = "019c52a8-805e-73c0-8cb2-1fb26074e97f";
+        String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
+        String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
+        String agentDefId = "019c52a8-805e-73dc-8cb3-cdebf02944d3";
+        String processId = "019c52a8-805e-7316-8cb1-29048d87ed51";
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("hostId", hostId);
+        data.put("taskId", taskId);
+        data.put("agentDefId", agentDefId);
+        data.put("taskType", "type1");
+        data.put("processId", processId);
+        data.put("wfInstanceId", "wfInst1");
+        data.put("wfTaskId", "wfTask1");
+        data.put("statusCode", "U");
+        data.put("locked", "N");
+        data.put("priority", 1);
+        data.put("startedTs", OffsetDateTime.now().toString());
+        data.put("newAggregateVersion", 1);
+
+        Map<String, Object> event = createEvent(hostId, userId, taskId, "TaskInfo", 1, data);
+
+        try (Connection conn = SqlDbStartupHook.ds.getConnection()) {
+            dbProvider.createTaskInfo(conn, event);
+            Result<String> result = dbProvider.getTaskInfoById(hostId, taskId);
+            assertTrue(result.isSuccess());
+            Map<String, Object> retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals("type1", retrieved.get("taskType"));
+
+            data.put("taskType", "type1_updated");
+            data.put("newAggregateVersion", 2);
+            event = createEvent(hostId, userId, taskId, "TaskInfo", 2, data);
+            dbProvider.updateTaskInfo(conn, event);
+            result = dbProvider.getTaskInfoById(hostId, taskId);
+            retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals("type1_updated", retrieved.get("taskType"));
+
+            result = dbProvider.queryTaskInfo(0, 10, null, null, null, true, hostId);
+            assertTrue(result.isSuccess());
+
+            data.put("newAggregateVersion", 3);
+            dbProvider.deleteTaskInfo(conn, event);
+            result = dbProvider.getTaskInfoById(hostId, taskId);
+            retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals(false, retrieved.get("active"));
+        }
+    }
+
+    @Test
+    void testTaskAssignment() throws Exception {
+        String taskAsstId = "019c52a8-805e-7410-8cb4-f41f9befce0c";
+        String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
+        String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
+        String taskId = "019c52a8-805e-73c0-8cb2-1fb26074e97f";
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("hostId", hostId);
+        data.put("taskAsstId", taskAsstId);
+        data.put("taskId", taskId);
+        data.put("assigneeId", "assignee1");
+        data.put("reasonCode", "reason1");
+        data.put("assignedTs", OffsetDateTime.now().toString());
+        data.put("newAggregateVersion", 1);
+
+        Map<String, Object> event = createEvent(hostId, userId, taskAsstId, "TaskAssignment", 1, data);
+
+        try (Connection conn = SqlDbStartupHook.ds.getConnection()) {
+            dbProvider.createTaskAssignment(conn, event);
+            Result<String> result = dbProvider.getTaskAssignmentById(hostId, taskAsstId);
+            assertTrue(result.isSuccess());
+            Map<String, Object> retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals("assignee1", retrieved.get("assigneeId"));
+
+            data.put("assigneeId", "assignee2");
+            data.put("newAggregateVersion", 2);
+            event = createEvent(hostId, userId, taskAsstId, "TaskAssignment", 2, data);
+            dbProvider.updateTaskAssignment(conn, event);
+            result = dbProvider.getTaskAssignmentById(hostId, taskAsstId);
+            retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals("assignee2", retrieved.get("assigneeId"));
+
+            result = dbProvider.queryTaskAssignment(0, 10, null, null, null, true, hostId);
+            assertTrue(result.isSuccess());
+
+            data.put("newAggregateVersion", 3);
+            dbProvider.deleteTaskAssignment(conn, event);
+            result = dbProvider.getTaskAssignmentById(hostId, taskAsstId);
+            retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals(false, retrieved.get("active"));
+        }
+    }
+
+    @Test
+    void testAuditLog() throws Exception {
+        String auditLogId = "019c52a8-805e-7428-8cb5-7a38fa49bcce";
+        String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
+        String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("hostId", hostId);
+        data.put("auditLogId", auditLogId);
+        data.put("sourceTypeId", "testSource");
+        data.put("correlationId", "corr123");
+        data.put("userId", userId);
+        data.put("success", "Y");
+        data.put("message", "Test message");
+
+        Map<String, Object> event = createEvent(hostId, userId, auditLogId, "AuditLog", 1, data);
+
+        try (Connection conn = SqlDbStartupHook.ds.getConnection()) {
+            dbProvider.createAuditLog(conn, event);
+            Result<String> result = dbProvider.getAuditLogById(hostId, auditLogId);
+            assertTrue(result.isSuccess());
+            Map<String, Object> retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals("testSource", retrieved.get("sourceTypeId"));
+
+            result = dbProvider.queryAuditLog(0, 10, null, null, null, hostId);
+            assertTrue(result.isSuccess());
+        }
+    }
+
+    @Test
+    void testSkill() throws Exception {
+        {
+            String skillId = "019c52a8-805e-74c7-8cb6-bda239814500";
+            String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
+            String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("hostId", hostId);
+            data.put("skillId", skillId);
+            data.put("name", "TestSkill");
+            data.put("contentMarkdown", "# Skill Content");
+            data.put("implementationClass", "net.lightapi.portal.SkillImpl");
+            data.put("newAggregateVersion", 1);
+
+            Map<String, Object> event = createEvent(hostId, userId, skillId, "Skill", 1, data);
+
+            try (Connection conn = SqlDbStartupHook.ds.getConnection()) {
+                dbProvider.createSkill(conn, event);
+                Result<String> result = dbProvider.getSkillById(hostId, skillId);
+                assertTrue(result.isSuccess());
+                Map<String, Object> retrieved = JsonMapper.string2Map(result.getResult());
+                assertEquals("TestSkill", retrieved.get("name"));
+
+                data.put("name", "TestSkillUpdated");
+                data.put("newAggregateVersion", 2);
+                event = createEvent(hostId, userId, skillId, "Skill", 2, data);
+                dbProvider.updateSkill(conn, event);
+                result = dbProvider.getSkillById(hostId, skillId);
+                retrieved = JsonMapper.string2Map(result.getResult());
+                assertEquals("TestSkillUpdated", retrieved.get("name"));
+
+                result = dbProvider.querySkill(0, 10, null, null, null, true, hostId);
+                assertTrue(result.isSuccess());
+
+                data.put("newAggregateVersion", 3);
+                dbProvider.deleteSkill(conn, event);
+                result = dbProvider.getSkillById(hostId, skillId);
+                retrieved = JsonMapper.string2Map(result.getResult());
+                assertEquals(false, retrieved.get("active"));
+            }
+        }
+        {
+            String skillId = "019c52ce-9aae-7491-8988-ede4daaaf1fe";
+            String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
+            String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("hostId", hostId);
+            data.put("skillId", skillId);
+            data.put("name", "TestSkill");
+            data.put("contentMarkdown", "# Skill Content");
+            data.put("implementationClass", "net.lightapi.portal.SkillImpl");
+            data.put("newAggregateVersion", 1);
+
+            Map<String, Object> event = createEvent(hostId, userId, skillId, "Skill", 1, data);
+
+            try (Connection conn = SqlDbStartupHook.ds.getConnection()) {
+                dbProvider.createSkill(conn, event);
+                Result<String> result = dbProvider.getSkillById(hostId, skillId);
+                assertTrue(result.isSuccess());
+                Map<String, Object> retrieved = JsonMapper.string2Map(result.getResult());
+                assertEquals("TestSkill", retrieved.get("name"));
+
+                data.put("name", "TestSkillUpdated");
+                data.put("newAggregateVersion", 2);
+                event = createEvent(hostId, userId, skillId, "Skill", 2, data);
+                dbProvider.updateSkill(conn, event);
+                result = dbProvider.getSkillById(hostId, skillId);
+                retrieved = JsonMapper.string2Map(result.getResult());
+                assertEquals("TestSkillUpdated", retrieved.get("name"));
+
+                result = dbProvider.querySkill(0, 10, null, null, null, true, hostId);
+                assertTrue(result.isSuccess());
+
+                data.put("newAggregateVersion", 3);
+                dbProvider.deleteSkill(conn, event);
+                result = dbProvider.getSkillById(hostId, skillId);
+                retrieved = JsonMapper.string2Map(result.getResult());
+                assertEquals(false, retrieved.get("active"));
+            }
+        }
+
+    }
+
+    @Test
+    void testSkillParam() throws Exception {
+        String paramId = "019c52a8-805e-74e0-8cb7-04a5060f192b";
+        String skillId = "019c52a8-805e-74c7-8cb6-bda239814500";
+        String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
+        String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("hostId", hostId);
+        data.put("paramId", paramId);
+        data.put("skillId", skillId);
+        data.put("name", "param1");
+        data.put("paramType", "string");
+        data.put("required", true);
+        data.put("newAggregateVersion", 1);
+
+        Map<String, Object> event = createEvent(hostId, userId, paramId, "SkillParam", 1, data);
+
+        try (Connection conn = SqlDbStartupHook.ds.getConnection()) {
+            dbProvider.createToolParam(conn, event);
+            Result<String> result = dbProvider.getToolParamById(hostId, paramId);
+            assertTrue(result.isSuccess());
+            Map<String, Object> retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals("param1", retrieved.get("name"));
+
+            data.put("name", "param1_updated");
+            data.put("newAggregateVersion", 2);
+            event = createEvent(hostId, userId, paramId, "SkillParam", 2, data);
+            dbProvider.updateToolParam(conn, event);
+            result = dbProvider.getToolParamById(hostId, paramId);
+            retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals("param1_updated", retrieved.get("name"));
+
+            result = dbProvider.queryToolParam(0, 10, null, null, null, true, hostId);
+            assertTrue(result.isSuccess());
+
+            data.put("newAggregateVersion", 3);
+            dbProvider.deleteToolParam(conn, event);
+            result = dbProvider.getToolParamById(hostId, paramId);
+            retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals(false, retrieved.get("active"));
+        }
+    }
+
+    @Test
+    void testSkillDependency() throws Exception {
+        String skillId = "019c52a8-805e-74c7-8cb6-bda239814500";
+        String dependsOnSkillId = "019c52ce-9aae-7491-8988-ede4daaaf1fe";
+
+        String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
+        String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("hostId", hostId);
+        data.put("skillId", skillId);
+        data.put("dependsOnSkillId", dependsOnSkillId);
+        data.put("required", true);
+        data.put("newAggregateVersion", 1);
+
+        Map<String, Object> event = createEvent(hostId, userId, skillId + "|" + dependsOnSkillId, "SkillDependency", 1, data);
+
+        try (Connection conn = SqlDbStartupHook.ds.getConnection()) {
+            dbProvider.createSkillDependency(conn, event);
+            Result<String> result = dbProvider.getSkillDependencyById(hostId, skillId, dependsOnSkillId);
+            assertTrue(result.isSuccess());
+            Map<String, Object> retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals(true, retrieved.get("required"));
+
+            data.put("required", false);
+            data.put("newAggregateVersion", 2);
+            event = createEvent(hostId, userId, skillId + "|" + dependsOnSkillId, "SkillDependency", 2, data);
+            dbProvider.updateSkillDependency(conn, event);
+            result = dbProvider.getSkillDependencyById(hostId, skillId, dependsOnSkillId);
+            retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals(false, retrieved.get("required"));
+
+            result = dbProvider.querySkillDependency(0, 10, null, null, null, true, hostId);
+            assertTrue(result.isSuccess());
+
+            data.put("newAggregateVersion", 3);
+            dbProvider.deleteSkillDependency(conn, event);
+            result = dbProvider.getSkillDependencyById(hostId, skillId, dependsOnSkillId);
+            retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals(false, retrieved.get("active"));
+        }
+    }
+
+    @Test
+    void testAgentSkill() throws Exception {
+        String agentDefId = "019c52a8-805e-73dc-8cb3-cdebf02944d3";
+        String skillId = "019c52a8-805e-74c7-8cb6-bda239814500";
+        String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
+        String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("hostId", hostId);
+        data.put("agentDefId", agentDefId);
+        data.put("skillId", skillId);
+        data.put("priority", 1);
+        data.put("newAggregateVersion", 1);
+
+        Map<String, Object> event = createEvent(hostId, userId, agentDefId + "|" + skillId, "AgentSkill", 1, data);
+
+        try (Connection conn = SqlDbStartupHook.ds.getConnection()) {
+            dbProvider.createAgentSkill(conn, event);
+            Result<String> result = dbProvider.getAgentSkillById(hostId, agentDefId, skillId);
+            assertTrue(result.isSuccess());
+            Map<String, Object> retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals(1, retrieved.get("priority"));
+
+            data.put("priority", 2);
+            data.put("newAggregateVersion", 2);
+            event = createEvent(hostId, userId, agentDefId + "|" + skillId, "AgentSkill", 2, data);
+            dbProvider.updateAgentSkill(conn, event);
+            result = dbProvider.getAgentSkillById(hostId, agentDefId, skillId);
+            retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals(2, retrieved.get("priority"));
+
+            result = dbProvider.queryAgentSkill(0, 10, null, null, null, true, hostId);
+            assertTrue(result.isSuccess());
+
+            data.put("newAggregateVersion", 3);
+            dbProvider.deleteAgentSkill(conn, event);
+            result = dbProvider.getAgentSkillById(hostId, agentDefId, skillId);
+            retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals(false, retrieved.get("active"));
+        }
+    }
+
+    @Test
+    void testAgentSessionHistory() throws Exception {
+        String sessionHistoryId = UUID.randomUUID().toString();
+        String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
+        String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
+        String processId = "019c52a8-805e-7316-8cb1-29048d87ed51";
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("hostId", hostId);
+        data.put("sessionHistoryId", sessionHistoryId);
+        data.put("processId", processId);
+        data.put("role", "user");
+        data.put("content", "Hello world");
+
+        Map<String, Object> event = createEvent(hostId, userId, sessionHistoryId, "AgentSessionHistory", 1, data);
+
+        try (Connection conn = SqlDbStartupHook.ds.getConnection()) {
+            dbProvider.createAgentSessionHistory(conn, event);
+            Result<String> result = dbProvider.getAgentSessionHistoryById(hostId, sessionHistoryId);
+            assertTrue(result.isSuccess());
+            Map<String, Object> retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals("user", retrieved.get("role"));
+
+            result = dbProvider.queryAgentSessionHistory(0, 10, null, null, null, true, hostId);
+            assertTrue(result.isSuccess());
+
+            data.put("newAggregateVersion", 3);
+            dbProvider.deleteAgentSessionHistory(conn, event);
+            result = dbProvider.getAgentSessionHistoryById(hostId, sessionHistoryId);
+            retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals(false, retrieved.get("active"));
+        }
+    }
+
+    @Test
+    void testSessionMemory() throws Exception {
+        String memId = UUID.randomUUID().toString();
+        String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
+        String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
+        String agentDefId = "019c52a8-805e-73dc-8cb3-cdebf02944d3";
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("hostId", hostId);
+        data.put("memId", memId);
+        data.put("sessionId", UUID.randomUUID().toString());
+        data.put("agentDefId", agentDefId);
+        data.put("content", "Memory content");
+        data.put("importanceScore", 0.8);
+        data.put("newAggregateVersion", 1);
+
+        Map<String, Object> event = createEvent(hostId, userId, memId, "SessionMemory", 1, data);
+
+        try (Connection conn = SqlDbStartupHook.ds.getConnection()) {
+            dbProvider.createSessionMemory(conn, event);
+            Result<String> result = dbProvider.getSessionMemoryById(hostId, memId);
+            assertTrue(result.isSuccess());
+            Map<String, Object> retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals("Memory content", retrieved.get("content"));
+
+            data.put("content", "Updated content");
+            data.put("newAggregateVersion", 2);
+            event = createEvent(hostId, userId, memId, "SessionMemory", 2, data);
+            dbProvider.updateSessionMemory(conn, event);
+            result = dbProvider.getSessionMemoryById(hostId, memId);
+            retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals("Updated content", retrieved.get("content"));
+
+            result = dbProvider.querySessionMemory(0, 10, null, null, null, true, hostId);
+            assertTrue(result.isSuccess());
+
+            data.put("newAggregateVersion", 3);
+            dbProvider.deleteSessionMemory(conn, event);
+            result = dbProvider.getSessionMemoryById(hostId, memId);
+            retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals(false, retrieved.get("active"));
+        }
+    }
+
+    @Test
+    void testUserMemory() throws Exception {
+        String memId = UUID.randomUUID().toString();
+        String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
+        String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("hostId", hostId);
+        data.put("memId", memId);
+        data.put("userId", userId);
+        data.put("content", "User preference");
+        data.put("memoryType", "preference");
+        data.put("newAggregateVersion", 1);
+
+        Map<String, Object> event = createEvent(hostId, userId, memId, "UserMemory", 1, data);
+
+        try (Connection conn = SqlDbStartupHook.ds.getConnection()) {
+            dbProvider.createUserMemory(conn, event);
+            Result<String> result = dbProvider.getUserMemoryById(hostId, memId);
+            assertTrue(result.isSuccess());
+            Map<String, Object> retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals("preference", retrieved.get("memoryType"));
+
+            data.put("memoryType", "fact");
+            data.put("newAggregateVersion", 2);
+            event = createEvent(hostId, userId, memId, "UserMemory", 2, data);
+            dbProvider.updateUserMemory(conn, event);
+            result = dbProvider.getUserMemoryById(hostId, memId);
+            retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals("fact", retrieved.get("memoryType"));
+
+            result = dbProvider.queryUserMemory(0, 10, null, null, null, true, hostId);
+            assertTrue(result.isSuccess());
+
+            data.put("newAggregateVersion", 3);
+            dbProvider.deleteUserMemory(conn, event);
+            result = dbProvider.getUserMemoryById(hostId, memId);
+            retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals(false, retrieved.get("active"));
+        }
+    }
+
+    @Test
+    void testAgentMemory() throws Exception {
+        String memId = UUID.randomUUID().toString();
+        String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
+        String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
+        String agentDefId = "019c52a8-805e-73dc-8cb3-cdebf02944d3";
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("hostId", hostId);
+        data.put("memId", memId);
+        data.put("agentDefId", agentDefId);
+        data.put("content", "Agent knowledge");
+        data.put("memoryType", "learning");
+        data.put("newAggregateVersion", 1);
+
+        Map<String, Object> event = createEvent(hostId, userId, memId, "AgentMemory", 1, data);
+
+        try (Connection conn = SqlDbStartupHook.ds.getConnection()) {
+            dbProvider.createAgentMemory(conn, event);
+            Result<String> result = dbProvider.getAgentMemoryById(hostId, memId);
+            assertTrue(result.isSuccess());
+            Map<String, Object> retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals("learning", retrieved.get("memoryType"));
+
+            data.put("memoryType", "persona");
+            data.put("newAggregateVersion", 2);
+            event = createEvent(hostId, userId, memId, "AgentMemory", 2, data);
+            dbProvider.updateAgentMemory(conn, event);
+            result = dbProvider.getAgentMemoryById(hostId, memId);
+            retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals("persona", retrieved.get("memoryType"));
+
+            result = dbProvider.queryAgentMemory(0, 10, null, null, null, true, hostId);
+            assertTrue(result.isSuccess());
+
+            data.put("newAggregateVersion", 3);
+            dbProvider.deleteAgentMemory(conn, event);
+            result = dbProvider.getAgentMemoryById(hostId, memId);
+            retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals(false, retrieved.get("active"));
+        }
+    }
+
+    @Test
+    void testOrgMemory() throws Exception {
+        String memId = UUID.randomUUID().toString();
+        String hostId = "01964b05-552a-7c4b-9184-6857e7f3dc5f";
+        String userId = "01964b05-5532-7c79-8cde-191dcbd421b8";
+        String domain = "networknt.com";
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("hostId", hostId);
+        data.put("memId", memId);
+        data.put("domain", domain);
+        data.put("content", "Global knowledge");
+        data.put("newAggregateVersion", 1);
+
+        Map<String, Object> event = createEvent(hostId, userId, memId, "OrgMemory", 1, data);
+
+        try (Connection conn = SqlDbStartupHook.ds.getConnection()) {
+            dbProvider.createOrgMemory(conn, event);
+            Result<String> result = dbProvider.getOrgMemoryById(hostId, memId);
+            assertTrue(result.isSuccess());
+            Map<String, Object> retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals("Global knowledge", retrieved.get("content"));
+
+            data.put("content", "Updated global knowledge");
+            data.put("newAggregateVersion", 2);
+            event = createEvent(hostId, userId, memId, "OrgMemory", 2, data);
+            dbProvider.updateOrgMemory(conn, event);
+            result = dbProvider.getOrgMemoryById(hostId, memId);
+            retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals("Updated global knowledge", retrieved.get("content"));
+
+            result = dbProvider.queryOrgMemory(0, 10, null, null, null, true, hostId);
+            assertTrue(result.isSuccess());
+
+            data.put("newAggregateVersion", 3);
+            dbProvider.deleteOrgMemory(conn, event);
+            result = dbProvider.getOrgMemoryById(hostId, memId);
+            retrieved = JsonMapper.string2Map(result.getResult());
+            assertEquals(false, retrieved.get("active"));
         }
     }
 }

@@ -6,6 +6,9 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Utility class for mapping YAML content.
+ */
 public final class YamlMapper {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(YamlMapper.class);
@@ -14,6 +17,13 @@ public final class YamlMapper {
         // Suppress instantiation
     }
 
+    /**
+     * Parses a YAML string into a Map-
+     *
+     * @param value The YAML string.
+     * @return A Map representation of the YAML.
+     * @throws YamlConversionException If parsing fails.
+     */
     public static Map<String, Object> toMap(String value) throws YamlConversionException {
         try {
             return YamlSupplier.yaml().load(value);
@@ -23,6 +33,13 @@ public final class YamlMapper {
         }
     }
 
+    /**
+     * Parses a YAML string into a List.
+     *
+     * @param value The YAML string.
+     * @return A List representation of the YAML.
+     * @throws YamlConversionException If parsing fails.
+     */
     public static List<Object> toList(String value) throws YamlConversionException {
         try {
             return YamlSupplier.yaml().load(value);
@@ -32,6 +49,13 @@ public final class YamlMapper {
         }
     }
 
+    /**
+     * Converts an object to a minified YAML string.
+     *
+     * @param value The object to convert.
+     * @return A minified YAML string.
+     * @throws YamlConversionException If conversion fails.
+     */
     public static String toMinifiedYamlString(Object value) throws YamlConversionException {
         try {
             return YamlSupplier.yaml().dump(value);
@@ -41,6 +65,13 @@ public final class YamlMapper {
         }
     }
 
+    /**
+     * Converts an object to a prettified YAML string.
+     *
+     * @param value The object to convert.
+     * @return A prettified YAML string.
+     * @throws YamlConversionException If conversion fails.
+     */
     public static String toPrettifiedYamlString(Object value) throws YamlConversionException {
         try {
             return YamlSupplier.prettyYaml().dump(value);
@@ -50,7 +81,16 @@ public final class YamlMapper {
         }
     }
 
+    /**
+     * Exception thrown when YAML conversion fails.
+     */
     public static class YamlConversionException extends Exception {
+        /**
+         * Constructor with message and cause.
+         *
+         * @param message Error message
+         * @param cause   Cause of the error
+         */
         public YamlConversionException(String message, Throwable cause) {
             super(message, cause);
         }

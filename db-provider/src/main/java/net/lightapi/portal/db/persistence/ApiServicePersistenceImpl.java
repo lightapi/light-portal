@@ -8,6 +8,7 @@ import com.networknt.status.Status;
 import com.networknt.utility.Constants;
 import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.db.PortalDbProvider;
+import net.lightapi.portal.db.PortalPersistenceException;
 import net.lightapi.portal.db.util.NotificationService;
 import net.lightapi.portal.db.util.SqlUtil;
 import org.slf4j.Logger;
@@ -34,7 +35,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     }
 
     @Override
-    public void createApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -175,15 +176,15 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createService for apiId {} aggregateVersion {}: {}", apiId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createService for apiId {} aggregateVersion {}: {}", apiId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the service should be active.
@@ -356,15 +357,15 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateService for apiId {} aggregateVersion {}: {}", apiId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateService for apiId {} aggregateVersion {}: {}", apiId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteApi(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -415,10 +416,10 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteService for apiId {} aggregateVersion {}: {}", apiId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteService for apiId {} aggregateVersion {}: {}", apiId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -682,7 +683,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     }
 
     @Override
-    public void createApiVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createApiVersion(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -885,15 +886,15 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createServiceVersion for hostId {} apiVersionId {} aggregateVersion {}: {}", hostId, apiVersionId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createServiceVersion for hostId {} apiVersionId {} aggregateVersion {}: {}", hostId, apiVersionId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateApiVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateApiVersion(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the service version should be active.
@@ -1128,15 +1129,15 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateServiceVersion for hostId {} apiVersionId {} aggregateVersion {}: {}", hostId, apiVersionId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateServiceVersion for hostId {} apiVersionId {} aggregateVersion {}: {}", hostId, apiVersionId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteApiVersion(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteApiVersion(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sqlDeactivateApiVersion =
@@ -1227,10 +1228,10 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteServiceVersion for hostId {} apiVersionId {} aggregateVersion {}: {}", hostId, apiVersionId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteServiceVersion for hostId {} apiVersionId {} aggregateVersion {}: {}", hostId, apiVersionId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -1361,7 +1362,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     }
 
     @Override
-    public void updateApiVersionSpec(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateApiVersionSpec(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String sqlUpdateApiVersion =
                 """
                 UPDATE api_version_t
@@ -1554,10 +1555,10 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
 
         } catch (SQLException e) {
             logger.error("SQLException during updateServiceVersion for hostId {} apiVersionId {} aggregateVersion {}: {}", hostId, apiVersionId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateServiceVersion for hostId {} apiVersionId {} aggregateVersion {}: {}", hostId, apiVersionId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
@@ -1770,7 +1771,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     }
 
     @Override
-    public void createApiEndpointRule(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createApiEndpointRule(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT: INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -1830,15 +1831,15 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during createApiEndpointRule for hostId {} endpointId {} ruleId {} aggregateVersion {}: {}", hostId, endpointId, ruleId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createApiEndpointRule for hostId {} endpointId {} ruleId {} aggregateVersion {}: {}", hostId, endpointId, ruleId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteApiEndpointRule(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteApiEndpointRule(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -1893,10 +1894,10 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteApiEndpointRule for hostId {} endpointId {} ruleId {} aggregateVersion {}: {}", hostId, endpointId, ruleId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during deleteApiEndpointRule for hostId {} endpointId {} ruleId {} aggregateVersion {}: {}", hostId, endpointId, ruleId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 

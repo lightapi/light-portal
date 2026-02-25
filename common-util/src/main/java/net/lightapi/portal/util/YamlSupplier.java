@@ -71,6 +71,11 @@ public final class YamlSupplier {
         return YAML_THREAD_LOCAL_HOLDER.get();
     }
 
+    /**
+     * Returns a thread-local instance of Yaml configured for pretty printing.
+     *
+     * @return A Yaml instance for pretty printing.
+     */
     public static Yaml prettyYaml() {
         return PRETTY_YAML_THREAD_LOCAL_HOLDER.get();
     }

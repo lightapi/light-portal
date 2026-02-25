@@ -1,6 +1,6 @@
 package net.lightapi.portal;
 
-import com.networknt.client.simplepool.SimpleConnectionHolder;
+import com.networknt.client.simplepool.SimpleConnectionState;
 import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
 import com.networknt.monad.Failure;
@@ -43,7 +43,11 @@ public class HybridQueryClient {
 
     static final Logger logger = LoggerFactory.getLogger(HybridQueryClient.class);
     static final String FAILED_TO_POPULATE_HEADER = "ERR12050";
+    /** Portal Client Config */
     public static final PortalClientConfig config = (PortalClientConfig) Config.getInstance().getJsonObjectConfig(PortalClientConfig.CONFIG_NAME, PortalClientConfig.class);
+
+    private HybridQueryClient() {
+    }
 
     //static final String queryServiceId = "com.networknt.portal.hybrid.query-1.0.0";
     static String tag = ServerConfig.getInstance().getEnvironment();
@@ -55,9 +59,15 @@ public class HybridQueryClient {
 
     static Map<String, ClientConnection> connCache = new ConcurrentHashMap<>();
 
+    /**
+     * Call query with token
+     * @param command command
+     * @param token token
+     * @return Result
+     */
     public static Result<String> callQueryWithToken(String command, String token) {
         Result<String> result = null;
-        SimpleConnectionHolder.ConnectionToken connectionToken = null;
+        SimpleConnectionState.ConnectionToken connectionToken = null;
         try {
             String host = cluster.serviceToUrl("https", config.getPortalQueryServiceId(), tag, null);
             if(logger.isTraceEnabled()) logger.trace("serviceId " + config.getPortalQueryServiceId() + " with result " + host);
@@ -90,9 +100,16 @@ public class HybridQueryClient {
         return result;
     }
 
+    /**
+     * Call query with exchange and url
+     * @param command command
+     * @param exchange HttpServerExchange
+     * @param url url
+     * @return Result
+     */
     public static Result<String> callQueryExchangeUrl(String command, HttpServerExchange exchange, String url) {
         Result<String> result = null;
-        SimpleConnectionHolder.ConnectionToken connectionToken = null;
+        SimpleConnectionState.ConnectionToken connectionToken = null;
         try {
             URI uri = new URI(url);
             connectionToken = client.borrow(uri, Http2Client.WORKER, client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true));
@@ -125,9 +142,15 @@ public class HybridQueryClient {
         return result;
     }
 
+    /**
+     * Call query with exchange
+     * @param command command
+     * @param exchange HttpServerExchange
+     * @return Result
+     */
     public static Result<String> callQueryExchange(String command, HttpServerExchange exchange) {
         Result<String> result = null;
-        SimpleConnectionHolder.ConnectionToken connectionToken = null;
+        SimpleConnectionState.ConnectionToken connectionToken = null;
         try {
             String host = cluster.serviceToUrl("https", config.getPortalQueryServiceId(), tag, null);
             if(logger.isTraceEnabled()) logger.trace("serviceId " + config.getPortalQueryServiceId() + " with result " + host);
@@ -164,9 +187,15 @@ public class HybridQueryClient {
         return result;
     }
 
+    /**
+     * Call query with url
+     * @param command command
+     * @param url url
+     * @return Result
+     */
     public static Result<String> callQueryUrl(String command, String url) {
         Result<String> result = null;
-        SimpleConnectionHolder.ConnectionToken connectionToken = null;
+        SimpleConnectionState.ConnectionToken connectionToken = null;
         try {
             URI uri = new URI(url);
             connectionToken = client.borrow(uri, Http2Client.WORKER, client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true));
@@ -196,9 +225,16 @@ public class HybridQueryClient {
         return result;
     }
 
+    /**
+     * Call query with token and url
+     * @param command command
+     * @param token token
+     * @param url url
+     * @return Result
+     */
     public static Result<String> callQueryTokenUrl(String command, String token, String url) {
         Result<String> result = null;
-        SimpleConnectionHolder.ConnectionToken connectionToken = null;
+        SimpleConnectionState.ConnectionToken connectionToken = null;
         try {
             URI uri = new URI(url);
             connectionToken = client.borrow(uri, Http2Client.WORKER, client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true));
@@ -741,6 +777,7 @@ public class HybridQueryClient {
      *
      * @param exchange HttpServerExchange
      * @param url host of instance that contains the state store
+     * @param hostId host id
      * @param authCode auth code
      * @param derived boolean flag to derive the auth code
      * @return Result of authCode object in JSON
@@ -902,7 +939,7 @@ public class HybridQueryClient {
     public static Result<String> getHosts() {
         String path = "/r/data?name=host";
         Result<String> result = null;
-        SimpleConnectionHolder.ConnectionToken connectionToken = null;
+        SimpleConnectionState.ConnectionToken connectionToken = null;
         try {
             String host = cluster.serviceToUrl(Http2Client.HTTPS, config.getPortalReferenceServiceId(), tag, null);
             URI uri = new URI(host);
@@ -1416,6 +1453,19 @@ public class HybridQueryClient {
         }
     }
 
+    /**
+     * Get Applicable Config Properties for Instance
+     *
+     * @param exchange HttpServerExchange
+     * @param hostId host id
+     * @param instanceId instance id
+     * @param resourceTypes resource Types
+     * @param configTypes config Types
+     * @param propertyTypes property Types
+     * @param limit limit
+     * @param offset offset
+     * @return Result the instance applicable properties
+     */
     public static Result<String> getApplicableConfigPropertiesForInstance(HttpServerExchange exchange, String hostId, String instanceId, Set<String> resourceTypes, Set<String> configTypes, Set<String> propertyTypes, int offset, int limit) {
         return getApplicableConfigPropertiesForInstance(exchange, hostId, instanceId, resourceTypes, configTypes, propertyTypes, Collections.emptySet(), offset, limit);
     }
@@ -1429,6 +1479,7 @@ public class HybridQueryClient {
      * @param resourceTypes resource Types
      * @param configTypes config Types
      * @param propertyTypes property Types
+     * @param configPhases config Phases
      * @param limit limit
      * @param offset offset
      * @return Result the instance applicable properties
@@ -1454,6 +1505,16 @@ public class HybridQueryClient {
         }
     }
 
+    /**
+     * Get Applicable Config Properties for InstanceApi
+     *
+     * @param exchange HttpServerExchange
+     * @param hostId host Id
+     * @param instanceApiId instance api id
+     * @param offset offset
+     * @param limit limit
+     * @return Result the instance api applicable properties
+     */
     public static Result<String> getApplicableConfigPropertiesForInstanceApi(HttpServerExchange exchange, String hostId, String instanceApiId, int offset, int limit) {
         final String data = JsonMapper.toJson(
             Map.of(
@@ -1471,6 +1532,16 @@ public class HybridQueryClient {
         }
     }
 
+    /**
+     * Get Applicable Config Properties for InstanceApp
+     *
+     * @param exchange HttpServerExchange
+     * @param hostId host Id
+     * @param instanceAppId instance app id
+     * @param offset offset
+     * @param limit limit
+     * @return Result the instance app applicable properties
+     */
     public static Result<String> getApplicableConfigPropertiesForInstanceApp(HttpServerExchange exchange, String hostId, String instanceAppId, int offset, int limit) {
         final String data = JsonMapper.toJson(
             Map.of(
@@ -1488,6 +1559,17 @@ public class HybridQueryClient {
         }
     }
 
+    /**
+     * Get Applicable Config Properties for InstanceAppApi
+     *
+     * @param exchange HttpServerExchange
+     * @param hostId host Id
+     * @param instanceAppId instance app id
+     * @param instanceApiId instance api id
+     * @param offset offset
+     * @param limit limit
+     * @return Result the instance app api applicable properties
+     */
     public static Result<String> getApplicableConfigPropertiesForInstanceAppApi(HttpServerExchange exchange, String hostId, String instanceAppId, String instanceApiId, int offset, int limit) {
         final String data = JsonMapper.toJson(
             Map.of(

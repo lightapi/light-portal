@@ -9,6 +9,7 @@ import com.networknt.utility.Constants;
 import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.PortalConstants;
 import net.lightapi.portal.db.PortalDbProvider;
+import net.lightapi.portal.db.PortalPersistenceException;
 import net.lightapi.portal.db.util.NotificationService;
 import net.lightapi.portal.db.util.SqlUtil;
 import org.slf4j.Logger;
@@ -36,7 +37,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
 
 
     @Override
-    public void createOrg(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createOrg(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String insertOrg =
                 """
                 INSERT INTO org_t (domain, org_name, org_desc, org_owner, aggregate_version, active, update_user, update_ts)
@@ -79,15 +80,15 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during UPSERT for Org {} aggregateVersion {}: {}", domain, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw for transaction management
+            throw new PortalPersistenceException("Persistence Error", e); // Re-throw for transaction management
         } catch (Exception e) {
             logger.error("Exception during UPSERT for Org {} aggregateVersion {}: {}", domain, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw for transaction management
+            throw new PortalPersistenceException("Persistence Error", e); // Re-throw for transaction management
         }
     }
 
     @Override
-    public void updateOrg(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateOrg(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // --- UPDATED SQL FOR MONOTONICITY ---
         // Sets new version and checks that the current DB version is strictly LESS than the incoming new version.
         // This is the read model's idempotent check.
@@ -154,15 +155,15 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
 
         } catch (SQLException e) {
             logger.error("SQLException during updateOrg for domain {} (old: {}) -> (new: {}): {}", domain, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateOrg for domain {} (old: {}) -> (new: {}): {}", domain, oldAggregateVersion, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteOrg(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteOrg(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String hardDeleteOrgSql =
                 """
                 DELETE FROM org_t WHERE domain = ? AND aggregate_version < ?
@@ -187,15 +188,15 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
 
         } catch (SQLException e) {
             logger.error("SQLException during deleteOrg for domain {} aggregateVersion {}: {}", domain, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw SQLException
+            throw new PortalPersistenceException("Persistence Error", e); // Re-throw SQLException
         } catch (Exception e) {
             logger.error("Exception during deleteOrg for domain {} aggregateVersion {}: {}", domain, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw generic Exception
+            throw new PortalPersistenceException("Persistence Error", e); // Re-throw generic Exception
         }
     }
 
     @Override
-    public void createHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createHost(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String insertHost =
                 """
                 INSERT INTO host_t (host_id, domain, sub_domain, host_desc, host_owner, update_user, update_ts, aggregate_version, active)
@@ -241,15 +242,15 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
             // Log the critical unique constraint violation if it happens on the secondary key (domain, sub_domain)
             // This is a data integrity error from upstream if it happens on insert.
             logger.error("SQLException during createHost UPSERT for hostId {} aggregateVersion {}: {}", hostId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during createHost UPSERT for hostId {} aggregateVersion {}: {}", hostId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void updateHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateHost(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We will attempt to update the record IF the incoming event is newer than the current projection version.
         // We also explicitly set active = TRUE (assuming an update implies the host is now active).
         final String sql =
@@ -308,15 +309,15 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
 
         } catch (SQLException e) {
             logger.error("SQLException during updateHost for hostId {} aggregateVersion {}: {}", hostId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during updateHost for hostId {} aggregateVersion {}: {}", hostId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void deleteHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteHost(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String hardDeleteHostSql =
                 """
                 DELETE FROM host_t WHERE host_id = ? AND aggregate_version < ?
@@ -341,15 +342,15 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
 
         } catch (SQLException e) {
             logger.error("SQLException during deleteHost for hostId {} aggregateVersion {}: {}", hostId, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw SQLException
+            throw new PortalPersistenceException("Persistence Error", e); // Re-throw SQLException
         } catch (Exception e) {
             logger.error("Exception during deleteHost for hostId {} aggregateVersion {}: {}", hostId, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw generic Exception
+            throw new PortalPersistenceException("Persistence Error", e); // Re-throw generic Exception
         }
     }
 
     @Override
-    public void switchUserHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void switchUserHost(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // in normal case, we should have another event to turn off the current host, however, this is not a sure thing. Chances are there
         // is no current host for the user yet. So this update is on the best effort basis.
         final String deactivateCurrentUserHost =
@@ -407,10 +408,10 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during switchHost for hostId {} userId {} aggregateVersion {}: {}", hostId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during switchHost for hoarIs {} userId {} aggregateVersion {}: {}", hostId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
         try (PreparedStatement activateStmt = conn.prepareStatement(activateNewHost)) {
             activateStmt.setString(1, userId);
@@ -450,15 +451,15 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
             logger.debug("Activated host {} for user {}", hostId, userId);
         } catch (SQLException e) {
             logger.error("SQLException during switchHost for hostId {} userId {} aggregateVersion {}: {}", hostId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         } catch (Exception e) {
             logger.error("Exception during switchHost for hostId {} userId {} aggregateVersion {}: {}", hostId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Persistence Error", e);
         }
     }
 
     @Override
-    public void createUserHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createUserHost(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // --- UPDATED SQL FOR UPSERT ---
         // This UPSERT handles:
         // 1. First time insert (no conflict).
@@ -511,15 +512,15 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
             }
         } catch (SQLException e) {
             logger.error("SQLException during UPSERT for hostId {} userId {} aggregateVersion {}: {}", hostId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw for transaction management
+            throw new PortalPersistenceException("Persistence Error", e); // Re-throw for transaction management
         } catch (Exception e) {
             logger.error("Exception during UPSERT for hostId {} userId {} aggregateVersion {}: {}", hostId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw for transaction management
+            throw new PortalPersistenceException("Persistence Error", e); // Re-throw for transaction management
         }
     }
 
     @Override
-    public void deleteUserHost(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteUserHost(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // --- UPDATED SQL FOR SOFT DELETE + MONOTONICITY ---
         // Sets the 'active' flag to FALSE and sets the new version IF the current DB version is older than the incoming event's version.
         final String softDeleteUserHostSql =
@@ -566,10 +567,10 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
 
         } catch (SQLException e) {
             logger.error("SQLException during deleteUserHost for hostId {} userId {} aggregateVersion {}: {}", hostId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw SQLException
+            throw new PortalPersistenceException("Persistence Error", e); // Re-throw SQLException
         } catch (Exception e) {
             logger.error("Exception during deleteUserHost for hostId {} userId {} aggregateVersion {}: {}", hostId, userId, newAggregateVersion, e.getMessage(), e);
-            throw e; // Re-throw generic Exception
+            throw new PortalPersistenceException("Persistence Error", e); // Re-throw generic Exception
         }
     }
 

@@ -10,6 +10,7 @@ import io.cloudevents.core.v1.CloudEventV1;
 import net.lightapi.portal.PortalConstants;
 import net.lightapi.portal.db.ConcurrencyException;
 import net.lightapi.portal.db.PortalDbProvider;
+import net.lightapi.portal.db.PortalPersistenceException;
 import net.lightapi.portal.db.util.NotificationService;
 import net.lightapi.portal.db.util.SqlUtil;
 import org.slf4j.Logger;
@@ -38,7 +39,7 @@ public class RulePersistenceImpl implements RulePersistence {
 
     /*
     @Override
-    public void createRule(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createRule(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         final String insertRule =
                 """
                 INSERT INTO rule_t (rule_id, host_id, rule_name, rule_version, rule_type,
@@ -124,7 +125,7 @@ public class RulePersistenceImpl implements RulePersistence {
     */
 
     @Override
-    public void createRule(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void createRule(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPSERT based on the Primary Key (rule_id): INSERT ON CONFLICT DO UPDATE
         // This handles:
         // 1. First time insert (no conflict).
@@ -162,12 +163,10 @@ public class RulePersistenceImpl implements RulePersistence {
                     update_ts = EXCLUDED.update_ts,
                     aggregate_version = EXCLUDED.aggregate_version,
                     active = TRUE
-                -- OCC/IDM: Only update if the incoming event is newer
                 WHERE rule_t.aggregate_version < EXCLUDED.aggregate_version
                 AND rule_t.active = FALSE
                 """;
 
-        // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
         Map<String, Object> map = SqlUtil.extractEventData(event);
 
         String ruleId = (String)map.get("ruleId");
@@ -230,21 +229,19 @@ public class RulePersistenceImpl implements RulePersistence {
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                // count=0 means the ON CONFLICT clause was hit, BUT the WHERE clause (aggregate_version < EXCLUDED.aggregate_version) failed.
-                // This is the desired idempotent/out-of-order protection behavior. Log and ignore.
                 logger.warn("Creation/Reactivation skipped for ruleId {} aggregateVersion {}. A newer or same version already exists.", ruleId, newAggregateVersion);
             }
         } catch (SQLException e) {
             logger.error("SQLException during createRule for ruleId {} aggregateVersion {}: {}", ruleId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Failed to create rule", e);
         } catch (Exception e) {
             logger.error("Exception during createRule for ruleId {} aggregateVersion {}: {}", ruleId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Failed to create rule due to unexpected error", e);
         }
     }
 
     @Override
-    public void updateRule(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void updateRule(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // We attempt to update the record IF the incoming event's aggregate_version is greater than the current projection's version.
         // This enforces Idempotence (IDM) and Optimistic Concurrency Control (OCC) by ensuring version monotonicity.
         // We explicitly set active = TRUE as an UPDATE event implies the rule should be active.
@@ -266,9 +263,8 @@ public class RulePersistenceImpl implements RulePersistence {
                     active = TRUE
                 WHERE rule_id = ?
                   AND aggregate_version < ?
-                """; // <<< CRITICAL: Added aggregate_version < ? to enforce monotonicity (OCC/IDM)
+                """;
 
-        // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
         Map<String, Object> map = SqlUtil.extractEventData(event);
 
         String ruleId = (String)map.get("ruleId");
@@ -335,55 +331,19 @@ public class RulePersistenceImpl implements RulePersistence {
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                // If 0 rows updated, it means the record was either not found
-                // OR aggregate_version >= newAggregateVersion (OCC/IDM check failed).
-                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
                 logger.warn("Update skipped for ruleId {} aggregateVersion {}. Record not found or a newer/same version already exists.", ruleId, newAggregateVersion);
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateRule for ruleId {} aggregateVersion {}: {}", ruleId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Failed to update rule", e);
         } catch (Exception e) {
             logger.error("Exception during updateRule for ruleId {} aggregateVersion {}: {}", ruleId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Failed to update rule due to unexpected error", e);
         }
     }
 
-    /*
     @Override
-    public void deleteRule(Connection conn, Map<String, Object> event) throws SQLException, Exception {
-        final String deleteRule = "DELETE from rule_t WHERE rule_id = ? AND aggregate_version = ?";
-        Map<String, Object> map = (Map<String, Object>)event.get(PortalConstants.DATA);
-        String ruleId = (String)map.get("ruleId");
-        String hostId = (String)event.get(Constants.HOST);
-        long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
-
-        try {
-            try (PreparedStatement statement = conn.prepareStatement(deleteRule)) {
-                statement.setString(1, ruleId);
-                statement.setLong(2, oldAggregateVersion);
-
-                int count = statement.executeUpdate();
-                if (count == 0) {
-                    if (queryRuleExists(conn, ruleId)) {
-                        throw new ConcurrencyException("Optimistic concurrency conflict during deleteRule for ruleId " + ruleId + " aggregateVersion " + oldAggregateVersion + " but found a different version or already updated.");
-                    } else {
-                        throw new SQLException("No record found during deleteRule for ruleId " + ruleId + ". It might have been already deleted.");
-                    }
-                }
-            }
-        } catch (SQLException e) {
-            logger.error("SQLException during deleteRule for ruleId {} aggregateVersion {}: {}", ruleId, oldAggregateVersion, e.getMessage(), e);
-            throw e;
-        } catch (Exception e) {
-            logger.error("Exception during deleteRule for ruleId {} aggregateVersion {}: {}", ruleId, oldAggregateVersion, e.getMessage(), e);
-            throw e;
-        }
-    }
-    */
-
-    @Override
-    public void deleteRule(Connection conn, Map<String, Object> event) throws SQLException, Exception {
+    public void deleteRule(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // Use UPDATE to implement Soft Delete (setting active = FALSE).
         // OCC/IDM is enforced by checking aggregate_version < newAggregateVersion.
         final String sql =
@@ -395,9 +355,8 @@ public class RulePersistenceImpl implements RulePersistence {
                     aggregate_version = ?
                 WHERE rule_id = ?
                   AND aggregate_version < ?
-                """; // <<< CRITICAL: Added aggregate_version < ? to enforce monotonicity (OCC/IDM)
+                """;
 
-        // Note: Assuming SqlUtil.extractEventData(event) is the correct utility based on other methods.
         Map<String, Object> map = SqlUtil.extractEventData(event);
 
         String ruleId = (String)map.get("ruleId");
@@ -421,18 +380,14 @@ public class RulePersistenceImpl implements RulePersistence {
 
             int count = statement.executeUpdate();
             if (count == 0) {
-                // If 0 rows updated, it means:
-                // 1. The record was not found (already deleted or never existed).
-                // 2. The OCC/IDM check failed (aggregate_version >= newAggregateVersion).
-                // We IGNORE the failure and log a warning, as this is the desired idempotent/monotonic behavior.
                 logger.warn("Soft delete skipped for ruleId {} aggregateVersion {}. Record not found or a newer/same version already exists.", ruleId, newAggregateVersion);
             }
         } catch (SQLException e) {
             logger.error("SQLException during deleteRule for ruleId {} aggregateVersion {}: {}", ruleId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Failed to delete rule", e);
         } catch (Exception e) {
             logger.error("Exception during deleteRule for ruleId {} aggregateVersion {}: {}", ruleId, newAggregateVersion, e.getMessage(), e);
-            throw e;
+            throw new PortalPersistenceException("Failed to delete rule due to unexpected error", e);
         }
     }
 
