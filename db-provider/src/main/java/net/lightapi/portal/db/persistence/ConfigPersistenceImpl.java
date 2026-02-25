@@ -6219,8 +6219,11 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
              PreparedStatement instanceCustomFilesPs = connection.prepareStatement(instanceCustomFilesSql);
         ) {
 
-            instanceRuntimeConfigsPs.setObject(1, hostId != null ? UUID.fromString(hostId) : null);
-            instanceRuntimeConfigsPs.setObject(2, instanceId != null ? UUID.fromString(instanceId) : null);
+            UUID hostUuid = hostId != null ? UUID.fromString(hostId) : null;
+            UUID instanceUuid = instanceId != null ? UUID.fromString(instanceId) : null;
+
+            instanceRuntimeConfigsPs.setObject(1, hostUuid);
+            instanceRuntimeConfigsPs.setObject(2, instanceUuid);
 
             try (ResultSet resultSet = instanceRuntimeConfigsPs.executeQuery()) {
                 while (resultSet.next()) {
@@ -6240,6 +6243,9 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     runtimeConfigs.add(map);
                 }
             }
+
+            instanceCustomFilesPs.setObject(1, hostUuid);
+            instanceCustomFilesPs.setObject(2, instanceUuid);
 
             try (ResultSet resultSet = instanceCustomFilesPs.executeQuery()) {
                 while (resultSet.next()) {

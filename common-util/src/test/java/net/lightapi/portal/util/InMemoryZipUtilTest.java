@@ -108,7 +108,7 @@ class InMemoryZipUtilTest {
     void testZipBase64Files_LargeFile() throws IOException {
         StringBuilder largeContent = new StringBuilder();
         largeContent.append("A".repeat(1000000));
-        String base64LargeContent = java.util.Base64.getEncoder().encodeToString(largeContent.toString().getBytes(StandardCharsets.UTF_8));
+        String base64LargeContent = java.util.Base64.getMimeEncoder().encodeToString(largeContent.toString().getBytes(StandardCharsets.UTF_8));
 
         base64Files.put("large.txt", base64LargeContent);
 
@@ -236,7 +236,7 @@ class InMemoryZipUtilTest {
                 -----END CERTIFICATE-----""";
 
         // Encode the entire certificate content, including BEGIN and END lines
-        String base64Cert = Base64.getEncoder().encodeToString(certContent.getBytes(StandardCharsets.UTF_8));
+        String base64Cert = Base64.getMimeEncoder().encodeToString(certContent.getBytes(StandardCharsets.UTF_8));
         base64Files.put("cert.crt", base64Cert);
 
         byte[] zippedContent = InMemoryZipUtil.zipBase64Files(base64Files);
