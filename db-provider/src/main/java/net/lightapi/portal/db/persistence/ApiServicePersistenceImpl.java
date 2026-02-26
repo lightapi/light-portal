@@ -701,11 +701,12 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                     api_version_desc,
                     spec_link,
                     spec,
+                    transport_config,
                     update_user,
                     update_ts,
                     aggregate_version,
                     active
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)
                 ON CONFLICT (host_id, api_version_id) DO UPDATE
                 SET api_id = EXCLUDED.api_id,
                     api_version = EXCLUDED.api_version,
@@ -714,6 +715,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                     api_version_desc = EXCLUDED.api_version_desc,
                     spec_link = EXCLUDED.spec_link,
                     spec = EXCLUDED.spec,
+                    transport_config = EXCLUDED.transport_config,
                     update_user = EXCLUDED.update_user,
                     update_ts = EXCLUDED.update_ts,
                     aggregate_version = EXCLUDED.aggregate_version,
@@ -733,17 +735,21 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                     http_method,
                     endpoint_path,
                     endpoint_name,
+                    tool_schema,
+                    tool_metadata,
                     endpoint_desc,
                     update_user,
                     update_ts,
                     active
-                ) VALUES (?,? ,?, ?, ?,  ?, ?, ?, ?, ?, TRUE)
+                ) VALUES (?,? ,?, ?, ?,  ?, ?, ?, ?, ?, ?, ?, TRUE)
                 ON CONFLICT (host_id, endpoint_id) DO UPDATE
                 SET api_version_id = EXCLUDED.api_version_id,
                     endpoint = EXCLUDED.endpoint,
                     http_method = EXCLUDED.http_method,
                     endpoint_path = EXCLUDED.endpoint,
                     endpoint_name = EXCLUDED.endpoint_name,
+                    tool_schema = EXCLUDED.tool_schema,
+                    tool_metadata = EXCLUDED.tool_metadata,
                     endpoint_desc = EXCLUDED.endpoint_desc,
                     update_user = EXCLUDED.update_user,
                     update_ts = EXCLUDED.update_ts,
@@ -815,6 +821,13 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 statement.setNull(i++, Types.CLOB); // Use appropriate large object type if TEXT is large, otherwise VARCHAR/CLOB/TEXT type
             }
 
+            // transport_config
+            if (map.containsKey("transportConfig")) {
+                statement.setString(i++, (String)map.get("transportConfig"));
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+
             // 10: update_user
             statement.setString(i++, (String)event.get(Constants.USER));
             // 11: update_ts
@@ -859,8 +872,18 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                         else
                             statementInsert.setString(8, (String) endpoint.get("endpointDesc"));
 
-                        statementInsert.setString(9, (String) event.get(Constants.USER));
-                        statementInsert.setObject(10, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                        if (endpoint.get("toolSchema") == null)
+                            statementInsert.setNull(9, NULL);
+                        else
+                            statementInsert.setString(9, (String) endpoint.get("toolSchema"));
+
+                        if (endpoint.get("toolMetadata") == null)
+                            statementInsert.setNull(10, NULL);
+                        else
+                            statementInsert.setString(10, (String) endpoint.get("toolMetadata"));
+
+                        statementInsert.setString(11, (String) event.get(Constants.USER));
+                        statementInsert.setObject(12, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
                         statementInsert.executeUpdate();
                     }
                     // insert scopes
@@ -908,6 +931,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                     api_version_desc = ?,
                     spec_link = ?,
                     spec = ?,
+                    transport_config = ?,
                     update_user = ?,
                     update_ts = ?,
                     aggregate_version = ?,
@@ -951,11 +975,13 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                     http_method,
                     endpoint_path,
                     endpoint_name,
+                    tool_schema,
+                    tool_metadata,
                     endpoint_desc,
                     update_user,
                     update_ts,
                     active
-                ) VALUES (?,? ,?, ?, ?,  ?, ?, ?, ?, ?, TRUE)
+                ) VALUES (?,? ,?, ?, ?,  ?, ?, ?, ?, ?, ?, ?, TRUE)
                 ON CONFLICT (host_id, endpoint_id) DO UPDATE
                 SET api_version_id = EXCLUDED.api_version_id,
                     endpoint = EXCLUDED.endpoint,
@@ -963,6 +989,8 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                     endpoint_path = EXCLUDED.endpoint,
                     endpoint_name = EXCLUDED.endpoint_name,
                     endpoint_desc = EXCLUDED.endpoint_desc,
+                    tool_schema = EXCLUDED.tool_schema,
+                    tool_metadata = EXCLUDED.tool_metadata,
                     update_user = EXCLUDED.update_user,
                     update_ts = EXCLUDED.update_ts,
                     active = TRUE
@@ -1030,20 +1058,27 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 statement.setNull(i++, Types.CLOB); // Use appropriate large object type
             }
 
-            // 8: update_user
+            // 8: transport_config
+            if (map.containsKey("transportConfig")) {
+                statement.setString(i++, (String)map.get("transportConfig"));
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+
+            // 9: update_user
             statement.setString(i++, (String)event.get(Constants.USER));
-            // 9: update_ts
+            // 10: update_ts
             statement.setObject(i++, OffsetDateTime.parse((String)event.get(CloudEventV1.TIME)));
-            // 10: aggregate_version
+            // 11: aggregate_version
             statement.setLong(i++, newAggregateVersion);
 
 
             // WHERE conditions (3 placeholders)
-            // 11: host_id
+            // 12: host_id
             statement.setObject(i++, UUID.fromString(hostId));
-            // 12: api_version_id
+            // 13: api_version_id
             statement.setObject(i++, UUID.fromString(apiVersionId));
-            // 13: aggregate_version < ? (new version for OCC/IDM check)
+            // 14: aggregate_version < ? (new version for OCC/IDM check)
             statement.setLong(i++, newAggregateVersion);
 
             int count = statement.executeUpdate();
@@ -1102,8 +1137,18 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                         else
                             statementInsert.setString(8, (String) endpoint.get("endpointDesc"));
 
-                        statementInsert.setString(9, (String) event.get(Constants.USER));
-                        statementInsert.setObject(10, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                        if (endpoint.get("toolSchema") == null)
+                            statementInsert.setNull(9, NULL);
+                        else
+                            statementInsert.setString(9, (String) endpoint.get("toolSchema"));
+
+                        if (endpoint.get("toolMetadata") == null)
+                            statementInsert.setNull(10, NULL);
+                        else
+                            statementInsert.setString(10, (String) endpoint.get("toolMetadata"));
+
+                        statementInsert.setString(11, (String) event.get(Constants.USER));
+                        statementInsert.setObject(12, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
                         statementInsert.executeUpdate();
                     }
                     // insert or update scopes
@@ -1240,7 +1285,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
         Result<String> result;
         String sql =
             """
-            SELECT host_id, api_version_id, api_id, api_version, api_type,
+            SELECT host_id, api_version_id, api_id, api_version, api_type, transport_config,
             service_id, api_version_desc, spec_link, spec,
             update_user, update_ts, aggregate_version, active
             FROM api_version_t
@@ -1262,6 +1307,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                         map.put("apiVersionDesc", resultSet.getString("api_version_desc"));
                         map.put("specLink", resultSet.getString("spec_link"));
                         map.put("spec", resultSet.getString("spec"));
+                        map.put("transportConfig", resultSet.getString("transport_config"));
                         map.put("updateUser", resultSet.getString("update_user"));
                         map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
                         map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
@@ -1318,7 +1364,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
         Result<String> result = null;
         String sql =
                 """
-                SELECT host_id, api_version_id, api_id, api_version, api_type,
+                SELECT host_id, api_version_id, api_id, api_version, api_type, transport_config,
                 service_id, api_version_desc, spec_link, spec,
                 update_user, update_ts, aggregate_version, active
                 FROM api_version_t
@@ -1343,6 +1389,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                     map.put("apiVersionDesc", resultSet.getString("api_version_desc"));
                     map.put("specLink", resultSet.getString("spec_link"));
                     map.put("spec", resultSet.getString("spec"));
+                    map.put("transportConfig", resultSet.getString("transport_config"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts", OffsetDateTime.class));
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
@@ -1409,18 +1456,22 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                     endpoint,
                     http_method,
                     endpoint_path,
+                    tool_schema,
+                    tool_metadata,
                     endpoint_name,
                     endpoint_desc,
                     update_user,
                     update_ts,
                     active
-                ) VALUES (?,? ,?, ?, ?,  ?, ?, ?, ?, ?, TRUE)
+                ) VALUES (?,? ,?, ?, ?,  ?, ?, ?, ?, ?, ?, ?, TRUE)
                 ON CONFLICT (host_id, endpoint_id) DO UPDATE
                 SET api_version_id = EXCLUDED.api_version_id,
                     endpoint = EXCLUDED.endpoint,
                     http_method = EXCLUDED.http_method,
                     endpoint_path = EXCLUDED.endpoint,
                     endpoint_name = EXCLUDED.endpoint_name,
+                    tool_schema = EXCLUDED.tool_schema,
+                    tool_metadata = EXCLUDED.tool_metadata,
                     endpoint_desc = EXCLUDED.endpoint_desc,
                     update_user = EXCLUDED.update_user,
                     update_ts = EXCLUDED.update_ts,
@@ -1611,7 +1662,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 SELECT COUNT(*) OVER () AS total,
                 e.host_id, e.endpoint_id, e.api_version_id, v.api_id,
                 v.api_version, e.endpoint, e.http_method, e.endpoint_path,
-                e.endpoint_desc, e.active, e.update_user, e.update_ts
+                e.tool_schema, e.tool_metadata, e.endpoint_desc, e.active, e.update_user, e.update_ts
                 FROM api_endpoint_t e
                 INNER JOIN api_version_t v ON e.api_version_id = v.api_version_id
                 WHERE e.host_id = ?
@@ -1652,6 +1703,8 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                     map.put("endpoint", resultSet.getString("endpoint"));
                     map.put("httpMethod", resultSet.getString("http_method"));
                     map.put("endpointPath", resultSet.getString("endpoint_path"));
+                    map.put("toolSchema", resultSet.getString("tool_schema"));
+                    map.put("toolMetadata", resultSet.getString("tool_metadata"));
                     map.put("endpointDesc", resultSet.getString("endpoint_desc"));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts", OffsetDateTime.class));
