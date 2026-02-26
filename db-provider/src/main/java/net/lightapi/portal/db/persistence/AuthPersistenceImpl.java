@@ -241,10 +241,10 @@ public class AuthPersistenceImpl implements AuthPersistence {
                 INSERT INTO auth_client_t (
                     host_id, client_id, client_name, app_id, api_id,
                     client_type, client_profile, client_secret, client_scope, custom_claim,
-                    redirect_uri, authenticate_class, deref_client_id, update_user, update_ts, aggregate_version
+                    redirect_uri, authenticate_class, token_ex_type, deref_client_id, update_user, update_ts, aggregate_version
                 )
                 VALUES (
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
                 )
                 ON CONFLICT (host_id, client_id) DO UPDATE -- <<< CONFLICT KEY is PRIMARY KEY
                 SET
@@ -258,6 +258,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                     custom_claim = EXCLUDED.custom_claim,
                     redirect_uri = EXCLUDED.redirect_uri,
                     authenticate_class = EXCLUDED.authenticate_class,
+                    token_ex_type = EXCLUDED.token_ex_type,
                     deref_client_id = EXCLUDED.deref_client_id,
                     update_user = EXCLUDED.update_user,
                     update_ts = EXCLUDED.update_ts,
@@ -327,16 +328,23 @@ public class AuthPersistenceImpl implements AuthPersistence {
                 statement.setNull(i++, Types.VARCHAR);
             }
 
+            String tokenExType = (String) map.get("tokenExType");
+            if (tokenExType != null && !tokenExType.isEmpty()) {
+                statement.setString(i++, tokenExType); // 13. token_ex_type
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
+
             String deRefClientId = (String) map.get("deRefClientId");
             if (deRefClientId != null && !deRefClientId.isEmpty()) {
-                statement.setObject(i++, UUID.fromString(deRefClientId)); // 13. deref_client_id
+                statement.setObject(i++, UUID.fromString(deRefClientId)); // 14. deref_client_id
             } else {
                 statement.setNull(i++, Types.OTHER);
             }
 
-            statement.setString(i++, (String) event.get(Constants.USER)); // 14. update_user
-            statement.setObject(i++, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME))); // 15. update_ts
-            statement.setLong(i++, newAggregateVersion); // 16. aggregate_version (The New Version)
+            statement.setString(i++, (String) event.get(Constants.USER)); // 15. update_user
+            statement.setObject(i++, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME))); // 16. update_ts
+            statement.setLong(i++, newAggregateVersion); // 17. aggregate_version (The New Version)
 
             // --- Execute UPSERT ---
             int count = statement.executeUpdate();
@@ -365,7 +373,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                 UPDATE auth_client_t SET app_id = ?, api_id = ?, client_name = ?,
                 client_type = ?, client_profile = ?,
                 client_scope = ?, custom_claim = ?, redirect_uri = ?, authenticate_class = ?,
-                deref_client_id = ?, update_user = ?, update_ts = ?, aggregate_version = ?
+                token_ex_type = ?, deref_client_id = ?, update_user = ?, update_ts = ?, aggregate_version = ?
                 WHERE host_id = ? AND client_id = ? AND aggregate_version < ?
                 """; // <<< CRITICAL: Changed '= ?' to '< ?' in the final aggregate_version check.
 
@@ -436,7 +444,15 @@ public class AuthPersistenceImpl implements AuthPersistence {
                 statement.setNull(i++, NULL);
             }
 
-            // 10. deref_client_id
+            // 10. token_ex_type
+            String tokenExType = (String) map.get("tokenExType");
+            if (tokenExType != null && !tokenExType.isEmpty()) {
+                statement.setString(i++, tokenExType);
+            } else {
+                statement.setNull(i++, NULL);
+            }
+
+            // 11. deref_client_id
             String deRefClientId = (String) map.get("deRefClientId");
             if (deRefClientId != null && !deRefClientId.isEmpty()) {
                 statement.setObject(i++, UUID.fromString(deRefClientId));
@@ -444,24 +460,24 @@ public class AuthPersistenceImpl implements AuthPersistence {
                 statement.setNull(i++, Types.OTHER);
             }
 
-            // 11. update_user
+            // 12. update_user
             statement.setString(i++, (String) event.get(Constants.USER));
 
-            // 12. update_ts
+            // 13. update_ts
             statement.setObject(i++, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
 
-            // 13. aggregate_version (New Version in SET clause)
+            // 14. aggregate_version (New Version in SET clause)
             statement.setLong(i++, newAggregateVersion);
 
             // --- WHERE CLAUSE PARAMETERS (15, 16, 17) ---
 
-            // 14. host_id
+            // 15. host_id
             statement.setObject(i++, UUID.fromString(hostId));
 
-            // 15. client_id
+            // 16. client_id
             statement.setObject(i++, UUID.fromString(clientId));
 
-            // 16. aggregate_version (Monotonicity Check: aggregate_version < newAggregateVersion)
+            // 17. aggregate_version (Monotonicity Check: aggregate_version < newAggregateVersion)
             statement.setLong(i, newAggregateVersion); // Check against the new version
 
             int count = statement.executeUpdate();
@@ -536,7 +552,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                 """
                 SELECT host_id, app_id, api_id, client_name, client_id, client_type,
                 client_profile, client_secret, client_scope, custom_claim, redirect_uri,
-                authenticate_class, deref_client_id, update_user, update_ts, aggregate_version
+                authenticate_class, token_ex_type, deref_client_id, update_user, update_ts, aggregate_version
                 FROM auth_client_t
                 WHERE active = TRUE AND client_id = ?
                 """;
@@ -558,6 +574,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                         map.put("customClaim", resultSet.getString("custom_claim"));
                         map.put("redirectUri", resultSet.getString("redirect_uri"));
                         map.put("authenticateClass", resultSet.getString("authenticate_class"));
+                        map.put("tokenExType", resultSet.getString("token_ex_type"));
                         map.put("deRefClientId", resultSet.getObject("deref_client_id", UUID.class));
                         map.put("updateUser", resultSet.getString("update_user"));
                         map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
@@ -595,7 +612,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                 """
                 SELECT host_id, app_id, api_id, client_name, client_id, client_type,
                 client_profile, client_secret, client_scope, custom_claim, redirect_uri,
-                authenticate_class, deref_client_id, update_user, update_ts, aggregate_version, active
+                authenticate_class, token_ex_type, deref_client_id, update_user, update_ts, aggregate_version, active
                 FROM auth_client_t
                 WHERE host_id = ? AND client_id = ?
                 """;
@@ -618,6 +635,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                         map.put("customClaim", resultSet.getString("custom_claim"));
                         map.put("redirectUri", resultSet.getString("redirect_uri"));
                         map.put("authenticateClass", resultSet.getString("authenticate_class"));
+                        map.put("tokenExType", resultSet.getString("token_ex_type"));
                         map.put("deRefClientId", resultSet.getObject("deref_client_id", UUID.class));
                         map.put("updateUser", resultSet.getString("update_user"));
                         map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
@@ -647,7 +665,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                 """
                 SELECT c.host_id, a.provider_id, a.client_id, c.client_type, c.client_profile,\s
                 c.client_secret, c.client_scope, c.custom_claim, c.redirect_uri,\s
-                c.authenticate_class, c.deref_client_id, a.aggregate_version
+                c.authenticate_class, c.token_ex_type, c.deref_client_id, a.aggregate_version
                 FROM auth_client_t c, auth_provider_client_t a
                 WHERE c.host_id = a.host_id AND c.client_id = a.client_id
                 AND a.provider_id = ?
@@ -671,6 +689,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                         map.put("customClaim", resultSet.getString("custom_claim"));
                         map.put("redirectUri", resultSet.getString("redirect_uri"));
                         map.put("authenticateClass", resultSet.getString("authenticate_class"));
+                        map.put("tokenExType", resultSet.getString("token_ex_type"));
                         map.put("deRefClientId", resultSet.getObject("deref_client_id", UUID.class));
                         map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     }
@@ -696,7 +715,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
         String sql =
                 """
                 SELECT host_id, app_id, client_id, client_type, client_profile, client_scope, custom_claim,
-                redirect_uri, authenticate_class, deref_client_id, update_user, update_ts, aggregate_version
+                redirect_uri, authenticate_class, token_ex_type, deref_client_id, update_user, update_ts, aggregate_version
                 FROM auth_client_t c
                 WHERE host_id = ? AND app_id = ?
                 """;
@@ -716,6 +735,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                         map.put("customClaim", resultSet.getString("custom_claim"));
                         map.put("redirectUri", resultSet.getString("redirect_uri"));
                         map.put("authenticateClass", resultSet.getString("authenticate_class"));
+                        map.put("tokenExType", resultSet.getString("token_ex_type"));
                         map.put("deRefClientId", resultSet.getObject("deref_client_id", UUID.class));
                         map.put("updateUser", resultSet.getString("update_user"));
                         map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
@@ -1836,7 +1856,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                 """
                 SELECT COUNT(*) OVER () AS total,
                 client_id, host_id, app_id, api_id, client_name, client_type, client_profile,
-                client_scope, custom_claim, redirect_uri, authenticate_class, deref_client_id,
+                client_scope, custom_claim, redirect_uri, authenticate_class, token_ex_type, deref_client_id,
                 update_user, update_ts, aggregate_version, active
                 FROM auth_client_t
                 WHERE host_id = ?
@@ -1882,6 +1902,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
                     map.put("customClaim", resultSet.getString("custom_claim"));
                     map.put("redirectUri", resultSet.getString("redirect_uri"));
                     map.put("authenticateClass", resultSet.getString("authenticate_class"));
+                    map.put("tokenExType", resultSet.getString("token_ex_type"));
                     map.put("deRefClientId", resultSet.getObject("deref_client_id", UUID.class));
                     map.put("updateUser", resultSet.getString("update_user"));
                     map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
