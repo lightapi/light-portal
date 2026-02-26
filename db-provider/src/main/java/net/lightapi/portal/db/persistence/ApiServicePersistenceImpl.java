@@ -746,7 +746,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 SET api_version_id = EXCLUDED.api_version_id,
                     endpoint = EXCLUDED.endpoint,
                     http_method = EXCLUDED.http_method,
-                    endpoint_path = EXCLUDED.endpoint,
+                    endpoint_path = EXCLUDED.endpoint_path,
                     endpoint_name = EXCLUDED.endpoint_name,
                     tool_schema = EXCLUDED.tool_schema,
                     tool_metadata = EXCLUDED.tool_metadata,
@@ -867,20 +867,20 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                         else
                             statementInsert.setString(7, (String) endpoint.get("endpointName"));
 
-                        if (endpoint.get("endpointDesc") == null)
+                        if (endpoint.get("toolSchema") == null)
                             statementInsert.setNull(8, NULL);
                         else
-                            statementInsert.setString(8, (String) endpoint.get("endpointDesc"));
-
-                        if (endpoint.get("toolSchema") == null)
-                            statementInsert.setNull(9, NULL);
-                        else
-                            statementInsert.setString(9, (String) endpoint.get("toolSchema"));
+                            statementInsert.setString(8, (String) endpoint.get("toolSchema"));
 
                         if (endpoint.get("toolMetadata") == null)
+                            statementInsert.setNull(9, NULL);
+                        else
+                            statementInsert.setString(9, (String) endpoint.get("toolMetadata"));
+
+                        if (endpoint.get("endpointDesc") == null)
                             statementInsert.setNull(10, NULL);
                         else
-                            statementInsert.setString(10, (String) endpoint.get("toolMetadata"));
+                            statementInsert.setString(10, (String) endpoint.get("endpointDesc"));
 
                         statementInsert.setString(11, (String) event.get(Constants.USER));
                         statementInsert.setObject(12, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
@@ -986,7 +986,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 SET api_version_id = EXCLUDED.api_version_id,
                     endpoint = EXCLUDED.endpoint,
                     http_method = EXCLUDED.http_method,
-                    endpoint_path = EXCLUDED.endpoint,
+                    endpoint_path = EXCLUDED.endpoint_path,
                     endpoint_name = EXCLUDED.endpoint_name,
                     endpoint_desc = EXCLUDED.endpoint_desc,
                     tool_schema = EXCLUDED.tool_schema,
@@ -1132,20 +1132,20 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                         else
                             statementInsert.setString(7, (String) endpoint.get("endpointName"));
 
-                        if (endpoint.get("endpointDesc") == null)
+                        if (endpoint.get("toolSchema") == null)
                             statementInsert.setNull(8, NULL);
                         else
-                            statementInsert.setString(8, (String) endpoint.get("endpointDesc"));
-
-                        if (endpoint.get("toolSchema") == null)
-                            statementInsert.setNull(9, NULL);
-                        else
-                            statementInsert.setString(9, (String) endpoint.get("toolSchema"));
+                            statementInsert.setString(8, (String) endpoint.get("toolSchema"));
 
                         if (endpoint.get("toolMetadata") == null)
+                            statementInsert.setNull(9, NULL);
+                        else
+                            statementInsert.setString(9, (String) endpoint.get("toolMetadata"));
+
+                        if (endpoint.get("endpointDesc") == null)
                             statementInsert.setNull(10, NULL);
                         else
-                            statementInsert.setString(10, (String) endpoint.get("toolMetadata"));
+                            statementInsert.setString(10, (String) endpoint.get("endpointDesc"));
 
                         statementInsert.setString(11, (String) event.get(Constants.USER));
                         statementInsert.setObject(12, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
@@ -1456,9 +1456,9 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                     endpoint,
                     http_method,
                     endpoint_path,
+                    endpoint_name,
                     tool_schema,
                     tool_metadata,
-                    endpoint_name,
                     endpoint_desc,
                     update_user,
                     update_ts,
@@ -1468,7 +1468,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 SET api_version_id = EXCLUDED.api_version_id,
                     endpoint = EXCLUDED.endpoint,
                     http_method = EXCLUDED.http_method,
-                    endpoint_path = EXCLUDED.endpoint,
+                    endpoint_path = EXCLUDED.endpoint_path,
                     endpoint_name = EXCLUDED.endpoint_name,
                     tool_schema = EXCLUDED.tool_schema,
                     tool_metadata = EXCLUDED.tool_metadata,
@@ -1573,13 +1573,23 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                         else
                             statementInsert.setString(7, (String) endpoint.get("endpointName"));
 
-                        if (endpoint.get("endpointDesc") == null)
+                        if (endpoint.get("toolSchema") == null)
                             statementInsert.setNull(8, NULL);
                         else
-                            statementInsert.setString(8, (String) endpoint.get("endpointDesc"));
+                            statementInsert.setString(8, (String) endpoint.get("toolSchema"));
 
-                        statementInsert.setString(9, (String) event.get(Constants.USER));
-                        statementInsert.setObject(10, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+                        if (endpoint.get("toolMetadata") == null)
+                            statementInsert.setNull(9, NULL);
+                        else
+                            statementInsert.setString(9, (String) endpoint.get("toolMetadata"));
+
+                        if (endpoint.get("endpointDesc") == null)
+                            statementInsert.setNull(10, NULL);
+                        else
+                            statementInsert.setString(10, (String) endpoint.get("endpointDesc"));
+
+                        statementInsert.setString(11, (String) event.get(Constants.USER));
+                        statementInsert.setObject(12, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
                         statementInsert.executeUpdate();
                     }
                     // insert or update scopes
