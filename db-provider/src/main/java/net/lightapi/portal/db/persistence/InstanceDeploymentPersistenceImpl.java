@@ -6269,11 +6269,12 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         final String sql =
                 """
                 INSERT INTO deployment_instance_t(host_id, deployment_instance_id, instance_id,
-                service_id, ip_address, port_number, system_env, runtime_env, pipeline_id,
+                platform_job_id, service_id, ip_address, port_number, system_env, runtime_env, pipeline_id,
                 update_user, update_ts, aggregate_version, active)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)
                 ON CONFLICT (host_id, deployment_instance_id) DO UPDATE
                 SET instance_id = EXCLUDED.instance_id,
+                    platform_job_id = EXCLUDED.platform_job_id,
                     service_id = EXCLUDED.service_id,
                     ip_address = EXCLUDED.ip_address,
                     port_number = EXCLUDED.port_number,
@@ -6299,6 +6300,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             statement.setObject(i++, UUID.fromString(hostId));
             statement.setObject(i++, UUID.fromString(deploymentInstanceId));
             statement.setObject(i++, UUID.fromString((String) map.get("instanceId")));
+            statement.setString(i++, (String) map.get("platformJobId"));
             statement.setString(i++, (String) map.get("serviceId"));
             statement.setString(i++, (String) map.get("ipAddress"));
 
@@ -6353,7 +6355,8 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         final String sql =
                 """
                 UPDATE deployment_instance_t
-                SET service_id = ?,
+                SET platform_job_id = ?,
+                    service_id = ?,
                     ip_address = ?,
                     port_number = ?,
                     system_env = ?,
@@ -6374,8 +6377,9 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         long newAggregateVersion = SqlUtil.getNewAggregateVersion(event);
 
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
-            // SET clause placeholders (9)
+            // SET clause placeholders (10)
             int i = 1;
+            statement.setString(i++, (String) map.get("platformJobId"));
             statement.setString(i++, (String) map.get("serviceId"));
             statement.setString(i++, (String) map.get("ipAddress"));
 
@@ -6517,7 +6521,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         String s =
             """
             SELECT COUNT(*) OVER () AS total,
-            di.host_id, di.instance_id, i.instance_name, di.deployment_instance_id, di.service_id, di.ip_address,
+            di.host_id, di.instance_id, i.instance_name, di.deployment_instance_id, di.platform_job_id, di.service_id, di.ip_address,
             di.port_number, di.system_env, di.runtime_env, di.pipeline_id, p.pipeline_name, p.pipeline_version,
             di.deploy_status, di.update_user, di.update_ts, di.aggregate_version, di.active
             FROM deployment_instance_t di
@@ -6558,6 +6562,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
                     map.put("instanceName", resultSet.getString("instance_name"));
                     map.put("deploymentInstanceId", resultSet.getObject("deployment_instance_id", UUID.class));
+                    map.put("platformJobId", resultSet.getString("platform_job_id"));
                     map.put("serviceId", resultSet.getString("service_id"));
                     map.put("ipAddress", resultSet.getString("ip_address"));
 
@@ -6601,7 +6606,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
     public Result<String> getDeploymentInstanceById(String hostId, String deploymentInstanceId) {
         final String sql =
                 """
-                SELECT host_id, instance_id, deployment_instance_id, service_id, ip_address,
+                SELECT host_id, instance_id, deployment_instance_id, platform_job_id, service_id, ip_address,
                 port_number, system_env, runtime_env, pipeline_id, deploy_status, aggregate_version,
                 active, update_user, update_ts
                 FROM deployment_instance_t
@@ -6623,6 +6628,7 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
                     map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
                     map.put("deploymentInstanceId", resultSet.getObject("deployment_instance_id", UUID.class));
+                    map.put("platformJobId", resultSet.getString("platform_job_id"));
                     map.put("serviceId", resultSet.getString("service_id"));
                     map.put("ipAddress", resultSet.getString("ip_address"));
                     map.put("portNumber", resultSet.getObject("port_number") != null ? resultSet.getInt("port_number") : null);
