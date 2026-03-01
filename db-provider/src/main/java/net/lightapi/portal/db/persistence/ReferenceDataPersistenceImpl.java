@@ -102,8 +102,9 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
             Boolean active = (Boolean) map.getOrDefault("active", Boolean.TRUE);
             statement.setBoolean(i++, active);
 
-            // 6: editable (Using FALSE if not specified)
-            Boolean editable = (Boolean)map.getOrDefault("editable", Boolean.FALSE);
+            // 6: editable (Using FALSE if not specified or null)
+            Boolean editableRaw = (Boolean) map.get("editable");
+            boolean editable = editableRaw != null ? editableRaw : false;
             statement.setBoolean(i++, editable);
 
             // 7: update_user
