@@ -928,4 +928,3 @@ public interface AccessControlPersistence {
      */
     Result<String> getAttributeColFilterById(String hostId, String attributeId, String endpointId);
 }
-

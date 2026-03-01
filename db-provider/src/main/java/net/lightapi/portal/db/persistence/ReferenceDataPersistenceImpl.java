@@ -102,13 +102,10 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
             Boolean active = (Boolean) map.getOrDefault("active", Boolean.TRUE);
             statement.setBoolean(i++, active);
 
-            // 6: editable
-            Boolean editable = (Boolean)map.get("editable");
-            if (editable != null) {
-                statement.setBoolean(i++, editable);
-            } else {
-                statement.setNull(i++, Types.BOOLEAN);
-            }
+            // 6: editable (Using FALSE if not specified or null)
+            Boolean editableRaw = (Boolean) map.get("editable");
+            boolean editable = editableRaw != null ? editableRaw : false;
+            statement.setBoolean(i++, editable);
 
             // 7: update_user
             statement.setString(i++, (String)event.get(Constants.USER));
@@ -178,15 +175,10 @@ public class ReferenceDataPersistenceImpl implements ReferenceDataPersistence {
             Boolean active = (Boolean)map.getOrDefault("active", Boolean.TRUE);
             statement.setBoolean(i++, active);
 
-            // 4: editable (Optional)
-            Boolean editable = (Boolean)map.get("editable");
-            if (editable != null) {
-                statement.setBoolean(i++, editable);
-            } else {
-                // Assuming we default to TRUE if null is passed, or preserve existing if logic is more complex.
-                // Since this is an update, we might set to null/default, but DDL is NOT NULL. Setting to NOT NULL DDL default if null from map.
-                statement.setBoolean(i++, (Boolean)map.getOrDefault("editable", Boolean.TRUE));
-            }
+            // 4: editable (Required and default to false)
+            Boolean editableRaw = (Boolean) map.get("editable");
+            boolean editable = editableRaw != null ? editableRaw : false;
+            statement.setBoolean(i++, editable);
 
             // 5: update_user
             statement.setString(i++, (String)event.get(Constants.USER));
