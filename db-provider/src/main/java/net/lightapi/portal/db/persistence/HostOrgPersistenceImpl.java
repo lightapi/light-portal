@@ -576,7 +576,7 @@ public class HostOrgPersistenceImpl implements HostOrgPersistence {
 
     @Override
     public Result<String> queryHostDomainById(String hostId) {
-        final String sql = "SELECT sub_domain || '.' || domain AS domain FROM host_t WHERE host_id = ?";
+        final String sql = "SELECT domain FROM host_t WHERE host_id = ?";
         Result<String> result;
         String domain = null;
         try (final Connection conn = ds.getConnection(); final PreparedStatement statement = conn.prepareStatement(sql)) {
