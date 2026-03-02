@@ -6300,9 +6300,17 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
             statement.setObject(i++, UUID.fromString(hostId));
             statement.setObject(i++, UUID.fromString(deploymentInstanceId));
             statement.setObject(i++, UUID.fromString((String) map.get("instanceId")));
-            statement.setString(i++, (String) map.get("platformJobId"));
+            if (map.get("platformJobId") != null) {
+                statement.setString(i++, (String) map.get("platformJobId"));
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
             statement.setString(i++, (String) map.get("serviceId"));
-            statement.setString(i++, (String) map.get("ipAddress"));
+            if (map.get("ipAddress") != null) {
+                statement.setString(i++, (String) map.get("ipAddress"));
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
 
             if (map.get("portNumber") != null) {
                 statement.setInt(i++, (Integer) map.get("portNumber"));
@@ -6379,9 +6387,17 @@ public class InstanceDeploymentPersistenceImpl implements InstanceDeploymentPers
         try (PreparedStatement statement = conn.prepareStatement(sql)) {
             // SET clause placeholders (10)
             int i = 1;
-            statement.setString(i++, (String) map.get("platformJobId"));
+            if (map.get("platformJobId") != null) {
+                statement.setString(i++, (String) map.get("platformJobId"));
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
             statement.setString(i++, (String) map.get("serviceId"));
-            statement.setString(i++, (String) map.get("ipAddress"));
+            if (map.get("ipAddress") != null) {
+                statement.setString(i++, (String) map.get("ipAddress"));
+            } else {
+                statement.setNull(i++, Types.VARCHAR);
+            }
 
             if (map.get("portNumber") != null) {
                 statement.setInt(i++, (Integer) map.get("portNumber"));
