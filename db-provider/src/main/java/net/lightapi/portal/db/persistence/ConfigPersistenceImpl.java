@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import java.sql.*;
 import java.time.OffsetDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.networknt.db.provider.SqlDbStartupHook.ds;
 import static net.lightapi.portal.db.util.SqlUtil.*;
@@ -6558,5 +6559,131 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
         }
         return result;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public Result<String> getEffectiveDeploymentConfigInstance(String hostId, String instanceId) {
+        try {
+            // Get applicable deployment properties (config_phase = 'D')
+            Result<String> applicablePropertiesResult = getApplicableConfigPropertiesForInstance(
+                0,
+                Integer.MAX_VALUE,
+                hostId,
+                instanceId,
+                Set.of(),
+                Set.of(),
+                Set.of(),
+                Set.of("D")
+            );
+
+            if (applicablePropertiesResult.isFailure()) {
+                return applicablePropertiesResult;
+            }
+
+            // Get instance-specific overridden properties
+            String filtersJson = String.format("[{\"id\": \"instanceId\", \"value\": \"%s\"}]", instanceId);
+            Result<String> instancePropertiesResult = getConfigInstance(
+                0,
+                Integer.MAX_VALUE,
+                filtersJson,
+                null,
+                null,
+                true,
+                hostId
+            );
+
+            if (instancePropertiesResult.isFailure()) {
+                return instancePropertiesResult;
+            }
+
+            // Parse results
+            Map<String, Object> applicableMap = JsonMapper.string2Map(applicablePropertiesResult.getResult());
+            Map<String, Object> instanceMap = JsonMapper.string2Map(instancePropertiesResult.getResult());
+
+            List<Map<String, Object>> applicableProperties =
+                (List<Map<String, Object>>) applicableMap.get("instanceApplicableProperties");
+
+            List<Map<String, Object>> instanceProperties =
+                (List<Map<String, Object>>) instanceMap.get("instanceProperties");
+
+            // Pluck instanceName from instance properties (same for all)
+            String instanceName = instanceProperties.stream()
+                .findFirst()
+                .map(prop -> (String) prop.get("instanceName"))
+                .orElse(null);
+
+            // Create a lookup map for instance properties by propertyId
+            Map<UUID, Map<String, Object>> instancePropertiesMap = instanceProperties.stream()
+                .filter(prop -> prop.get("propertyId") != null && prop.get("propertyId") instanceof String)
+                .collect(Collectors.toMap(
+                    prop -> UUID.fromString((String) prop.get("propertyId")),
+                    prop -> prop,
+                    (existing, replacement) -> existing
+                ));
+
+            // Perform LEFT JOIN and value inference
+            List<Map<String, Object>> effectiveProperties = applicableProperties.stream()
+                .filter(prop -> prop.get("propertyId") != null && prop.get("propertyId") instanceof String)
+                .map(applicableProp -> {
+                    Map<String, Object> effectiveProp = new HashMap<>();
+                    UUID propertyId = UUID.fromString((String) applicableProp.get("propertyId"));
+                    Map<String, Object> instanceProp = instancePropertiesMap.get(propertyId);
+
+                    // Copy base fields from applicable properties
+                    effectiveProp.put("hostId", applicableProp.get("hostId"));
+                    effectiveProp.put("instanceId", applicableProp.get("instanceId"));
+                    effectiveProp.put("instanceName", instanceName);
+                    effectiveProp.put("configId", applicableProp.get("configId"));
+                    effectiveProp.put("configName", applicableProp.get("configName"));
+                    effectiveProp.put("propertyId", propertyId);
+                    effectiveProp.put("propertyName", applicableProp.get("propertyName"));
+                    effectiveProp.put("required", applicableProp.get("required"));
+                    effectiveProp.put("propertyDesc", applicableProp.get("propertyDesc"));
+                    effectiveProp.put("propertyType", applicableProp.get("propertyType"));
+                    effectiveProp.put("resourceType", applicableProp.get("resourceType"));
+                    effectiveProp.put("valueType", applicableProp.get("valueType"));
+                    effectiveProp.put("configType", applicableProp.get("configType"));
+                    effectiveProp.put("configDesc", applicableProp.get("configDesc"));
+                    effectiveProp.put("classPath", applicableProp.get("classPath"));
+
+                    // Value inference logic
+                    // Use instance property value if exists, otherwise use applicable property value
+                    if (instanceProp != null && instanceProp.get("propertyValue") != null) {
+                        // Match found in instance properties - use instance values
+                        effectiveProp.put("propertyValue", instanceProp.get("propertyValue"));
+                        effectiveProp.put("updateUser", instanceProp.get("updateUser"));
+                        effectiveProp.put("updateTs", instanceProp.get("updateTs"));
+                        effectiveProp.put("aggregateVersion", instanceProp.get("aggregateVersion"));
+                        effectiveProp.put("active", instanceProp.get("active"));
+                        effectiveProp.put("propertySource", instanceName);
+                        effectiveProp.put("propertySourceType", "instance_property");
+                    } else {
+                        // No match - use applicable property values
+                        effectiveProp.put("propertyValue", applicableProp.get("propertyValue"));
+                        effectiveProp.put("updateUser", null);
+                        effectiveProp.put("updateTs", null);
+                        effectiveProp.put("aggregateVersion", 0);
+                        effectiveProp.put("active", true);
+                        effectiveProp.put("propertySource", applicableProp.get("propertySource"));
+                        effectiveProp.put("propertySourceType", applicableProp.get("propertySourceType"));
+                    }
+
+                    return effectiveProp;
+                })
+                .collect(Collectors.toList());
+
+            // Build result matching getConfigInstance format
+            Map<String, Object> resultMap = Map.of(
+                "total", effectiveProperties.size(),
+                "instanceProperties", effectiveProperties
+            );
+
+            return Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (Exception e) {
+            logger.error("Exception in getEffectiveDeploymentConfigInstance:", e);
+            return Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+        }
     }
 }
