@@ -4791,10 +4791,12 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     public Result<String> getConfigDeploymentInstanceById(String hostId, String deploymentInstanceId, String propertyId) {
         final String sql =
                 """
-                SELECT host_id, deployment_instance_id, property_id, property_value,
-                aggregate_version, active, update_user, update_ts
-                FROM deployment_instance_property_t
-                WHERE host_id = ? AND deployment_instance_id = ? AND property_id = ?
+                SELECT dip.host_id, dip.deployment_instance_id, dip.property_id, dip.property_value,
+                cp.config_id, cp.property_type,
+                dip.aggregate_version, dip.active, dip.update_user, dip.update_ts
+                FROM deployment_instance_property_t dip
+                JOIN config_property_t cp ON dip.property_id = cp.property_id
+                WHERE dip.host_id = ? AND dip.deployment_instance_id = ? AND dip.property_id = ?
                 """;
         Result<String> result;
         Map<String, Object> map = new HashMap<>();
@@ -4814,6 +4816,8 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("deploymentInstanceId", resultSet.getObject("deployment_instance_id", UUID.class));
                     map.put("propertyId", resultSet.getObject("property_id", UUID.class));
                     map.put("propertyValue", resultSet.getString("property_value"));
+                    map.put("configId", resultSet.getObject("config_id", UUID.class));
+                    map.put("propertyType", resultSet.getString("property_type"));
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     map.put("active", resultSet.getBoolean("active"));
                     map.put("updateUser", resultSet.getString("update_user"));
