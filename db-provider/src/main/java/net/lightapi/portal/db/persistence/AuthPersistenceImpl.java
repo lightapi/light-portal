@@ -2095,7 +2095,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "r", "u", "a", "c");
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "u", "a", "c");
         String[] searchColumns = {"r.entity_id", "r.email", "u.first_name", "u.last_name", "a.app_name", "r.roles", "r.groups", "r.positions", "r.attributes", "r.scope"};
         String sqlBuilder = s + activeClause +
                 dynamicFilter(Arrays.asList("r.host_id", "r.refresh_token", "r.user_id", "r.client_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
@@ -2375,9 +2375,8 @@ public class AuthPersistenceImpl implements AuthPersistence {
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-        String activeClause = SqlUtil.buildMultiTableActiveClause(active);
         String[] searchColumns = {"entity_id", "email", "roles", "redirect_uri", "scope"};
-        String sqlBuilder = s + activeClause +
+        String sqlBuilder = s +
                 dynamicFilter(Arrays.asList("host_id", "user_id"), Arrays.asList(searchColumns), filters, null, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
                 dynamicSorting("update_ts", sorting, null) +
