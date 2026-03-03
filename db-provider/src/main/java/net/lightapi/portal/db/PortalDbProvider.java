@@ -314,6 +314,7 @@ public interface PortalDbProvider extends DbProvider {
 
     Result<String> getConfigInstance(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<String> getConfigInstanceById(String hostId, String instanceId, String propertyId);
+    Result<String> getEffectiveDeploymentConfigInstance(String hostId, String instanceId);
 
     // InstanceFile (was ConfigInstanceFile)
     void createConfigInstanceFile(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
@@ -698,6 +699,14 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> querySkill(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<String> getSkillById(String hostId, String skillId);
     Result<String> getSkillLabel(String hostId);
+
+    // Tool
+    void createTool(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void updateTool(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteTool(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    Result<String> queryTool(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
+    Result<String> getToolById(String hostId, String skillId);
+    Result<String> getToolLabel(String hostId);
 
     // ToolParam
     void createToolParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
@@ -1109,6 +1118,9 @@ public interface PortalDbProvider extends DbProvider {
             case PortalConstants.SKILL_CREATED_EVENT: createSkill(conn, event); break;
             case PortalConstants.SKILL_UPDATED_EVENT: updateSkill(conn, event); break;
             case PortalConstants.SKILL_DELETED_EVENT: deleteSkill(conn, event); break;
+            case PortalConstants.TOOL_CREATED_EVENT: createTool(conn, event); break;
+            case PortalConstants.TOOL_UPDATED_EVENT: updateTool(conn, event); break;
+            case PortalConstants.TOOL_DELETED_EVENT: deleteTool(conn, event); break;
             case PortalConstants.TOOL_PARAM_CREATED_EVENT: createToolParam(conn, event); break;
             case PortalConstants.TOOL_PARAM_UPDATED_EVENT: updateToolParam(conn, event); break;
             case PortalConstants.TOOL_PARAM_DELETED_EVENT: deleteToolParam(conn, event); break;

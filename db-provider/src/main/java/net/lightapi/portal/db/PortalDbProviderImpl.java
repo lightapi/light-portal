@@ -252,6 +252,7 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void deleteConfigInstance(Connection connection, Map<String, Object> event) throws PortalPersistenceException { configPersistence.deleteConfigInstance(connection, event); }
     @Override public Result<String> getConfigInstance(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return configPersistence.getConfigInstance(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getConfigInstanceById(String hostId, String instanceId, String propertyId) { return configPersistence.getConfigInstanceById(hostId, instanceId, propertyId); }
+    @Override public Result<String> getEffectiveDeploymentConfigInstance(String hostId, String instanceId) { return configPersistence.getEffectiveDeploymentConfigInstance(hostId, instanceId); }
     @Override public void createConfigInstanceApi(Connection connection, Map<String, Object> event) throws PortalPersistenceException { configPersistence.createConfigInstanceApi(connection, event); }
     @Override public void updateConfigInstanceApi(Connection connection, Map<String, Object> event) throws PortalPersistenceException { configPersistence.updateConfigInstanceApi(connection, event); }
     @Override public void deleteConfigInstanceApi(Connection connection, Map<String, Object> event) throws PortalPersistenceException { configPersistence.deleteConfigInstanceApi(connection, event); }
@@ -630,6 +631,14 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public Result<String> querySkill(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return genAIPersistence.querySkill(offset, limit, filters, globalFilter, sorting, active, hostId); }
     @Override public Result<String> getSkillById(String hostId, String skillId) { return genAIPersistence.getSkillById(hostId, skillId); }
     @Override public Result<String> getSkillLabel(String hostId) { return genAIPersistence.getSkillLabel(hostId); }
+
+    // --- Tool ---
+    @Override public void createTool(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.createTool(conn, event); }
+    @Override public void updateTool(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.updateTool(conn, event); }
+    @Override public void deleteTool(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.deleteTool(conn, event); }
+    @Override public Result<String> queryTool(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return genAIPersistence.queryTool(offset, limit, filters, globalFilter, sorting, active, hostId); }
+    @Override public Result<String> getToolById(String hostId, String toolId) { return genAIPersistence.getToolById(hostId, toolId); }
+    @Override public Result<String> getToolLabel(String hostId) { return genAIPersistence.getToolLabel(hostId); }
 
     // --- ToolParam ---
     @Override public void createToolParam(Connection conn, Map<String, Object> event) throws PortalPersistenceException { genAIPersistence.createToolParam(conn, event); }

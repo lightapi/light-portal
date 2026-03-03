@@ -613,6 +613,12 @@ public class PortalConstants {
     public static final String SKILL_UPDATED_EVENT = "SkillUpdatedEvent";
     /** SkillDeletedEvent */
     public static final String SKILL_DELETED_EVENT = "SkillDeletedEvent";
+    /** ToolCreatedEvent */
+    public static final String TOOL_CREATED_EVENT = "ToolCreatedEvent";
+    /** ToolUpdatedEvent */
+    public static final String TOOL_UPDATED_EVENT = "ToolUpdatedEvent";
+    /** ToolDeletedEvent */
+    public static final String TOOL_DELETED_EVENT = "ToolDeletedEvent";
     /** ToolParamCreatedEvent */
     public static final String TOOL_PARAM_CREATED_EVENT = "ToolParamCreatedEvent";
     /** ToolParamUpdatedEvent */
