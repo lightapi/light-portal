@@ -45,6 +45,7 @@ public interface ConfigPersistence {
     void deleteConfigInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
     Result<String> getConfigInstance(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<String> getConfigInstanceById(String hostId, String instanceId, String propertyId);
+    Result<String> getEffectiveDeploymentConfigInstance(String hostId, String instanceId);
 
     // InstanceApiProperty (was ConfigInstanceApi)
     void createConfigInstanceApi(Connection conn, Map<String, Object> event) throws PortalPersistenceException;

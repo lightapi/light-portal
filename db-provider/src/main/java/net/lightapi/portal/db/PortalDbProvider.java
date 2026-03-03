@@ -314,6 +314,7 @@ public interface PortalDbProvider extends DbProvider {
 
     Result<String> getConfigInstance(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<String> getConfigInstanceById(String hostId, String instanceId, String propertyId);
+    Result<String> getEffectiveDeploymentConfigInstance(String hostId, String instanceId);
 
     // InstanceFile (was ConfigInstanceFile)
     void createConfigInstanceFile(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
