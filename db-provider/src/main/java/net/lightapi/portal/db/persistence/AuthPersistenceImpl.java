@@ -2030,14 +2030,13 @@ public class AuthPersistenceImpl implements AuthPersistence {
 
     @Override
     public void deleteRefreshToken(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
-        final String deleteRefreshToken = "DELETE from auth_refresh_token_t WHERE refresh_token = ? AND user_id = ? AND aggregate_version = ?";
+        final String deleteRefreshToken = "DELETE from auth_refresh_token_t WHERE refresh_token = ? AND aggregate_version = ?";
         Map<String, Object> map = SqlUtil.extractEventData(event);
         String refreshToken = (String) map.get("refreshToken");
         long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(deleteRefreshToken)) {
             statement.setObject(1, UUID.fromString(refreshToken));
-            statement.setObject(2, UUID.fromString((String) map.get("userId")));
-            statement.setLong(3, oldAggregateVersion);
+            statement.setLong(2, oldAggregateVersion);
             int count = statement.executeUpdate();
             if (count == 0) {
                 throw new SQLException(String.format("no record is deleted for refresh token %s", refreshToken));
@@ -2294,14 +2293,13 @@ public class AuthPersistenceImpl implements AuthPersistence {
 
     @Override
     public void deleteAuthCode(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
-        final String deleteAuthCode = "DELETE FROM auth_code_t WHERE host_id = ? AND auth_code = ? AND aggregate_version = ?";
+        final String deleteAuthCode = "DELETE FROM auth_code_t WHERE auth_code = ? AND aggregate_version = ?";
         Map<String, Object> map = SqlUtil.extractEventData(event);
         String authCode = (String) map.get("authCode");
         long oldAggregateVersion = SqlUtil.getOldAggregateVersion(event);
         try (PreparedStatement statement = conn.prepareStatement(deleteAuthCode)) {
-            statement.setObject(1, UUID.fromString((String) map.get("hostId")));
-            statement.setString(2, authCode);
-            statement.setLong(3, oldAggregateVersion);
+            statement.setString(1, authCode);
+            statement.setLong(2, oldAggregateVersion);
             int count = statement.executeUpdate();
             if (count == 0) {
                 // there shouldn't be any conflict in aggregate version, so if no record is deleted, it means the auth code doesn't exist
