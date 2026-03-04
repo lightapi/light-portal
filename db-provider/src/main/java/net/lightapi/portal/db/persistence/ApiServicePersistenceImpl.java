@@ -2121,7 +2121,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                                         WHERE up.host_id = ?
                                         AND uv.api_id = ?
                                         AND uv.api_version = ?
-                                        AND ue.endpoint = ae.endpoint
+                                        AND ue.endpoint_id = ae.endpoint_id
                                     ), '[]')
                                 )
                             )
