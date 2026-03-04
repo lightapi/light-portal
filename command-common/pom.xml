@@ -83,6 +83,7 @@
         <dependency>
             <groupId>io.cloudevents</groupId>
             <artifactId>cloudevents-json-jackson</artifactId>
+            <version>${version.cloudevents}</version>
         </dependency>
 
     </dependencies>
