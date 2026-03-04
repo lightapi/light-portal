@@ -2088,7 +2088,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                                         WHERE gp.host_id = ?
                                         AND gv.api_id = ?
                                         AND gv.api_version = ?
-                                        AND ge.endpoint = ae.endpoint
+                                        AND ge.endpoint_id = ae.endpoint_id
                                     ), '[]'),
                                     'attributes', COALESCE((
                                         SELECT JSON_AGG(
