@@ -1664,24 +1664,37 @@ public class AuthPersistenceImpl implements AuthPersistence {
         List<Map<String, Object>> filters = SqlUtil.parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = SqlUtil.parseJsonList(sortingJson);
 
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "hostId", "pc.host_id",
+                "clientId", "pc.client_id",
+                "providerId", "pc.provider_id",
+                "clientName", "c.client_name",
+                "appId", "c.app_id",
+                "apiId", "c.api_id",
+                "updateUser", "pc.update_user",
+                "updateTs", "pc.update_ts",
+                "aggregateVersion", "pc.aggregate_version",
+                "active", "pc.active"
+        ));
+
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
-                host_id, client_id, provider_id, aggregate_version,
-                active, update_user, update_ts
-                FROM auth_provider_client_t
-                WHERE host_id = ?
+                pc.host_id, pc.client_id, pc.provider_id, pc.aggregate_version,
+                pc.active, pc.update_user, pc.update_ts, c.client_name, c.app_id, c.api_id
+                FROM auth_provider_client_t pc
+                JOIN auth_client_t c ON pc.client_id = c.client_id
+                WHERE pc.host_id = ?
                 """;
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-        String activeClause = SqlUtil.buildMultiTableActiveClause(active);
-        String[] searchColumns = {"provider_id"};
-        // Note: Dynamic filtering/sorting columns changed to match table structure.
+        String activeClause = SqlUtil.buildMultiTableActiveClause(active, "pc", "c");
+        String[] searchColumns = {"pc.provider_id", "c.client_name", "c.app_id", "c.api_id"};
         String sqlBuilder = s + activeClause +
-                SqlUtil.dynamicFilter(Arrays.asList("host_id", "client_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+                SqlUtil.dynamicFilter(Arrays.asList("pc.host_id", "pc.client_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 SqlUtil.globalFilter(globalFilter, searchColumns, parameters) +
-                SqlUtil.dynamicSorting("provider_id, client_id", sorting, null) +
+                SqlUtil.dynamicSorting("pc.provider_id, pc.client_id", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
@@ -1691,7 +1704,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
         List<Map<String, Object>> authProviderClients = new ArrayList<>();
 
         try (Connection connection = ds.getConnection(); // Assuming ds.getConnection() is available
-            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+             PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
             SqlUtil.populateParameters(preparedStatement, parameters);
             boolean isFirstRow = true;
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -1704,6 +1717,9 @@ public class AuthPersistenceImpl implements AuthPersistence {
                     map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("clientId", resultSet.getObject("client_id", UUID.class));
                     map.put("providerId", resultSet.getString("provider_id"));
+                    map.put("clientName", resultSet.getString("client_name"));
+                    map.put("appId", resultSet.getString("app_id"));
+                    map.put("apiId", resultSet.getString("api_id"));
                     map.put("aggregateVersion", resultSet.getLong("aggregate_version"));
                     map.put("active", resultSet.getBoolean("active"));
                     map.put("updateUser", resultSet.getString("update_user"));
