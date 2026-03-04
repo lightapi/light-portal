@@ -1969,7 +1969,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
         Result<String> result = null;
         String sql =
                 """
-                SELECT ae.host_id, a.api_id, av.api_version, e.endpoint, r.rule_type, ae.rule_id, ae.aggregate_version
+                SELECT ae.host_id, ae.endpoint_id, a.api_id, av.api_version, e.endpoint, r.rule_type, ae.rule_id, ae.aggregate_version
                 FROM api_endpoint_rule_t ae
                 INNER JOIN rule_t r ON ae.rule_id = r.rule_id
                 INNER JOIN api_endpoint_t e ON e.endpoint_id = ae.endpoint_id
