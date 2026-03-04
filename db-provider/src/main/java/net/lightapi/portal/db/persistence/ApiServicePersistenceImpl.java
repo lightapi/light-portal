@@ -2043,9 +2043,10 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
         Result<String> result = null;
         String sql = """
                 SELECT
-                    CASE
-                        WHEN COUNT(ae.endpoint) > 0 THEN
-                            JSON_AGG(
+                    COALESCE(
+                        CASE
+                            WHEN COUNT(ae.endpoint) > 0 THEN
+                                JSON_AGG(
                                 JSON_BUILD_OBJECT(
                                     'endpoint', ae.endpoint,
                                     'roles', COALESCE((
@@ -2126,7 +2127,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                                 )
                             )
                         ELSE NULL
-                    END AS permissions
+                    END, '[]') AS permissions
                 FROM
                     api_endpoint_t ae
                 INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id
