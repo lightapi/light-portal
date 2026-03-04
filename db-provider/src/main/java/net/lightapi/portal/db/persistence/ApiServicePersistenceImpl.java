@@ -2041,98 +2041,100 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     @Override
     public Result<String> queryApiPermission(String hostId, String apiId, String apiVersion) {
         Result<String> result = null;
-        String sql = "SELECT\n" +
-                "    CASE\n" +
-                "        WHEN COUNT(ae.endpoint) > 0 THEN\n" +
-                "            JSON_AGG(\n" +
-                "                JSON_BUILD_OBJECT(\n" +
-                "                    'endpoint', ae.endpoint,\n" +
-                "                    'roles', COALESCE((\n" +
-                "                        SELECT JSON_ARRAYAGG(\n" +
-                "                            JSON_BUILD_OBJECT(\n" +
-                "                                'roleId', rp.role_id\n" +
-                "                            )\n" +
-                "                        )\n" +
-                "                        FROM role_permission_t rp\n" +
-                "                        INNER JOIN api_endpoint_t re ON rp.endpoint_id = re.endpoint_id AND rp.host_id = re.host_id\n" + // Added join for correct filtering
-                "                        INNER JOIN api_version_t rv ON re.api_version_id = rv.api_version_id AND re.host_id = rv.host_id\n" + // Added join for correct filtering
-                "                        WHERE rp.host_id = ?\n" +
-                "                        AND rv.api_id = ?\n" + // Filter on v.api_id from api_version_t
-                "                        AND rv.api_version = ?\n" + // Filter on v.api_version from api_version_t
-                "                        AND re.endpoint = ae.endpoint\n" +
-                "                    ), '[]'),\n" +
-                "                    'positions', COALESCE((\n" +
-                "                        SELECT JSON_ARRAYAGG(\n" +
-                "                             JSON_BUILD_OBJECT(\n" +
-                "                                'positionId', pp.position_id\n" +
-                "                             )\n" +
-                "                         )\n" +
-                "                        FROM position_permission_t pp\n" +
-                "                        INNER JOIN api_endpoint_t pe ON pp.endpoint_id = pe.endpoint_id AND pp.host_id = pe.host_id\n" + // Added join for correct filtering
-                "                        INNER JOIN api_version_t pv ON pe.api_version_id = pv.api_version_id AND pe.host_id = pv.host_id\n" + // Added join for correct filtering
-                "                        WHERE pp.host_id = ?\n" +
-                "                        AND pv.api_id = ?\n" + // Filter on v.api_id from api_version_t
-                "                        AND pv.api_version = ?\n" + // Filter on v.api_version from api_version_t
-                "                        AND pe.endpoint = ae.endpoint\n" +
-                "                    ), '[]'),\n" +
-                "                    'groups', COALESCE((\n" +
-                "                        SELECT JSON_ARRAYAGG(\n" +
-                "                            JSON_BUILD_OBJECT(\n" +
-                "                               'groupId', gp.group_id\n" +
-                "                            )\n" +
-                "                        )\n" +
-                "                        FROM group_permission_t gp\n" +
-                "                        INNER JOIN api_endpoint_t ge ON gp.endpoint_id = ge.endpoint_id AND gp.host_id = ge.host_id\n" + // Added join for correct filtering
-                "                        INNER JOIN api_version_t gv ON ge.api_version_id = gv.api_version_id AND ge.host_id = gv.host_id\n" + // Added join for correct filtering
-                "                        WHERE gp.host_id = ?\n" +
-                "                        AND gv.api_id = ?\n" + // Filter on v.api_id from api_version_t
-                "                        AND gv.api_version = ?\n" + // Filter on v.api_version from api_version_t
-                "                        AND ge.endpoint = ae.endpoint\n" +
-                "                    ), '[]'),\n" +
-                "                    'attributes', COALESCE((\n" +
-                "                        SELECT JSON_ARRAYAGG(\n" +
-                "                            JSON_BUILD_OBJECT(\n" +
-                "                                'attribute_id', ap.attribute_id, \n" +
-                "                                'attribute_value', ap.attribute_value, \n" +
-                "                                'attribute_type', a.attribute_type\n" +
-                "                            )\n" +
-                "                        )\n" +
-                "                        FROM attribute_permission_t ap, attribute_t a\n" +
-                "                        INNER JOIN api_endpoint_t ate ON ap.endpoint_id = ate.endpoint_id AND ap.host_id = ate.host_id\n" + // Added join for correct filtering
-                "                        INNER JOIN api_version_t atv ON ate.api_version_id = atv.api_version_id AND ate.host_id = atv.host_id\n" + // Added join for correct filtering
-                "                        WHERE ap.attribute_id = a.attribute_id\n" +
-                "                        AND ap.host_id = ?\n" +
-                "                        AND atv.api_id = ?\n" + // Filter on v.api_id from api_version_t
-                "                        AND atv.api_version = ?\n" + // Filter on v.api_version from api_version_t
-                "                        AND ate.endpoint = ae.endpoint\n" +
-                "                    ), '[]'),\n" +
-                "                    'users', COALESCE((\n" +
-                "                        SELECT JSON_ARRAYAGG(\n" +
-                "                            JSON_BUILD_OBJECT(\n" +
-                "                                 'userId', user_id,\n" +
-                "                                 'startTs', start_ts,\n" +
-                "                                 'endTs', end_ts\n" +
-                "                            )\n" +
-                "                        )\n" +
-                "                        FROM user_permission_t up\n" +
-                "                        INNER JOIN api_endpoint_t ue ON up.endpoint_id = ue.endpoint_id AND up.host_id = ue.host_id\n" + // Added join for correct filtering
-                "                        INNER JOIN api_version_t uv ON ue.api_version_id = uv.api_version_id AND ue.host_id = uv.host_id\n" + // Added join for correct filtering
-                "                        WHERE up.host_id = ?\n" +
-                "                        AND uv.api_id = ?\n" + // Filter on v.api_id from api_version_t
-                "                        AND uv.api_version = ?\n" + // Filter on v.api_version from api_version_t
-                "                        AND ue.endpoint = ae.endpoint\n" +
-                "                    ), '[]')\n" +
-                "                )\n" +
-                "            )\n" +
-                "        ELSE NULL\n" +
-                "    END AS permissions\n" +
-                "FROM\n" +
-                "    api_endpoint_t ae\n" +
-                "INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id\n" + // Join to filter endpoints by apiId and apiVersion
-                "WHERE\n" +
-                "    ae.host_id = ?\n" +
-                "    AND av.api_id = ?\n" + // Use alias for consistency
-                "    AND av.api_version = ?;\n"; // Use alias for consistency
+        String sql = """
+                SELECT
+                    CASE
+                        WHEN COUNT(ae.endpoint) > 0 THEN
+                            JSON_AGG(
+                                JSON_BUILD_OBJECT(
+                                    'endpoint', ae.endpoint,
+                                    'roles', COALESCE((
+                                        SELECT JSON_AGG(
+                                            JSON_BUILD_OBJECT(
+                                                'roleId', rp.role_id
+                                            )
+                                        )
+                                        FROM role_permission_t rp
+                                        INNER JOIN api_endpoint_t re ON rp.endpoint_id = re.endpoint_id AND rp.host_id = re.host_id
+                                        INNER JOIN api_version_t rv ON re.api_version_id = rv.api_version_id AND re.host_id = rv.host_id
+                                        WHERE rp.host_id = ?
+                                        AND rv.api_id = ?
+                                        AND rv.api_version = ?
+                                        AND re.endpoint = ae.endpoint
+                                    ), '[]'),
+                                    'positions', COALESCE((
+                                        SELECT JSON_AGG(
+                                             JSON_BUILD_OBJECT(
+                                                'positionId', pp.position_id
+                                             )
+                                         )
+                                        FROM position_permission_t pp
+                                        INNER JOIN api_endpoint_t pe ON pp.endpoint_id = pe.endpoint_id AND pp.host_id = pe.host_id
+                                        INNER JOIN api_version_t pv ON pe.api_version_id = pv.api_version_id AND pe.host_id = pv.host_id
+                                        WHERE pp.host_id = ?
+                                        AND pv.api_id = ?
+                                        AND pv.api_version = ?
+                                        AND pe.endpoint = ae.endpoint
+                                    ), '[]'),
+                                    'groups', COALESCE((
+                                        SELECT JSON_AGG(
+                                            JSON_BUILD_OBJECT(
+                                               'groupId', gp.group_id
+                                            )
+                                        )
+                                        FROM group_permission_t gp
+                                        INNER JOIN api_endpoint_t ge ON gp.endpoint_id = ge.endpoint_id AND gp.host_id = ge.host_id
+                                        INNER JOIN api_version_t gv ON ge.api_version_id = gv.api_version_id AND ge.host_id = gv.host_id
+                                        WHERE gp.host_id = ?
+                                        AND gv.api_id = ?
+                                        AND gv.api_version = ?
+                                        AND ge.endpoint = ae.endpoint
+                                    ), '[]'),
+                                    'attributes', COALESCE((
+                                        SELECT JSON_AGG(
+                                            JSON_BUILD_OBJECT(
+                                                'attribute_id', ap.attribute_id,
+                                                'attribute_value', ap.attribute_value,
+                                                'attribute_type', a.attribute_type
+                                            )
+                                        )
+                                        FROM attribute_permission_t ap
+                                        INNER JOIN attribute_t a ON ap.attribute_id = a.attribute_id
+                                        INNER JOIN api_endpoint_t ate ON ap.endpoint_id = ate.endpoint_id AND ap.host_id = ate.host_id
+                                        INNER JOIN api_version_t atv ON ate.api_version_id = atv.api_version_id AND ate.host_id = atv.host_id
+                                        WHERE ap.host_id = ?
+                                        AND atv.api_id = ?
+                                        AND atv.api_version = ?
+                                        AND ate.endpoint = ae.endpoint
+                                    ), '[]'),
+                                    'users', COALESCE((
+                                        SELECT JSON_AGG(
+                                            JSON_BUILD_OBJECT(
+                                                 'userId', up.user_id,
+                                                 'startTs', up.start_ts,
+                                                 'endTs', up.end_ts
+                                            )
+                                        )
+                                        FROM user_permission_t up
+                                        INNER JOIN api_endpoint_t ue ON up.endpoint_id = ue.endpoint_id AND up.host_id = ue.host_id
+                                        INNER JOIN api_version_t uv ON ue.api_version_id = uv.api_version_id AND ue.host_id = uv.host_id
+                                        WHERE up.host_id = ?
+                                        AND uv.api_id = ?
+                                        AND uv.api_version = ?
+                                        AND ue.endpoint = ae.endpoint
+                                    ), '[]')
+                                )
+                            )
+                        ELSE NULL
+                    END AS permissions
+                FROM
+                    api_endpoint_t ae
+                INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id
+                WHERE
+                    ae.host_id = ?
+                    AND av.api_id = ?
+                    AND av.api_version = ?;
+                """;
 
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
@@ -2202,7 +2204,6 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 "    rrf.host_id = ?\n" +
                 "    AND av.api_id = ?\n" +
                 "    AND av.api_version = ?\n" +
-                "GROUP BY 1\n" + // Group by a constant to aggregate all results into one JSON_AGG
                 "HAVING COUNT(*) > 0 \n" +
                 "UNION ALL\n" +
                 "SELECT\n" +
@@ -2223,7 +2224,6 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 "    rcf.host_id = ?\n" +
                 "    AND av.api_id = ?\n" +
                 "    AND av.api_version = ?\n" +
-                "GROUP BY 1\n" +
                 "HAVING COUNT(*) > 0\n" +
                 "UNION ALL\n" +
                 "SELECT\n" +
@@ -2246,7 +2246,6 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 "    grf.host_id = ?\n" +
                 "    AND av.api_id = ?\n" +
                 "    AND av.api_version = ?\n" +
-                "GROUP BY 1\n" +
                 "HAVING COUNT(*) > 0 \n" +
                 "UNION ALL\n" +
                 "SELECT\n" +
@@ -2267,7 +2266,6 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 "    gcf.host_id = ?\n" +
                 "    AND av.api_id = ?\n" +
                 "    AND av.api_version = ?\n" +
-                "GROUP BY 1\n" +
                 "HAVING COUNT(*) > 0\n" +
                 "UNION ALL\n" +
                 "SELECT\n" +
@@ -2290,7 +2288,6 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 "    prf.host_id = ?\n" +
                 "    AND av.api_id = ?\n" +
                 "    AND av.api_version = ?\n" +
-                "GROUP BY 1\n" +
                 "HAVING COUNT(*) > 0 \n" +
                 "UNION ALL\n" +
                 "SELECT\n" +
@@ -2311,7 +2308,6 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 "    pcf.host_id = ?\n" +
                 "    AND av.api_id = ?\n" +
                 "    AND av.api_version = ?\n" +
-                "GROUP BY 1\n" +
                 "HAVING COUNT(*) > 0\n" +
                 "UNION ALL\n" +
                 "SELECT\n" +
@@ -2335,7 +2331,6 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 "    arf.host_id = ?\n" +
                 "    AND av.api_id = ?\n" +
                 "    AND av.api_version = ?\n" +
-                "GROUP BY 1\n" +
                 "HAVING COUNT(*) > 0 \n" +
                 "UNION ALL\n" +
                 "SELECT\n" +
@@ -2357,7 +2352,6 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 "    acf.host_id = ?\n" +
                 "    AND av.api_id = ?\n" +
                 "    AND av.api_version = ?\n" +
-                "GROUP BY 1\n" +
                 "HAVING COUNT(*) > 0\n" +
                 "UNION ALL\n" +
                 "SELECT\n" +
@@ -2382,7 +2376,6 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 "    urf.host_id = ?\n" +
                 "    AND av.api_id = ?\n" +
                 "    AND av.api_version = ?\n" +
-                "GROUP BY 1\n" +
                 "HAVING COUNT(*) > 0 \n" +
                 "UNION ALL\n" +
                 "SELECT\n" +
@@ -2405,14 +2398,13 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
                 "    ucf.host_id = ?\n" +
                 "    AND av.api_id = ?\n" +
                 "    AND av.api_version = ?\n" +
-                "GROUP BY 1\n" +
                 "HAVING COUNT(*) > 0\n";
 
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            // Each UNION ALL block needs its set of parameters. There are 8 blocks, each takes hostId, apiId, apiVersion.
-            // So, 8 * 3 = 24 parameters in total.
-            for (int i = 0; i < 8; i++) {
+            // Each UNION ALL block needs its set of parameters. There are 10 blocks, each takes hostId, apiId, apiVersion.
+            // So, 10 * 3 = 30 parameters in total.
+            for (int i = 0; i < 10; i++) {
                 preparedStatement.setObject(i * 3 + 1, UUID.fromString(hostId));
                 preparedStatement.setString(i * 3 + 2, apiId);
                 preparedStatement.setString(i * 3 + 3, apiVersion);
