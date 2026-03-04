@@ -284,7 +284,6 @@ public class PortalDbProviderImplTest {
     }
 
     @Test
-    @Disabled
     public void testQueryServicePermission() {
         Result<String> result = dbProvider.queryApiPermission("01964b05-552a-7c4b-9184-6857e7f3dc5f", "0100", "1.0.0");
         if(result.isFailure()) {
@@ -298,7 +297,6 @@ public class PortalDbProviderImplTest {
     }
 
     @Test
-    @Disabled
     public void testQueryServiceFilter() {
         Result<List<String>> result = dbProvider.queryApiFilter("01964b05-552a-7c4b-9184-6857e7f3dc5f", "0100", "1.0.0");
         if(result.isFailure()) {
