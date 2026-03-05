@@ -156,6 +156,9 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void updateAuthProviderClient(Connection conn, Map<String, Object> event) throws PortalPersistenceException { authPersistence.updateAuthProviderClient(conn, event); }
     @Override public void deleteAuthProviderClient(Connection conn, Map<String, Object> event) throws PortalPersistenceException { authPersistence.deleteAuthProviderClient(conn, event); }
     @Override public Result<String> queryAuthProviderClient(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return authPersistence.queryAuthProviderClient(offset, limit, filters, globalFilter, sorting, active, hostId); }
+    @Override public void createClientToken(Connection connection, Map<String, Object> event) throws PortalPersistenceException { authPersistence.createClientToken(connection, event); }
+    @Override public void deleteClientToken(Connection connection, Map<String, Object> event) throws PortalPersistenceException { authPersistence.deleteClientToken(connection, event); }
+    @Override public Result<String> queryClientToken(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId) { return authPersistence.queryClientToken(offset, limit, filters, globalFilter, sorting, active, hostId); }
 
     @Override public void createAuthCode(Connection connection, Map<String, Object> event) throws PortalPersistenceException { authPersistence.createAuthCode(connection, event); }
     @Override public void deleteAuthCode(Connection connection, Map<String, Object> event) throws PortalPersistenceException { authPersistence.deleteAuthCode(connection, event); }

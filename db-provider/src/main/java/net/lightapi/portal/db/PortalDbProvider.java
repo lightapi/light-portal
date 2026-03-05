@@ -115,6 +115,11 @@ public interface PortalDbProvider extends DbProvider {
     Result<String> getRefToken(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<String> queryRefToken(String refToken);
 
+    // ClientToken
+    void createClientToken(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    void deleteClientToken(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
+    Result<String> queryClientToken(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
+
     // AuthCode
     void createAuthCode(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
     void deleteAuthCode(Connection conn, Map<String, Object> event) throws PortalPersistenceException;

@@ -321,8 +321,9 @@ public class PortalConstants {
     public static final String AUTH_REFRESH_TOKEN_DELETED_EVENT = "AuthRefreshTokenDeletedEvent";
     /** AuthCodeCreatedEvent */
     public static final String AUTH_CODE_CREATED_EVENT = "AuthCodeCreatedEvent";
-    /** AuthCodeDeletedEvent */
     public static final String AUTH_CODE_DELETED_EVENT = "AuthCodeDeletedEvent";
+    public static final String CLIENT_TOKEN_CREATED_EVENT = "ClientTokenCreatedEvent";
+    public static final String CLIENT_TOKEN_DELETED_EVENT = "ClientTokenDeletedEvent";
     /** AuthRefTokenCreatedEvent */
     public static final String AUTH_REF_TOKEN_CREATED_EVENT = "AuthRefTokenCreatedEvent";
     /** AuthRefTokenDeletedEvent */
@@ -690,6 +691,7 @@ public class PortalConstants {
     // -- Auth --
     /** AuthCode aggregate */
     public static final String AGGREGATE_AUTH_CODE = "AuthCode";
+    public static final String AGGREGATE_CLIENT_TOKEN = "ClientToken";
     /** Client aggregate */
     public static final String AGGREGATE_CLIENT = "Client";
     /** AuthProvider aggregate */

@@ -2229,6 +2229,138 @@ public class AuthPersistenceImpl implements AuthPersistence {
     }
 
     @Override
+    public void createClientToken(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
+        final String insertClientToken = "INSERT INTO auth_client_token_t(host_id, client_id, token_id, expiration_ts, last_used_ts, update_user, update_ts) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        Map<String, Object> map = (Map<String, Object>) event.get(PortalConstants.DATA);
+        String tokenId = (String) map.get("tokenId");
+        try (PreparedStatement statement = conn.prepareStatement(insertClientToken)) {
+            statement.setObject(1, UUID.fromString((String) map.get("hostId")));
+            statement.setObject(2, UUID.fromString((String) map.get("clientId")));
+            statement.setString(3, tokenId);
+            
+            if (map.containsKey("expirationTs")) {
+                statement.setObject(4, OffsetDateTime.parse((String) map.get("expirationTs")));
+            } else {
+                statement.setObject(4, OffsetDateTime.now());
+            }
+
+            if (map.containsKey("lastUsedTs")) {
+                statement.setObject(5, OffsetDateTime.parse((String) map.get("lastUsedTs")));
+            } else {
+                statement.setObject(5, OffsetDateTime.now());
+            }
+
+            statement.setString(6, (String) event.get(Constants.USER));
+            statement.setObject(7, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
+            
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException("Failed to insert the client token with tokenId " + tokenId);
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during createClientToken for tokenId {}: {}", tokenId, e.getMessage(), e);
+            throw new PortalPersistenceException("Persistence Error", e);
+        } catch (Exception e) {
+            logger.error("Exception during createClientToken for tokenId {}: {}", tokenId, e.getMessage(), e);
+            throw new PortalPersistenceException("Persistence Error", e);
+        }
+    }
+
+    @Override
+    public void deleteClientToken(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
+        final String deleteClientToken = "DELETE FROM auth_client_token_t WHERE host_id = ? AND client_id = ? AND token_id = ?";
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        String tokenId = (String) map.get("tokenId");
+        try (PreparedStatement statement = conn.prepareStatement(deleteClientToken)) {
+            statement.setObject(1, UUID.fromString((String) map.get("hostId")));
+            statement.setObject(2, UUID.fromString((String) map.get("clientId")));
+            statement.setString(3, tokenId);
+            
+            int count = statement.executeUpdate();
+            if (count == 0) {
+                throw new SQLException(String.format("no record is deleted for client token %s", tokenId));
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException during deleteClientToken for tokenId {}: {}", tokenId, e.getMessage(), e);
+            throw new PortalPersistenceException("Persistence Error", e);
+        } catch (Exception e) {
+            logger.error("Exception during deleteClientToken for tokenId {}: {}", tokenId, e.getMessage(), e);
+            throw new PortalPersistenceException("Persistence Error", e);
+        }
+    }
+
+    @Override
+    public Result<String> queryClientToken(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, boolean active, String hostId) {
+        Result<String> result = null;
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                host_id, client_id, token_id, expiration_ts, last_used_ts, update_user, update_ts
+                FROM auth_client_token_t
+                WHERE host_id = ?
+                """;
+
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(hostId));
+
+        String[] searchColumns = {"token_id"};
+        String sqlBuilder = s +
+                dynamicFilter(Arrays.asList("host_id", "client_id"), Arrays.asList(searchColumns), filters, null, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("update_ts", sorting, null) +
+                "\nLIMIT ? OFFSET ?";
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        int total = 0;
+        List<Map<String, Object>> tokens = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+            PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+            populateParameters(preparedStatement, parameters);
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("clientId", resultSet.getObject("client_id", UUID.class));
+                    map.put("tokenId", resultSet.getString("token_id"));
+                    map.put("expirationTs", resultSet.getObject("expiration_ts") != null ? resultSet.getObject("expiration_ts", OffsetDateTime.class) : null);
+                    map.put("lastUsedTs", resultSet.getObject("last_used_ts") != null ? resultSet.getObject("last_used_ts", OffsetDateTime.class) : null);
+                    map.put("updateUser", resultSet.getString("update_user"));
+                    map.put("updateTs", resultSet.getObject("update_ts") != null ? resultSet.getObject("update_ts", OffsetDateTime.class) : null);
+
+                    tokens.add(map);
+                }
+            }
+
+            Map<String, Object> resultMap = new HashMap<>();
+            resultMap.put("total", total);
+            resultMap.put("tokens", tokens);
+            result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status(GENERIC_EXCEPTION, e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
     public void createAuthCode(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
 
         final String insertAuthCode = "INSERT INTO auth_code_t(host_id, provider_id, auth_code, user_id, entity_id, user_type, email, roles," +
