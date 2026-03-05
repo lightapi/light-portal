@@ -534,6 +534,12 @@ public class PortalConstants {
     public static final String CONFIG_PRODUCT_VERSION_UPDATED_EVENT = "ConfigProductVersionUpdatedEvent";
     /** ConfigProductVersionDeletedEvent */
     public static final String CONFIG_PRODUCT_VERSION_DELETED_EVENT = "ConfigProductVersionDeletedEvent";
+    /** ConfigSnapshotCreatedEvent */
+    public static final String CONFIG_SNAPSHOT_CREATED_EVENT = "ConfigSnapshotCreatedEvent";
+    /** ConfigSnapshotUpdatedEvent */
+    public static final String CONFIG_SNAPSHOT_UPDATED_EVENT = "ConfigSnapshotUpdatedEvent";
+    /** ConfigSnapshotDeletedEvent */
+    public static final String CONFIG_SNAPSHOT_DELETED_EVENT = "ConfigSnapshotDeletedEvent";
 
     // --- App Events ---
     /** AppCreatedEvent */
@@ -736,6 +742,8 @@ public class PortalConstants {
     public static final String AGGREGATE_CONFIG_PRODUCT = "ConfigProduct";
     /** ConfigProductVersion aggregate */
     public static final String AGGREGATE_CONFIG_PRODUCT_VERSION = "ConfigProductVersion";
+    /** ConfigSnapshot aggregate */
+    public static final String AGGREGATE_CONFIG_SNAPSHOT = "ConfigSnapshot";
 
     // -- Deployment --
     /** Deployment aggregate */

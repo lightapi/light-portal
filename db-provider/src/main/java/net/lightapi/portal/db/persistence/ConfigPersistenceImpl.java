@@ -2894,13 +2894,15 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     @Override
     public void createConfigSnapshot(Connection conn, Map<String, Object> event) throws PortalPersistenceException {
         // 1. Extract Input Parameters
-        UUID hostId = UUID.fromString((String) event.get("hostId"));
-        UUID instanceId = UUID.fromString((String) event.get("instanceId"));
-        String snapshotType = (String) event.getOrDefault("snapshotType", "USER_SAVE");
-        String description = (String) event.get("description");
-        UUID userId = UUID.fromString((String)event.get("userId"));
-        UUID deploymentId = event.get("deploymentId") != null ? UUID.fromString((String) event.get("deploymentId")) : null;
-        UUID snapshotId = UuidUtil.getUUID();
+        Map<String, Object> map = SqlUtil.extractEventData(event);
+        UUID hostId = UUID.fromString((String) event.get(Constants.HOST));
+        UUID instanceId = UUID.fromString((String) map.get("instanceId"));
+        String snapshotType = (String) map.getOrDefault("snapshotType", "USER_SAVE");
+        String description = (String) map.get("description");
+        UUID userId = UUID.fromString((String)event.get(Constants.USER));
+        UUID deploymentId = map.get("deploymentId") != null ? UUID.fromString((String) map.get("deploymentId")) : null;
+        UUID snapshotId = UUID.fromString((String) map.get("snapshotId"));
+
         String s = "CALL create_snapshot(?, ?, ?, ?, ?, ?, ?)";
 
         try ( CallableStatement stmt = conn.prepareCall(s)) {
@@ -2932,8 +2934,8 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             """;
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
-        String description = (String) event.get("description");
-        String snapshotId = (String)event.get("snapshotId");
+        String description = (String)map.get("description");
+        String snapshotId = (String)map.get("snapshotId");
 
         try (PreparedStatement statement = conn.prepareStatement(s)) {
             statement.setString(1, description);
@@ -2988,23 +2990,24 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
     public Result<String> getConfigSnapshot(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String hostId) {
         Result<String> result = null;
         final Map<String, String> columnMap = new HashMap<>(Map.of(
-                "snapshotId", "snapshot_id",
-                "snapshotTs", "snapshot_ts",
-                "snapshotType", "snapshot_type",
-                "hostId", "host_id",
-                "instanceId", "instance_id",
-                "description", "description",
-                "userId", "user_id",
-                "deploymentId", "deployment_id",
-                "environment", "environment",
-                "productId", "product_id"
+                "snapshotId", "s.snapshot_id",
+                "snapshotTs", "s.snapshot_ts",
+                "snapshotType", "s.snapshot_type",
+                "hostId", "s.host_id",
+                "instanceId", "s.instance_id",
+                "description", "s.description",
+                "userId", "s.user_id",
+                "deploymentId", "s.deployment_id",
+                "environment", "s.environment",
+                "productId", "s.product_id"
         ));
 
-        columnMap.put("productVersion", "product_version");
-        columnMap.put("serviceId", "service_id");
-        columnMap.put("apiId", "api_id");
-        columnMap.put("apiVersion", "api_version");
-        columnMap.put("current", "current");
+        columnMap.put("productVersion", "s.product_version");
+        columnMap.put("serviceId", "s.service_id");
+        columnMap.put("apiId", "s.api_id");
+        columnMap.put("apiVersion", "s.api_version");
+        columnMap.put("current", "s.current");
+        columnMap.put("instanceName", "i.instance_name");
 
         List<Map<String, Object>> filters = parseJsonList(filtersJson);
         List<Map<String, Object>> sorting = parseJsonList(sortingJson);
@@ -3012,19 +3015,20 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         String s =
                 """
                 SELECT COUNT(*) OVER () AS total,
-                snapshot_id, snapshot_ts, snapshot_type, host_id, instance_id, current, description, user_id, deployment_id, environment,
-                product_id, product_version, service_id, api_id, api_version
-                FROM config_snapshot_t
-                WHERE host_id = ?
+                s.snapshot_id, s.snapshot_ts, s.snapshot_type, s.host_id, s.instance_id, s.current, s.description, s.user_id, s.deployment_id, s.environment,
+                s.product_id, s.product_version, s.service_id, s.api_id, s.api_version, i.instance_name
+                FROM config_snapshot_t s
+                JOIN instance_t i ON s.instance_id = i.instance_id
+                WHERE s.host_id = ?
                 """;
         List<Object> parameters = new ArrayList<>();
         parameters.add(UUID.fromString(hostId));
 
-        String[] searchColumns = {"description"};
+        String[] searchColumns = {"s.description"};
         String sqlBuilder = s +
-                dynamicFilter(Arrays.asList("snapshot_id", "host_id", "instance_id", "user_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                dynamicFilter(Arrays.asList("s.snapshot_id", "s.host_id", "s.instance_id", "s.user_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
                 globalFilter(globalFilter, searchColumns, parameters) +
-                dynamicSorting("host_id, instance_id, snapshot_ts", sorting, columnMap) +
+                dynamicSorting("s.host_id, s.instance_id, s.snapshot_ts", sorting, columnMap) +
                 "\nLIMIT ? OFFSET ?";
 
         parameters.add(limit);
@@ -3053,6 +3057,7 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
                     map.put("snapshotType", resultSet.getString("snapshot_type"));
                     map.put("hostId", resultSet.getObject("host_id", UUID.class));
                     map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
+                    map.put("instanceName", resultSet.getString("instance_name"));
                     map.put("current", resultSet.getBoolean("current"));
                     map.put("description", resultSet.getString("description"));
                     map.put("userId", resultSet.getObject("user_id", UUID.class));
@@ -3071,6 +3076,60 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             resultMap.put("total", total);
             resultMap.put("snapshots", snapshots);
             result = Success.of(JsonMapper.toJson(resultMap));
+
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> queryConfigSnapshotById(String hostId, String snapshotId) {
+        Result<String> result = null;
+        String sql =
+                """
+                SELECT s.snapshot_id, s.snapshot_ts, s.snapshot_type, s.host_id, s.instance_id, s.current, s.description, s.user_id, s.deployment_id, s.environment,
+                s.product_id, s.product_version, s.service_id, s.api_id, s.api_version, i.instance_name
+                FROM config_snapshot_t s
+                JOIN instance_t i ON s.instance_id = i.instance_id
+                WHERE s.host_id = ? AND s.snapshot_id = ?
+                """;
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            preparedStatement.setObject(1, UUID.fromString(hostId));
+            preparedStatement.setObject(2, UUID.fromString(snapshotId));
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                if (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("snapshotId", resultSet.getObject("snapshot_id", UUID.class));
+                    map.put("snapshotTs", resultSet.getObject("snapshot_ts") != null ? resultSet.getObject("snapshot_ts", OffsetDateTime.class) : null);
+                    map.put("snapshotType", resultSet.getString("snapshot_type"));
+                    map.put("hostId", resultSet.getObject("host_id", UUID.class));
+                    map.put("instanceId", resultSet.getObject("instance_id", UUID.class));
+                    map.put("instanceName", resultSet.getString("instance_name"));
+                    map.put("current", resultSet.getBoolean("current"));
+                    map.put("description", resultSet.getString("description"));
+                    map.put("userId", resultSet.getObject("user_id", UUID.class));
+                    map.put("deploymentId", resultSet.getObject("deployment_id", UUID.class));
+                    map.put("environment", resultSet.getString("environment"));
+                    map.put("productId", resultSet.getString("product_id"));
+                    map.put("productVersion", resultSet.getString("product_version"));
+                    map.put("serviceId", resultSet.getString("service_id"));
+                    map.put("apiId", resultSet.getString("api_id"));
+                    map.put("apiVersion", resultSet.getString("api_version"));
+
+                    result = Success.of(JsonMapper.toJson(map));
+                } else {
+                    result = Failure.of(new Status("OBJECT_NOT_FOUND", "config_snapshot_t", snapshotId));
+                }
+            }
 
         } catch (SQLException e) {
             logger.error("SQLException:", e);
