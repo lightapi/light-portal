@@ -192,6 +192,15 @@ public class EventTypeUtil {
                 if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, id);
                 yield id;
             }
+            case PortalConstants.AGGREGATE_CONFIG_SNAPSHOT -> {
+                String snapshotId = (String) dataMap.get("snapshotId");
+                if (snapshotId == null) {
+                    logger.warn("snapshotId is null in data map for aggregate type: {}", aggregateType);
+                    yield null;
+                }
+                if(logger.isTraceEnabled()) logger.trace("Derived aggregateId for {}: {}", aggregateType, snapshotId);
+                yield snapshotId;
+            }
             case PortalConstants.AGGREGATE_REF_TABLE -> {
                 String tableId = (String) dataMap.get("tableId");
                 if (tableId == null) {

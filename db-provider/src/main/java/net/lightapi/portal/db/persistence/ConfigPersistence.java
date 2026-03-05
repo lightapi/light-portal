@@ -101,6 +101,7 @@ public interface ConfigPersistence {
     void updateConfigSnapshot(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
     void deleteConfigSnapshot(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
     Result<String> getConfigSnapshot(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
+    Result<String> queryConfigSnapshotById(String hostId, String snapshotId);
 
     // Product / Instance Applicable Properties
     Result<String> getApplicableConfigPropertiesForInstance(int offset, int limit, String hostId, String instanceId, Set<String> resourceTypes, Set<String> configTypes, Set<String> propertyTypes,Set<String> configPhases);

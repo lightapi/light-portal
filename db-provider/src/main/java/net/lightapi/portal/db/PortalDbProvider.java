@@ -316,6 +316,7 @@ public interface PortalDbProvider extends DbProvider {
     void updateConfigSnapshot(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
     void deleteConfigSnapshot(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
     Result<String> getConfigSnapshot(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
+    Result<String> queryConfigSnapshotById(String hostId, String snapshotId);
 
     Result<String> getConfigInstance(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<String> getConfigInstanceById(String hostId, String instanceId, String propertyId);
@@ -1069,6 +1070,9 @@ public interface PortalDbProvider extends DbProvider {
             case PortalConstants.CONFIG_PRODUCT_VERSION_CREATED_EVENT: createConfigProductVersion(conn, event); break;
             case PortalConstants.CONFIG_PRODUCT_VERSION_UPDATED_EVENT: updateConfigProductVersion(conn, event); break;
             case PortalConstants.CONFIG_PRODUCT_VERSION_DELETED_EVENT: deleteConfigProductVersion(conn, event); break;
+            case PortalConstants.CONFIG_SNAPSHOT_CREATED_EVENT: createConfigSnapshot(conn, event); break;
+            case PortalConstants.CONFIG_SNAPSHOT_UPDATED_EVENT: updateConfigSnapshot(conn, event); break;
+            case PortalConstants.CONFIG_SNAPSHOT_DELETED_EVENT: deleteConfigSnapshot(conn, event); break;
 
             // --- App Events ---
             case PortalConstants.APP_CREATED_EVENT: createApp(conn, event); break;
