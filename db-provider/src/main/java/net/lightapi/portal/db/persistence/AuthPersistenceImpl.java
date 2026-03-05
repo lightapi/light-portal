@@ -2238,7 +2238,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
             statement.setObject(1, UUID.fromString((String) map.get("hostId")));
             statement.setObject(2, UUID.fromString((String) map.get("clientId")));
             statement.setString(3, tokenId);
-            
+
             if (map.containsKey("expirationTs")) {
                 statement.setObject(4, OffsetDateTime.parse((String) map.get("expirationTs")));
             } else {
@@ -2253,7 +2253,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
 
             statement.setString(6, (String) event.get(Constants.USER));
             statement.setObject(7, OffsetDateTime.parse((String) event.get(CloudEventV1.TIME)));
-            
+
             int count = statement.executeUpdate();
             if (count == 0) {
                 throw new SQLException("Failed to insert the client token with tokenId " + tokenId);
@@ -2276,7 +2276,7 @@ public class AuthPersistenceImpl implements AuthPersistence {
             statement.setObject(1, UUID.fromString((String) map.get("hostId")));
             statement.setObject(2, UUID.fromString((String) map.get("clientId")));
             statement.setString(3, tokenId);
-            
+
             int count = statement.executeUpdate();
             if (count == 0) {
                 throw new SQLException(String.format("no record is deleted for client token %s", tokenId));
