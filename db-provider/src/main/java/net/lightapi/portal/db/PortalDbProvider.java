@@ -196,11 +196,11 @@ public interface PortalDbProvider extends DbProvider {
     // EndpointRule
     void createApiEndpointRule(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
     void deleteApiEndpointRule(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
-    Result<String> queryServiceRule(String hostId, String apiId, String apiVersion);
+    Result<String> queryServiceRule(String host, String apiId, String apiVersion);
 
     // Permissions and Filters (Service Specific Aggregations)
-    Result<String> queryApiPermission(String hostId, String apiId, String apiVersion);
-    Result<List<String>> queryApiFilter(String hostId, String apiId, String apiVersion);
+    Result<String> queryApiPermission(String host, String apiId, String apiVersion);
+    Result<List<String>> queryApiFilter(String host, String apiId, String apiVersion);
     Result<String> getServiceIdLabel(String hostId);
 
     // Org

@@ -1965,8 +1965,26 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     }
 
     @Override
-    public Result<String> queryServiceRule(String hostId, String apiId, String apiVersion) {
+    public Result<String> queryServiceRule(String host, String apiId, String apiVersion) {
         Result<String> result = null;
+        UUID hostId = null;
+        try (Connection connection = ds.getConnection();
+             PreparedStatement ps = connection.prepareStatement("SELECT host_id FROM host_t WHERE sub_domain || '.' || domain = ?")) {
+            ps.setString(1, host);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    hostId = rs.getObject("host_id", UUID.class);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            return Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+
+        if (hostId == null) {
+            return Failure.of(new Status(OBJECT_NOT_FOUND, "host_t", host));
+        }
+
         String sql =
                 """
                 SELECT ae.host_id, ae.endpoint_id, a.api_id, av.api_version, e.endpoint, r.rule_type, ae.rule_id, ae.aggregate_version
@@ -1986,7 +2004,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
 
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
-            preparedStatement.setObject(1, UUID.fromString(hostId));
+            preparedStatement.setObject(1, hostId);
             preparedStatement.setString(2, apiId);
             preparedStatement.setString(3, apiVersion);
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
@@ -2039,8 +2057,26 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     }
 
     @Override
-    public Result<String> queryApiPermission(String hostId, String apiId, String apiVersion) {
+    public Result<String> queryApiPermission(String host, String apiId, String apiVersion) {
         Result<String> result = null;
+        UUID hostId = null;
+        try (Connection connection = ds.getConnection();
+             PreparedStatement ps = connection.prepareStatement("SELECT host_id FROM host_t WHERE sub_domain || '.' || domain = ?")) {
+            ps.setString(1, host);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    hostId = rs.getObject("host_id", UUID.class);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            return Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+
+        if (hostId == null) {
+            return Failure.of(new Status(OBJECT_NOT_FOUND, "host_t", host));
+        }
+
         String sql = """
                 SELECT
                     COALESCE(
@@ -2140,27 +2176,27 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
             // Parameters for roles subquery
-            preparedStatement.setObject(1, UUID.fromString(hostId));
+            preparedStatement.setObject(1, hostId);
             preparedStatement.setString(2, apiId);
             preparedStatement.setString(3, apiVersion);
             // Parameters for positions subquery
-            preparedStatement.setObject(4, UUID.fromString(hostId));
+            preparedStatement.setObject(4, hostId);
             preparedStatement.setString(5, apiId);
             preparedStatement.setString(6, apiVersion);
             // Parameters for groups subquery
-            preparedStatement.setObject(7, UUID.fromString(hostId));
+            preparedStatement.setObject(7, hostId);
             preparedStatement.setString(8, apiId);
             preparedStatement.setString(9, apiVersion);
             // Parameters for attributes subquery
-            preparedStatement.setObject(10, UUID.fromString(hostId));
+            preparedStatement.setObject(10, hostId);
             preparedStatement.setString(11, apiId);
             preparedStatement.setString(12, apiVersion);
             // Parameters for users subquery
-            preparedStatement.setObject(13, UUID.fromString(hostId));
+            preparedStatement.setObject(13, hostId);
             preparedStatement.setString(14, apiId);
             preparedStatement.setString(15, apiVersion);
             // Parameters for main query
-            preparedStatement.setObject(16, UUID.fromString(hostId));
+            preparedStatement.setObject(16, hostId);
             preparedStatement.setString(17, apiId);
             preparedStatement.setString(18, apiVersion);
 
@@ -2181,8 +2217,26 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     }
 
     @Override
-    public Result<List<String>> queryApiFilter(String hostId, String apiId, String apiVersion) {
+    public Result<List<String>> queryApiFilter(String host, String apiId, String apiVersion) {
         Result<List<String>> result = null;
+        UUID hostId = null;
+        try (Connection connection = ds.getConnection();
+             PreparedStatement ps = connection.prepareStatement("SELECT host_id FROM host_t WHERE sub_domain || '.' || domain = ?")) {
+            ps.setString(1, host);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    hostId = rs.getObject("host_id", UUID.class);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            return Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
+        }
+
+        if (hostId == null) {
+            return Failure.of(new Status(OBJECT_NOT_FOUND, "host_t", host));
+        }
+
         // Corrected SQL to use endpoint_id from filters and join to api_endpoint_t and api_version_t
         // to filter by api_id and api_version.
         String sql = "SELECT\n" +
@@ -2406,7 +2460,7 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
             // Each UNION ALL block needs its set of parameters. There are 10 blocks, each takes hostId, apiId, apiVersion.
             // So, 10 * 3 = 30 parameters in total.
             for (int i = 0; i < 10; i++) {
-                preparedStatement.setObject(i * 3 + 1, UUID.fromString(hostId));
+                preparedStatement.setObject(i * 3 + 1, hostId);
                 preparedStatement.setString(i * 3 + 2, apiId);
                 preparedStatement.setString(i * 3 + 3, apiVersion);
             }

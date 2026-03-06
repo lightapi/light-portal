@@ -2902,7 +2902,6 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         UUID userId = UUID.fromString((String)event.get(Constants.USER));
         UUID deploymentId = map.get("deploymentId") != null ? UUID.fromString((String) map.get("deploymentId")) : null;
         UUID snapshotId = UUID.fromString((String) map.get("snapshotId"));
-
         String s = "CALL create_snapshot(?, ?, ?, ?, ?, ?, ?)";
 
         try ( CallableStatement stmt = conn.prepareCall(s)) {
@@ -2915,6 +2914,21 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
             stmt.setObject(7, snapshotId);
 
             stmt.execute();
+
+            Boolean current = (Boolean) map.get("current");
+            if (current != null && current) {
+                String updateSql = "UPDATE config_snapshot_t SET current = false WHERE instance_id = ? AND snapshot_id != ?";
+                try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
+                    ps.setObject(1, instanceId);
+                    ps.setObject(2, snapshotId);
+                    ps.executeUpdate();
+                }
+                String setCurrentSql = "UPDATE config_snapshot_t SET current = true WHERE snapshot_id = ?";
+                try (PreparedStatement ps = conn.prepareStatement(setCurrentSql)) {
+                    ps.setObject(1, snapshotId);
+                    ps.executeUpdate();
+                }
+            }
         } catch (SQLException e) {
             logger.error("SQLException during createConfigSnapshot for hostId {} instanceId {}: {}", hostId, instanceId, e.getMessage(), e);
             throw new PortalPersistenceException("Persistence Error", e);
@@ -2930,20 +2944,34 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
 
         String s =
             """
-            UPDATE config_snapshot_t SET description = ? WHERE snapshot_id = ?
+            UPDATE config_snapshot_t SET description = ?, current = ? WHERE snapshot_id = ?
             """;
 
         Map<String, Object> map = SqlUtil.extractEventData(event);
         String description = (String)map.get("description");
         String snapshotId = (String)map.get("snapshotId");
+        Boolean current = (Boolean) map.get("current");
+        if (current == null) current = false;
 
-        try (PreparedStatement statement = conn.prepareStatement(s)) {
-            statement.setString(1, description);
-            statement.setObject(2, UUID.fromString(snapshotId));
-            int count = statement.executeUpdate();
-            if (count == 0) {
-                // If 0 rows were updated, it's a valid idempotent outcome.
-                logger.warn("Update skipped for updateConfigSnapshot with snapshotId {}. Record not found or a newer version already exists.", snapshotId);
+        try {
+            if (current) {
+                String resetSql = "UPDATE config_snapshot_t SET current = false WHERE instance_id = (SELECT instance_id FROM config_snapshot_t WHERE snapshot_id = ?) AND snapshot_id != ?";
+                try (PreparedStatement resetStmt = conn.prepareStatement(resetSql)) {
+                    resetStmt.setObject(1, UUID.fromString(snapshotId));
+                    resetStmt.setObject(2, UUID.fromString(snapshotId));
+                    resetStmt.executeUpdate();
+                }
+            }
+
+            try (PreparedStatement statement = conn.prepareStatement(s)) {
+                statement.setString(1, description);
+                statement.setBoolean(2, current);
+                statement.setObject(3, UUID.fromString(snapshotId));
+                int count = statement.executeUpdate();
+                if (count == 0) {
+                    // If 0 rows were updated, it's a valid idempotent outcome.
+                    logger.warn("Update skipped for updateConfigSnapshot with snapshotId {}. Record not found or a newer version already exists.", snapshotId);
+                }
             }
         } catch (SQLException e) {
             logger.error("SQLException during updateConfigSnapshot for snapshotId {}: {}",

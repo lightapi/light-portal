@@ -198,10 +198,10 @@ public class PortalDbProviderImpl implements PortalDbProvider {
     @Override public void createApiEndpointRule(Connection connection, Map<String, Object> event) throws PortalPersistenceException { apiServicePersistence.createApiEndpointRule(connection, event); }
     @Override public void deleteApiEndpointRule(Connection connection, Map<String, Object> event) throws PortalPersistenceException { apiServicePersistence.deleteApiEndpointRule(connection, event); }
     @Override public Result<String> queryApiEndpointRule(String hostId, String endpointId) { return apiServicePersistence.queryApiEndpointRule(hostId, endpointId); }
-    @Override public Result<String> queryServiceRule(String hostId, String apiId, String apiVersion) { return apiServicePersistence.queryServiceRule(hostId, apiId, apiVersion); }
+    @Override public Result<String> queryServiceRule(String host, String apiId, String apiVersion) { return apiServicePersistence.queryServiceRule(host, apiId, apiVersion); }
 
-    @Override public Result<String> queryApiPermission(String hostId, String apiId, String apiVersion) { return apiServicePersistence.queryApiPermission(hostId, apiId, apiVersion); }
-    @Override public Result<List<String>> queryApiFilter(String hostId, String apiId, String apiVersion) { return apiServicePersistence.queryApiFilter(hostId, apiId, apiVersion); }
+    @Override public Result<String> queryApiPermission(String host, String apiId, String apiVersion) { return apiServicePersistence.queryApiPermission(host, apiId, apiVersion); }
+    @Override public Result<List<String>> queryApiFilter(String host, String apiId, String apiVersion) { return apiServicePersistence.queryApiFilter(host, apiId, apiVersion); }
     @Override public Result<String> getServiceIdLabel(String hostId) { return apiServicePersistence.getServiceIdLabel(hostId); }
 
     // --- HostOrg ---
