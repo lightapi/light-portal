@@ -2239,221 +2239,223 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
 
         // Corrected SQL to use endpoint_id from filters and join to api_endpoint_t and api_version_t
         // to filter by api_id and api_version.
-        String sql = "SELECT\n" +
-                "    JSON_BUILD_OBJECT(\n" +
-                "        'role_row', JSON_AGG(\n" +
-                "            JSON_BUILD_OBJECT(\n" +
-                "                'endpoint', ae.endpoint,\n" +
-                "                'roleId', rrf.role_id,\n" +
-                "                'colName', rrf.col_name,\n" +
-                "                'operator', rrf.operator,\n" +
-                "                'colValue', rrf.col_value\n" +
-                "            )\n" +
-                "        )\n" +
-                "    ) AS result\n" +
-                "FROM\n" +
-                "    role_row_filter_t rrf\n" +
-                "INNER JOIN api_endpoint_t ae ON rrf.endpoint_id = ae.endpoint_id AND rrf.host_id = ae.host_id\n" +
-                "INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id\n" +
-                "WHERE\n" +
-                "    rrf.host_id = ?\n" +
-                "    AND av.api_id = ?\n" +
-                "    AND av.api_version = ?\n" +
-                "HAVING COUNT(*) > 0 \n" +
-                "UNION ALL\n" +
-                "SELECT\n" +
-                "    JSON_BUILD_OBJECT(\n" +
-                "        'role_col', JSON_AGG(\n" +
-                "            JSON_BUILD_OBJECT(\n" +
-                "                'endpoint', ae.endpoint,\n" +
-                "                'roleId', rcf.role_id,\n" +
-                "                'columns', rcf.columns\n" +
-                "            )\n" +
-                "        )\n" +
-                "    ) AS result\n" +
-                "FROM\n" +
-                "    role_col_filter_t rcf\n" +
-                "INNER JOIN api_endpoint_t ae ON rcf.endpoint_id = ae.endpoint_id AND rcf.host_id = ae.host_id\n" +
-                "INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id\n" +
-                "WHERE\n" +
-                "    rcf.host_id = ?\n" +
-                "    AND av.api_id = ?\n" +
-                "    AND av.api_version = ?\n" +
-                "HAVING COUNT(*) > 0\n" +
-                "UNION ALL\n" +
-                "SELECT\n" +
-                "    JSON_BUILD_OBJECT(\n" +
-                "        'group_row', JSON_AGG(\n" +
-                "            JSON_BUILD_OBJECT(\n" +
-                "                'endpoint', ae.endpoint,\n" +
-                "                'groupId', grf.group_id,\n" +
-                "                'colName', grf.col_name,\n" +
-                "                'operator', grf.operator,\n" +
-                "                'colValue', grf.col_value\n" +
-                "            )\n" +
-                "        )\n" +
-                "    ) AS result\n" +
-                "FROM\n" +
-                "    group_row_filter_t grf\n" +
-                "INNER JOIN api_endpoint_t ae ON grf.endpoint_id = ae.endpoint_id AND grf.host_id = ae.host_id\n" +
-                "INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id\n" +
-                "WHERE\n" +
-                "    grf.host_id = ?\n" +
-                "    AND av.api_id = ?\n" +
-                "    AND av.api_version = ?\n" +
-                "HAVING COUNT(*) > 0 \n" +
-                "UNION ALL\n" +
-                "SELECT\n" +
-                "    JSON_BUILD_OBJECT(\n" +
-                "        'group_col', JSON_AGG(\n" +
-                "            JSON_BUILD_OBJECT(\n" +
-                "                'endpoint', ae.endpoint,\n" +
-                "                'groupId', gcf.group_id,\n" +
-                "                'columns', gcf.columns\n" +
-                "            )\n" +
-                "        )\n" +
-                "    ) AS result\n" +
-                "FROM\n" +
-                "    group_col_filter_t gcf\n" +
-                "INNER JOIN api_endpoint_t ae ON gcf.endpoint_id = ae.endpoint_id AND gcf.host_id = ae.host_id\n" +
-                "INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id\n" +
-                "WHERE\n" +
-                "    gcf.host_id = ?\n" +
-                "    AND av.api_id = ?\n" +
-                "    AND av.api_version = ?\n" +
-                "HAVING COUNT(*) > 0\n" +
-                "UNION ALL\n" +
-                "SELECT\n" +
-                "    JSON_BUILD_OBJECT(\n" +
-                "        'position_row', JSON_AGG(\n" +
-                "            JSON_BUILD_OBJECT(\n" +
-                "                'endpoint', ae.endpoint,\n" +
-                "                'positionId', prf.position_id,\n" +
-                "                'colName', prf.col_name,\n" +
-                "                'operator', prf.operator,\n" +
-                "                'colValue', prf.col_value\n" +
-                "            )\n" +
-                "        )\n" +
-                "    ) AS result\n" +
-                "FROM\n" +
-                "    position_row_filter_t prf\n" +
-                "INNER JOIN api_endpoint_t ae ON prf.endpoint_id = ae.endpoint_id AND prf.host_id = ae.host_id\n" +
-                "INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id\n" +
-                "WHERE\n" +
-                "    prf.host_id = ?\n" +
-                "    AND av.api_id = ?\n" +
-                "    AND av.api_version = ?\n" +
-                "HAVING COUNT(*) > 0 \n" +
-                "UNION ALL\n" +
-                "SELECT\n" +
-                "    JSON_BUILD_OBJECT(\n" +
-                "        'position_col', JSON_AGG(\n" +
-                "            JSON_BUILD_OBJECT(\n" +
-                "                'endpoint', ae.endpoint,\n" +
-                "                'positionId', pcf.position_id,\n" +
-                "                'columns', pcf.columns\n" +
-                "            )\n" +
-                "        )\n" +
-                "    ) AS result\n" +
-                "FROM\n" +
-                "    position_col_filter_t pcf\n" +
-                "INNER JOIN api_endpoint_t ae ON pcf.endpoint_id = ae.endpoint_id AND pcf.host_id = ae.host_id\n" +
-                "INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id\n" +
-                "WHERE\n" +
-                "    pcf.host_id = ?\n" +
-                "    AND av.api_id = ?\n" +
-                "    AND av.api_version = ?\n" +
-                "HAVING COUNT(*) > 0\n" +
-                "UNION ALL\n" +
-                "SELECT\n" +
-                "    JSON_BUILD_OBJECT(\n" +
-                "        'attribute_row', JSON_AGG(\n" +
-                "            JSON_BUILD_OBJECT(\n" +
-                "                'endpoint', ae.endpoint,\n" +
-                "                'attributeId', arf.attribute_id,\n" +
-                "                'attributeValue', arf.attribute_value,\n" +
-                "                'colName', arf.col_name,\n" +
-                "                'operator', arf.operator,\n" +
-                "                'colValue', arf.col_value\n" +
-                "            )\n" +
-                "        )\n" +
-                "    ) AS result\n" +
-                "FROM\n" +
-                "    attribute_row_filter_t arf\n" +
-                "INNER JOIN api_endpoint_t ae ON arf.endpoint_id = ae.endpoint_id AND arf.host_id = ae.host_id\n" +
-                "INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id\n" +
-                "WHERE\n" +
-                "    arf.host_id = ?\n" +
-                "    AND av.api_id = ?\n" +
-                "    AND av.api_version = ?\n" +
-                "HAVING COUNT(*) > 0 \n" +
-                "UNION ALL\n" +
-                "SELECT\n" +
-                "    JSON_BUILD_OBJECT(\n" +
-                "        'attribute_col', JSON_AGG(\n" +
-                "            JSON_BUILD_OBJECT(\n" +
-                "                'endpoint', ae.endpoint,\n" +
-                "                'attributeId', acf.attribute_id,\n" +
-                "                'attributeValue', acf.attribute_value,\n" +
-                "                'columns', acf.columns\n" +
-                "            )\n" +
-                "        )\n" +
-                "    ) AS result\n" +
-                "FROM\n" +
-                "    attribute_col_filter_t acf\n" +
-                "INNER JOIN api_endpoint_t ae ON acf.endpoint_id = ae.endpoint_id AND acf.host_id = ae.host_id\n" +
-                "INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id\n" +
-                "WHERE\n" +
-                "    acf.host_id = ?\n" +
-                "    AND av.api_id = ?\n" +
-                "    AND av.api_version = ?\n" +
-                "HAVING COUNT(*) > 0\n" +
-                "UNION ALL\n" +
-                "SELECT\n" +
-                "    JSON_BUILD_OBJECT(\n" +
-                "        'user_row', JSON_AGG(\n" +
-                "            JSON_BUILD_OBJECT(\n" +
-                "                'endpoint', ae.endpoint,\n" +
-                "                'userId', urf.user_id,\n" +
-                "                'startTs', urf.start_ts,\n" +
-                "                'endTs', urf.end_ts,\n" +
-                "                'colName', urf.col_name,\n" +
-                "                'operator', urf.operator,\n" +
-                "                'colValue', urf.col_value\n" +
-                "            )\n" +
-                "        )\n" +
-                "    ) AS result\n" +
-                "FROM\n" +
-                "    user_row_filter_t urf\n" +
-                "INNER JOIN api_endpoint_t ae ON urf.endpoint_id = ae.endpoint_id AND urf.host_id = ae.host_id\n" +
-                "INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id\n" +
-                "WHERE\n" +
-                "    urf.host_id = ?\n" +
-                "    AND av.api_id = ?\n" +
-                "    AND av.api_version = ?\n" +
-                "HAVING COUNT(*) > 0 \n" +
-                "UNION ALL\n" +
-                "SELECT\n" +
-                "    JSON_BUILD_OBJECT(\n" +
-                "        'user_col', JSON_AGG(\n" +
-                "            JSON_BUILD_OBJECT(\n" +
-                "                'endpoint', ae.endpoint,\n" +
-                "                'userId', ucf.user_id,\n" +
-                "                'startTs', ucf.start_ts,\n" +
-                "                'endTs', ucf.end_ts,\n" +
-                "                'columns', ucf.columns\n" +
-                "            )\n" +
-                "        )\n" +
-                "    ) AS result\n" +
-                "FROM\n" +
-                "    user_col_filter_t ucf\n" +
-                "INNER JOIN api_endpoint_t ae ON ucf.endpoint_id = ae.endpoint_id AND ucf.host_id = ae.host_id\n" +
-                "INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id\n" +
-                "WHERE\n" +
-                "    ucf.host_id = ?\n" +
-                "    AND av.api_id = ?\n" +
-                "    AND av.api_version = ?\n" +
-                "HAVING COUNT(*) > 0\n";
+        String sql = """
+                SELECT
+                    JSON_BUILD_OBJECT(
+                        'role_row', JSON_AGG(
+                            JSON_BUILD_OBJECT(
+                                'endpoint', ae.endpoint,
+                                'roleId', rrf.role_id,
+                                'colName', rrf.col_name,
+                                'operator', rrf.operator,
+                                'colValue', rrf.col_value
+                            )
+                        )
+                    ) AS result
+                FROM
+                    role_row_filter_t rrf
+                INNER JOIN api_endpoint_t ae ON rrf.endpoint_id = ae.endpoint_id AND rrf.host_id = ae.host_id
+                INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id
+                WHERE
+                    rrf.host_id = ?
+                    AND av.api_id = ?
+                    AND av.api_version = ?
+                HAVING COUNT(*) > 0 
+                UNION ALL
+                SELECT
+                    JSON_BUILD_OBJECT(
+                        'role_col', JSON_AGG(
+                            JSON_BUILD_OBJECT(
+                                'endpoint', ae.endpoint,
+                                'roleId', rcf.role_id,
+                                'columns', rcf.columns
+                            )
+                        )
+                    ) AS result
+                FROM
+                    role_col_filter_t rcf
+                INNER JOIN api_endpoint_t ae ON rcf.endpoint_id = ae.endpoint_id AND rcf.host_id = ae.host_id
+                INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id
+                WHERE
+                    rcf.host_id = ?
+                    AND av.api_id = ?
+                    AND av.api_version = ?
+                HAVING COUNT(*) > 0
+                UNION ALL
+                SELECT
+                    JSON_BUILD_OBJECT(
+                        'group_row', JSON_AGG(
+                            JSON_BUILD_OBJECT(
+                                'endpoint', ae.endpoint,
+                                'groupId', grf.group_id,
+                                'colName', grf.col_name,
+                                'operator', grf.operator,
+                                'colValue', grf.col_value
+                            )
+                        )
+                    ) AS result
+                FROM
+                    group_row_filter_t grf
+                INNER JOIN api_endpoint_t ae ON grf.endpoint_id = ae.endpoint_id AND grf.host_id = ae.host_id
+                INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id
+                WHERE
+                    grf.host_id = ?
+                    AND av.api_id = ?
+                    AND av.api_version = ?
+                HAVING COUNT(*) > 0 
+                UNION ALL
+                SELECT
+                    JSON_BUILD_OBJECT(
+                        'group_col', JSON_AGG(
+                            JSON_BUILD_OBJECT(
+                                'endpoint', ae.endpoint,
+                                'groupId', gcf.group_id,
+                                'columns', gcf.columns
+                            )
+                        )
+                    ) AS result
+                FROM
+                    group_col_filter_t gcf
+                INNER JOIN api_endpoint_t ae ON gcf.endpoint_id = ae.endpoint_id AND gcf.host_id = ae.host_id
+                INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id
+                WHERE
+                    gcf.host_id = ?
+                    AND av.api_id = ?
+                    AND av.api_version = ?
+                HAVING COUNT(*) > 0
+                UNION ALL
+                SELECT
+                    JSON_BUILD_OBJECT(
+                        'position_row', JSON_AGG(
+                            JSON_BUILD_OBJECT(
+                                'endpoint', ae.endpoint,
+                                'positionId', prf.position_id,
+                                'colName', prf.col_name,
+                                'operator', prf.operator,
+                                'colValue', prf.col_value
+                            )
+                        )
+                    ) AS result
+                FROM
+                    position_row_filter_t prf
+                INNER JOIN api_endpoint_t ae ON prf.endpoint_id = ae.endpoint_id AND prf.host_id = ae.host_id
+                INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id
+                WHERE
+                    prf.host_id = ?
+                    AND av.api_id = ?
+                    AND av.api_version = ?
+                HAVING COUNT(*) > 0 
+                UNION ALL
+                SELECT
+                    JSON_BUILD_OBJECT(
+                        'position_col', JSON_AGG(
+                            JSON_BUILD_OBJECT(
+                                'endpoint', ae.endpoint,
+                                'positionId', pcf.position_id,
+                                'columns', pcf.columns
+                            )
+                        )
+                    ) AS result
+                FROM
+                    position_col_filter_t pcf
+                INNER JOIN api_endpoint_t ae ON pcf.endpoint_id = ae.endpoint_id AND pcf.host_id = ae.host_id
+                INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id
+                WHERE
+                    pcf.host_id = ?
+                    AND av.api_id = ?
+                    AND av.api_version = ?
+                HAVING COUNT(*) > 0
+                UNION ALL
+                SELECT
+                    JSON_BUILD_OBJECT(
+                        'attribute_row', JSON_AGG(
+                            JSON_BUILD_OBJECT(
+                                'endpoint', ae.endpoint,
+                                'attributeId', arf.attribute_id,
+                                'attributeValue', arf.attribute_value,
+                                'colName', arf.col_name,
+                                'operator', arf.operator,
+                                'colValue', arf.col_value
+                            )
+                        )
+                    ) AS result
+                FROM
+                    attribute_row_filter_t arf
+                INNER JOIN api_endpoint_t ae ON arf.endpoint_id = ae.endpoint_id AND arf.host_id = ae.host_id
+                INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id
+                WHERE
+                    arf.host_id = ?
+                    AND av.api_id = ?
+                    AND av.api_version = ?
+                HAVING COUNT(*) > 0 
+                UNION ALL
+                SELECT
+                    JSON_BUILD_OBJECT(
+                        'attribute_col', JSON_AGG(
+                            JSON_BUILD_OBJECT(
+                                'endpoint', ae.endpoint,
+                                'attributeId', acf.attribute_id,
+                                'attributeValue', acf.attribute_value,
+                                'columns', acf.columns
+                            )
+                        )
+                    ) AS result
+                FROM
+                    attribute_col_filter_t acf
+                INNER JOIN api_endpoint_t ae ON acf.endpoint_id = ae.endpoint_id AND acf.host_id = ae.host_id
+                INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id
+                WHERE
+                    acf.host_id = ?
+                    AND av.api_id = ?
+                    AND av.api_version = ?
+                HAVING COUNT(*) > 0
+                UNION ALL
+                SELECT
+                    JSON_BUILD_OBJECT(
+                        'user_row', JSON_AGG(
+                            JSON_BUILD_OBJECT(
+                                'endpoint', ae.endpoint,
+                                'userId', urf.user_id,
+                                'startTs', urf.start_ts,
+                                'endTs', urf.end_ts,
+                                'colName', urf.col_name,
+                                'operator', urf.operator,
+                                'colValue', urf.col_value
+                            )
+                        )
+                    ) AS result
+                FROM
+                    user_row_filter_t urf
+                INNER JOIN api_endpoint_t ae ON urf.endpoint_id = ae.endpoint_id AND urf.host_id = ae.host_id
+                INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id
+                WHERE
+                    urf.host_id = ?
+                    AND av.api_id = ?
+                    AND av.api_version = ?
+                HAVING COUNT(*) > 0 
+                UNION ALL
+                SELECT
+                    JSON_BUILD_OBJECT(
+                        'user_col', JSON_AGG(
+                            JSON_BUILD_OBJECT(
+                                'endpoint', ae.endpoint,
+                                'userId', ucf.user_id,
+                                'startTs', ucf.start_ts,
+                                'endTs', ucf.end_ts,
+                                'columns', ucf.columns
+                            )
+                        )
+                    ) AS result
+                FROM
+                    user_col_filter_t ucf
+                INNER JOIN api_endpoint_t ae ON ucf.endpoint_id = ae.endpoint_id AND ucf.host_id = ae.host_id
+                INNER JOIN api_version_t av ON ae.api_version_id = av.api_version_id AND ae.host_id = av.host_id
+                WHERE
+                    ucf.host_id = ?
+                    AND av.api_id = ?
+                    AND av.api_version = ?
+                HAVING COUNT(*) > 0
+                """;
 
         try (Connection connection = ds.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
