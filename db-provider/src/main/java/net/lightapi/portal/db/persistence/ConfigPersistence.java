@@ -103,6 +103,36 @@ public interface ConfigPersistence {
     Result<String> getConfigSnapshot(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> queryConfigSnapshotById(String hostId, String snapshotId);
 
+    // Snapshot Property
+    Result<String> getConfigSnapshotProperty(int offset, int limit, String filters, String globalFilter, String sorting, String snapshotId);
+
+    // Snapshot File
+    Result<String> getSnapshotInstanceFile(int offset, int limit, String filters, String globalFilter, String sorting, String snapshotId);
+
+    // Snapshot Deployment Instance Property
+    Result<String> getSnapshotDeploymentInstanceProperty(int offset, int limit, String filters, String globalFilter, String sorting, String snapshotId);
+
+    // Snapshot Instance Api Property
+    Result<String> getSnapshotInstanceApiProperty(int offset, int limit, String filters, String globalFilter, String sorting, String snapshotId);
+
+    // Snapshot Instance App Property
+    Result<String> getSnapshotInstanceAppProperty(int offset, int limit, String filters, String globalFilter, String sorting, String snapshotId);
+
+    // Snapshot Instance App Api Property
+    Result<String> getSnapshotInstanceAppApiProperty(int offset, int limit, String filters, String globalFilter, String sorting, String snapshotId);
+
+    // Snapshot Instance Property
+    Result<String> getSnapshotInstanceProperty(int offset, int limit, String filters, String globalFilter, String sorting, String snapshotId);
+
+    // Snapshot Environment Property
+    Result<String> getSnapshotEnvironmentProperty(int offset, int limit, String filters, String globalFilter, String sorting, String snapshotId);
+
+    // Snapshot Product Property
+    Result<String> getSnapshotProductProperty(int offset, int limit, String filters, String globalFilter, String sorting, String snapshotId);
+
+    // Snapshot Product Version Property
+    Result<String> getSnapshotProductVersionProperty(int offset, int limit, String filters, String globalFilter, String sorting, String snapshotId);
+
     // Product / Instance Applicable Properties
     Result<String> getApplicableConfigPropertiesForInstance(int offset, int limit, String hostId, String instanceId, Set<String> resourceTypes, Set<String> configTypes, Set<String> propertyTypes,Set<String> configPhases);
     Result<String> getApplicableConfigPropertiesForInstanceApi(int offset, int limit, String hostId, String instanceApiId);

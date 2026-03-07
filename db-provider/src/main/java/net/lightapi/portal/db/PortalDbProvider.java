@@ -317,6 +317,16 @@ public interface PortalDbProvider extends DbProvider {
     void deleteConfigSnapshot(Connection conn, Map<String, Object> event) throws PortalPersistenceException;
     Result<String> getConfigSnapshot(int offset, int limit, String filters, String globalFilter, String sorting, String hostId);
     Result<String> queryConfigSnapshotById(String hostId, String snapshotId);
+    Result<String> getConfigSnapshotProperty(int offset, int limit, String filters, String globalFilter, String sorting, String snapshotId);
+    Result<String> getSnapshotInstanceFile(int offset, int limit, String filters, String globalFilter, String sorting, String snapshotId);
+    Result<String> getSnapshotDeploymentInstanceProperty(int offset, int limit, String filters, String globalFilter, String sorting, String snapshotId);
+    Result<String> getSnapshotInstanceApiProperty(int offset, int limit, String filters, String globalFilter, String sorting, String snapshotId);
+    Result<String> getSnapshotInstanceAppProperty(int offset, int limit, String filters, String globalFilter, String sorting, String snapshotId);
+    Result<String> getSnapshotInstanceAppApiProperty(int offset, int limit, String filters, String globalFilter, String sorting, String snapshotId);
+    Result<String> getSnapshotInstanceProperty(int offset, int limit, String filters, String globalFilter, String sorting, String snapshotId);
+    Result<String> getSnapshotEnvironmentProperty(int offset, int limit, String filters, String globalFilter, String sorting, String snapshotId);
+    Result<String> getSnapshotProductProperty(int offset, int limit, String filters, String globalFilter, String sorting, String snapshotId);
+    Result<String> getSnapshotProductVersionProperty(int offset, int limit, String filters, String globalFilter, String sorting, String snapshotId);
 
     Result<String> getConfigInstance(int offset, int limit, String filters, String globalFilter, String sorting, boolean active, String hostId);
     Result<String> getConfigInstanceById(String hostId, String instanceId, String propertyId);

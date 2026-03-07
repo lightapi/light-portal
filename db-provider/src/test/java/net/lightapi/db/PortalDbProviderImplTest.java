@@ -284,8 +284,19 @@ public class PortalDbProviderImplTest {
     }
 
     @Test
+    public void testQueryServiceRule() {
+        Result<String> result = dbProvider.queryServiceRule("01964b05-552a-7c4b-9184-6857e7f3dc5f", "MCP0001", "3.0.0");
+        if(result.isFailure()) {
+            System.out.println(result.getError());
+            fail();
+        } else {
+            System.out.println(result.getResult());
+        }
+    }
+
+    @Test
     public void testQueryServicePermission() {
-        Result<String> result = dbProvider.queryApiPermission("dev.lightapi.net", "0100", "1.0.0");
+        Result<String> result = dbProvider.queryApiPermission("01964b05-552a-7c4b-9184-6857e7f3dc5f", "MCP0001", "3.0.0");
         if(result.isFailure()) {
             System.out.println(result.getError());
             fail();
@@ -298,7 +309,7 @@ public class PortalDbProviderImplTest {
 
     @Test
     public void testQueryServiceFilter() {
-        Result<List<String>> result = dbProvider.queryApiFilter("dev.lightapi.net", "0100", "1.0.0");
+        Result<List<String>> result = dbProvider.queryApiFilter("01964b05-552a-7c4b-9184-6857e7f3dc5f", "MCP0001", "3.0.0");
         if(result.isFailure()) {
             System.out.println(result.getError());
             fail();

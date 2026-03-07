@@ -3169,6 +3169,776 @@ public class ConfigPersistenceImpl implements ConfigPersistence {
         return result;
     }
 
+    @Override
+    public Result<String> getConfigSnapshotProperty(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String snapshotId) {
+        Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "snapshotPropertyId", "s.snapshot_property_id",
+                "snapshotId", "s.snapshot_id",
+                "configPhase", "s.config_phase",
+                "configId", "s.config_id",
+                "propertyId", "s.property_id",
+                "propertyName", "s.property_name",
+                "propertyType", "s.property_type",
+                "propertyValue", "s.property_value",
+                "valueType", "s.value_type",
+                "sourceLevel", "s.source_level"
+        ));
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                s.snapshot_property_id, s.snapshot_id, s.config_phase, s.config_id, s.property_id,
+                s.property_name, s.property_type, s.property_value, s.value_type, s.source_level
+                FROM config_snapshot_property_t s
+                WHERE s.snapshot_id = ?
+                """;
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(snapshotId));
+
+        String[] searchColumns = {"s.property_name", "s.property_value"};
+        String sqlBuilder = s +
+                dynamicFilter(Arrays.asList("s.snapshot_property_id", "s.snapshot_id", "s.config_phase", "s.config_id", "s.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("s.property_name", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        if(logger.isTraceEnabled()) logger.trace("sql = {}", sqlBuilder);
+        int total = 0;
+        List<Map<String, Object>> list = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+
+            populateParameters(preparedStatement, parameters);
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+
+                    map.put("snapshotPropertyId", resultSet.getString("snapshot_property_id"));
+                    map.put("snapshotId", resultSet.getString("snapshot_id"));
+                    map.put("configPhase", resultSet.getString("config_phase"));
+                    map.put("configId", resultSet.getString("config_id"));
+                    map.put("propertyId", resultSet.getString("property_id"));
+                    map.put("propertyName", resultSet.getString("property_name"));
+                    map.put("propertyType", resultSet.getString("property_type"));
+                    map.put("propertyValue", resultSet.getString("property_value"));
+                    map.put("valueType", resultSet.getString("value_type"));
+                    map.put("sourceLevel", resultSet.getString("source_level"));
+                    list.add(map);
+                }
+            }
+
+            Map<String, Object> responseMap = new HashMap<>();
+            responseMap.put("totalCount", total);
+            responseMap.put("data", list);
+            result = Success.of(JsonMapper.toJson(responseMap));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getSnapshotInstanceFile(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String snapshotId) {
+        Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "snapshotId", "s.snapshot_id",
+                "hostId", "s.host_id",
+                "instanceFileId", "s.instance_file_id",
+                "instanceId", "s.instance_id",
+                "fileType", "s.file_type",
+                "fileName", "s.file_name",
+                "fileValue", "s.file_value",
+                "fileDesc", "s.file_desc",
+                "expirationTs", "s.expiration_ts"
+        ));
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                s.snapshot_id, s.host_id, s.instance_file_id, s.instance_id, s.file_type,
+                s.file_name, s.file_value, s.file_desc, s.expiration_ts
+                FROM snapshot_instance_file_t s
+                WHERE s.snapshot_id = ?
+                """;
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(snapshotId));
+
+        String[] searchColumns = {"s.file_name", "s.file_value", "s.file_desc"};
+        String sqlBuilder = s +
+                dynamicFilter(Arrays.asList("s.snapshot_id", "s.host_id", "s.instance_file_id", "s.instance_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("s.file_name", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        if(logger.isTraceEnabled()) logger.trace("sql = {}", sqlBuilder);
+        int total = 0;
+        List<Map<String, Object>> list = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+
+            populateParameters(preparedStatement, parameters);
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+
+                    map.put("snapshotId", resultSet.getString("snapshot_id"));
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("instanceFileId", resultSet.getString("instance_file_id"));
+                    map.put("instanceId", resultSet.getString("instance_id"));
+                    map.put("fileType", resultSet.getString("file_type"));
+                    map.put("fileName", resultSet.getString("file_name"));
+                    map.put("fileValue", resultSet.getString("file_value"));
+                    map.put("fileDesc", resultSet.getString("file_desc"));
+                    map.put("expirationTs", resultSet.getObject("expiration_ts") != null ? resultSet.getObject("expiration_ts", OffsetDateTime.class) : null);
+                    list.add(map);
+                }
+            }
+
+            Map<String, Object> responseMap = new HashMap<>();
+            responseMap.put("totalCount", total);
+            responseMap.put("data", list);
+            result = Success.of(JsonMapper.toJson(responseMap));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getSnapshotDeploymentInstanceProperty(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String snapshotId) {
+        Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "snapshotId", "s.snapshot_id",
+                "hostId", "s.host_id",
+                "deploymentInstanceId", "s.deployment_instance_id",
+                "propertyId", "s.property_id",
+                "propertyValue", "s.property_value"
+        ));
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                s.snapshot_id, s.host_id, s.deployment_instance_id, s.property_id, s.property_value
+                FROM snapshot_deployment_instance_property_t s
+                WHERE s.snapshot_id = ?
+                """;
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(snapshotId));
+
+        String[] searchColumns = {"s.property_id", "s.property_value"};
+        String sqlBuilder = s +
+                dynamicFilter(Arrays.asList("s.snapshot_id", "s.host_id", "s.deployment_instance_id", "s.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("s.property_id", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        if(logger.isTraceEnabled()) logger.trace("sql = {}", sqlBuilder);
+        int total = 0;
+        List<Map<String, Object>> list = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+
+            populateParameters(preparedStatement, parameters);
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+
+                    map.put("snapshotId", resultSet.getString("snapshot_id"));
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("deploymentInstanceId", resultSet.getString("deployment_instance_id"));
+                    map.put("propertyId", resultSet.getString("property_id"));
+                    map.put("propertyValue", resultSet.getString("property_value"));
+                    list.add(map);
+                }
+            }
+
+            Map<String, Object> responseMap = new HashMap<>();
+            responseMap.put("totalCount", total);
+            responseMap.put("data", list);
+            result = Success.of(JsonMapper.toJson(responseMap));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getSnapshotInstanceApiProperty(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String snapshotId) {
+        Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "snapshotId", "s.snapshot_id",
+                "hostId", "s.host_id",
+                "instanceApiId", "s.instance_api_id",
+                "propertyId", "s.property_id",
+                "propertyValue", "s.property_value"
+        ));
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                s.snapshot_id, s.host_id, s.instance_api_id, s.property_id, s.property_value
+                FROM snapshot_instance_api_property_t s
+                WHERE s.snapshot_id = ?
+                """;
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(snapshotId));
+
+        String[] searchColumns = {"s.property_id", "s.property_value"};
+        String sqlBuilder = s +
+                dynamicFilter(Arrays.asList("s.snapshot_id", "s.host_id", "s.instance_api_id", "s.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("s.property_id", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        if(logger.isTraceEnabled()) logger.trace("sql = {}", sqlBuilder);
+        int total = 0;
+        List<Map<String, Object>> list = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+
+            populateParameters(preparedStatement, parameters);
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+
+                    map.put("snapshotId", resultSet.getString("snapshot_id"));
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("instanceApiId", resultSet.getString("instance_api_id"));
+                    map.put("propertyId", resultSet.getString("property_id"));
+                    map.put("propertyValue", resultSet.getString("property_value"));
+                    list.add(map);
+                }
+            }
+
+            Map<String, Object> responseMap = new HashMap<>();
+            responseMap.put("totalCount", total);
+            responseMap.put("data", list);
+            result = Success.of(JsonMapper.toJson(responseMap));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getSnapshotInstanceAppProperty(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String snapshotId) {
+        Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "snapshotId", "s.snapshot_id",
+                "hostId", "s.host_id",
+                "instanceAppId", "s.instance_app_id",
+                "propertyId", "s.property_id",
+                "propertyValue", "s.property_value"
+        ));
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                s.snapshot_id, s.host_id, s.instance_app_id, s.property_id, s.property_value
+                FROM snapshot_instance_app_property_t s
+                WHERE s.snapshot_id = ?
+                """;
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(snapshotId));
+
+        String[] searchColumns = {"s.property_id", "s.property_value"};
+        String sqlBuilder = s +
+                dynamicFilter(Arrays.asList("s.snapshot_id", "s.host_id", "s.instance_app_id", "s.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("s.property_id", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        if(logger.isTraceEnabled()) logger.trace("sql = {}", sqlBuilder);
+        int total = 0;
+        List<Map<String, Object>> list = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+
+            populateParameters(preparedStatement, parameters);
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+
+                    map.put("snapshotId", resultSet.getString("snapshot_id"));
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("instanceAppId", resultSet.getString("instance_app_id"));
+                    map.put("propertyId", resultSet.getString("property_id"));
+                    map.put("propertyValue", resultSet.getString("property_value"));
+                    list.add(map);
+                }
+            }
+
+            Map<String, Object> responseMap = new HashMap<>();
+            responseMap.put("totalCount", total);
+            responseMap.put("data", list);
+            result = Success.of(JsonMapper.toJson(responseMap));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getSnapshotInstanceAppApiProperty(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String snapshotId) {
+        Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "snapshotId", "s.snapshot_id",
+                "hostId", "s.host_id",
+                "instanceAppId", "s.instance_app_id",
+                "instanceApiId", "s.instance_api_id",
+                "propertyId", "s.property_id",
+                "propertyValue", "s.property_value"
+        ));
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                s.snapshot_id, s.host_id, s.instance_app_id, s.instance_api_id, s.property_id, s.property_value
+                FROM snapshot_instance_app_api_property_t s
+                WHERE s.snapshot_id = ?
+                """;
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(snapshotId));
+
+        String[] searchColumns = {"s.property_id", "s.property_value"};
+        String sqlBuilder = s +
+                dynamicFilter(Arrays.asList("s.snapshot_id", "s.host_id", "s.instance_app_id", "s.instance_api_id", "s.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("s.property_id", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        if(logger.isTraceEnabled()) logger.trace("sql = {}", sqlBuilder);
+        int total = 0;
+        List<Map<String, Object>> list = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+
+            populateParameters(preparedStatement, parameters);
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+
+                    map.put("snapshotId", resultSet.getString("snapshot_id"));
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("instanceAppId", resultSet.getString("instance_app_id"));
+                    map.put("instanceApiId", resultSet.getString("instance_api_id"));
+                    map.put("propertyId", resultSet.getString("property_id"));
+                    map.put("propertyValue", resultSet.getString("property_value"));
+                    list.add(map);
+                }
+            }
+
+            Map<String, Object> responseMap = new HashMap<>();
+            responseMap.put("totalCount", total);
+            responseMap.put("data", list);
+            result = Success.of(JsonMapper.toJson(responseMap));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getSnapshotInstanceProperty(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String snapshotId) {
+        Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "snapshotId", "s.snapshot_id",
+                "hostId", "s.host_id",
+                "instanceId", "s.instance_id",
+                "propertyId", "s.property_id",
+                "propertyValue", "s.property_value"
+        ));
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                s.snapshot_id, s.host_id, s.instance_id, s.property_id, s.property_value
+                FROM snapshot_instance_property_t s
+                WHERE s.snapshot_id = ?
+                """;
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(snapshotId));
+
+        String[] searchColumns = {"s.property_id", "s.property_value"};
+        String sqlBuilder = s +
+                dynamicFilter(Arrays.asList("s.snapshot_id", "s.host_id", "s.instance_id", "s.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("s.property_id", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        if(logger.isTraceEnabled()) logger.trace("sql = {}", sqlBuilder);
+        int total = 0;
+        List<Map<String, Object>> list = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+
+            populateParameters(preparedStatement, parameters);
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+
+                    map.put("snapshotId", resultSet.getString("snapshot_id"));
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("instanceId", resultSet.getString("instance_id"));
+                    map.put("propertyId", resultSet.getString("property_id"));
+                    map.put("propertyValue", resultSet.getString("property_value"));
+                    list.add(map);
+                }
+            }
+
+            Map<String, Object> responseMap = new HashMap<>();
+            responseMap.put("totalCount", total);
+            responseMap.put("data", list);
+            result = Success.of(JsonMapper.toJson(responseMap));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getSnapshotEnvironmentProperty(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String snapshotId) {
+        Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "snapshotId", "s.snapshot_id",
+                "hostId", "s.host_id",
+                "environment", "s.environment",
+                "propertyId", "s.property_id",
+                "propertyValue", "s.property_value"
+        ));
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                s.snapshot_id, s.host_id, s.environment, s.property_id, s.property_value
+                FROM snapshot_environment_property_t s
+                WHERE s.snapshot_id = ?
+                """;
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(snapshotId));
+
+        String[] searchColumns = {"s.environment", "s.property_id", "s.property_value"};
+        String sqlBuilder = s +
+                dynamicFilter(Arrays.asList("s.snapshot_id", "s.host_id", "s.environment", "s.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("s.property_id", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        if(logger.isTraceEnabled()) logger.trace("sql = {}", sqlBuilder);
+        int total = 0;
+        List<Map<String, Object>> list = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+
+            populateParameters(preparedStatement, parameters);
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+
+                    map.put("snapshotId", resultSet.getString("snapshot_id"));
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("environment", resultSet.getString("environment"));
+                    map.put("propertyId", resultSet.getString("property_id"));
+                    map.put("propertyValue", resultSet.getString("property_value"));
+                    list.add(map);
+                }
+            }
+
+            Map<String, Object> responseMap = new HashMap<>();
+            responseMap.put("totalCount", total);
+            responseMap.put("data", list);
+            result = Success.of(JsonMapper.toJson(responseMap));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getSnapshotProductProperty(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String snapshotId) {
+        Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "snapshotId", "s.snapshot_id",
+                "productId", "s.product_id",
+                "propertyId", "s.property_id",
+                "propertyValue", "s.property_value"
+        ));
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                s.snapshot_id, s.product_id, s.property_id, s.property_value
+                FROM snapshot_product_property_t s
+                WHERE s.snapshot_id = ?
+                """;
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(snapshotId));
+
+        String[] searchColumns = {"s.product_id", "s.property_id", "s.property_value"};
+        String sqlBuilder = s +
+                dynamicFilter(Arrays.asList("s.snapshot_id", "s.product_id", "s.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("s.property_id", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        if(logger.isTraceEnabled()) logger.trace("sql = {}", sqlBuilder);
+        int total = 0;
+        List<Map<String, Object>> list = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+
+            populateParameters(preparedStatement, parameters);
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+
+                    map.put("snapshotId", resultSet.getString("snapshot_id"));
+                    map.put("productId", resultSet.getString("product_id"));
+                    map.put("propertyId", resultSet.getString("property_id"));
+                    map.put("propertyValue", resultSet.getString("property_value"));
+                    list.add(map);
+                }
+            }
+
+            Map<String, Object> responseMap = new HashMap<>();
+            responseMap.put("totalCount", total);
+            responseMap.put("data", list);
+            result = Success.of(JsonMapper.toJson(responseMap));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+        }
+        return result;
+    }
+
+    @Override
+    public Result<String> getSnapshotProductVersionProperty(int offset, int limit, String filtersJson, String globalFilter, String sortingJson, String snapshotId) {
+        Result<String> result = null;
+        final Map<String, String> columnMap = new HashMap<>(Map.of(
+                "snapshotId", "s.snapshot_id",
+                "hostId", "s.host_id",
+                "productVersionId", "s.product_version_id",
+                "propertyId", "s.property_id",
+                "propertyValue", "s.property_value"
+        ));
+
+        List<Map<String, Object>> filters = parseJsonList(filtersJson);
+        List<Map<String, Object>> sorting = parseJsonList(sortingJson);
+
+        String s =
+                """
+                SELECT COUNT(*) OVER () AS total,
+                s.snapshot_id, s.host_id, s.product_version_id, s.property_id, s.property_value
+                FROM snapshot_product_version_property_t s
+                WHERE s.snapshot_id = ?
+                """;
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(UUID.fromString(snapshotId));
+
+        String[] searchColumns = {"s.product_version_id", "s.property_id", "s.property_value"};
+        String sqlBuilder = s +
+                dynamicFilter(Arrays.asList("s.snapshot_id", "s.host_id", "s.product_version_id", "s.property_id"), Arrays.asList(searchColumns), filters, columnMap, parameters) +
+                globalFilter(globalFilter, searchColumns, parameters) +
+                dynamicSorting("s.property_id", sorting, columnMap) +
+                "\nLIMIT ? OFFSET ?";
+
+        parameters.add(limit);
+        parameters.add(offset);
+
+        if(logger.isTraceEnabled()) logger.trace("sql = {}", sqlBuilder);
+        int total = 0;
+        List<Map<String, Object>> list = new ArrayList<>();
+
+        try (Connection connection = ds.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sqlBuilder)) {
+
+            populateParameters(preparedStatement, parameters);
+
+            boolean isFirstRow = true;
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Map<String, Object> map = new HashMap<>();
+                    if (isFirstRow) {
+                        total = resultSet.getInt("total");
+                        isFirstRow = false;
+                    }
+
+                    map.put("snapshotId", resultSet.getString("snapshot_id"));
+                    map.put("hostId", resultSet.getString("host_id"));
+                    map.put("productVersionId", resultSet.getString("product_version_id"));
+                    map.put("propertyId", resultSet.getString("property_id"));
+                    map.put("propertyValue", resultSet.getString("property_value"));
+                    list.add(map);
+                }
+            }
+
+            Map<String, Object> responseMap = new HashMap<>();
+            responseMap.put("totalCount", total);
+            responseMap.put("data", list);
+            result = Success.of(JsonMapper.toJson(responseMap));
+        } catch (SQLException e) {
+            logger.error("SQLException:", e);
+            result = Failure.of(new Status("SQL_EXCEPTION", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Exception:", e);
+            result = Failure.of(new Status("GENERIC_EXCEPTION", e.getMessage()));
+        }
+        return result;
+    }
+
     /*
     @Override
     public void commitConfigInstance(Connection conn, Map<String, Object> event) throws PortalPersistenceException {

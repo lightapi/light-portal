@@ -1965,24 +1965,19 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     }
 
     @Override
-    public Result<String> queryServiceRule(String host, String apiId, String apiVersion) {
+    public Result<String> queryServiceRule(String hostIdStr, String apiId, String apiVersion) {
         Result<String> result = null;
         UUID hostId = null;
-        try (Connection connection = ds.getConnection();
-             PreparedStatement ps = connection.prepareStatement("SELECT host_id FROM host_t WHERE sub_domain || '.' || domain = ?")) {
-            ps.setString(1, host);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    hostId = rs.getObject("host_id", UUID.class);
-                }
-            }
-        } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            return Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-        }
-
-        if (hostId == null) {
-            return Failure.of(new Status(OBJECT_NOT_FOUND, "host_t", host));
+        
+        if (hostIdStr != null && !hostIdStr.trim().isEmpty()) {
+             try {
+                 hostId = UUID.fromString(hostIdStr);
+             } catch (IllegalArgumentException e) {
+                 logger.error("Invalid hostId format: {}", hostIdStr, e);
+                 return Failure.of(new Status(GENERIC_EXCEPTION, "Invalid UUID string: " + hostIdStr));
+             }
+        } else {
+             return Failure.of(new Status(OBJECT_NOT_FOUND, "hostId", hostIdStr));
         }
 
         String sql =
@@ -2057,24 +2052,18 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     }
 
     @Override
-    public Result<String> queryApiPermission(String host, String apiId, String apiVersion) {
+    public Result<String> queryApiPermission(String hostIdStr, String apiId, String apiVersion) {
         Result<String> result = null;
         UUID hostId = null;
-        try (Connection connection = ds.getConnection();
-             PreparedStatement ps = connection.prepareStatement("SELECT host_id FROM host_t WHERE sub_domain || '.' || domain = ?")) {
-            ps.setString(1, host);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    hostId = rs.getObject("host_id", UUID.class);
-                }
-            }
-        } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            return Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-        }
-
-        if (hostId == null) {
-            return Failure.of(new Status(OBJECT_NOT_FOUND, "host_t", host));
+        if (hostIdStr != null && !hostIdStr.trim().isEmpty()) {
+             try {
+                 hostId = UUID.fromString(hostIdStr);
+             } catch (IllegalArgumentException e) {
+                 logger.error("Invalid hostId format: {}", hostIdStr, e);
+                 return Failure.of(new Status(GENERIC_EXCEPTION, "Invalid UUID string: " + hostIdStr));
+             }
+        } else {
+             return Failure.of(new Status(OBJECT_NOT_FOUND, "hostId", hostIdStr));
         }
 
         String sql = """
@@ -2217,24 +2206,19 @@ public class ApiServicePersistenceImpl implements ApiServicePersistence {
     }
 
     @Override
-    public Result<List<String>> queryApiFilter(String host, String apiId, String apiVersion) {
+    public Result<List<String>> queryApiFilter(String hostIdStr, String apiId, String apiVersion) {
         Result<List<String>> result = null;
         UUID hostId = null;
-        try (Connection connection = ds.getConnection();
-             PreparedStatement ps = connection.prepareStatement("SELECT host_id FROM host_t WHERE sub_domain || '.' || domain = ?")) {
-            ps.setString(1, host);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    hostId = rs.getObject("host_id", UUID.class);
-                }
-            }
-        } catch (SQLException e) {
-            logger.error("SQLException:", e);
-            return Failure.of(new Status(SQL_EXCEPTION, e.getMessage()));
-        }
-
-        if (hostId == null) {
-            return Failure.of(new Status(OBJECT_NOT_FOUND, "host_t", host));
+        
+        if (hostIdStr != null && !hostIdStr.trim().isEmpty()) {
+             try {
+                 hostId = UUID.fromString(hostIdStr);
+             } catch (IllegalArgumentException e) {
+                 logger.error("Invalid hostId format: {}", hostIdStr, e);
+                 return Failure.of(new Status(GENERIC_EXCEPTION, "Invalid UUID string: " + hostIdStr));
+             }
+        } else {
+             return Failure.of(new Status(OBJECT_NOT_FOUND, "hostId", hostIdStr));
         }
 
         // Corrected SQL to use endpoint_id from filters and join to api_endpoint_t and api_version_t
